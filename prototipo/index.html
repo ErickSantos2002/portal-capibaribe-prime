@@ -181,9 +181,11 @@
 
   /* ---------- navegação ---------- */
   .nav { display: flex; background: var(--folha); border-top: 1px solid var(--linha); }
+  /* Ícones numa fileira só, sempre na mesma altura; rótulo comprido ("Minha unidade" com 5 abas) quebra para baixo. */
   .nav a {
-    flex: 1; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; color: var(--tinta-suave); text-decoration: none; font-size: 13px; position: relative;
+    flex: 1; min-width: 0; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 10px 2px 8px; gap: 3px; color: var(--tinta-suave); text-decoration: none; font-size: 13px; line-height: 1.15;
+    text-align: center; position: relative;
   }
   .nav a[aria-current] { color: var(--mata); font-weight: 700; }
   .nav a[aria-current]::before {
@@ -237,6 +239,8 @@
   :focus-visible { outline: 3px solid var(--ipe-forte); outline-offset: 2px; }
   /* Sobre o verde (topo e menu lateral), o ipê-forte some (1,6:1); o ipê claro dá 4:1. */
   .topo :focus-visible, .pc .nav :focus-visible { outline-color: var(--ipe); }
+  /* O título recebe foco a cada tela só para o leitor de tela anunciar; não é controle, não ganha moldura. */
+  h1[tabindex="-1"]:focus { outline: none; }
   input:focus-visible, textarea:focus-visible, select:focus-visible { border-color: var(--mata); }
 
   .botao {
@@ -368,7 +372,7 @@
   .pc .conteudo { grid-area: main; padding: 32px max(40px, calc((100% - 720px) / 2)) 48px; }
   .pc .nav { grid-area: nav; flex-direction: column; border-top: 0; padding: 20px 14px; gap: 4px; background: var(--mata); }
   .escuro.pc .nav { background: var(--folha); border-right: 1px solid var(--linha); }
-  .pc .nav a { flex: 0; flex-direction: row; justify-content: flex-start; gap: 12px; min-height: 52px; padding: 0 14px;
+  .pc .nav a { flex: 0; flex-direction: row; justify-content: flex-start; align-items: center; text-align: left; gap: 12px; min-height: 52px; padding: 0 14px;
                font-size: 17px; border-radius: var(--r-pequeno); color: var(--sobre-mata); opacity: .88; }
   .escuro.pc .nav a, .escuro.pc .nav-marca, .escuro.pc .nav-placa { color: var(--tinta); }
   .pc .nav a:hover { opacity: 1; background: rgba(255,255,255,.08); }
@@ -529,6 +533,8 @@ const paragrafos = t => `<div class="texto-aviso">${esc(t).split("\n\n").map(p =
 // busca sem acento e sem maiúscula: "fundacao" acha "Fundação"
 const semAcento = t => t.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 const UNIDADE_OK = /^[1-5][0-7]0[1-8]$/;
+// unidade como o morador fala: "Bloco 1, 101", nunca o código colado "1101"
+const un = u => /^\d{4}$/.test(u) ? `Bloco ${u[0]}, ${u.slice(1)}` : u;
 const visivel = a => !a.blocos || a.blocos.includes(blocoDe(eu().unidade));
 const naoLidos = () => avisos.filter(a => visivel(a) && !a.lido[perfil]).length;
 /* Uma região de status só, criada uma vez e reposta a cada tela: o leitor de tela precisa que ela
@@ -575,8 +581,15 @@ function nav(ativa) {
     <span class="nav-placa">${placa(eu().unidade, gestao() ? "gestao" : "")}<span>${esc(eu().nome)}${gestao() ? `<br>${eu().papel === "admin" ? "Administrador" : "Comissão"}` : ""}</span></span>
   </nav>`;
 }
-const tela = (cab, corpo, aba, extra = "") =>
-  `${cab}<main class="conteudo" tabindex="-1">${corpo}</main>${extra}${aba ? nav(aba) : ""}`;
+/* No celular, tela de detalhe usa a seta de voltar e esconde as abas (mais espaço). No computador o menu
+   lateral não some: fica marcada a seção de onde a tela veio. */
+const SECAO = { aviso: "avisos", leitura: "avisos", "novo-aviso": "avisos", enquete: "enquetes", "nova-enquete": "enquetes",
+  "novo-documento": "documentos", unidade: "admin", historico: "admin" };
+let secaoAtual = null;
+const tela = (cab, corpo, aba, extra = "") => {
+  const a = aba || (modo === "pc" && secaoAtual);
+  return `${cab}<main class="conteudo" tabindex="-1">${corpo}</main>${extra}${a ? nav(a) : ""}`;
+};
 const naoEncontrado = () => tela(topo("Não encontrado", true), `
   <div class="aviso-caixa atencao">${ic("alerta")}<p>Não achamos esta página. O link pode estar incompleto, ou ela é de outro bloco.</p></div>
   <a class="botao" href="#avisos">Ir para o mural</a>`);
@@ -789,12 +802,14 @@ function telaLeitura(id) {
   if (!gestao()) return semPermissao();
   const a = avisos.find(x => x.id === id); if (!a) return naoEncontrado();
   const total = a.blocos ? a.blocos.length * 64 : 320;
-  const falta = UNIDADES.filter(u => !a.blocos || a.blocos.includes(u.bloco)).slice(0, 40);
+  const falta = UNIDADES.filter(u => (!a.blocos || a.blocos.includes(u.bloco)) && !u.ativa).slice(0, 40);
+  const porBloco = [...new Set(falta.map(u => u.bloco))];
   return tela(topo("Quem leu", true), `
     <h2>${esc(a.titulo)}</h2>
     <div class="resumo" style="grid-template-columns:1fr 1fr"><div><b>${a.leram}</b>leram</div><div><b>${total - a.leram}</b>ainda não</div></div>
     <p class="secao">Apartamentos que ainda não leram</p>
-    <div class="grade">${falta.map(u => `<a href="#unidade/${u.login}">${u.login}</a>`).join("")}</div>
+    ${porBloco.map(b => `<p class="suave" style="margin:12px 0 6px"><b>Bloco ${b}</b></p>
+    <div class="grade">${falta.filter(u => u.bloco === b).map(u => `<a href="#unidade/${u.login}" aria-label="Bloco ${b}, apartamento ${u.login.slice(1)}">${u.login.slice(1)}</a>`).join("")}</div>`).join("")}
     <p class="ajuda" style="margin-top:12px">Mostrando os primeiros 40.</p>
     <button class="botao leve" onclick="recado('Lista copiada. Dá para colar no grupo.')">Copiar a lista</button>`);
 }
@@ -825,7 +840,7 @@ function telaEnquete(id) {
     <h2>${esc(e.pergunta)}</h2>
     ${e.aberta ? `
       <p class="suave">O voto vale pelo apartamento ${u.slice(1)} do Bloco ${u[0]}. Dá para trocar até ${e.encerra}.</p>
-      ${meu !== undefined ? `<div class="aviso-caixa info">${ic("certo")}<p>Seu apartamento já votou em <b>${esc(e.opcoes[meu][0])}</b>. Se escolher outra, vale a nova.</p></div>` : ""}
+      ${meu !== undefined ? `<div class="aviso-caixa info" id="ja-votou" role="status" tabindex="-1">${ic("certo")}<p>${votouAgora ? "Voto registrado. " : ""}Seu apartamento já votou em <b>${esc(e.opcoes[meu][0])}</b>. Se escolher outra, vale a nova.</p></div>` : ""}
       <form onsubmit="event.preventDefault(); votar(${e.id})">
         <fieldset style="border:0;padding:0;margin:16px 0 0"><legend class="oculto">Opções</legend>
         ${e.opcoes.map(([t], i) => `<label class="opcao"><input type="radio" name="op" value="${i}" ${meu === i ? "checked" : ""} required> ${esc(t)}</label>`).join("")}
@@ -838,10 +853,14 @@ function telaEnquete(id) {
     <p class="ajuda" style="margin-top:20px">Enquete é consulta. Não tem valor legal de votação em assembleia.</p>
     ${gestao() ? `<p class="secao">Para a Comissão</p><a class="arquivo" href="#" onclick="event.preventDefault();recado('Mostra quais apartamentos votaram, sem mostrar em quê.')">${ic("enquetes", 28)}<span><b>Quais apartamentos votaram</b><br><span class="ajuda">Sem mostrar o voto de ninguém</span></span></a>` : ""}`);
 }
+let votouAgora = false;
 window.votar = id => {
   const e = enquetes.find(x => x.id === id), i = Number(document.querySelector("input[name=op]:checked").value);
   if (e.votou[perfil] !== undefined) e.opcoes[e.votou[perfil]][1]--;
-  e.opcoes[i][1]++; e.votou[perfil] = i; render(); recado(`Voto registrado: Bloco ${eu().unidade[0]}, apartamento ${eu().unidade.slice(1)}.`);
+  e.opcoes[i][1]++; e.votou[perfil] = i;
+  // A confirmação aparece no lugar, em cima das opções: o recado flutuante cobria o resultado.
+  votouAgora = true; render(); votouAgora = false;
+  document.getElementById("ja-votou").focus();
 };
 
 /* ===================== Documentos ===================== */
@@ -1039,13 +1058,13 @@ function telaUnidade(login) {
 function telaHistorico() {
   if (eu().papel !== "admin") return semPermissao();
   const h = [["3 nov., 9h12", "2304", "publicou o aviso “Vistoria da obra no dia 15 de novembro”"],
-    ["2 nov., 22h40", "Portal", "bloqueou o 5307 por 15 minutos, depois de 5 senhas erradas"],
-    ["2 nov., 18h03", "1101", "resetou o 1106"],
+    ["2 nov., 22h40", "Portal", "bloqueou o Bloco 5, 307 por 15 minutos, depois de 5 senhas erradas"],
+    ["2 nov., 18h03", "1101", "resetou o Bloco 1, 106"],
     ["1 nov., 10h30", "2304", "publicou o aviso “Fundação do Bloco 4 concluída”"],
     ["29 out., 20h14", "1203", "entrou pela primeira vez"],
-    ["28 out., 19h00", "1101", "deu papel de Comissão ao 2304"]];
+    ["28 out., 19h00", "1101", "deu papel de Comissão ao Bloco 2, 304"]];
   return tela(topo("Histórico", true), `<p class="suave">Só o administrador vê. Ninguém consegue apagar.</p>
-    <div class="folha">${h.map(([d, u, t]) => `<div class="item"><h3><b>${u}</b> ${t}</h3><span class="linha-meta">${d}</span></div>`).join("")}</div>`);
+    <div class="folha">${h.map(([d, u, t]) => `<div class="item"><h3><b>${un(u)}</b> ${t}</h3><span class="linha-meta">${d}</span></div>`).join("")}</div>`);
 }
 
 /* ===================== Roteador ===================== */
@@ -1059,7 +1078,10 @@ function render() {
     "minha-unidade": telaMinhaUnidade, "novo-aviso": telaNovoAviso, "nova-enquete": telaNovaEnquete,
     "novo-documento": telaNovoDocumento, "admin": telaAdmin, "unidade": () => telaUnidade(p), "historico": telaHistorico,
   };
+  secaoAtual = SECAO[r] || null;
   app.innerHTML = (rotas[r] || telaEntrar)();
+  // recado é da tela em que nasceu: trocou de tela, some (senão o "voto registrado" aparecia no mural de outro)
+  clearTimeout(recadoEl._t); recadoEl.classList.remove("on"); recadoEl.textContent = "";
   app.append(recadoEl);
   app.classList.toggle("pc", modo === "pc");
   app.classList.toggle("sem-nav", !app.querySelector(".nav"));
