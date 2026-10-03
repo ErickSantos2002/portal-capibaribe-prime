@@ -1,0 +1,5 @@
+# Só sobe o que é do protótipo.
+.env*
+.vercel
+.gitignore
+.vercelignore
