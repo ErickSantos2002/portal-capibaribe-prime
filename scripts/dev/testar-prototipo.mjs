@@ -16,6 +16,19 @@ const casos = [
  ['erick','admin'],['erick','unidade/2304'],['erick','unidade/1101'],['erick','historico'],['socorro','publicos'],['socorro','esqueci-ok'],
 ];
 await p.goto(url); await new Promise(r=>setTimeout(r,800));
+// boas-vindas abre sozinha na 1ª visita e fecha no "Começar"
+console.log('boas-vindas aberta:', await p.$eval('#boasVindas', d => d.open));
+await p.screenshot({ path: '/tmp/prototipo-prints/boas-vindas.png' });
+await p.click('#boasVindas button'); await new Promise(r=>setTimeout(r,100));
+console.log('boas-vindas fechada:', !(await p.$eval('#boasVindas', d => d.open)));
+// login com a unidade de quem testa; número que não existe cai no erro
+await p.evaluate(()=>location.hash='#entrar'); await new Promise(r=>setTimeout(r,100));
+await p.type('#login','9999'); await p.type('#senha','x'); await p.click('form button[type=submit]'); await new Promise(r=>setTimeout(r,100));
+console.log('9999 dá erro:', await p.evaluate(()=>location.hash) === '#entrar-erro');
+await p.$eval('#login', e => e.value = ''); await p.type('#login','2704'); await p.type('#senha','x'); await p.click('form button[type=submit]'); await new Promise(r=>setTimeout(r,100));
+console.log('2704 vê a própria placa:', (await p.$eval('#app', e => e.innerText)).includes('Bloco 2, apartamento 704'));
+await p.select('#perfil','voce'); await p.evaluate(()=>location.hash='#avisos'); await new Promise(r=>setTimeout(r,100));
+console.log('2704 no mural:', (await p.$eval('#app', e => e.innerText)).includes('704'));
 for (const [perf, h] of casos) {
   await p.select('#perfil', perf);
   await p.evaluate(x => { location.hash = '#' + x; }, h);
@@ -42,5 +55,7 @@ console.log('rolagem horizontal no pc:', larg);
 await p.select('#modo','cel'); await p.select('#tema','claro');
 await p.setViewport({ width: 390, height: 844 }); await p.evaluate(()=>location.hash='#avisos'); await new Promise(r=>setTimeout(r,100));
 await p.screenshot({ path: '/tmp/prototipo-prints/mobile-avisos.png' });
+const alt = await p.evaluate(() => [document.querySelector('.proto').offsetHeight, document.documentElement.scrollHeight, innerHeight]);
+console.log('celular: barra', alt[0] + 'px, página', alt[1], 'x tela', alt[2], alt[1] <= alt[2] ? '(sem rolar a página)' : '(PÁGINA ROLA)');
 console.log('ERROS:', erros.length ? erros : 'nenhum');
 await b.close();

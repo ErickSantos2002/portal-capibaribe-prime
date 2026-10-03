@@ -4,6 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Protótipo · Portal Capibaribe Prime</title>
+<!-- Rascunho com dados inventados: fora dos buscadores. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Rascunho do Portal dos moradores: avisos oficiais, enquetes e documentos num lugar só. Teste e dê sua opinião no grupo.">
+<!-- Prévia do link no WhatsApp. og:image precisa de endereço completo. -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:title" content="Portal Capibaribe Prime · protótipo para testar">
+<meta property="og:description" content="Avisos oficiais, enquetes e documentos do condomínio num lugar só. Experimente e diga no grupo o que achou.">
+<meta property="og:url" content="https://capibaribe-prototipo.vercel.app/">
+<meta property="og:image" content="https://capibaribe-prototipo.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Placa do apartamento Bloco 1, 101, com o nome Portal Capibaribe Prime">
+<meta name="theme-color" content="#1f5e3b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f5e3b'/%3E%3Crect x='6' y='8' width='20' height='16' rx='3' fill='none' stroke='%23fff' stroke-width='2.5'/%3E%3Crect x='6' y='21' width='20' height='3' fill='%23e8b22a'/%3E%3C/svg%3E">
 <!-- No protótipo a fonte vem do Google Fonts. No app real ela é servida pelo próprio Portal
      (nenhuma requisição a terceiros, LGPD). Sem internet, cai na fonte do sistema. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,6 +81,30 @@
   .proto select { font-size: 14px; padding: 4px 6px; border-radius: 6px; color: #17231c; }
   .proto a { color: #cfe3d6; margin-right: 10px; display: inline-block; }
   .proto details { width: 100%; }
+  .proto .so-cel-proto { display: none; }
+  .proto .ajuda-proto {
+    margin-left: auto; white-space: nowrap; background: #f0c14b; color: #17231c; border: 0; border-radius: 6px;
+    padding: 5px 12px; font-weight: 700; font-size: 14px; cursor: pointer;
+  }
+
+  /* ---------- boas-vindas (só do protótipo) ---------- */
+  .boas-vindas {
+    width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto;
+    border: 0; border-radius: 16px; padding: 28px 24px 24px; background: #fff; color: #17231c;
+    font-size: 17px; line-height: 1.5; box-shadow: 0 24px 60px rgba(0,0,0,.35);
+  }
+  .boas-vindas::backdrop { background: rgba(16, 23, 19, .62); }
+  .boas-vindas h2:focus { outline: none; }
+  .boas-vindas h2 { font-size: 24px; line-height: 1.2; margin: 6px 0 10px; color: #154129; }
+  .boas-vindas .selo { display: inline-block; background: #fbf0cf; color: #6b4a00; font-weight: 700; font-size: 14px; padding: 3px 10px; border-radius: 999px; }
+  .boas-vindas ol { padding-left: 22px; margin: 8px 0 14px; }
+  .boas-vindas li { margin-bottom: 6px; }
+  .boas-vindas .grupo { background: #e3eee6; border-radius: 10px; padding: 12px 14px; margin: 0 0 18px; }
+  .boas-vindas button {
+    width: 100%; min-height: 52px; border: 0; border-radius: 10px; background: #1f5e3b; color: #fff;
+    font-weight: 700; font-size: 18px; cursor: pointer;
+  }
+  .boas-vindas button:focus-visible { outline: 3px solid #9a6a00; outline-offset: 3px; }
 
   /* ---------- moldura ---------- */
   .palco { display: flex; justify-content: center; padding: 24px 16px 48px; }
@@ -75,9 +114,17 @@
     border: 10px solid #121614; border-radius: 34px; overflow: hidden; position: relative;
     display: flex; flex-direction: column; box-shadow: 0 18px 44px rgba(0,0,0,.22);
   }
+  /* Celular de verdade: a barra do protótipo vira uma linha e o app ocupa o resto da tela. */
   @media (max-width: 480px) {
-    .palco { padding: 0; }
-    .app { border: 0; border-radius: 0; height: calc(100vh - 40px); max-height: none; box-shadow: none; }
+    body { display: flex; flex-direction: column; height: 100dvh; }
+    .proto { padding: 8px 12px; gap: 8px; flex-wrap: nowrap; font-size: 13px; }
+    .proto .so-largo { display: none; }
+    .proto label { white-space: nowrap; }
+    .proto select { max-width: 175px; }
+    .proto .so-cel-proto { display: inline; }
+    .boas-vindas { padding: 22px 18px 18px; font-size: 16px; }
+    .palco { padding: 0; flex: 1; min-height: 0; }
+    .app { border: 0; border-radius: 0; height: 100%; max-height: none; box-shadow: none; }
   }
 
   /* ---------- topo ---------- */
@@ -302,22 +349,23 @@
 <body>
 
 <div class="proto" role="region" aria-label="Controles do protótipo">
-  <span><b>Protótipo</b>, com dados fictícios. Nada é salvo.</span>
+  <span><b>Protótipo</b><span class="so-largo">, com dados fictícios. Nada é salvo.</span></span>
   <label style="margin:0;font-weight:400">Ver como
     <select id="perfil">
-      <option value="socorro">Dona Socorro, unidade 1203</option>
-      <option value="rafael">Rafael, unidade 4203</option>
-      <option value="carla">Carla, unidade 2304 (Comissão)</option>
-      <option value="erick">Erick, unidade 1101 (administrador)</option>
+      <option value="socorro">Dona Socorro, 1203</option>
+      <option value="rafael">Rafael, 4203</option>
+      <option value="carla">Carla, Comissão, 2304</option>
+      <option value="erick">Erick, admin, 1101</option>
     </select>
   </label>
-  <label style="margin:0;font-weight:400">Tela
+  <label class="so-largo" style="margin:0;font-weight:400">Tela
     <select id="modo"><option value="cel">Celular</option><option value="pc">Computador</option></select>
   </label>
-  <label style="margin:0;font-weight:400">Tema
+  <label class="so-largo" style="margin:0;font-weight:400">Tema
     <select id="tema"><option value="claro">Claro</option><option value="escuro">Escuro</option></select>
   </label>
-  <details>
+  <button type="button" class="ajuda-proto" onclick="boasVindas.showModal()"><span class="so-largo">Como testar</span><span class="so-cel-proto">Ajuda</span></button>
+  <details class="so-largo">
     <summary style="min-height:auto">Ir direto para uma tela</summary>
     <a href="#entrar">Entrar</a><a href="#entrar-erro">Senha errada</a><a href="#entrar-bloqueio">Bloqueio</a>
     <a href="#esqueci">Esqueci a senha</a><a href="#primeiro-acesso">Primeiro acesso</a><a href="#instalar">Instalar</a>
@@ -331,6 +379,24 @@
 </div>
 
 <div class="palco"><div class="app" id="app" aria-live="polite"></div></div>
+
+<dialog class="boas-vindas" id="boasVindas" aria-labelledby="bv-titulo">
+  <span class="selo">Rascunho para testar</span>
+  <h2 id="bv-titulo" tabindex="-1" autofocus>Portal Capibaribe Prime</h2>
+  <p>Uma proposta de lugar oficial para os <b>avisos da Comissão</b>, as <b>enquetes</b> e os <b>documentos</b>
+    do condomínio, para nada importante se perder no meio do grupo.</p>
+  <p><b>Nada aqui é real.</b> Nomes e avisos são inventados, e o que você digitar não é salvo nem enviado a ninguém.</p>
+  <p style="margin-bottom:0"><b>Experimente:</b></p>
+  <ol>
+    <li>Entrar com o <b>seu</b> bloco e apartamento (ex.: Bloco 1, apto 101 = <b>1101</b>) e qualquer senha.</li>
+    <li>Abrir o aviso fixado e o que tem PDF.</li>
+    <li>Votar na enquete.</li>
+    <li>Achar um documento.</li>
+    <li>Em <b>Ver como</b>, na barra escura de cima, escolher a <b>Carla, da Comissão</b>, para ver o lado de quem publica.</li>
+  </ol>
+  <p class="grupo">Depois, conta no <b>grupo do WhatsApp</b>: o que foi fácil, onde travou e o que faltou. Crítica sincera ajuda mais que elogio.</p>
+  <form method="dialog"><button>Começar</button></form>
+</dialog>
 
 <script>
 /* ===================== Ícones (traço 2px, um estilo só) ===================== */
@@ -455,7 +521,7 @@ function telaEntrar(estado) {
       <div class="titulo">Portal Capibaribe Prime</div>
       <p class="suave">Os avisos oficiais do condomínio, num lugar só.</p></div>
     ${msg}
-    <form onsubmit="event.preventDefault(); location.hash='#primeiro-acesso'">
+    <form onsubmit="event.preventDefault(); entrarComo(this.login.value)">
       <label for="login">Bloco e apartamento</label>
       <input id="login" type="text" inputmode="numeric" autocomplete="username" required aria-describedby="ajuda-login">
       <p class="ajuda" id="ajuda-login">Escreva o número do bloco e, colado nele, o do apartamento, como na placa acima: Bloco 1, apartamento 101 vira <b>1101</b>.</p>
@@ -468,6 +534,20 @@ function telaEntrar(estado) {
     <p style="text-align:center;margin:12px 0 0"><a class="texto-link" href="#esqueci">Esqueci minha senha</a></p>
     <p style="text-align:center"><a class="texto-link" href="#publicos">Ver documentos públicos</a></p>`);
 }
+/* Quem testa entra com a própria unidade e passa a ver a própria placa.
+   Bloco 1–5, andar 0–7, posição 01–08: 1203, 1101, 5708… Fora disso, a mesma mensagem do app real. */
+function entrarComo(valor) {
+  const u = valor.replace(/\D/g, "");
+  if (!/^[1-5][0-7]0[1-8]$/.test(u)) { location.hash = "#entrar-erro"; return; }
+  PERFIS.voce = { unidade: u, nome: "Você", papel: null, email: null };
+  const sel = document.getElementById("perfil");
+  let op = sel.querySelector('option[value="voce"]');
+  if (!op) { op = new Option("", "voce"); sel.prepend(op); }
+  op.textContent = `Você, ${u}`;
+  sel.value = perfil = "voce";
+  location.hash = "#primeiro-acesso";
+}
+window.entrarComo = entrarComo;
 function telaEsqueci(ok) {
   return tela(topo("Esqueci minha senha", true), ok ? `
     <div class="aviso-caixa info" role="status">${ic("info")}<p>Se esta unidade tiver e-mail cadastrado, mandamos um link para criar uma senha nova. O link vale por 1 hora.</p></div>
@@ -814,7 +894,15 @@ document.getElementById("perfil").addEventListener("change", e => { perfil = e.t
 document.getElementById("modo").addEventListener("change", e => { modo = e.target.value; render(); });
 document.getElementById("tema").addEventListener("change", e => app.classList.toggle("escuro", e.target.value === "escuro"));
 addEventListener("hashchange", render);
+// Começa no tema do aparelho de quem abre.
+if (matchMedia("(prefers-color-scheme: dark)").matches) { document.getElementById("tema").value = "escuro"; app.classList.add("escuro"); }
 render();
+
+// Boas-vindas só na primeira visita; depois, pelo botão "Como testar".
+let jaViu = false;
+try { jaViu = localStorage.getItem("prototipo-viu-boas-vindas") === "1"; } catch {}
+if (!jaViu) boasVindas.showModal();
+boasVindas.addEventListener("close", () => { try { localStorage.setItem("prototipo-viu-boas-vindas", "1"); } catch {} });
 </script>
 </body>
 </html>
