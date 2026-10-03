@@ -10,9 +10,6 @@ Decisão do autor (02/10/2026): uma conta por unidade, login = bloco + apartamen
 senha inicial `mudar123` igual para todos, troca obrigatória no primeiro acesso. Nenhum serviço
 de autenticação pronto tem esse modelo, e todos pedem e-mail, que aqui é opcional.
 
-Revisão 03/10/2026: na **tela**, bloco e apartamento viraram campos separados (sugestão de um
-vizinho no teste do protótipo). O login guardado e enviado à API continua `1101`; quem junta é a tela.
-
 ## Decisão
 - **Senha:** hash Argon2id (`argon2-cffi`, parâmetros padrão da biblioteca).
 - **Sessão:** token aleatório de 32 bytes num cookie `HttpOnly`, `Secure`, `SameSite=Lax`.
