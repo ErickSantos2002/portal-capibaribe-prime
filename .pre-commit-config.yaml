@@ -1,0 +1,36 @@
+# Checagens que rodam sozinhas a cada commit. Instalar o gancho uma vez por clone:
+#   pre-commit install
+# Rodar em tudo, sem commitar:  pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      # Segredo (chave de API, token, senha) não sai da máquina.
+      # Usa o gitleaks do sistema (pacman -S gitleaks).
+      - id: gitleaks
+        name: gitleaks (segredos)
+        entry: gitleaks git --pre-commit --staged --redact --no-banner
+        language: system
+        pass_filenames: false
+
+      # Mudou o protótipo? Roda o teste no Chrome; falha barra o commit.
+      - id: testar-prototipo
+        name: teste do protótipo
+        entry: node scripts/dev/testar-prototipo.mjs
+        language: system
+        files: ^(prototipo/index\.html|scripts/dev/testar-prototipo\.mjs)$
+        pass_filenames: false
