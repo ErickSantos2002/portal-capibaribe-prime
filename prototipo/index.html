@@ -40,7 +40,8 @@
     --folha: #ffffff;
     --tinta: #17231c;
     --tinta-suave: #4a5a50;
-    --linha: #cfd8d1;
+    --linha: #cfd8d1;       /* divisória de cartão (decorativa) */
+    --borda: #7a8a80;       /* borda de controle (campo, opção, botão de bloco): 3,6:1 no branco, WCAG 1.4.11 */
     --erro: #a3322a;
     --erro-suave: #f8e4e1;
     --sobre-mata: #ffffff;
@@ -61,6 +62,7 @@
     --tinta: #e8efe9;
     --tinta-suave: #a9b8ae;
     --linha: #314038;
+    --borda: #6b7d72;
     --erro: #f19a90;
     --erro-suave: #3a1d1a;
     --sobre-mata: #0d1a12;
@@ -163,6 +165,11 @@
 
   /* ---------- área de conteúdo ---------- */
   .conteudo { flex: 1; overflow-y: auto; padding: 20px 16px 28px; }
+  /* Com botão flutuante, sobra espaço no fim para ele não cobrir o último item. */
+  .conteudo:has(+ .flutuante) { padding-bottom: 100px; }
+  .texto-aviso p { white-space: pre-line; }
+  .previa { border: 2px dashed var(--borda); border-radius: var(--r-medio); padding: 12px; margin: 18px 0 0; }
+  .previa .item { pointer-events: none; }
   .conteudo > :first-child { margin-top: 0; }
   h2 { font-size: 26px; line-height: 1.2; margin: 0 0 8px; }
   h3 { font-size: 19px; line-height: 1.3; margin: 0; }
@@ -218,7 +225,7 @@
   input[type=text], input[type=password], input[type=tel], input[type=email], input[type=search],
   input[type=datetime-local], textarea, select {
     width: 100%; min-height: 54px; padding: 12px 14px; font-size: 18px; background: var(--folha);
-    border: 2px solid var(--linha); border-radius: var(--r-pequeno);
+    border: 2px solid var(--borda); border-radius: var(--r-pequeno);
   }
   /* Campo de uma linha com a mesma altura dos botões (56px): a coluna fica com um ritmo só. */
   .app :is(input[type=text], input[type=password], input[type=tel], input[type=email], input[type=search],
@@ -226,6 +233,8 @@
   input:hover, textarea:hover, select:hover { border-color: var(--tinta-suave); }
   textarea { min-height: 140px; resize: vertical; }
   :focus-visible { outline: 3px solid var(--ipe-forte); outline-offset: 2px; }
+  /* Sobre o verde (topo e menu lateral), o ipê-forte some (1,6:1); o ipê claro dá 4:1. */
+  .topo :focus-visible, .pc .nav :focus-visible { outline-color: var(--ipe); }
   input:focus-visible, textarea:focus-visible, select:focus-visible { border-color: var(--mata); }
 
   .botao {
@@ -251,14 +260,14 @@
 
   .opcao {
     display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 12px 16px; margin: 0 0 10px;
-    border: 2px solid var(--linha); border-radius: var(--r-pequeno); background: var(--folha); cursor: pointer; font-weight: 400;
+    border: 2px solid var(--borda); border-radius: var(--r-pequeno); background: var(--folha); cursor: pointer; font-weight: 400;
   }
   .opcao input { width: 24px; height: 24px; accent-color: var(--mata); flex: none; margin: 0; }
   .opcao:has(input:checked) { border-color: var(--mata); background: var(--mata-suave); font-weight: 700; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
-    min-height: 44px; padding: 8px 16px; border-radius: 22px; border: 2px solid var(--linha);
+    min-height: 44px; padding: 8px 16px; border-radius: 22px; border: 2px solid var(--borda);
     background: var(--folha); cursor: pointer;
   }
   .chip[aria-pressed=true] { border-color: var(--mata); background: var(--mata-suave); font-weight: 700; }
@@ -270,7 +279,7 @@
   .blocos-op label { margin: 0; }
   .blocos-op input { position: absolute; opacity: 0; width: 1px; height: 1px; }
   .blocos-op span {
-    display: grid; place-items: center; min-height: 56px; border: 2px solid var(--linha); border-radius: var(--r-pequeno);
+    display: grid; place-items: center; min-height: 56px; border: 2px solid var(--borda); border-radius: var(--r-pequeno);
     background: var(--folha); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer;
   }
   .blocos-op input:checked + span { border-color: var(--mata); background: var(--mata-suave); color: var(--mata-forte); box-shadow: inset 0 -4px 0 var(--mata); }
@@ -304,8 +313,8 @@
   .resumo b { display: block; font-size: 28px; color: var(--mata); font-variant-numeric: tabular-nums; }
   .grade { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
   .grade a {
-    font-size: 12px; text-align: center; padding: 7px 0; border-radius: 5px; text-decoration: none;
-    background: var(--folha); color: var(--tinta-suave); border: 1px solid var(--linha); font-variant-numeric: tabular-nums;
+    font-size: 13px; display: grid; place-items: center; min-height: 44px; border-radius: 5px; text-decoration: none;
+    background: var(--folha); color: var(--tinta-suave); border: 1px solid var(--borda); font-variant-numeric: tabular-nums;
   }
   .grade a.at { background: var(--mata); color: var(--sobre-mata); border-color: var(--mata); }
   .grade a.ge { box-shadow: inset 0 -4px 0 var(--ipe-forte); }
@@ -321,7 +330,7 @@
   .ficha dd { margin: 0; font-weight: 700; text-align: right; }
 
   .entrada { text-align: center; padding-top: 12px; }
-  .entrada .titulo { font-size: 30px; font-weight: 700; line-height: 1.1; color: var(--mata-forte); margin: 14px 0 4px; }
+  .entrada h1.titulo { font-size: 30px; font-weight: 700; line-height: 1.1; color: var(--mata-forte); margin: 14px 0 4px; }
 
   .flutuante {
     position: absolute; right: 16px; bottom: 82px; display: inline-flex; align-items: center; gap: 8px;
@@ -336,6 +345,9 @@
   .recado.on { opacity: 1; transform: none; }
   .vazio { text-align: center; color: var(--tinta-suave); padding: 32px 8px; margin: 0; }
   details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  /* Seta à direita: sem ela, o que abre e fecha parece título solto. */
+  details summary::after { content: ""; margin-left: auto; width: 10px; height: 10px; border: solid currentColor; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-3px, -3px); flex: none; }
+  details[open] > summary::after { transform: rotate(-135deg) translate(-3px, -3px); }
   ol.passos { margin: 4px 0 12px; padding-left: 24px; }
   ol.passos li { margin-bottom: 6px; }
   .oculto { position: absolute; left: -9999px; }
@@ -407,7 +419,7 @@
   </details>
 </div>
 
-<div class="palco"><div class="app" id="app" aria-live="polite"></div></div>
+<div class="palco"><div class="app" id="app"></div></div>
 
 <dialog class="boas-vindas" id="boasVindas" aria-labelledby="bv-titulo">
   <span class="selo">Rascunho para testar</span>
@@ -471,19 +483,19 @@ let perfil = "socorro", modo = "cel";
 const eu = () => PERFIS[perfil];
 const gestao = () => !!eu().papel;
 const blocoDe = u => Number(u[0]);
-const placa = (u, cls = "") => `<span class="placa ${cls}" role="img" aria-label="Bloco ${u[0]}, apartamento ${u.slice(1)}"><small>Bloco ${u[0]}</small><strong>${u.slice(1)}</strong></span>`;
+const placa = (u, cls = "", decorativa) => `<span class="placa ${cls}" ${decorativa ? 'aria-hidden="true"' : `role="img" aria-label="Bloco ${u[0]}, apartamento ${u.slice(1)}"`}><small>Bloco ${u[0]}</small><strong>${u.slice(1)}</strong></span>`;
 
 const avisos = [
-  { id: 1, titulo: "Bem-vindos ao Portal Capibaribe Prime", data: "28 de outubro", fixado: true, blocos: null, leram: 214,
+  { id: 1, titulo: "Bem-vindos ao Portal Capibaribe Prime", data: "28 de outubro", quando: "2026-10-28", fixado: true, blocos: null, leram: 214,
     texto: "A partir de agora, os avisos oficiais da Comissão saem aqui. O grupo do WhatsApp continua para conversa, mas o que é oficial fica registrado no Portal.\n\nColoque o Portal na tela inicial do celular para receber as notificações.",
     lido: { socorro: 1, rafael: 1, carla: 1, erick: 1 } },
-  { id: 2, titulo: "Vistoria da obra no dia 15 de novembro", data: "3 de novembro", blocos: null, leram: 141,
+  { id: 2, titulo: "Vistoria da obra no dia 15 de novembro", data: "3 de novembro", quando: "2026-11-03", blocos: null, leram: 141,
     texto: "A construtora liberou uma visita guiada ao canteiro no sábado, 15 de novembro, às 9h. Vagas limitadas a uma pessoa por unidade.\n\nAs regras de segurança estão no PDF anexo.",
     anexo: { tipo: "pdf", nome: "Regras da visita à obra", tam: "320 KB" }, lido: { carla: 1, erick: 1 } },
-  { id: 3, titulo: "Fundação do Bloco 4 concluída", data: "1º de novembro", blocos: [4, 5], leram: 37,
+  { id: 3, titulo: "Fundação do Bloco 4 concluída", data: "1º de novembro", quando: "2026-11-01", blocos: [4, 5], leram: 37,
     texto: "A construtora informou que a fundação do Bloco 4 foi concluída. A engenharia enviou a foto abaixo.",
     anexo: { tipo: "img", nome: "fundação do Bloco 4" }, lido: {} },
-  { id: 4, titulo: "Reunião com a construtora: horário corrigido", data: "25 de outubro", corrigido: "26 de outubro", blocos: null, leram: 266,
+  { id: 4, titulo: "Reunião com a construtora: horário corrigido", data: "25 de outubro", quando: "2026-10-25", corrigido: "26 de outubro", blocos: null, leram: 266,
     texto: "A reunião com a construtora será às 19h30 (e não às 19h, como dito antes), no salão da igreja da Várzea.",
     anterior: "A reunião com a construtora será às 19h, no salão da igreja da Várzea.", lido: { socorro: 1, carla: 1, erick: 1 } },
 ];
@@ -509,20 +521,28 @@ const GESTAO = { "2304": "Comissão", "1408": "Comissão", "3105": "Comissão", 
 
 /* ===================== Utilitários ===================== */
 const app = document.getElementById("app");
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const paragrafos = t => esc(t).split("\n\n").map(p => `<p>${p}</p>`).join("");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// parágrafo = linha em branco; quebra simples continua quebra (CSS pre-line em .texto-aviso)
+const paragrafos = t => `<div class="texto-aviso">${esc(t).split("\n\n").map(p => `<p>${p}</p>`).join("")}</div>`;
+// busca sem acento e sem maiúscula: "fundacao" acha "Fundação"
+const semAcento = t => t.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+const UNIDADE_OK = /^[1-5][0-7]0[1-8]$/;
 const visivel = a => !a.blocos || a.blocos.includes(blocoDe(eu().unidade));
 const naoLidos = () => avisos.filter(a => visivel(a) && !a.lido[perfil]).length;
+/* Uma região de status só, criada uma vez e reposta a cada tela: o leitor de tela precisa que ela
+   já exista antes do texto mudar, senão o recado não é anunciado. */
+const recadoEl = Object.assign(document.createElement("div"), { className: "recado" });
+recadoEl.setAttribute("role", "status");
 function recado(msg) {
-  const r = app.querySelector(".recado"); if (!r) return;
-  r.textContent = msg; r.classList.add("on"); clearTimeout(r._t);
+  const r = recadoEl; clearTimeout(r._t);
+  requestAnimationFrame(() => { r.textContent = msg; r.classList.add("on"); });
   r._t = setTimeout(() => r.classList.remove("on"), 2600);
 }
 window.recado = recado;
 
 function topo(titulo, voltar) {
   return `<header class="topo">
-    ${voltar ? `<button class="voltar" onclick="history.back()">${ic("voltar", 28, "Voltar")}</button>` : ""}
+    ${voltar ? `<button class="voltar" onclick="voltar()">${ic("voltar", 28, "Voltar")}</button>` : ""}
     <h1>${titulo}</h1>
     ${voltar === undefined ? placa(eu().unidade, gestao() ? "gestao" : "") : ""}
     ${botaoTema()}
@@ -554,19 +574,32 @@ function nav(ativa) {
   </nav>`;
 }
 const tela = (cab, corpo, aba, extra = "") =>
-  `${cab}<main class="conteudo">${corpo}</main>${extra}${aba ? nav(aba) : ""}<div class="recado" role="status"></div>`;
+  `${cab}<main class="conteudo" tabindex="-1">${corpo}</main>${extra}${aba ? nav(aba) : ""}`;
+const naoEncontrado = () => tela(topo("Não encontrado", true), `
+  <div class="aviso-caixa atencao">${ic("alerta")}<p>Não achamos esta página. O link pode estar incompleto, ou ela é de outro bloco.</p></div>
+  <a class="botao" href="#avisos">Ir para o mural</a>`);
 
 /* ===================== Acesso ===================== */
+// Valida o formulário com mensagem em português simples, em cima do formulário, e leva o foco ao campo.
+function erroForm(form, msg, campo) {
+  let c = form.querySelector(".erro-form");
+  if (!c) { c = document.createElement("div"); form.prepend(c); }
+  c.className = "aviso-caixa erro erro-form"; c.setAttribute("role", "alert");
+  c.innerHTML = `${ic("alerta")}<p>${msg}</p>`;
+  (campo || c).focus();
+  return false;
+}
+const limpo = id => document.getElementById(id).value.trim();
 function telaEntrar(estado) {
   const msg = {
-    erro: `<div class="aviso-caixa erro" role="alert">${ic("alerta")}<p>Bloco, apartamento ou senha incorretos. Confira e tente de novo.</p></div>`,
+    erro: telaEntrar.erro,
     bloqueio: `<div class="aviso-caixa erro" role="alert">${ic("cadeado")}<div><p><b>Entrada bloqueada por 12 minutos</b> depois de várias senhas erradas.</p><p>Se não foi você, avise a administração do Portal no grupo do WhatsApp.</p></div></div>`,
   }[estado] || "";
   return tela(botaoTema("solto"), `
-    <div class="entrada">${placa("1101", "grande")}
-      <div class="titulo">Portal Capibaribe Prime</div>
+    <div class="entrada">${placa("1101", "grande", true)}
+      <h1 class="titulo">Portal Capibaribe Prime</h1>
       <p class="suave">Os avisos oficiais do condomínio, num lugar só.</p></div>
-    ${msg}
+    <div id="msg-entrar">${msg}</div>
     <form onsubmit="event.preventDefault(); entrarComo(this.bloco.value, this.apto.value)">
       ${campoUnidade("login")}
       <label for="senha">Senha</label>
@@ -576,8 +609,10 @@ function telaEntrar(estado) {
       <button class="botao" type="submit">Entrar</button>
     </form>
     <p style="text-align:center;margin:12px 0 0"><a class="texto-link" href="#esqueci">Esqueci minha senha</a></p>
-    <p style="text-align:center"><a class="texto-link" href="#publicos">Ver documentos públicos</a></p>`);
+    <p style="text-align:center"><a class="texto-link" href="#publicos">Ver documentos públicos</a></p>
+    <p style="text-align:center"><button type="button" class="texto-link" onclick="boasVindas.showModal()">Como testar este rascunho</button></p>`);
 }
+telaEntrar.erro = `<div class="aviso-caixa erro" role="alert">${ic("alerta")}<p>Bloco, apartamento ou senha incorretos. Confira e tente de novo.</p></div>`;
 /* Bloco em botões (são só 5) e apartamento num campo à parte: ninguém precisa saber que
    "Bloco 1, apto 101" vira 1101. A tela junta os dois e manda o login de sempre para a API. */
 function campoUnidade(id) {
@@ -585,21 +620,42 @@ function campoUnidade(id) {
       <div class="blocos-op">${[1, 2, 3, 4, 5].map(b =>
         `<label><input type="radio" name="bloco" value="${b}" required aria-label="Bloco ${b}"><span>${b}</span></label>`).join("")}</div></fieldset>
     <label for="${id}">Apartamento</label>
-    <input id="${id}" name="apto" class="apto" type="text" inputmode="numeric" maxlength="3" pattern="[0-9]{1,3}" oninput="this.value = this.value.replace(/\\D/g, '')" autocomplete="off" required aria-describedby="ajuda-${id}">
+    <input id="${id}" name="apto" class="apto" type="text" inputmode="numeric" pattern="[0-9]{1,3}" oninput="soApto(this, event)" autocomplete="off" required aria-describedby="ajuda-${id}">
     <p class="ajuda" id="ajuda-${id}">O número da porta, como 101. No térreo, 007 ou só 7.</p>`;
 }
+/* Sem maxlength de propósito: ele cortava o texto colado ANTES de limpar ("Apto 502" virava vazio).
+   Aqui limpa primeiro e corta depois. Quem COLAR o login antigo inteiro (1203) ganha o bloco marcado;
+   digitando, o 4º dígito só é ignorado. */
+window.soApto = (el, ev) => {
+  let d = el.value.replace(/\D/g, "");
+  if (ev && ev.inputType === "insertFromPaste" && d.length === 4 && /[1-5]/.test(d[0])) {
+    const r = el.form.querySelector(`input[name=bloco][value="${d[0]}"]`); if (r) r.checked = true;
+    d = d.slice(1);
+  }
+  el.value = d.slice(0, 3);
+};
 /* Quem testa entra com a própria unidade e passa a ver a própria placa.
    Bloco 1–5, andar 0–7, posição 01–08: 1203, 1101, 5708… Fora disso, a mesma mensagem do app real. */
 function entrarComo(bloco, apto) {
   const u = bloco + apto.replace(/\D/g, "").padStart(3, "0");
-  if (!/^[1-5][0-7]0[1-8]$/.test(u)) { location.hash = "#entrar-erro"; return; }
+  if (!UNIDADE_OK.test(u)) {
+    // Erro sem redesenhar a tela: o que a pessoa escolheu e digitou fica onde estava.
+    const m = document.getElementById("msg-entrar");
+    m.innerHTML = telaEntrar.erro; m.querySelector("[role=alert]").setAttribute("tabindex", "-1");
+    document.getElementById("login").focus(); document.getElementById("login").select();
+    return;
+  }
+  entrarComUnidade(u);
+  location.hash = "#primeiro-acesso";
+}
+function entrarComUnidade(u) {
   PERFIS.voce = { unidade: u, nome: "Você", papel: null, email: null };
+  try { sessionStorage.setItem("prototipo-unidade", u); } catch {}
   const sel = document.getElementById("perfil");
   let op = sel.querySelector('option[value="voce"]');
   if (!op) { op = new Option("", "voce"); sel.prepend(op); }
   op.textContent = `Você, ${u}`;
   sel.value = perfil = "voce";
-  location.hash = "#primeiro-acesso";
 }
 window.entrarComo = entrarComo;
 function telaEsqueci(ok) {
@@ -608,16 +664,18 @@ function telaEsqueci(ok) {
     <p>Sem e-mail cadastrado, fale com a administração do Portal no grupo do WhatsApp. Ela volta sua senha para a inicial.</p>
     <a class="botao leve" href="#entrar">Voltar para a entrada</a>` : `
     <p>Escreva o bloco e o apartamento. Se houver e-mail cadastrado, mandamos um link para criar uma senha nova.</p>
+    <form onsubmit="event.preventDefault(); if (UNIDADE_OK.test(this.bloco.value + this.apto.value.padStart(3, '0'))) location.hash='#esqueci-ok'; else erroForm(this, 'Esse apartamento não existe. Confira o bloco e o número da porta.', this.apto)">
     ${campoUnidade("l2")}
     <div style="height:20px"></div>
-    <button class="botao" onclick="location.hash='#esqueci-ok'">Mandar link</button>`);
+    <button class="botao" type="submit">Mandar link</button></form>`);
 }
 function telaPrimeiroAcesso() {
   const u = eu().unidade;
   return tela(topo("Primeiro acesso", false), `
     <div style="text-align:center">${placa(u, "grande")}</div>
     <div class="aviso-caixa atencao">${ic("alerta")}<p>Esta conta é da família do <b>Bloco ${u[0]}, apartamento ${u.slice(1)}</b>. Se este não é o seu apartamento, pare aqui.</p></div>
-    <form onsubmit="event.preventDefault(); location.hash='#instalar'">
+    <button type="button" class="botao leve" onclick="naoEMeu()">Não é o meu apartamento, voltar</button>
+    <form onsubmit="event.preventDefault(); salvarPrimeiroAcesso(this)">
       <div class="lado">
         <div><label for="s1">Senha nova</label><input id="s1" type="password" autocomplete="new-password" required aria-describedby="a1">
         <p class="ajuda" id="a1">Pelo menos 8 letras ou números. A família toda vai usar.</p></div>
@@ -631,8 +689,22 @@ function telaPrimeiroAcesso() {
       <div style="height:20px"></div>
       <button class="botao" type="submit">Salvar e entrar</button>
     </form>
-    <p class="ajuda" style="margin-top:16px">Guardamos só nome, celular e e-mail, para os fins da <a class="texto-link" href="#">política de privacidade</a>.</p>`);
+    <p class="ajuda" style="margin-top:16px">Guardamos só nome, celular e e-mail, para os fins da <button type="button" class="texto-link" onclick="recado('No app real, abre a política de privacidade.')">política de privacidade</button>.</p>`);
 }
+window.naoEMeu = () => {
+  try { sessionStorage.removeItem("prototipo-unidade"); } catch {}
+  location.hash = "#entrar";
+};
+window.salvarPrimeiroAcesso = f => {
+  const s1 = f.s1.value, cel = f.cel.value.replace(/\D/g, "");
+  if (s1.length < 8) return erroForm(f, "A senha nova precisa ter pelo menos 8 letras ou números.", f.s1);
+  if (s1 === "mudar123") return erroForm(f, "Escolha uma senha diferente da inicial, que todo mundo conhece.", f.s1);
+  if (s1 !== f.s2.value) return erroForm(f, "As duas senhas estão diferentes. Escreva a mesma nas duas.", f.s2);
+  if (!limpo("nm")) return erroForm(f, "Escreva o nome de quem responde pela unidade.", f.nm);
+  if (cel.length < 10 || cel.length > 11) return erroForm(f, "Confira o celular: DDD e número, como (81) 9 1234-5678.", f.cel);
+  Object.assign(eu(), { nome: limpo("nm"), cel: f.cel.value.trim(), email: limpo("em") || null });
+  location.hash = "#instalar";
+};
 function telaInstalar() {
   return tela(topo("Receber os avisos", false), `
     <h2>Quer ser avisado na hora?</h2>
@@ -675,10 +747,10 @@ function itemAviso(a) {
   </a>`;
 }
 function telaAvisos() {
-  const lista = avisos.filter(visivel).sort((x, y) => y.id - x.id);
+  const lista = avisos.filter(visivel).sort((x, y) => y.quando.localeCompare(x.quando) || y.id - x.id);
   const fix = lista.filter(a => a.fixado), resto = lista.filter(a => !a.fixado);
   return tela(topo("Avisos"), `
-    ${fix.map(a => `<a class="fixado" href="#aviso/${a.id}"><span class="rotulo">${ic("pino", 20)} Fixado pela Comissão</span>
+    ${fix.map(a => `<a class="fixado" href="#aviso/${a.id}"><span class="rotulo">${ic("pino", 20)} Fixado pela Comissão${a.lido[perfil] ? "" : ` <span class="selo novo">Novo</span>`}</span>
       <h3>${esc(a.titulo)}</h3><p>${esc(a.texto.split("\n")[0])}</p></a>`).join("")}
     <label for="busca" class="com-icone" style="margin-top:0">${ic("busca", 20)} Procurar nos avisos</label>
     <input id="busca" type="search" oninput="filtrar(this.value)">
@@ -687,12 +759,13 @@ function telaAvisos() {
     "avisos", gestao() ? `<a class="flutuante" href="#novo-aviso">${ic("mais")} Novo aviso</a>` : "");
 }
 window.filtrar = q => {
-  q = q.toLowerCase();
-  const l = avisos.filter(visivel).filter(a => !a.fixado && (a.titulo + a.texto).toLowerCase().includes(q));
+  q = semAcento(q.trim());
+  const l = avisos.filter(visivel).sort((x, y) => y.quando.localeCompare(x.quando) || y.id - x.id)
+    .filter(a => (q ? true : !a.fixado) && semAcento(a.titulo + " " + a.texto).includes(q));
   document.getElementById("lista").innerHTML = l.length ? l.map(itemAviso).join("") : `<p class="vazio">Nenhum aviso com essas palavras. Tente outra palavra.</p>`;
 };
 function telaAviso(id) {
-  const a = avisos.find(x => x.id === id); if (!a) return telaAvisos();
+  const a = avisos.find(x => x.id === id); if (!a || !visivel(a)) return naoEncontrado();
   a.lido[perfil] = 1;
   const total = a.blocos ? a.blocos.length * 64 : 320;
   return tela(topo("Aviso", true), `
@@ -711,7 +784,8 @@ function telaAviso(id) {
       <button class="botao leve" onclick="recado('O aviso sai do mural e fica em Avisos arquivados.')">${ic("arquivar")} Arquivar</button>` : ""}`);
 }
 function telaLeitura(id) {
-  const a = avisos.find(x => x.id === id);
+  if (!gestao()) return semPermissao();
+  const a = avisos.find(x => x.id === id); if (!a) return naoEncontrado();
   const total = a.blocos ? a.blocos.length * 64 : 320;
   const falta = UNIDADES.filter(u => !a.blocos || a.blocos.includes(u.bloco)).slice(0, 40);
   return tela(topo("Quem leu", true), `
@@ -743,7 +817,8 @@ function resultado(e) {
     `<p class="ajuda">${tot} de 320 apartamentos votaram (${Math.round(tot * 100 / 320)}%).</p>`;
 }
 function telaEnquete(id) {
-  const e = enquetes.find(x => x.id === id), meu = e.votou[perfil], u = eu().unidade;
+  const e = enquetes.find(x => x.id === id); if (!e) return naoEncontrado();
+  const meu = e.votou[perfil], u = eu().unidade;
   return tela(topo("Enquete", true), `
     <h2>${esc(e.pergunta)}</h2>
     ${e.aberta ? `
@@ -764,7 +839,7 @@ function telaEnquete(id) {
 window.votar = id => {
   const e = enquetes.find(x => x.id === id), i = Number(document.querySelector("input[name=op]:checked").value);
   if (e.votou[perfil] !== undefined) e.opcoes[e.votou[perfil]][1]--;
-  e.opcoes[i][1]++; e.votou[perfil] = i; render(); recado("Voto registrado pelo apartamento " + eu().unidade.slice(1) + ".");
+  e.opcoes[i][1]++; e.votou[perfil] = i; render(); recado(`Voto registrado: Bloco ${eu().unidade[0]}, apartamento ${eu().unidade.slice(1)}.`);
 };
 
 /* ===================== Documentos ===================== */
@@ -774,13 +849,20 @@ function itemDoc(d) {
     <span class="linha-meta"><span>${d.data}</span>${d.versao ? `<span>versão ${d.versao}</span>` : ""}
     ${d.acesso === "gestao" ? `<span class="tag">${ic("cadeado", 16)} só a Comissão vê</span>` : ""}</span></a>`;
 }
+const docsVisiveis = () => documentos.filter(d => d.acesso !== "gestao" || gestao());
+const listaDocs = docs => [...new Set(docs.map(d => d.cat))]
+  .map(c => `<p class="secao">${c}</p><div class="folha">${docs.filter(d => d.cat === c).map(itemDoc).join("")}</div>`).join("")
+  || `<p class="vazio">Nenhum documento com essas palavras. Tente outra palavra.</p>`;
+window.filtrarDocs = q => {
+  q = semAcento(q.trim());
+  document.getElementById("lista-docs").innerHTML = listaDocs(docsVisiveis().filter(d => semAcento(d.titulo + " " + d.cat).includes(q)));
+};
 function telaDocumentos() {
-  const docs = documentos.filter(d => d.acesso !== "gestao" || gestao());
-  const cats = [...new Set(docs.map(d => d.cat))];
+  const docs = docsVisiveis();
   return tela(topo("Documentos"), `
     <label for="bd" class="com-icone" style="margin-top:0">${ic("busca", 20)} Procurar documento</label>
-    <input id="bd" type="search">
-    ${cats.map(c => `<p class="secao">${c}</p><div class="folha">${docs.filter(d => d.cat === c).map(itemDoc).join("")}</div>`).join("")}`,
+    <input id="bd" type="search" oninput="filtrarDocs(this.value)">
+    <div id="lista-docs">${listaDocs(docs)}</div>`,
     "documentos", gestao() ? `<a class="flutuante" href="#novo-documento">${ic("mais")} Novo documento</a>` : "");
 }
 
@@ -791,8 +873,8 @@ function telaMinhaUnidade() {
     <dl class="ficha">
       <div><dt>Apartamento</dt><dd>Bloco ${u.unidade[0]}, ${u.unidade.slice(1)}</dd></div>
       <div><dt>Responsável</dt><dd>${esc(u.nome)}</dd></div>
-      <div><dt>Celular</dt><dd>(81) 9 0000-0000</dd></div>
-      <div><dt>E-mail</dt><dd>${u.email || "não informado"}</dd></div>
+      <div><dt>Celular</dt><dd>${esc(u.cel || "(81) 9 0000-0000")}</dd></div>
+      <div><dt>E-mail</dt><dd>${esc(u.email || "não informado")}</dd></div>
       ${u.papel ? `<div><dt>Papel</dt><dd>${u.papel === "admin" ? "Administrador" : "Comissão"}</dd></div>` : ""}
     </dl>
     <button class="botao leve" onclick="recado('Abre os dados para editar.')">${ic("editar")} Mudar meus dados</button>
@@ -823,36 +905,57 @@ window.chip = el => {
 };
 const destino = () => `<label id="dest">Para quem</label>
   <div class="chips" role="group" aria-labelledby="dest"><button type="button" class="chip" data-todos aria-pressed="true" onclick="chip(this)">Todos os blocos</button>
-  ${[1, 2, 3, 4, 5].map(b => `<button type="button" class="chip" aria-pressed="false" onclick="chip(this)">Bloco ${b}</button>`).join("")}</div>`;
+  ${[1, 2, 3, 4, 5].map(b => `<button type="button" class="chip" data-bloco="${b}" aria-pressed="false" onclick="chip(this)">Bloco ${b}</button>`).join("")}</div>`;
+const blocosEscolhidos = f => [...f.querySelectorAll(".chip[data-bloco][aria-pressed=true]")].map(c => Number(c.dataset.bloco));
 const semPermissao = () => tela(topo("Sem permissão", true), `<div class="aviso-caixa erro">${ic("cadeado")}<p>Esta tela é só da Comissão e da administração. No protótipo, troque o perfil em "Ver como".</p></div>`);
 function telaNovoAviso() {
   if (!gestao()) return semPermissao();
   return tela(topo("Novo aviso", true), `
-    <form onsubmit="event.preventDefault(); publicar()">
+    <form onsubmit="event.preventDefault(); publicar(this)" oninput="mudouAviso(this)" onclick="if (event.target.closest('.chip')) mudouAviso(this)">
       <label for="t">Título</label><input id="t" type="text" required maxlength="120">
       <label for="x">Texto do aviso</label><textarea id="x" required></textarea>
       <label>Anexo, se tiver</label>
       <button type="button" class="botao leve" onclick="recado('Abre os arquivos. Fotos são reduzidas antes de enviar.')">${ic("clipe")} Anexar PDF ou foto</button>
       <p class="ajuda">Até 10 MB cada.</p>
       ${destino()}
-      <label class="opcao" style="margin-top:18px"><input type="checkbox"> Fixar no topo do mural</label>
+      <label class="opcao" style="margin-top:18px"><input type="checkbox" name="fixar"> Fixar no topo do mural</label>
       <div class="aviso-caixa info">${ic("sino")}<p>Vai para <b id="alvo">320</b> apartamentos, com notificação, e por e-mail para quem cadastrou.</p></div>
-      <button class="botao" type="submit">Publicar aviso</button>
+      <div id="previa"></div>
+      <button class="botao" type="submit">Ver prévia</button>
     </form>`);
 }
-window.publicar = () => {
-  avisos.push({ id: avisos.length + 1, titulo: document.getElementById("t").value, texto: document.getElementById("x").value, data: "hoje", blocos: null, leram: 1, lido: { [perfil]: 1 } });
+window.mudouAviso = f => {
+  if (f.dataset.previa !== "1") return;
+  f.dataset.previa = ""; document.getElementById("previa").innerHTML = "";
+  f.querySelector("button[type=submit]").textContent = "Ver prévia";
+};
+/* Primeiro clique mostra a prévia (H-12); o segundo publica. Mexeu em algo, volta a pedir prévia. */
+window.publicar = f => {
+  const titulo = limpo("t"), texto = limpo("x");
+  if (!titulo) return erroForm(f, "Escreva o título do aviso.", f.t);
+  if (!texto) return erroForm(f, "Escreva o texto do aviso.", f.x);
+  f.querySelector(".erro-form")?.remove();
+  const bl = blocosEscolhidos(f), novo = { id: avisos.length + 1, titulo, texto, data: "hoje", quando: "9999", blocos: bl.length ? bl : null, fixado: f.fixar.checked, leram: 1, lido: {} };
+  if (f.dataset.previa !== "1") {
+    const p = document.getElementById("previa");
+    p.innerHTML = `<div class="previa" tabindex="-1"><p class="secao" style="margin-top:0">Prévia: assim vai aparecer no mural</p>
+      <div class="folha">${itemAviso(novo)}</div>
+      <p class="ajuda" style="margin:10px 0 0">${novo.fixado ? "Fixado no topo. " : ""}Para ${bl.length ? "os Blocos " + bl.join(" e ") : "todos os blocos"}: ${bl.length ? bl.length * 64 : 320} apartamentos.</p></div>`;
+    f.dataset.previa = "1"; f.querySelector("button[type=submit]").textContent = "Publicar aviso";
+    p.firstElementChild.focus(); return;
+  }
+  novo.lido = { [perfil]: 1 }; avisos.push(novo);
   location.hash = "#avisos"; setTimeout(() => recado("Aviso publicado. As notificações foram enviadas."), 60);
 };
 function telaNovaEnquete() {
   if (!gestao()) return semPermissao();
   return tela(topo("Nova enquete", true), `
-    <form onsubmit="event.preventDefault(); location.hash='#enquetes'; setTimeout(()=>recado('Enquete publicada.'),60)">
+    <form onsubmit="event.preventDefault(); publicarEnquete(this)">
       <label for="p">Pergunta</label><input id="p" type="text" required>
       <label>Opções de resposta</label>
-      <input type="text" aria-label="Opção 1" required style="margin-bottom:8px">
-      <input type="text" aria-label="Opção 2" required style="margin-bottom:8px">
-      <button type="button" class="texto-link" onclick="this.insertAdjacentHTML('beforebegin','<input type=text aria-label=\\'Outra opção\\' style=margin-bottom:8px>')">Adicionar opção</button>
+      <input type="text" class="op-enq" aria-label="Opção 1" required style="margin-bottom:8px">
+      <input type="text" class="op-enq" aria-label="Opção 2" required style="margin-bottom:8px">
+      <button type="button" class="texto-link" onclick="maisOpcao(this)">Adicionar opção</button>
       <p class="ajuda">De 2 a 10 opções.</p>
       <label class="opcao" style="margin-top:18px"><input type="checkbox"> Pode marcar mais de uma</label>
       <div class="lado">
@@ -864,10 +967,24 @@ function telaNovaEnquete() {
       <button class="botao" type="submit">Publicar enquete</button>
     </form>`);
 }
+window.maisOpcao = btn => {
+  const n = btn.form.querySelectorAll(".op-enq").length;
+  if (n >= 10) return recado("O limite é de 10 opções.");
+  btn.insertAdjacentHTML("beforebegin", `<input type="text" class="op-enq" aria-label="Opção ${n + 1}" style="margin-bottom:8px">`);
+  btn.previousElementSibling.focus();
+  if (n + 1 >= 10) btn.hidden = true;
+};
+window.publicarEnquete = f => {
+  if (!limpo("p")) return erroForm(f, "Escreva a pergunta.", f.p);
+  const ops = [...f.querySelectorAll(".op-enq")].filter(i => i.value.trim());
+  if (ops.length < 2) return erroForm(f, "Escreva pelo menos 2 opções de resposta.", f.querySelector(".op-enq"));
+  if (new Date(f.enc.value) <= new Date()) return erroForm(f, "A data de término já passou. Escolha uma data no futuro.", f.enc);
+  location.hash = "#enquetes"; setTimeout(() => recado("Enquete publicada."), 60);
+};
 function telaNovoDocumento() {
   if (!gestao()) return semPermissao();
   return tela(topo("Novo documento", true), `
-    <form onsubmit="event.preventDefault(); location.hash='#documentos'; setTimeout(()=>recado('Documento publicado.'),60)">
+    <form onsubmit="event.preventDefault(); if (!limpo('dt')) return erroForm(this, 'Escreva o título do documento.', this.dt); location.hash='#documentos'; setTimeout(()=>recado('Documento publicado.'),60)">
       <label for="dt">Título</label><input id="dt" type="text" required>
       <div class="lado">
         <div><label for="dc">Assunto</label><select id="dc"><option>Obra</option><option>Convenção</option><option>Regimento</option><option>Atas</option><option>Contratos</option><option>Orientações</option></select></div>
@@ -893,13 +1010,14 @@ function telaAdmin() {
     ${[1, 2, 3, 4, 5].map(b => {
       const us = UNIDADES.filter(u => u.bloco === b), a = us.filter(u => u.ativa).length;
       return `<p class="secao">Bloco ${b}: ${a} de 64</p><div class="grade" aria-label="Bloco ${b}, do 7º andar ao térreo">
-        ${us.slice().reverse().map(u => `<a href="#unidade/${u.login}" class="${u.ativa ? "at" : ""} ${GESTAO[u.login] ? "ge" : ""}" aria-label="Apartamento ${u.login.slice(1)}, ${u.ativa ? "já entrou" : "ainda não entrou"}">${u.login.slice(1)}</a>`).join("")}</div>`;
+        ${us.slice().sort((x, y) => y.login[1] - x.login[1] || x.login.localeCompare(y.login)).map(u => `<a href="#unidade/${u.login}" class="${u.ativa ? "at" : ""} ${GESTAO[u.login] ? "ge" : ""}" aria-label="Apartamento ${u.login.slice(1)}, ${u.ativa ? "já entrou" : "ainda não entrou"}">${u.login.slice(1)}</a>`).join("")}</div>`;
     }).join("")}
     <div style="height:20px"></div>
     <a class="botao leve" href="#historico">${ic("relogio")} Histórico de ações</a>`, "admin");
 }
 function telaUnidade(login) {
   if (eu().papel !== "admin") return semPermissao();
+  if (!UNIDADE_OK.test(login || "")) return naoEncontrado();
   const u = UNIDADES.find(x => x.login === login) || { login, ativa: false }, g = GESTAO[login];
   return tela(topo("Unidade", true), `
     <div style="text-align:center;margin-bottom:16px">${placa(login, "grande" + (g ? " gestao" : ""))}</div>
@@ -940,14 +1058,28 @@ function render() {
     "novo-documento": telaNovoDocumento, "admin": telaAdmin, "unidade": () => telaUnidade(p), "historico": telaHistorico,
   };
   app.innerHTML = (rotas[r] || telaEntrar)();
+  app.append(recadoEl);
   app.classList.toggle("pc", modo === "pc");
   app.classList.toggle("sem-nav", !app.querySelector(".nav"));
   const m = app.querySelector(".conteudo"); if (m) m.scrollTop = 0;
+  // Título da aba e foco no título da tela: o leitor de tela anuncia onde a pessoa chegou.
+  const h1 = app.querySelector("h1");
+  document.title = (h1 && r !== "entrar" ? h1.textContent.trim() + " · " : "") + "Portal Capibaribe Prime";
+  if (focarAoTrocar && h1) { h1.setAttribute("tabindex", "-1"); h1.focus({ preventScroll: true }); }
 }
+let focarAoTrocar = false, passos = 0;
+/* Voltar sem histórico interno (link aberto direto do WhatsApp) vai para a tela de cima, não sai do Portal. */
+const PAI = { aviso: "avisos", leitura: "aviso", enquete: "enquetes", unidade: "admin", historico: "admin",
+  "novo-aviso": "avisos", "nova-enquete": "enquetes", "novo-documento": "documentos", esqueci: "entrar", "esqueci-ok": "entrar", publicos: "entrar" };
+window.voltar = () => {
+  if (passos > 0) { passos -= 2; history.back(); return; }
+  const [r, p] = location.hash.slice(1).split("/"), pai = PAI[r] || "avisos";
+  location.hash = "#" + pai + (pai === "aviso" ? "/" + p : "");
+};
 document.getElementById("perfil").addEventListener("change", e => { perfil = e.target.value; render(); });
 document.getElementById("modo").addEventListener("change", e => { modo = e.target.value; render(); });
 document.getElementById("tema").addEventListener("change", e => aplicarTema(e.target.value));
-addEventListener("hashchange", render);
+addEventListener("hashchange", () => { passos++; focarAoTrocar = true; render(); });
 // A barra escura é ferramenta de quem desenha o Portal: só aparece com ?dev no endereço.
 // Sem ela, quem testa vê o app como ele seria: celular em tela cheia, computador na versão de computador.
 if (!new URLSearchParams(location.search).has("dev")) {
@@ -959,6 +1091,8 @@ if (!new URLSearchParams(location.search).has("dev")) {
 let temaSalvo = null;
 try { temaSalvo = localStorage.getItem("portal-tema"); } catch {}
 if (temaSalvo === "escuro") { document.getElementById("tema").value = "escuro"; app.classList.add("escuro"); }
+// Recarregou a página depois de entrar com a própria unidade: continua sendo você.
+try { const u = sessionStorage.getItem("prototipo-unidade"); if (u && UNIDADE_OK.test(u)) entrarComUnidade(u); } catch {}
 render();
 
 // Boas-vindas só na primeira visita; depois, pelo botão "Como testar".

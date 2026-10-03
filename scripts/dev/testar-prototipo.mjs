@@ -36,7 +36,8 @@ const entrar = async (bl, ap) => {
 await p.$eval('#login', e => e.value = ''); await p.type('#login', '5a-02x9');
 ok('apto só aceita número e 3 dígitos:', await p.$eval('#login', e => e.value) === '502');
 await entrar(2, '999');
-ok('Bloco 2, apto 999 dá erro:', await p.evaluate(()=>location.hash) === '#entrar-erro');
+ok('Bloco 2, apto 999 dá erro sem apagar o formulário:', await p.evaluate(() => !!document.querySelector('#msg-entrar [role=alert]')
+  && document.getElementById('login').value === '999' && document.querySelector('input[name=bloco]:checked')?.value === '2'));
 await entrar(1, '7');
 ok('Bloco 1, apto 7 vira 1007:', (await p.$eval('#app', e => e.innerText)).includes('Bloco 1, apartamento 007'));
 await p.evaluate(()=>location.hash='#entrar'); await new Promise(r=>setTimeout(r,100));
@@ -98,6 +99,65 @@ await p.setViewport({ width: 1300, height: 900 }); await p.reload(); await new P
 await p.screenshot({ path: '/tmp/prototipo-prints/publico-pc-entrar.png' });
 await p.evaluate(() => { location.hash = '#avisos'; }); await new Promise(r=>setTimeout(r,100));
 await p.screenshot({ path: '/tmp/prototipo-prints/publico-pc-avisos.png' });
+
+// ---- regressões da revisão independente de 03/10/2026 (um revisor de UX e um de código) ----
+await p.goto(url); await new Promise(r=>setTimeout(r,300));
+await p.evaluate(() => document.getElementById('boasVindas').open && document.getElementById('boasVindas').close());
+const ir = async (perf, h) => { await p.select('#perfil', perf); await p.evaluate(x => { location.hash = '#' + x; }, h); await new Promise(r => setTimeout(r, 120)); };
+const texto = () => p.$eval('#app', e => e.innerText);
+await ir('erick', "unidade/1');alert(1);('");
+ok('rota de unidade inválida não monta tela (XSS):', (await texto()).includes('Não encontrado'));
+await ir('socorro', 'aviso/3');
+ok('aviso de outro bloco não abre:', (await texto()).includes('Não encontrado'));
+await ir('socorro', 'leitura/2');
+ok('"quem leu" é só da gestão:', (await texto()).includes('Sem permissão'));
+for (const h of ['leitura/99', 'enquete/99', 'enquete']) { await ir('carla', h); ok(`#${h} mostra "não encontrado":`, (await texto()).includes('Não encontrado')); }
+await ir('socorro', 'entrar');
+const colar = v => p.$eval('#login', (e, v) => { e.value = v; e.dispatchEvent(new InputEvent('input', { inputType: 'insertFromPaste', bubbles: true })); return e.value; }, v);
+ok('colar "Apto 502" vira 502:', await colar('Apto 502') === '502');
+ok('colar " 502" vira 502:', await colar(' 502') === '502');
+ok('colar "1203" marca o Bloco 1 e deixa 203:', await colar('1203') === '203' && await p.$eval('input[name=bloco]:checked', e => e.value) === '1');
+await ir('rafael', 'avisos');
+const ordem = await p.$$eval('#lista h3', hs => hs.map(h => h.textContent));
+ok('mural do mais novo pro mais antigo:', ordem[0].startsWith('Vistoria') && ordem[1].startsWith('Fundação') && ordem[2].startsWith('Reunião'));
+await p.evaluate(() => filtrar('fundacao'));
+ok('busca sem acento acha "Fundação":', (await p.$eval('#lista', e => e.innerText)).includes('Fundação'));
+await p.evaluate(() => filtrar('bem-vindos'));
+ok('busca acha o aviso fixado:', (await p.$eval('#lista', e => e.innerText)).includes('Bem-vindos'));
+await ir('socorro', 'documentos');
+await p.type('#bd', 'cronograma');
+ok('busca de documentos filtra:', await p.$$eval('#lista-docs .item', i => i.length) === 1);
+await ir('carla', 'novo-aviso');
+await p.type('#t', '   '); await p.type('#x', 'x'); await p.click('form button[type=submit]');
+ok('título só de espaços é recusado:', !!(await p.$('.erro-form')) && (await p.evaluate(() => location.hash)) === '#novo-aviso');
+await p.$eval('#t', e => e.value = ''); await p.type('#t', 'Teste de bloco 4'); await p.$eval('#x', e => e.value = '');
+await p.type('#x', 'Linha 1'); await p.keyboard.down('Shift'); await p.keyboard.press('Enter'); await p.keyboard.up('Shift'); await p.type('#x', 'Linha 2');
+await p.click('.chip[data-bloco="4"]'); await p.click('input[name=fixar]'); await p.click('form button[type=submit]');
+ok('primeiro clique mostra a prévia:', (await p.$eval('#previa', e => e.innerText)).includes('64 apartamentos'));
+await p.click('form button[type=submit]'); await new Promise(r=>setTimeout(r,150));
+await ir('socorro', 'avisos');
+ok('aviso do Bloco 4 não aparece pro Bloco 1:', !(await texto()).includes('Teste de bloco 4'));
+await ir('rafael', 'avisos');
+ok('aviso do Bloco 4 aparece fixado pro Bloco 4:', (await p.$$eval('.fixado h3', hs => hs.map(h => h.textContent))).includes('Teste de bloco 4'));
+await p.evaluate(() => { location.hash = '#aviso/' + avisos.length; }); await new Promise(r=>setTimeout(r,120));
+ok('quebra de linha simples continua no aviso:', (await p.$eval('.texto-aviso', e => e.innerText)).includes('Linha 1\nLinha 2'));
+await ir('socorro', 'primeiro-acesso');
+await p.type('#s1', 'abc'); await p.type('#s2', 'zzz'); await p.type('#nm', 'X'); await p.type('#cel', 'abc'); await p.click('form button[type=submit]');
+ok('primeiro acesso recusa senha curta:', (await p.evaluate(() => location.hash)) === '#primeiro-acesso' && !!(await p.$('.erro-form')));
+await ir('socorro', 'esqueci'); await p.evaluate(() => document.querySelector('form').requestSubmit());
+ok('esqueci a senha não avança vazio:', (await p.evaluate(() => location.hash)) === '#esqueci');
+await ir('carla', 'documentos');
+await p.$eval('.conteudo', e => e.scrollTop = e.scrollHeight); await new Promise(r=>setTimeout(r,100));
+ok('botão flutuante não cobre o último documento:', await p.evaluate(() => { const i = [...document.querySelectorAll('.item')].pop().getBoundingClientRect(), f = document.querySelector('.flutuante').getBoundingClientRect(); return i.bottom <= f.top; }));
+await ir('erick', 'admin');
+ok('grade começa no 701:', (await p.$eval('.grade a', a => a.textContent)) === '701');
+ok('título da aba acompanha a tela:', (await p.title()).startsWith('Unidades'));
+ok('#app sem aria-live (o leitor não relê a tela toda):', !(await p.$eval('#app', e => e.hasAttribute('aria-live'))));
+const p2 = await b.newPage(); await p2.goto(url.replace('?dev', '') + '#aviso/2'); await new Promise(r=>setTimeout(r,300));
+await p2.evaluate(() => document.getElementById('boasVindas').open && document.getElementById('boasVindas').close());
+await p2.click('.voltar'); await new Promise(r=>setTimeout(r,200));
+ok('voltar sem histórico vai pro mural, não sai do Portal:', (await p2.evaluate(() => location.hash)) === '#avisos');
+await p2.close();
 console.log('ERROS:', erros.length ? erros : 'nenhum');
 await b.close();
 if (falhas.length || erros.length) { console.log('FALHOU:', falhas); process.exit(1); }

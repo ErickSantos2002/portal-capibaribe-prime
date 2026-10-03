@@ -68,10 +68,12 @@ crítica por print no final.
 |---|---|---|---|
 | `--mata` | `#1f5e3b` | `#7fc79a` | Cor principal: a reserva verde |
 | `--ipe` | `#e8b22a` | `#f0c14b` | Destaque: os ipês-amarelos do empreendimento. Só em fixado e marcação de gestão |
-| `--ipe-forte` | `#9a6a00` | `#f0c14b` | Contorno de foco e marcações sobre fundo claro |
+| `--ipe-forte` | `#9a6a00` | `#f0c14b` | Contorno de foco e marcações sobre fundo claro. Sobre o verde (topo, menu lateral), o foco usa `--ipe` |
 | `--papel` | `#f4f6f2` | `#101713` | Fundo, com leve tom verde (evita o creme genérico) |
 | `--folha` | `#ffffff` | `#18221c` | Superfícies |
 | `--tinta` / `--tinta-suave` | `#17231c` / `#4a5a50` | `#e8efe9` / `#a9b8ae` | Texto |
+| `--borda` | `#7a8a80` | `#6b7d72` | Contorno de **controle** (campo, opção, botão de bloco, chip): ≥ 3:1 contra a superfície (WCAG 1.4.11). Entrou em 03/10/2026, revisão independente mediu 1,46:1 com `--linha` |
+| `--linha` | `#cfd8d1` | `#314038` | Só divisória decorativa de cartão. Nunca em controle |
 | `--erro` | `#a3322a` | `#f19a90` | Erros e ações destrutivas |
 
 **Fonte:** Atkinson Hyperlegible, criada pelo Braille Institute para baixa visão (recomendação do
