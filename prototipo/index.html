@@ -4,649 +4,815 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Protótipo · Portal Capibaribe Prime</title>
+<!-- No protótipo a fonte vem do Google Fonts. No app real ela é servida pelo próprio Portal
+     (nenhuma requisição a terceiros, LGPD). Sem internet, cai na fonte do sistema. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
-  /* Tokens visuais do Portal. Verde inspirado na identidade do empreendimento,
-     sem usar a marca da construtora. Contraste mínimo AA (RNF-04). */
+  /* ============================================================
+     Tokens · ver docs/06-prototipo.md, seção 3
+     mata = a reserva verde · ipê = os ipês-amarelos do empreendimento
+     ============================================================ */
   :root {
-    --verde: #1b6b45;
-    --verde-escuro: #12492f;
-    --verde-claro: #e6f2ec;
-    --texto: #1a1f1c;
-    --texto-suave: #4f5b55;
-    --fundo: #f6f7f5;
-    --cartao: #ffffff;
-    --borda: #d5dbd7;
-    --alerta: #8a4b00;
-    --alerta-fundo: #fff3e0;
-    --erro: #b3261e;
-    --erro-fundo: #fdecea;
-    --novo: #0b57d0;
-    --raio: 14px;
-    --fonte: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mata: #1f5e3b;
+    --mata-forte: #154129;
+    --mata-suave: #e3eee6;
+    --ipe: #e8b22a;
+    --ipe-suave: #fbf0cf;
+    --ipe-forte: #9a6a00;   /* foco e marcações sobre fundo claro: 4,35:1 */
+    --papel: #f4f6f2;
+    --folha: #ffffff;
+    --tinta: #17231c;
+    --tinta-suave: #4a5a50;
+    --linha: #cfd8d1;
+    --erro: #a3322a;
+    --erro-suave: #f8e4e1;
+    --sobre-mata: #ffffff;
+    --sombra: 0 1px 0 rgba(23, 35, 28, .06);
+    --fonte: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --r-pequeno: 8px;
+    --r-medio: 12px;
+  }
+  .escuro {
+    --mata: #7fc79a;
+    --mata-forte: #a6dcb9;
+    --mata-suave: #1c2e23;
+    --ipe: #f0c14b;
+    --ipe-suave: #3a3215;
+    --ipe-forte: #f0c14b;
+    --papel: #101713;
+    --folha: #18221c;
+    --tinta: #e8efe9;
+    --tinta-suave: #a9b8ae;
+    --linha: #314038;
+    --erro: #f19a90;
+    --erro-suave: #3a1d1a;
+    --sobre-mata: #0d1a12;
+    --sombra: none;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
-  body {
-    font-family: var(--fonte);
-    font-size: 18px;               /* base grande: Dona Socorro (RNF-02) */
-    line-height: 1.5;
-    color: var(--texto);
-    background: #dfe4e1;
-  }
-  button, input, textarea, select { font: inherit; }
+  body { font-family: var(--fonte); background: #d9dfda; color: #17231c; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
-  /* ---------- barra do protótipo (fora do "celular") ---------- */
+  /* ---------- barra do protótipo (não faz parte do app) ---------- */
   .proto {
-    background: #20262a; color: #fff; font-size: 14px;
-    padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+    background: #1d2420; color: #f1f4f2; font-size: 14px; padding: 10px 16px;
+    display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
   }
-  .proto strong { color: #9fe0bd; }
-  .proto select { font-size: 14px; padding: 4px 6px; border-radius: 6px; }
-  .proto a { color: #cfe9db; }
+  .proto b { color: #f0c14b; }
+  .proto select { font-size: 14px; padding: 4px 6px; border-radius: 6px; color: #17231c; }
+  .proto a { color: #cfe3d6; margin-right: 10px; display: inline-block; }
   .proto details { width: 100%; }
-  .proto details a { display: inline-block; margin: 2px 10px 2px 0; }
 
-  /* ---------- moldura de celular ---------- */
+  /* ---------- moldura ---------- */
   .palco { display: flex; justify-content: center; padding: 24px 16px 48px; }
-  .celular {
-    width: 100%; max-width: 400px; height: 820px; max-height: calc(100vh - 120px);
-    background: var(--fundo); border-radius: 36px; border: 10px solid #111;
-    overflow: hidden; display: flex; flex-direction: column; position: relative;
-    box-shadow: 0 20px 50px rgba(0,0,0,.25);
+  .app {
+    width: 100%; max-width: 400px; height: 820px; max-height: calc(100vh - 110px);
+    background: var(--papel); color: var(--tinta); font-size: 18px; line-height: 1.5;
+    border: 10px solid #121614; border-radius: 34px; overflow: hidden; position: relative;
+    display: flex; flex-direction: column; box-shadow: 0 18px 44px rgba(0,0,0,.22);
   }
   @media (max-width: 480px) {
     .palco { padding: 0; }
-    .celular { border: 0; border-radius: 0; height: calc(100vh - 44px); max-height: none; box-shadow: none; }
+    .app { border: 0; border-radius: 0; height: calc(100vh - 40px); max-height: none; box-shadow: none; }
   }
 
-  /* ---------- estrutura do app ---------- */
+  /* ---------- topo ---------- */
   .topo {
-    background: var(--verde); color: #fff; padding: 14px 18px 12px;
-    display: flex; align-items: center; gap: 10px; min-height: 60px;
+    background: var(--mata); color: var(--sobre-mata); min-height: 64px;
+    padding: 12px 16px; display: flex; align-items: center; gap: 8px;
   }
-  .topo h1 { font-size: 20px; margin: 0; flex: 1; font-weight: 650; }
-  .topo .voltar {
-    background: none; border: 0; color: #fff; font-size: 26px; padding: 0 8px 0 0; cursor: pointer;
-  }
-  .topo .unid { font-size: 14px; background: rgba(255,255,255,.18); padding: 3px 10px; border-radius: 99px; }
-  .conteudo { flex: 1; overflow-y: auto; padding: 16px; }
-  .abas {
-    display: flex; border-top: 1px solid var(--borda); background: var(--cartao);
-  }
-  .abas a {
-    flex: 1; text-align: center; padding: 8px 2px 10px; font-size: 13px; color: var(--texto-suave);
-    text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  }
-  .abas a .ic { font-size: 22px; line-height: 1.2; }
-  .abas a.ativa { color: var(--verde); font-weight: 700; }
-  .abas a .ponto { position: relative; }
-  .abas a .ponto::after {
-    content: ""; position: absolute; top: 0; right: -6px; width: 9px; height: 9px;
-    background: var(--novo); border-radius: 50%;
+  .topo h1 { font-size: 21px; margin: 0; flex: 1; font-weight: 700; }
+  .escuro .topo { background: var(--folha); color: var(--tinta); border-bottom: 1px solid var(--linha); }
+  .voltar {
+    background: none; border: 0; color: inherit; width: 44px; height: 44px; margin-left: -10px;
+    display: grid; place-items: center; cursor: pointer; border-radius: var(--r-pequeno);
   }
 
-  /* ---------- componentes ---------- */
-  .cartao {
-    background: var(--cartao); border: 1px solid var(--borda); border-radius: var(--raio);
-    padding: 14px 16px; margin-bottom: 12px; display: block; color: inherit; text-decoration: none;
+  /* ---------- a placa do apartamento (o elemento-assinatura) ---------- */
+  .placa {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 2px solid currentColor; border-radius: 6px; padding: 2px 10px 3px; line-height: 1;
+    font-variant-numeric: tabular-nums; min-width: 64px;
   }
-  .cartao.naolido { border-left: 5px solid var(--novo); }
-  .cartao h3 { margin: 0 0 4px; font-size: 18px; }
-  .meta { font-size: 14px; color: var(--texto-suave); }
-  .etiqueta {
-    display: inline-block; font-size: 13px; font-weight: 600; padding: 1px 9px; border-radius: 99px;
-    background: var(--verde-claro); color: var(--verde-escuro); margin-right: 6px;
+  .placa small { font-size: 11px; font-weight: 700; letter-spacing: .02em; opacity: .9; }
+  .placa strong { font-size: 22px; font-weight: 700; letter-spacing: .04em; }
+  .placa.grande { border-width: 3px; padding: 8px 22px 10px; border-radius: 10px; color: var(--mata-forte); }
+  .placa.grande small { font-size: 16px; }
+  .placa.grande strong { font-size: 52px; }
+  .placa.gestao { box-shadow: inset 0 -4px 0 var(--ipe); }
+
+  /* ---------- área de conteúdo ---------- */
+  .conteudo { flex: 1; overflow-y: auto; padding: 20px 16px 28px; }
+  .conteudo > :first-child { margin-top: 0; }
+  h2 { font-size: 26px; line-height: 1.2; margin: 0 0 8px; }
+  h3 { font-size: 19px; line-height: 1.3; margin: 0; }
+  p { margin: 0 0 14px; }
+  .suave { color: var(--tinta-suave); font-size: 16px; }
+  .secao { font-size: 17px; font-weight: 700; margin: 28px 0 10px; color: var(--tinta); }
+
+  /* ---------- navegação ---------- */
+  .nav { display: flex; background: var(--folha); border-top: 1px solid var(--linha); }
+  .nav a {
+    flex: 1; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; color: var(--tinta-suave); text-decoration: none; font-size: 13px; position: relative;
   }
-  .etiqueta.novo { background: #e3ecfd; color: var(--novo); }
-  .etiqueta.cinza { background: #eceeed; color: var(--texto-suave); }
-  .etiqueta.alerta { background: var(--alerta-fundo); color: var(--alerta); }
-  .secao { font-size: 14px; font-weight: 700; color: var(--texto-suave); text-transform: uppercase;
-           letter-spacing: .04em; margin: 18px 0 8px; }
-  .btn {
-    display: block; width: 100%; padding: 14px; border-radius: 12px; border: 0; cursor: pointer;
-    background: var(--verde); color: #fff; font-weight: 650; font-size: 18px; text-align: center;
-    text-decoration: none; min-height: 52px;
+  .nav a[aria-current] { color: var(--mata); font-weight: 700; }
+  .nav a[aria-current]::before {
+    content: ""; position: absolute; top: 0; left: 24%; right: 24%; height: 3px; background: var(--mata); border-radius: 0 0 3px 3px;
   }
-  .btn:hover { background: var(--verde-escuro); }
-  .btn.sec { background: var(--cartao); color: var(--verde); border: 2px solid var(--verde); }
-  .btn.perigo { background: var(--erro); }
-  .btn + .btn { margin-top: 10px; }
-  .link { color: var(--verde); font-weight: 600; text-decoration: underline; background: none;
-          border: 0; padding: 0; cursor: pointer; }
-  label { display: block; font-weight: 600; margin: 14px 0 4px; }
-  .ajuda { font-size: 15px; color: var(--texto-suave); margin: 2px 0 0; }
-  input[type=text], input[type=password], input[type=tel], input[type=email], input[type=datetime-local],
-  textarea, select {
-    width: 100%; padding: 13px 14px; border: 2px solid var(--borda); border-radius: 12px;
-    background: #fff; min-height: 52px;
+  .nav .conta {
+    position: absolute; top: 7px; left: calc(50% + 6px); background: var(--ipe); color: #17231c;
+    font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px;
+    display: grid; place-items: center;
   }
-  input:focus, textarea:focus, select:focus, .btn:focus-visible, a:focus-visible {
-    outline: 3px solid #f2b705; outline-offset: 2px;
+  .nav-marca, .nav-placa { display: none; }
+
+  /* ---------- lista do mural (folha contínua, não cartões soltos) ---------- */
+  .folha { background: var(--folha); border: 1px solid var(--linha); border-radius: var(--r-medio); box-shadow: var(--sombra); }
+  .item {
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center;
+    padding: 16px; color: inherit; text-decoration: none; border-top: 1px solid var(--linha); min-height: 72px;
   }
-  textarea { min-height: 120px; resize: vertical; }
-  .caixa { border-radius: 12px; padding: 12px 14px; margin: 12px 0; font-size: 16px; }
-  .caixa.alerta { background: var(--alerta-fundo); color: #5c3200; border: 1px solid #f0c27a; }
-  .caixa.erro { background: var(--erro-fundo); color: #7a1610; border: 1px solid #f1aaa5; }
-  .caixa.info { background: var(--verde-claro); color: var(--verde-escuro); border: 1px solid #b6d8c6; }
-  .fab {
-    position: absolute; right: 18px; bottom: 84px; background: var(--verde); color: #fff;
-    border-radius: 99px; padding: 14px 20px; font-weight: 700; text-decoration: none;
-    box-shadow: 0 6px 16px rgba(0,0,0,.25);
+  .item:first-child { border-top: 0; }
+  a.item:hover { background: var(--mata-suave); }
+  .item h3 { font-weight: 400; }
+  .item.novo h3 { font-weight: 700; }
+  .item .linha-meta { grid-column: 1; font-size: 15px; color: var(--tinta-suave); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+  .item .seta { grid-row: 1 / span 2; grid-column: 2; color: var(--tinta-suave); }
+  .selo { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; }
+  .selo.novo { color: var(--mata); }
+  .selo.novo::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--mata); }
+  .com-icone { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* aviso fixado: o único bloco que ganha cor de fundo no mural */
+  .fixado {
+    display: block; background: var(--ipe-suave); border: 1px solid var(--ipe); border-radius: var(--r-medio);
+    padding: 16px; color: inherit; text-decoration: none; margin-bottom: 20px;
   }
+  .fixado .rotulo { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .fixado p { margin: 6px 0 0; font-size: 16px; color: var(--tinta-suave); }
+
+  /* ---------- formulário ---------- */
+  label { display: block; font-weight: 700; margin: 18px 0 6px; }
+  .ajuda { font-size: 16px; color: var(--tinta-suave); margin: 6px 0 0; }
+  input[type=text], input[type=password], input[type=tel], input[type=email], input[type=search],
+  input[type=datetime-local], textarea, select {
+    width: 100%; min-height: 54px; padding: 12px 14px; font-size: 18px; background: var(--folha);
+    border: 2px solid var(--linha); border-radius: var(--r-pequeno);
+  }
+  input:hover, textarea:hover, select:hover { border-color: var(--tinta-suave); }
+  textarea { min-height: 140px; resize: vertical; }
+  :focus-visible { outline: 3px solid var(--ipe-forte); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { border-color: var(--mata); }
+
+  .botao {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px;
+    padding: 12px 18px; border-radius: var(--r-pequeno); border: 2px solid var(--mata); background: var(--mata);
+    color: var(--sobre-mata); font-weight: 700; font-size: 18px; text-decoration: none; cursor: pointer;
+    transition: background-color .15s, border-color .15s;
+  }
+  .botao:hover { background: var(--mata-forte); border-color: var(--mata-forte); }
+  .botao.leve { background: transparent; color: var(--mata); }
+  .botao.leve:hover { background: var(--mata-suave); }
+  .botao.perigo { background: var(--erro); border-color: var(--erro); color: var(--folha); }
+  .botao + .botao { margin-top: 12px; }
+  .texto-link { color: var(--mata); font-weight: 700; text-decoration: underline; text-underline-offset: 3px;
+                background: none; border: 0; padding: 8px 0; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
+
+  .aviso-caixa { display: flex; gap: 10px; border-radius: var(--r-medio); padding: 14px; margin: 16px 0; font-size: 16px; }
+  .aviso-caixa svg { flex: none; margin-top: 2px; }
+  .aviso-caixa.atencao { background: var(--ipe-suave); border: 1px solid var(--ipe); }
+  .aviso-caixa.erro { background: var(--erro-suave); border: 1px solid var(--erro); }
+  .aviso-caixa.info { background: var(--mata-suave); border: 1px solid var(--linha); }
+  .aviso-caixa p:last-child { margin: 0; }
+
   .opcao {
-    display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid var(--borda);
-    border-radius: 12px; margin-bottom: 10px; cursor: pointer; background: #fff; font-weight: 500;
+    display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 12px 16px; margin: 0 0 10px;
+    border: 2px solid var(--linha); border-radius: var(--r-pequeno); background: var(--folha); cursor: pointer; font-weight: 400;
   }
-  .opcao input { width: 24px; height: 24px; accent-color: var(--verde); }
-  .opcao.marcada { border-color: var(--verde); background: var(--verde-claro); }
-  .barra { height: 12px; background: #e3e7e5; border-radius: 99px; overflow: hidden; margin: 4px 0 12px; }
-  .barra span { display: block; height: 100%; background: var(--verde); }
+  .opcao input { width: 24px; height: 24px; accent-color: var(--mata); flex: none; margin: 0; }
+  .opcao:has(input:checked) { border-color: var(--mata); background: var(--mata-suave); font-weight: 700; }
+
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { padding: 8px 14px; border: 2px solid var(--borda); border-radius: 99px; background: #fff; cursor: pointer; }
-  .chip.on { border-color: var(--verde); background: var(--verde-claro); color: var(--verde-escuro); font-weight: 700; }
-  .anexo { display: flex; gap: 10px; align-items: center; padding: 12px; border: 1px dashed var(--borda);
-           border-radius: 12px; margin-top: 10px; background: #fff; }
-  .anexo .ic { font-size: 26px; }
-  a.anexo { color: var(--texto); text-decoration: none; }
-  a.anexo b { color: var(--verde); text-decoration: underline; }
-  .foto { height: 160px; border-radius: 12px; margin-top: 12px;
-          background: repeating-linear-gradient(45deg,#cfdcd5,#cfdcd5 12px,#dde7e1 12px,#dde7e1 24px);
-          display: flex; align-items: center; justify-content: center; color: var(--texto-suave); font-size: 15px; }
-  .grade { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
-  .grade a { font-size: 11px; text-align: center; padding: 6px 0; border-radius: 6px; text-decoration: none;
-             background: #eceeed; color: var(--texto-suave); }
-  .grade a.at { background: var(--verde); color: #fff; }
-  .grade a.gest { outline: 2px solid #f2b705; }
-  .numeros { display: flex; gap: 10px; margin-bottom: 8px; }
-  .numeros div { flex: 1; background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 10px; text-align: center; }
-  .numeros b { display: block; font-size: 26px; color: var(--verde); }
-  .linha { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--borda); font-size: 16px; }
-  .linha:last-child { border-bottom: 0; }
-  .passos { padding-left: 22px; margin: 6px 0; }
-  .passos li { margin-bottom: 6px; }
-  .centro { text-align: center; }
-  .logo { font-size: 15px; letter-spacing: .25em; color: var(--verde); font-weight: 700; margin-top: 24px; }
-  .logo b { display: block; font-size: 34px; letter-spacing: 0; color: var(--verde-escuro); line-height: 1.1; }
-  .busca { margin-bottom: 12px; }
-  .vazio { color: var(--texto-suave); text-align: center; padding: 30px 10px; }
-  .toast {
-    position: absolute; left: 16px; right: 16px; bottom: 90px; background: #20262a; color: #fff;
-    padding: 12px 16px; border-radius: 12px; font-size: 16px; opacity: 0; transition: opacity .2s;
-    pointer-events: none;
+  .chip {
+    min-height: 44px; padding: 8px 16px; border-radius: 22px; border: 2px solid var(--linha);
+    background: var(--folha); cursor: pointer;
   }
-  .toast.on { opacity: 1; }
+  .chip[aria-pressed=true] { border-color: var(--mata); background: var(--mata-suave); font-weight: 700; }
+
+  /* ---------- resultado de enquete ---------- */
+  .res { margin-bottom: 14px; }
+  .res-topo { display: flex; justify-content: space-between; gap: 12px; }
+  .res-topo b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .barra { height: 14px; border-radius: 7px; background: var(--mata-suave); margin-top: 4px; overflow: hidden; }
+  .barra span { display: block; height: 100%; background: var(--mata); }
+
+  /* ---------- anexos e arquivos ---------- */
+  .arquivo {
+    display: flex; align-items: center; gap: 12px; padding: 14px; margin-top: 12px; min-height: 64px;
+    border: 1px solid var(--linha); border-radius: var(--r-medio); background: var(--folha);
+    color: inherit; text-decoration: none;
+  }
+  .arquivo .nome { font-weight: 700; color: var(--mata); text-decoration: underline; text-underline-offset: 3px; }
+  .foto {
+    height: 170px; border-radius: var(--r-medio); margin-top: 12px; color: var(--tinta-suave);
+    background: repeating-linear-gradient(135deg, var(--mata-suave) 0 14px, var(--papel) 14px 28px);
+    border: 1px solid var(--linha); display: grid; place-items: center;
+  }
+  .tag { font-size: 14px; color: var(--tinta-suave); display: inline-flex; gap: 4px; align-items: center; }
+
+  /* ---------- painel de ativação ---------- */
+  .resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .resumo div { background: var(--folha); border: 1px solid var(--linha); border-radius: var(--r-medio); padding: 12px 8px; text-align: center; font-size: 15px; }
+  .resumo b { display: block; font-size: 28px; color: var(--mata); font-variant-numeric: tabular-nums; }
+  .grade { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .grade a {
+    font-size: 12px; text-align: center; padding: 7px 0; border-radius: 5px; text-decoration: none;
+    background: var(--folha); color: var(--tinta-suave); border: 1px solid var(--linha); font-variant-numeric: tabular-nums;
+  }
+  .grade a.at { background: var(--mata); color: var(--sobre-mata); border-color: var(--mata); }
+  .grade a.ge { box-shadow: inset 0 -4px 0 var(--ipe-forte); }
+  .grade a.at.ge { box-shadow: inset 0 -4px 0 var(--ipe); }
+  .legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 15px; color: var(--tinta-suave); margin: 12px 0 0; }
+  .legenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .legenda i { width: 16px; height: 16px; border-radius: 4px; display: inline-block; border: 1px solid var(--linha); background: var(--folha); }
+
+  .ficha { background: var(--folha); border: 1px solid var(--linha); border-radius: var(--r-medio); padding: 4px 16px; margin: 0 0 16px; }
+  .ficha div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--linha); font-size: 17px; }
+  .ficha div:first-child { border-top: 0; }
+  .ficha dt { color: var(--tinta-suave); }
+  .ficha dd { margin: 0; font-weight: 700; text-align: right; }
+
+  .entrada { text-align: center; padding-top: 12px; }
+  .entrada .titulo { font-size: 30px; font-weight: 700; line-height: 1.1; color: var(--mata-forte); margin: 14px 0 4px; }
+
+  .flutuante {
+    position: absolute; right: 16px; bottom: 82px; display: inline-flex; align-items: center; gap: 8px;
+    min-height: 56px; padding: 0 20px; border-radius: 28px; background: var(--mata); color: var(--sobre-mata);
+    font-weight: 700; text-decoration: none; box-shadow: 0 6px 18px rgba(0,0,0,.24);
+  }
+  .recado {
+    position: absolute; left: 16px; right: 16px; bottom: 92px; background: var(--tinta); color: var(--papel);
+    padding: 14px 16px; border-radius: var(--r-medio); font-size: 16px; opacity: 0; transform: translateY(6px);
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 5;
+  }
+  .recado.on { opacity: 1; transform: none; }
+  .vazio { text-align: center; color: var(--tinta-suave); padding: 32px 8px; margin: 0; }
+  details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  ol.passos { margin: 4px 0 12px; padding-left: 24px; }
+  ol.passos li { margin-bottom: 6px; }
+  .oculto { position: absolute; left: -9999px; }
+
+  /* ============================================================
+     Computador · no app real: @media (min-width: 900px)
+     ============================================================ */
+  .app.pc {
+    max-width: 1180px; height: 780px; border-width: 30px 8px 8px; border-radius: 12px;
+    display: grid; grid-template-columns: 264px 1fr; grid-template-rows: auto 1fr;
+    grid-template-areas: "nav topo" "nav main";
+  }
+  .app.pc.sem-nav { grid-template-columns: 1fr; grid-template-areas: "topo" "main"; }
+  .pc .topo { grid-area: topo; padding: 14px 40px; background: var(--folha); color: var(--tinta); border-bottom: 1px solid var(--linha); }
+  .pc .topo .placa { display: none; }
+  .pc .conteudo { grid-area: main; padding: 32px max(40px, calc((100% - 720px) / 2)) 48px; }
+  .pc .nav { grid-area: nav; flex-direction: column; border-top: 0; padding: 20px 14px; gap: 4px; background: var(--mata); }
+  .escuro.pc .nav { background: var(--folha); border-right: 1px solid var(--linha); }
+  .pc .nav a { flex: 0; flex-direction: row; justify-content: flex-start; gap: 12px; min-height: 52px; padding: 0 14px;
+               font-size: 17px; border-radius: var(--r-pequeno); color: var(--sobre-mata); opacity: .88; }
+  .escuro.pc .nav a, .escuro.pc .nav-marca, .escuro.pc .nav-placa { color: var(--tinta); }
+  .pc .nav a:hover { opacity: 1; background: rgba(255,255,255,.08); }
+  .pc .nav a[aria-current] { opacity: 1; background: rgba(255,255,255,.14); }
+  .pc .nav a[aria-current]::before { top: 12px; bottom: 12px; left: 0; right: auto; width: 4px; height: auto; background: var(--ipe); border-radius: 0 3px 3px 0; }
+  .pc .nav .conta { position: static; margin-left: auto; }
+  .pc .nav-marca { display: block; color: var(--sobre-mata); font-weight: 700; font-size: 20px; line-height: 1.2; padding: 4px 14px 24px; }
+  .pc .nav-placa { display: flex; align-items: center; gap: 12px; margin-top: auto; padding: 16px 14px 4px; color: var(--sobre-mata); font-size: 15px; }
+  .pc .flutuante { bottom: 32px; right: 40px; }
+  .pc .recado { left: auto; right: 40px; bottom: 100px; width: 400px; }
+  .pc .grade a { font-size: 13px; padding: 9px 0; }
+  .pc .lado { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+  .so-pc { display: none; }
+  .pc .so-pc { display: block; }
+  .pc .so-cel { display: none; }
 </style>
 </head>
 <body>
 
 <div class="proto" role="region" aria-label="Controles do protótipo">
-  <span><strong>PROTÓTIPO</strong> · dados fictícios · nada é salvo</span>
-  <label style="margin:0;font-weight:400">Ver como:
+  <span><b>Protótipo</b>, com dados fictícios. Nada é salvo.</span>
+  <label style="margin:0;font-weight:400">Ver como
     <select id="perfil">
-      <option value="socorro">Dona Socorro · 1203 (unidade comum)</option>
-      <option value="rafael">Rafael · 4203 (unidade comum)</option>
-      <option value="carla">Carla · 2304 (Comissão)</option>
-      <option value="erick">Erick · 1101 (Administrador)</option>
+      <option value="socorro">Dona Socorro, unidade 1203</option>
+      <option value="rafael">Rafael, unidade 4203</option>
+      <option value="carla">Carla, unidade 2304 (Comissão)</option>
+      <option value="erick">Erick, unidade 1101 (administrador)</option>
     </select>
   </label>
+  <label style="margin:0;font-weight:400">Tela
+    <select id="modo"><option value="cel">Celular</option><option value="pc">Computador</option></select>
+  </label>
+  <label style="margin:0;font-weight:400">Tema
+    <select id="tema"><option value="claro">Claro</option><option value="escuro">Escuro</option></select>
+  </label>
   <details>
-    <summary>Ir direto para uma tela</summary>
+    <summary style="min-height:auto">Ir direto para uma tela</summary>
     <a href="#entrar">Entrar</a><a href="#entrar-erro">Senha errada</a><a href="#entrar-bloqueio">Bloqueio</a>
-    <a href="#esqueci">Esqueci a senha</a><a href="#primeiro-acesso">Primeiro acesso</a>
-    <a href="#instalar">Instalar e notificações</a><a href="#publicos">Documentos públicos</a>
-    <a href="#avisos">Mural</a><a href="#aviso/2">Aviso com anexo</a><a href="#aviso/4">Aviso editado</a>
-    <a href="#enquetes">Enquetes</a><a href="#enquete/1">Votar</a><a href="#enquete/2">Resultado</a>
-    <a href="#documentos">Documentos</a><a href="#minha-unidade">Minha unidade</a>
-    <a href="#novo-aviso">Publicar aviso</a><a href="#nova-enquete">Criar enquete</a><a href="#novo-documento">Publicar documento</a>
+    <a href="#esqueci">Esqueci a senha</a><a href="#primeiro-acesso">Primeiro acesso</a><a href="#instalar">Instalar</a>
+    <a href="#publicos">Documentos públicos</a><a href="#avisos">Mural</a><a href="#aviso/2">Aviso com PDF</a>
+    <a href="#aviso/4">Aviso corrigido</a><a href="#enquetes">Enquetes</a><a href="#enquete/1">Votar</a>
+    <a href="#enquete/2">Resultado</a><a href="#documentos">Documentos</a><a href="#minha-unidade">Minha unidade</a>
+    <a href="#novo-aviso">Novo aviso</a><a href="#nova-enquete">Nova enquete</a><a href="#novo-documento">Novo documento</a>
     <a href="#leitura/2">Quem leu</a><a href="#admin">Painel de ativação</a><a href="#unidade/2304">Unidade (admin)</a>
     <a href="#historico">Histórico</a>
   </details>
 </div>
 
-<div class="palco">
-  <div class="celular" id="app" aria-live="polite"></div>
-</div>
+<div class="palco"><div class="app" id="app" aria-live="polite"></div></div>
 
 <script>
+/* ===================== Ícones (traço 2px, um estilo só) ===================== */
+const P = {
+  avisos: '<path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>',
+  enquetes: '<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 12.5l3 3 5.5-6.5"/>',
+  documentos: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  casa: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/>',
+  painel: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  voltar: '<path d="M15 18l-6-6 6-6"/>',
+  seta: '<path d="M9 6l6 6-6 6"/>',
+  pino: '<path d="M12 16v5"/><path d="M8.5 3.5h7l-1 5.5 3 3.5h-11l3-3.5z"/>',
+  clipe: '<path d="M20.5 11.5l-8.2 8.2a5 5 0 0 1-7-7l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.6 8.6a1.8 1.8 0 0 1-2.5-2.5L15.5 7"/>',
+  olho: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  busca: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+  sino: '<path d="M6 9.5a6 6 0 0 1 12 0c0 6.5 2.5 8 2.5 8h-17S6 16 6 9.5"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+  celular: '<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/>',
+  monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  cadeado: '<rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
+  imagem: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9.5 9"/>',
+  sair: '<path d="M14.5 4H19v16h-4.5"/><path d="M10 8l-4 4 4 4M6 12h9.5"/>',
+  relogio: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  mais: '<path d="M12 5v14M5 12h14"/>',
+  baixar: '<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/>',
+  certo: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+  alerta: '<path d="M12 3.5 21 19.5H3z"/><path d="M12 10v4.5M12 17.2v.1"/>',
+  info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.1"/>',
+  editar: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  arquivar: '<rect x="3.5" y="4" width="17" height="4.5" rx="1"/><path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 12.5h4"/>',
+};
+const ic = (n, t = 24, rot) =>
+  `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${rot ? `role="img" aria-label="${rot}"` : 'aria-hidden="true"'}>${P[n]}</svg>`;
+
 /* ===================== Dados fictícios ===================== */
 const PERFIS = {
-  socorro: { unidade: "1203", nome: "Maria do Socorro", papel: null },
-  rafael:  { unidade: "4203", nome: "Rafael Lima",      papel: null },
-  carla:   { unidade: "2304", nome: "Carla Mendes",     papel: "comissao" },
-  erick:   { unidade: "1101", nome: "Erick",            papel: "admin" },
+  socorro: { unidade: "1203", nome: "Maria do Socorro", papel: null, email: null },
+  rafael:  { unidade: "4203", nome: "Rafael Lima", papel: null, email: "rafael@example.com" },
+  carla:   { unidade: "2304", nome: "Carla Mendes", papel: "comissao", email: "carla@example.com" },
+  erick:   { unidade: "1101", nome: "Erick", papel: "admin", email: "erick@example.com" },
 };
-let perfil = "socorro";
+let perfil = "socorro", modo = "cel";
 const eu = () => PERFIS[perfil];
 const gestao = () => !!eu().papel;
-const bloco = u => Number(u[0]);
+const blocoDe = u => Number(u[0]);
+const placa = (u, cls = "") => `<span class="placa ${cls}" role="img" aria-label="Bloco ${u[0]}, apartamento ${u.slice(1)}"><small>Bloco ${u[0]}</small><strong>${u.slice(1)}</strong></span>`;
 
 const avisos = [
-  { id: 1, titulo: "Bem-vindos ao Portal Capibaribe Prime", texto: "A partir de agora, os avisos oficiais da Comissão saem aqui. O grupo do WhatsApp continua para conversa, mas o que é oficial fica registrado no Portal.\n\nInstale o Portal na tela inicial do celular para receber as notificações.",
-    data: "28/10/2026", fixado: true, blocos: null, lido: { socorro: true, rafael: true, carla: true, erick: true }, leram: 214 },
-  { id: 2, titulo: "Vistoria da obra no dia 15/11", texto: "A construtora liberou uma visita guiada ao canteiro no sábado, 15/11, às 9h. Vagas limitadas a uma pessoa por unidade.\n\nConfira as regras de segurança no PDF anexo.",
-    data: "03/11/2026", fixado: false, blocos: null, anexo: { tipo: "pdf", nome: "regras-visita-obra.pdf", tam: "320 KB" }, lido: { carla: true, erick: true }, leram: 141 },
-  { id: 3, titulo: "Fundação do Bloco 4 concluída", texto: "A construtora informou que a fundação do Bloco 4 foi concluída. Fotos enviadas pela engenharia abaixo.",
-    data: "01/11/2026", fixado: false, blocos: [4, 5], anexo: { tipo: "img", nome: "fundacao-bloco4.jpg", tam: "410 KB" }, lido: {}, leram: 37 },
-  { id: 4, titulo: "Reunião com a construtora: horário corrigido", texto: "A reunião com a construtora será às 19h30 (e não às 19h, como dito antes), no salão da igreja da Várzea.",
-    anterior: "A reunião com a construtora será às 19h, no salão da igreja da Várzea.",
-    data: "25/10/2026", editado: "26/10/2026", fixado: false, blocos: null, lido: { socorro: true, carla: true, erick: true }, leram: 266 },
+  { id: 1, titulo: "Bem-vindos ao Portal Capibaribe Prime", data: "28 de outubro", fixado: true, blocos: null, leram: 214,
+    texto: "A partir de agora, os avisos oficiais da Comissão saem aqui. O grupo do WhatsApp continua para conversa, mas o que é oficial fica registrado no Portal.\n\nColoque o Portal na tela inicial do celular para receber as notificações.",
+    lido: { socorro: 1, rafael: 1, carla: 1, erick: 1 } },
+  { id: 2, titulo: "Vistoria da obra no dia 15 de novembro", data: "3 de novembro", blocos: null, leram: 141,
+    texto: "A construtora liberou uma visita guiada ao canteiro no sábado, 15 de novembro, às 9h. Vagas limitadas a uma pessoa por unidade.\n\nAs regras de segurança estão no PDF anexo.",
+    anexo: { tipo: "pdf", nome: "Regras da visita à obra", tam: "320 KB" }, lido: { carla: 1, erick: 1 } },
+  { id: 3, titulo: "Fundação do Bloco 4 concluída", data: "1º de novembro", blocos: [4, 5], leram: 37,
+    texto: "A construtora informou que a fundação do Bloco 4 foi concluída. A engenharia enviou a foto abaixo.",
+    anexo: { tipo: "img", nome: "fundação do Bloco 4" }, lido: {} },
+  { id: 4, titulo: "Reunião com a construtora: horário corrigido", data: "25 de outubro", corrigido: "26 de outubro", blocos: null, leram: 266,
+    texto: "A reunião com a construtora será às 19h30 (e não às 19h, como dito antes), no salão da igreja da Várzea.",
+    anterior: "A reunião com a construtora será às 19h, no salão da igreja da Várzea.", lido: { socorro: 1, carla: 1, erick: 1 } },
 ];
-
 const enquetes = [
-  { id: 1, pergunta: "Qual o melhor dia para a próxima reunião com a construtora?", multipla: false,
-    encerra: "10/11/2026 às 20h", aberta: true, resultado: "durante",
+  { id: 1, pergunta: "Qual o melhor dia para a próxima reunião com a construtora?", aberta: true, encerra: "10 de novembro, às 20h",
     opcoes: [["Terça à noite", 41], ["Quinta à noite", 63], ["Sábado de manhã", 88]], votou: { carla: 2 } },
-  { id: 2, pergunta: "Qual nome vocês preferem para o portal do condomínio?", multipla: false,
-    encerra: "20/09/2026", aberta: false, resultado: "durante",
+  { id: 2, pergunta: "Qual nome vocês preferem para o portal do condomínio?", aberta: false, encerra: "20 de setembro",
     opcoes: [["Portal Capibaribe Prime", 35], ["Capibaribe Connect", 9], ["Prime Hub", 1], ["Meu Capibaribe", 0]], votou: {} },
 ];
-
 const documentos = [
-  { id: 1, titulo: "Como acessar o Portal (passo a passo)", cat: "Outros", data: "28/10/2026", acesso: "publico", versoes: 1 },
-  { id: 2, titulo: "Memorial descritivo do empreendimento", cat: "Obra", data: "23/12/2023", acesso: "compradores", versoes: 1 },
-  { id: 3, titulo: "Cronograma da obra", cat: "Obra", data: "01/11/2026", acesso: "compradores", versoes: 3 },
-  { id: 4, titulo: "Rascunho do regimento interno", cat: "Regimento", data: "20/10/2026", acesso: "compradores", versoes: 2 },
-  { id: 5, titulo: "Ata da reunião da Comissão", cat: "Atas", data: "18/10/2026", acesso: "gestao", versoes: 1 },
+  { titulo: "Como acessar o Portal, passo a passo", cat: "Orientações", data: "28 out. 2026", acesso: "publico" },
+  { titulo: "Memorial descritivo do empreendimento", cat: "Obra", data: "23 dez. 2023", acesso: "compradores" },
+  { titulo: "Cronograma da obra", cat: "Obra", data: "1 nov. 2026", acesso: "compradores", versao: 3 },
+  { titulo: "Rascunho do regimento interno", cat: "Regimento", data: "20 out. 2026", acesso: "compradores", versao: 2 },
+  { titulo: "Ata da reunião da Comissão", cat: "Atas", data: "18 out. 2026", acesso: "gestao" },
 ];
-
-// 320 unidades; ativação pseudoaleatória estável (≈ 40%)
 const UNIDADES = [];
 for (let b = 1; b <= 5; b++) for (let a = 0; a <= 7; a++) for (let p = 1; p <= 8; p++) {
   const n = `${b}${a}${String(p).padStart(2, "0")}`;
-  const h = (b * 7919 + a * 104729 + p * 1299709) % 100;
-  UNIDADES.push({ login: n, bloco: b, ativa: h < 40 || ["1203","4203","2304","1101"].includes(n) });
+  UNIDADES.push({ login: n, bloco: b, ativa: (b * 7919 + a * 104729 + p * 1299709) % 100 < 40 || ["1203", "4203", "2304", "1101"].includes(n) });
 }
-const GESTAO = { "2304": "Comissão", "1101": "Admin", "1408": "Comissão", "3105": "Comissão", "5601": "Comissão", "4702": "Comissão" };
+const GESTAO = { "2304": "Comissão", "1408": "Comissão", "3105": "Comissão", "5601": "Comissão", "4702": "Comissão", "1101": "Administrador" };
 
 /* ===================== Utilitários ===================== */
 const app = document.getElementById("app");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const par = t => esc(t).split("\n\n").map(p => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
-const visivel = av => !av.blocos || av.blocos.includes(bloco(eu().unidade));
+const paragrafos = t => esc(t).split("\n\n").map(p => `<p>${p}</p>`).join("");
+const visivel = a => !a.blocos || a.blocos.includes(blocoDe(eu().unidade));
 const naoLidos = () => avisos.filter(a => visivel(a) && !a.lido[perfil]).length;
-function toast(msg) {
-  let t = app.querySelector(".toast");
-  if (!t) return;
-  t.textContent = msg; t.classList.add("on");
-  setTimeout(() => t.classList.remove("on"), 2200);
+function recado(msg) {
+  const r = app.querySelector(".recado"); if (!r) return;
+  r.textContent = msg; r.classList.add("on"); clearTimeout(r._t);
+  r._t = setTimeout(() => r.classList.remove("on"), 2600);
 }
+window.recado = recado;
 
 function topo(titulo, voltar) {
   return `<header class="topo">
-    ${voltar ? `<button class="voltar" aria-label="Voltar" onclick="history.back()">‹</button>` : ""}
+    ${voltar ? `<button class="voltar" onclick="history.back()">${ic("voltar", 28, "Voltar")}</button>` : ""}
     <h1>${titulo}</h1>
-    ${voltar === undefined ? `<span class="unid" title="Sua unidade">${eu().unidade}</span>` : ""}
+    ${voltar === undefined ? placa(eu().unidade, gestao() ? "gestao" : "") : ""}
   </header>`;
 }
-function abas(ativa) {
-  const it = [["avisos", "📢", "Avisos"], ["enquetes", "🗳️", "Enquetes"], ["documentos", "📄", "Documentos"], ["minha-unidade", "🏠", "Minha unidade"]];
-  if (eu().papel === "admin") it.push(["admin", "🛠️", "Admin"]);
-  return `<nav class="abas" aria-label="Seções">${it.map(([h, ic, n]) =>
-    `<a href="#${h}" class="${h === ativa ? "ativa" : ""}" ${h === ativa ? 'aria-current="page"' : ""}>
-       <span class="ic ${h === "avisos" && naoLidos() ? "ponto" : ""}" aria-hidden="true">${ic}</span>${n}</a>`).join("")}</nav>`;
+function nav(ativa) {
+  const it = [["avisos", "avisos", "Avisos"], ["enquetes", "enquetes", "Enquetes"], ["documentos", "documentos", "Documentos"], ["minha-unidade", "casa", "Minha unidade"]];
+  if (eu().papel === "admin") it.push(["admin", "painel", "Unidades"]);
+  const n = naoLidos();
+  return `<nav class="nav" aria-label="Seções do Portal">
+    <span class="nav-marca">Portal<br>Capibaribe Prime</span>
+    ${it.map(([h, i, t]) => `<a href="#${h}" ${h === ativa ? 'aria-current="page"' : ""}>${ic(i)}<span>${t}</span>${h === "avisos" && n ? `<span class="conta" aria-label="${n} não lidos">${n}</span>` : ""}</a>`).join("")}
+    <span class="nav-placa">${placa(eu().unidade, gestao() ? "gestao" : "")}<span>${esc(eu().nome)}${gestao() ? `<br>${eu().papel === "admin" ? "Administrador" : "Comissão"}` : ""}</span></span>
+  </nav>`;
 }
-const tela = (t, corpo, aba, extra = "") =>
-  `${t}<main class="conteudo">${corpo}</main>${extra}${aba ? abas(aba) : ""}<div class="toast" role="status"></div>`;
+const tela = (cab, corpo, aba, extra = "") =>
+  `${cab}<main class="conteudo">${corpo}</main>${extra}${aba ? nav(aba) : ""}<div class="recado" role="status"></div>`;
 
-/* ===================== Telas: acesso ===================== */
+/* ===================== Acesso ===================== */
 function telaEntrar(estado) {
   const msg = {
-    erro: `<div class="caixa erro" role="alert">Bloco/apartamento ou senha incorretos.</div>`,
-    bloqueio: `<div class="caixa erro" role="alert"><b>Acesso bloqueado por 12 minutos</b> depois de muitas tentativas erradas.<br>Se não foi você, avise a administração do Portal no grupo do WhatsApp.</div>`,
+    erro: `<div class="aviso-caixa erro" role="alert">${ic("alerta")}<p>Bloco e apartamento ou senha incorretos. Confira os números e tente de novo.</p></div>`,
+    bloqueio: `<div class="aviso-caixa erro" role="alert">${ic("cadeado")}<div><p><b>Entrada bloqueada por 12 minutos</b> depois de várias senhas erradas.</p><p>Se não foi você, avise a administração do Portal no grupo do WhatsApp.</p></div></div>`,
   }[estado] || "";
   return tela("", `
-    <div class="centro"><div class="logo">PORTAL<b>Capibaribe Prime</b></div>
-    <p class="meta">O canal oficial dos moradores</p></div>
+    <div class="entrada">${placa("1101", "grande")}
+      <div class="titulo">Portal Capibaribe Prime</div>
+      <p class="suave">Os avisos oficiais do condomínio, num lugar só.</p></div>
     ${msg}
-    <form onsubmit="event.preventDefault(); location.hash = '#primeiro-acesso'">
+    <form onsubmit="event.preventDefault(); location.hash='#primeiro-acesso'">
       <label for="login">Bloco e apartamento</label>
-      <input id="login" type="text" inputmode="numeric" autocomplete="username" placeholder="Ex.: 1101" required>
-      <p class="ajuda">Junte o número do bloco com o do apartamento.<br>Bloco 1, apto 101 → <b>1101</b></p>
+      <input id="login" type="text" inputmode="numeric" autocomplete="username" required aria-describedby="ajuda-login">
+      <p class="ajuda" id="ajuda-login">Escreva o número do bloco e, colado nele, o do apartamento, como na placa acima: Bloco 1, apartamento 101 vira <b>1101</b>.</p>
       <label for="senha">Senha</label>
-      <input id="senha" type="password" autocomplete="current-password" required>
-      <p class="ajuda">Primeira vez? Use a senha que a Comissão divulgou no grupo.</p>
-      <div style="height:16px"></div>
-      <button class="btn" type="submit">Entrar</button>
+      <input id="senha" type="password" autocomplete="current-password" required aria-describedby="ajuda-senha">
+      <p class="ajuda" id="ajuda-senha">Primeira vez aqui? Use a senha que a Comissão mandou no grupo.</p>
+      <div style="height:20px"></div>
+      <button class="botao" type="submit">Entrar</button>
     </form>
-    <p class="centro"><a class="link" href="#esqueci">Esqueci minha senha</a></p>
-    <p class="centro meta"><a class="link" href="#publicos">Documentos públicos</a></p>
-  `);
+    <p style="text-align:center;margin:12px 0 0"><a class="texto-link" href="#esqueci">Esqueci minha senha</a></p>
+    <p style="text-align:center"><a class="texto-link" href="#publicos">Ver documentos públicos</a></p>`);
 }
-function telaEsqueci(enviado) {
-  return tela(topo("Esqueci minha senha", true), enviado ? `
-    <div class="caixa info" role="status">Se houver e-mail cadastrado nesta unidade, enviamos um link para criar uma nova senha. Ele vale por 1 hora.</div>
-    <p>Não chegou? Sem e-mail cadastrado, fale com a administração do Portal no grupo do WhatsApp: ela volta sua senha para a inicial.</p>
-    <a class="btn sec" href="#entrar">Voltar para entrar</a>` : `
-    <p>Digite o bloco e o apartamento.</p>
-    <label for="l2">Bloco e apartamento</label>
-    <input id="l2" type="text" inputmode="numeric" placeholder="Ex.: 1101">
-    <div style="height:16px"></div>
-    <button class="btn" onclick="location.hash='#esqueci-ok'">Enviar link</button>`);
+function telaEsqueci(ok) {
+  return tela(topo("Esqueci minha senha", true), ok ? `
+    <div class="aviso-caixa info" role="status">${ic("info")}<p>Se esta unidade tiver e-mail cadastrado, mandamos um link para criar uma senha nova. O link vale por 1 hora.</p></div>
+    <p>Sem e-mail cadastrado, fale com a administração do Portal no grupo do WhatsApp. Ela volta sua senha para a inicial.</p>
+    <a class="botao leve" href="#entrar">Voltar para a entrada</a>` : `
+    <p>Escreva o bloco e o apartamento. Se houver e-mail cadastrado, mandamos um link para criar uma senha nova.</p>
+    <label for="l2">Bloco e apartamento</label><input id="l2" type="text" inputmode="numeric">
+    <div style="height:20px"></div>
+    <button class="botao" onclick="location.hash='#esqueci-ok'">Mandar link</button>`);
 }
 function telaPrimeiroAcesso() {
+  const u = eu().unidade;
   return tela(topo("Primeiro acesso", false), `
-    <div class="caixa alerta"><b>Esta é a unidade ${eu().unidade}.</b><br>Se você não é desta unidade, não continue. A conta é da família que mora ou vai morar aqui.</div>
+    <div style="text-align:center">${placa(u, "grande")}</div>
+    <div class="aviso-caixa atencao">${ic("alerta")}<p>Esta conta é da família do <b>Bloco ${u[0]}, apartamento ${u.slice(1)}</b>. Se este não é o seu apartamento, pare aqui.</p></div>
     <form onsubmit="event.preventDefault(); location.hash='#instalar'">
-      <label for="s1">Crie uma nova senha</label>
-      <input id="s1" type="password" autocomplete="new-password" required>
-      <p class="ajuda">Pelo menos 8 letras ou números. Toda a família vai usar esta senha.</p>
-      <label for="s2">Repita a nova senha</label>
-      <input id="s2" type="password" autocomplete="new-password" required>
-      <label for="nm">Nome de um responsável</label>
-      <input id="nm" type="text" autocomplete="name" required>
-      <label for="cel">Celular</label>
-      <input id="cel" type="tel" autocomplete="tel" placeholder="(81) 9 0000-0000" required>
-      <p class="ajuda">Só a Comissão vê. Serve para falarem com a unidade.</p>
-      <label for="em">E-mail <span class="meta">(opcional)</span></label>
-      <input id="em" type="email" autocomplete="email">
-      <p class="ajuda">Com e-mail, você recupera a senha sozinho e recebe os avisos também por e-mail.</p>
-      <div style="height:16px"></div>
-      <button class="btn" type="submit">Concluir</button>
+      <div class="lado">
+        <div><label for="s1">Senha nova</label><input id="s1" type="password" autocomplete="new-password" required aria-describedby="a1">
+        <p class="ajuda" id="a1">Pelo menos 8 letras ou números. A família toda vai usar.</p></div>
+        <div><label for="s2">Repita a senha nova</label><input id="s2" type="password" autocomplete="new-password" required></div>
+      </div>
+      <label for="nm">Nome de quem responde pela unidade</label><input id="nm" type="text" autocomplete="name" required>
+      <label for="cel">Celular</label><input id="cel" type="tel" autocomplete="tel" required aria-describedby="a2">
+      <p class="ajuda" id="a2">Só a Comissão vê. É para falarem com a unidade quando precisar.</p>
+      <label for="em">E-mail, se quiser</label><input id="em" type="email" autocomplete="email" aria-describedby="a3">
+      <p class="ajuda" id="a3">Com e-mail, você recupera a senha sozinho e recebe os avisos também por lá.</p>
+      <div style="height:20px"></div>
+      <button class="botao" type="submit">Salvar e entrar</button>
     </form>
-    <p class="meta">Ao concluir, você concorda com a <a class="link" href="#">política de privacidade</a>: guardamos só nome, celular e e-mail, para os fins descritos nela.</p>`);
+    <p class="ajuda" style="margin-top:16px">Guardamos só nome, celular e e-mail, para os fins da <a class="texto-link" href="#">política de privacidade</a>.</p>`);
 }
 function telaInstalar() {
-  return tela(topo("Quase pronto", false), `
-    <h2 style="margin-top:0">Receba os avisos no celular</h2>
-    <p>Dois passos rápidos. Se preferir, pode fazer depois em <b>Minha unidade</b>.</p>
-    <div class="cartao"><h3>1. Coloque o Portal na tela inicial</h3>
-      <p class="meta" style="margin:4px 0 10px">Ele fica como um aplicativo, sem ocupar espaço.</p>
-      <details><summary><b>Tenho Android</b></summary>
-        <ol class="passos"><li>Toque no botão abaixo.</li><li>Confirme em <b>Instalar</b>.</li></ol></details>
-      <details><summary><b>Tenho iPhone</b></summary>
-        <ol class="passos"><li>Toque em <b>Compartilhar</b> <span aria-hidden="true">⬆️</span> na barra do Safari.</li>
-        <li>Escolha <b>Adicionar à Tela de Início</b>.</li><li>Abra o Portal pelo novo ícone.</li></ol>
-        <p class="ajuda">No iPhone, as notificações só funcionam com o Portal aberto pelo ícone.</p></details>
-      <div style="height:10px"></div>
-      <button class="btn sec" onclick="toast('No app real, abre a janela de instalação do celular')">Instalar na tela inicial</button>
+  return tela(topo("Receber os avisos", false), `
+    <h2>Quer ser avisado na hora?</h2>
+    <p>Dois passos, uma vez só. Dá para fazer depois em <b>Minha unidade</b>.</p>
+    <div class="folha" style="padding:16px;margin-top:16px">
+      <h3 class="com-icone">${ic(modo === "pc" ? "monitor" : "celular")} Coloque o Portal ${modo === "pc" ? "no computador" : "na tela inicial"}</h3>
+      <div class="so-cel">
+        <details><summary>No Android</summary><ol class="passos"><li>Toque em <b>Instalar</b>, aqui embaixo.</li><li>Confirme.</li></ol></details>
+        <details><summary>No iPhone</summary><ol class="passos"><li>No Safari, toque em <b>Compartilhar</b>.</li><li>Escolha <b>Adicionar à Tela de Início</b>.</li><li>Abra o Portal pelo ícone novo.</li></ol>
+          <p class="ajuda">No iPhone, as notificações só chegam se o Portal for aberto pelo ícone.</p></details>
+      </div>
+      <div class="so-pc"><p class="ajuda">No Chrome ou no Edge, o Portal vira uma janela própria. No Firefox não dá para instalar, mas tudo funciona pelo navegador.</p></div>
+      <div style="height:12px"></div>
+      <button class="botao leve" onclick="recado('No app real, abre a janela de instalação.')">Instalar</button>
     </div>
-    <div class="cartao"><h3>2. Ative as notificações</h3>
-      <p class="meta" style="margin:4px 0 10px">Avisamos só quando sair aviso, enquete ou documento oficial.</p>
-      <button class="btn sec" onclick="toast('No app real, o celular pergunta se pode notificar')">Ativar notificações</button>
+    <div class="folha" style="padding:16px;margin-top:16px">
+      <h3 class="com-icone">${ic("sino")} Ligue as notificações</h3>
+      <p class="ajuda">Só quando sair aviso, enquete ou documento oficial.</p>
+      <div style="height:12px"></div>
+      <button class="botao leve" onclick="recado('No app real, o aparelho pergunta se pode notificar.')">Ligar notificações</button>
     </div>
-    <a class="btn" href="#avisos">Ir para o Portal</a>`);
+    <div style="height:20px"></div>
+    <a class="botao" href="#avisos">Ir para o mural</a>`);
 }
 function telaPublicos() {
-  const docs = documentos.filter(d => d.acesso === "publico");
-  return tela(topo("Documentos públicos", true), docs.map(cartaoDoc).join("") +
-    `<p class="meta">Os demais documentos ficam disponíveis depois de entrar com a conta da sua unidade.</p>`);
+  return tela(topo("Documentos públicos", true), `<div class="folha">${documentos.filter(d => d.acesso === "publico").map(itemDoc).join("")}</div>
+    <p class="ajuda" style="margin-top:16px">Os outros documentos aparecem depois que você entra com a conta do seu apartamento.</p>`);
 }
 
-/* ===================== Telas: avisos ===================== */
-function cartaoAviso(a) {
+/* ===================== Avisos ===================== */
+function itemAviso(a) {
   const novo = !a.lido[perfil];
-  return `<a class="cartao ${novo ? "naolido" : ""}" href="#aviso/${a.id}">
-    <div>${a.fixado ? `<span class="etiqueta">📌 Fixado</span>` : ""}${novo ? `<span class="etiqueta novo">Novo</span>` : ""}
-      ${a.blocos ? `<span class="etiqueta cinza">Blocos ${a.blocos.join(" e ")}</span>` : ""}</div>
+  return `<a class="item ${novo ? "novo" : ""}" href="#aviso/${a.id}">
     <h3>${esc(a.titulo)}</h3>
-    <div class="meta">${a.data} · Comissão${a.anexo ? " · 📎 anexo" : ""}${a.editado ? " · editado" : ""}</div>
+    <span class="seta">${ic("seta")}</span>
+    <span class="linha-meta">${novo ? `<span class="selo novo">Novo</span>` : ""}<span>${a.data}</span>
+      ${a.blocos ? `<span>Blocos ${a.blocos.join(" e ")}</span>` : ""}
+      ${a.anexo ? `<span class="com-icone">${ic("clipe", 18)} anexo</span>` : ""}
+      ${a.corrigido ? `<span>corrigido</span>` : ""}</span>
   </a>`;
 }
 function telaAvisos() {
-  const lista = avisos.filter(visivel).sort((x, y) => (y.fixado - x.fixado) || (y.id - x.id));
+  const lista = avisos.filter(visivel).sort((x, y) => y.id - x.id);
+  const fix = lista.filter(a => a.fixado), resto = lista.filter(a => !a.fixado);
   return tela(topo("Avisos"), `
-    <input class="busca" type="search" placeholder="🔎 Buscar nos avisos" aria-label="Buscar nos avisos"
-      oninput="filtrar(this.value)" style="width:100%;padding:12px 14px;border:2px solid var(--borda);border-radius:12px">
-    <div id="lista">${lista.map(cartaoAviso).join("")}</div>`,
-    "avisos", gestao() ? `<a class="fab" href="#novo-aviso">＋ Novo aviso</a>` : "");
+    ${fix.map(a => `<a class="fixado" href="#aviso/${a.id}"><span class="rotulo">${ic("pino", 20)} Fixado pela Comissão</span>
+      <h3>${esc(a.titulo)}</h3><p>${esc(a.texto.split("\n")[0])}</p></a>`).join("")}
+    <label for="busca" class="com-icone" style="margin-top:0">${ic("busca", 20)} Procurar nos avisos</label>
+    <input id="busca" type="search" oninput="filtrar(this.value)">
+    <div style="height:16px"></div>
+    <div class="folha" id="lista">${resto.map(itemAviso).join("")}</div>`,
+    "avisos", gestao() ? `<a class="flutuante" href="#novo-aviso">${ic("mais")} Novo aviso</a>` : "");
 }
 window.filtrar = q => {
   q = q.toLowerCase();
-  const l = avisos.filter(visivel).filter(a => (a.titulo + a.texto).toLowerCase().includes(q));
-  document.getElementById("lista").innerHTML = l.length ? l.map(cartaoAviso).join("") : `<p class="vazio">Nenhum aviso encontrado.</p>`;
+  const l = avisos.filter(visivel).filter(a => !a.fixado && (a.titulo + a.texto).toLowerCase().includes(q));
+  document.getElementById("lista").innerHTML = l.length ? l.map(itemAviso).join("") : `<p class="vazio">Nenhum aviso com essas palavras. Tente outra palavra.</p>`;
 };
 function telaAviso(id) {
-  const a = avisos.find(x => x.id === id);
-  if (!a) return telaAvisos();
-  a.lido[perfil] = true;
+  const a = avisos.find(x => x.id === id); if (!a) return telaAvisos();
+  a.lido[perfil] = 1;
   const total = a.blocos ? a.blocos.length * 64 : 320;
   return tela(topo("Aviso", true), `
-    <div>${a.fixado ? `<span class="etiqueta">📌 Fixado</span>` : ""}${a.blocos ? `<span class="etiqueta cinza">Blocos ${a.blocos.join(" e ")}</span>` : `<span class="etiqueta cinza">Todos os blocos</span>`}</div>
-    <h2 style="margin:8px 0 4px">${esc(a.titulo)}</h2>
-    <div class="meta">Publicado pela Comissão em ${a.data}</div>
-    ${a.editado ? `<div class="caixa info">Editado em ${a.editado}. <details style="display:inline"><summary class="link">Ver versão anterior</summary><p>${esc(a.anterior)}</p></details></div>` : ""}
-    ${par(a.texto)}
-    ${a.anexo ? (a.anexo.tipo === "img" ? `<div class="foto" role="img" aria-label="Foto anexada">📷 ${a.anexo.nome}</div>` :
-      `<a class="anexo" href="#" onclick="event.preventDefault();toast('No app real, abre o PDF')"><span class="ic">📄</span><span><b>${a.anexo.nome}</b><br><span class="meta">PDF · ${a.anexo.tam} · toque para abrir</span></span></a>`) : ""}
-    ${gestao() ? `<div class="secao">Gestão</div>
-      <a class="cartao" href="#leitura/${a.id}"><b>👁️ Lido por ${a.leram} de ${total} unidades</b><div class="meta">Toque para ver quem ainda não leu</div></a>
-      <button class="btn sec" onclick="toast('Abre o formulário com o texto atual. A versão antiga fica guardada.')">Corrigir aviso</button>
-      <button class="btn sec" onclick="toast('O aviso sai do mural, mas continua em Avisos arquivados.')">Arquivar</button>` : ""}`);
+    <p class="suave">${a.fixado ? "Fixado. " : ""}Publicado pela Comissão em ${a.data}, para ${a.blocos ? `os Blocos ${a.blocos.join(" e ")}` : "todos os blocos"}.</p>
+    <h2>${esc(a.titulo)}</h2>
+    ${a.corrigido ? `<div class="aviso-caixa info">${ic("editar")}<div><p>Corrigido em ${a.corrigido}.</p>
+      <details><summary>Ver como era antes</summary><p>${esc(a.anterior)}</p></details></div></div>` : ""}
+    ${paragrafos(a.texto)}
+    ${a.anexo ? (a.anexo.tipo === "img"
+      ? `<div class="foto" role="img" aria-label="Foto: ${a.anexo.nome}">${ic("imagem", 32)}</div>`
+      : `<a class="arquivo" href="#" onclick="event.preventDefault();recado('No app real, abre o PDF.')">${ic("documentos", 32)}<span><span class="nome">${a.anexo.nome}</span><br><span class="ajuda">PDF, ${a.anexo.tam}</span></span></a>`) : ""}
+    ${gestao() ? `<p class="secao">Para a Comissão</p>
+      <a class="arquivo" href="#leitura/${a.id}">${ic("olho", 28)}<span><b>${a.leram} de ${total} apartamentos leram</b><br><span class="ajuda">Ver quem ainda não leu</span></span></a>
+      <div style="height:16px"></div>
+      <button class="botao leve" onclick="recado('Abre o texto para corrigir. A versão de antes fica guardada.')">${ic("editar")} Corrigir aviso</button>
+      <button class="botao leve" onclick="recado('O aviso sai do mural e fica em Avisos arquivados.')">${ic("arquivar")} Arquivar</button>` : ""}`);
 }
 function telaLeitura(id) {
   const a = avisos.find(x => x.id === id);
-  const naoleram = UNIDADES.filter(u => !a.blocos || a.blocos.includes(u.bloco)).slice(0, 320 - a.leram).slice(0, 40);
+  const total = a.blocos ? a.blocos.length * 64 : 320;
+  const falta = UNIDADES.filter(u => !a.blocos || a.blocos.includes(u.bloco)).slice(0, 40);
   return tela(topo("Quem leu", true), `
-    <h2 style="margin-top:0">${esc(a.titulo)}</h2>
-    <div class="numeros"><div><b>${a.leram}</b>leram</div><div><b>${(a.blocos ? a.blocos.length * 64 : 320) - a.leram}</b>não leram</div></div>
-    <div class="secao">Ainda não leram</div>
-    <div class="grade">${naoleram.map(u => `<a href="#unidade/${u.login}">${u.login}</a>`).join("")}</div>
-    <p class="meta">Mostrando as primeiras 40. Dá para copiar a lista e cobrar no grupo.</p>`);
+    <h2>${esc(a.titulo)}</h2>
+    <div class="resumo" style="grid-template-columns:1fr 1fr"><div><b>${a.leram}</b>leram</div><div><b>${total - a.leram}</b>ainda não</div></div>
+    <p class="secao">Apartamentos que ainda não leram</p>
+    <div class="grade">${falta.map(u => `<a href="#unidade/${u.login}">${u.login}</a>`).join("")}</div>
+    <p class="ajuda" style="margin-top:12px">Mostrando os primeiros 40.</p>
+    <button class="botao leve" onclick="recado('Lista copiada. Dá para colar no grupo.')">Copiar a lista</button>`);
 }
 
-/* ===================== Telas: enquetes ===================== */
+/* ===================== Enquetes ===================== */
 function telaEnquetes() {
-  const card = e => {
-    const v = e.votou[perfil] !== undefined;
-    return `<a class="cartao" href="#enquete/${e.id}">
-      <div>${e.aberta ? `<span class="etiqueta">Aberta</span>` : `<span class="etiqueta cinza">Encerrada</span>`}
-      ${e.aberta && !v ? `<span class="etiqueta novo">Sua unidade ainda não votou</span>` : ""}</div>
-      <h3>${esc(e.pergunta)}</h3>
-      <div class="meta">${e.aberta ? "Encerra em " : "Encerrou em "}${e.encerra}</div></a>`;
+  const item = e => {
+    const falta = e.aberta && e.votou[perfil] === undefined;
+    return `<a class="item ${falta ? "novo" : ""}" href="#enquete/${e.id}"><h3>${esc(e.pergunta)}</h3><span class="seta">${ic("seta")}</span>
+      <span class="linha-meta">${falta ? `<span class="selo novo">Seu apartamento ainda não votou</span>` : ""}<span>${e.aberta ? "Vai até" : "Terminou em"} ${e.encerra}</span></span></a>`;
   };
+  const ab = enquetes.filter(e => e.aberta), fe = enquetes.filter(e => !e.aberta);
   return tela(topo("Enquetes"), `
-    <div class="secao">Abertas</div>${enquetes.filter(e => e.aberta).map(card).join("")}
-    <div class="secao">Encerradas</div>${enquetes.filter(e => !e.aberta).map(card).join("")}`,
-    "enquetes", gestao() ? `<a class="fab" href="#nova-enquete">＋ Nova enquete</a>` : "");
+    <p class="secao" style="margin-top:0">Abertas</p><div class="folha">${ab.map(item).join("") || `<p class="vazio">Nenhuma enquete aberta agora.</p>`}</div>
+    <p class="secao">Terminadas</p><div class="folha">${fe.map(item).join("")}</div>`,
+    "enquetes", gestao() ? `<a class="flutuante" href="#nova-enquete">${ic("mais")} Nova enquete</a>` : "");
 }
 function resultado(e) {
   const tot = e.opcoes.reduce((s, o) => s + o[1], 0) || 1;
-  return e.opcoes.map(([t, n]) => `<div style="display:flex;justify-content:space-between"><span>${esc(t)}</span><b>${n} · ${Math.round(n * 100 / tot)}%</b></div>
-    <div class="barra"><span style="width:${n * 100 / tot}%"></span></div>`).join("") +
-    `<p class="meta">${tot} unidades votaram, de 320 (${Math.round(tot * 100 / 320)}% de participação).</p>`;
+  return e.opcoes.map(([t, n]) => `<div class="res"><div class="res-topo"><span>${esc(t)}</span><b>${n} votos, ${Math.round(n * 100 / tot)}%</b></div>
+    <div class="barra"><span style="width:${n * 100 / tot}%"></span></div></div>`).join("") +
+    `<p class="ajuda">${tot} de 320 apartamentos votaram (${Math.round(tot * 100 / 320)}%).</p>`;
 }
 function telaEnquete(id) {
-  const e = enquetes.find(x => x.id === id);
-  const meu = e.votou[perfil];
-  const corpo = e.aberta ? `
-    <p class="meta">Escolha uma opção. O voto vale para a unidade ${eu().unidade} inteira e pode ser trocado até ${e.encerra}.</p>
-    ${meu !== undefined ? `<div class="caixa info">Sua unidade já votou. Se escolher outra opção, vale a última.</div>` : ""}
-    <form onsubmit="event.preventDefault(); votar(${e.id})">
-      ${e.opcoes.map(([t], i) => `<label class="opcao ${meu === i ? "marcada" : ""}">
-        <input type="radio" name="op" value="${i}" ${meu === i ? "checked" : ""} required onchange="marcar(this)"> ${esc(t)}</label>`).join("")}
-      <button class="btn" type="submit">${meu !== undefined ? "Trocar voto" : "Votar"}</button>
-    </form>
-    <div class="secao">Resultado parcial</div>${resultado(e)}` : `
-    <div class="caixa info">Enquete encerrada em ${e.encerra}. O resultado não pode mais ser alterado.</div>
-    <div class="secao">Resultado</div>${resultado(e)}`;
+  const e = enquetes.find(x => x.id === id), meu = e.votou[perfil], u = eu().unidade;
   return tela(topo("Enquete", true), `
-    <h2 style="margin-top:0">${esc(e.pergunta)}</h2>${corpo}
-    <p class="meta" style="margin-top:18px">ℹ️ Consulta sem valor legal.</p>
-    ${gestao() ? `<div class="secao">Gestão</div><div class="cartao"><b>Unidades que votaram</b><div class="meta">Mostra quais unidades votaram, mas não em quê.</div></div>` : ""}`);
+    <h2>${esc(e.pergunta)}</h2>
+    ${e.aberta ? `
+      <p class="suave">O voto vale pelo apartamento ${u.slice(1)} do Bloco ${u[0]}. Dá para trocar até ${e.encerra}.</p>
+      ${meu !== undefined ? `<div class="aviso-caixa info">${ic("certo")}<p>Seu apartamento já votou em <b>${esc(e.opcoes[meu][0])}</b>. Se escolher outra, vale a nova.</p></div>` : ""}
+      <form onsubmit="event.preventDefault(); votar(${e.id})">
+        <fieldset style="border:0;padding:0;margin:16px 0 0"><legend class="oculto">Opções</legend>
+        ${e.opcoes.map(([t], i) => `<label class="opcao"><input type="radio" name="op" value="${i}" ${meu === i ? "checked" : ""} required> ${esc(t)}</label>`).join("")}
+        </fieldset>
+        <button class="botao" type="submit">${meu !== undefined ? "Trocar voto" : "Votar"}</button>
+      </form>
+      <p class="secao">Como está até agora</p>${resultado(e)}` : `
+      <div class="aviso-caixa info">${ic("relogio")}<p>Terminou em ${e.encerra}. O resultado não muda mais.</p></div>
+      <p class="secao">Resultado</p>${resultado(e)}`}
+    <p class="ajuda" style="margin-top:20px">Enquete é consulta. Não tem valor legal de votação em assembleia.</p>
+    ${gestao() ? `<p class="secao">Para a Comissão</p><a class="arquivo" href="#" onclick="event.preventDefault();recado('Mostra quais apartamentos votaram, sem mostrar em quê.')">${ic("enquetes", 28)}<span><b>Quais apartamentos votaram</b><br><span class="ajuda">Sem mostrar o voto de ninguém</span></span></a>` : ""}`);
 }
-window.marcar = el => { el.closest("form").querySelectorAll(".opcao").forEach(o => o.classList.toggle("marcada", o.contains(el))); };
 window.votar = id => {
-  const e = enquetes.find(x => x.id === id);
-  const i = Number(document.querySelector("input[name=op]:checked").value);
+  const e = enquetes.find(x => x.id === id), i = Number(document.querySelector("input[name=op]:checked").value);
   if (e.votou[perfil] !== undefined) e.opcoes[e.votou[perfil]][1]--;
-  e.opcoes[i][1]++; e.votou[perfil] = i;
-  render(); toast("Voto registrado para a unidade " + eu().unidade);
+  e.opcoes[i][1]++; e.votou[perfil] = i; render(); recado("Voto registrado pelo apartamento " + eu().unidade.slice(1) + ".");
 };
 
-/* ===================== Telas: documentos ===================== */
-const NIVEL = { publico: "Público", compradores: "Compradores", gestao: "Só gestão" };
-function cartaoDoc(d) {
-  return `<a class="cartao" href="#" onclick="event.preventDefault();toast('No app real, abre o PDF no celular')">
-    <div><span class="etiqueta">${d.cat}</span>${d.acesso === "gestao" ? `<span class="etiqueta alerta">🔒 Só gestão</span>` : ""}</div>
-    <h3>📄 ${esc(d.titulo)}</h3>
-    <div class="meta">${d.data}${d.versoes > 1 ? ` · versão ${d.versoes} <span class="link">(ver anteriores)</span>` : ""}</div></a>`;
+/* ===================== Documentos ===================== */
+function itemDoc(d) {
+  return `<a class="item" href="#" onclick="event.preventDefault();recado('No app real, abre o documento.')">
+    <h3>${esc(d.titulo)}</h3><span class="seta">${ic("baixar")}</span>
+    <span class="linha-meta"><span>${d.data}</span>${d.versao ? `<span>versão ${d.versao}</span>` : ""}
+    ${d.acesso === "gestao" ? `<span class="tag">${ic("cadeado", 16)} só a Comissão vê</span>` : ""}</span></a>`;
 }
 function telaDocumentos() {
   const docs = documentos.filter(d => d.acesso !== "gestao" || gestao());
   const cats = [...new Set(docs.map(d => d.cat))];
   return tela(topo("Documentos"), `
-    <input class="busca" type="search" placeholder="🔎 Buscar documento" aria-label="Buscar documento"
-      style="width:100%;padding:12px 14px;border:2px solid var(--borda);border-radius:12px">
-    ${cats.map(c => `<div class="secao">${c}</div>${docs.filter(d => d.cat === c).map(cartaoDoc).join("")}`).join("")}`,
-    "documentos", gestao() ? `<a class="fab" href="#novo-documento">＋ Novo documento</a>` : "");
+    <label for="bd" class="com-icone" style="margin-top:0">${ic("busca", 20)} Procurar documento</label>
+    <input id="bd" type="search">
+    ${cats.map(c => `<p class="secao">${c}</p><div class="folha">${docs.filter(d => d.cat === c).map(itemDoc).join("")}</div>`).join("")}`,
+    "documentos", gestao() ? `<a class="flutuante" href="#novo-documento">${ic("mais")} Novo documento</a>` : "");
 }
 
-/* ===================== Tela: minha unidade ===================== */
+/* ===================== Minha unidade ===================== */
 function telaMinhaUnidade() {
   const u = eu();
   return tela(topo("Minha unidade"), `
-    <div class="cartao">
-      <div class="linha"><span>Unidade</span><b>Bloco ${u.unidade[0]} · Apto ${u.unidade.slice(1)}</b></div>
-      <div class="linha"><span>Responsável</span><b>${u.nome}</b></div>
-      <div class="linha"><span>Celular</span><b>(81) 9 0000-0000</b></div>
-      <div class="linha"><span>E-mail</span><b>${perfil === "socorro" ? "não informado" : "exemplo@example.com"}</b></div>
-      ${u.papel ? `<div class="linha"><span>Papel</span><b>${u.papel === "admin" ? "Administrador" : "Comissão"}</b></div>` : ""}
+    <dl class="ficha">
+      <div><dt>Apartamento</dt><dd>Bloco ${u.unidade[0]}, ${u.unidade.slice(1)}</dd></div>
+      <div><dt>Responsável</dt><dd>${esc(u.nome)}</dd></div>
+      <div><dt>Celular</dt><dd>(81) 9 0000-0000</dd></div>
+      <div><dt>E-mail</dt><dd>${u.email || "não informado"}</dd></div>
+      ${u.papel ? `<div><dt>Papel</dt><dd>${u.papel === "admin" ? "Administrador" : "Comissão"}</dd></div>` : ""}
+    </dl>
+    <button class="botao leve" onclick="recado('Abre os dados para editar.')">${ic("editar")} Mudar meus dados</button>
+    <button class="botao leve" onclick="recado('Pede a senha atual e a nova.')">${ic("cadeado")} Trocar a senha</button>
+    <a class="botao leve" href="#instalar" style="margin-top:12px">${ic("sino")} Notificações e instalação</a>
+    <p class="secao">Aparelhos conectados</p>
+    <div class="folha">
+      <div class="item"><h3 class="com-icone">${ic("celular")} Android, Chrome</h3><span class="linha-meta">este aparelho</span></div>
+      <div class="item"><h3 class="com-icone">${ic("celular")} iPhone, Safari</h3><span class="seta"><button class="texto-link" onclick="recado('Aparelho desconectado.')">Desconectar</button></span><span class="linha-meta">usado ontem</span></div>
     </div>
-    <button class="btn sec" onclick="toast('Abre o formulário de edição')">Editar dados</button>
-    <button class="btn sec" onclick="toast('Pede a senha atual e a nova')">Trocar senha</button>
-    <a class="btn sec" href="#instalar">Instalar / ativar notificações</a>
-    <div class="secao">Aparelhos conectados</div>
-    <div class="cartao">
-      <div class="linha"><span>📱 Android · Chrome<br><span class="meta">este aparelho</span></span></div>
-      <div class="linha"><span>📱 iPhone · Safari<br><span class="meta">último uso: ontem</span></span><button class="link" onclick="toast('Aparelho desconectado')">Desconectar</button></div>
-    </div>
-    <button class="btn sec" onclick="location.hash='#entrar'">Sair</button>
-    <div class="secao">Privacidade</div>
-    <button class="btn perigo" onclick="toast('Pede confirmação. Apaga nome, celular e e-mail, desconecta tudo e a senha volta à inicial. Votos continuam valendo.')">Apagar meus dados</button>`,
+    <div style="height:20px"></div>
+    <a class="botao leve" href="#entrar">${ic("sair")} Sair deste aparelho</a>
+    <p class="secao">Privacidade</p>
+    <p class="ajuda">Apaga nome, celular e e-mail, desconecta todos os aparelhos e volta a senha para a inicial. Os votos do apartamento continuam valendo.</p>
+    <div style="height:12px"></div>
+    <button class="botao perigo" onclick="recado('Pede confirmação antes de apagar.')">Apagar meus dados</button>`,
     "minha-unidade");
 }
 
-/* ===================== Telas: gestão ===================== */
-window.chip = el => { el.classList.toggle("on"); const todos = el.parentNode.querySelector("[data-todos]");
-  if (el.dataset.todos !== undefined) el.parentNode.querySelectorAll(".chip:not([data-todos])").forEach(c => c.classList.remove("on"));
-  else todos.classList.remove("on");
-  const sel = [...el.parentNode.querySelectorAll(".chip.on:not([data-todos])")].length;
-  const n = el.parentNode.querySelector("[data-todos]").classList.contains("on") || !sel ? 320 : sel * 64;
-  const alvo = document.getElementById("alvo"); if (alvo) alvo.textContent = n; };
-const destino = () => `<label>Para quem</label>
-  <div class="chips"><button type="button" class="chip on" data-todos onclick="chip(this)">Todos</button>
-  ${[1, 2, 3, 4, 5].map(b => `<button type="button" class="chip" onclick="chip(this)">Bloco ${b}</button>`).join("")}</div>`;
-function semPermissao() {
-  return tela(topo("Sem permissão", true), `<div class="caixa erro">Esta tela é só da Comissão e da administração. Troque o perfil no topo do protótipo para ver.</div>`);
-}
+/* ===================== Gestão ===================== */
+window.chip = el => {
+  const g = el.parentNode, todos = g.querySelector("[data-todos]");
+  if (el === todos) g.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === todos));
+  else { el.setAttribute("aria-pressed", el.getAttribute("aria-pressed") !== "true"); todos.setAttribute("aria-pressed", "false"); }
+  const sel = g.querySelectorAll('.chip[aria-pressed=true]:not([data-todos])').length;
+  if (!sel) todos.setAttribute("aria-pressed", "true");
+  const alvo = document.getElementById("alvo"); if (alvo) alvo.textContent = sel ? sel * 64 : 320;
+};
+const destino = () => `<label id="dest">Para quem</label>
+  <div class="chips" role="group" aria-labelledby="dest"><button type="button" class="chip" data-todos aria-pressed="true" onclick="chip(this)">Todos os blocos</button>
+  ${[1, 2, 3, 4, 5].map(b => `<button type="button" class="chip" aria-pressed="false" onclick="chip(this)">Bloco ${b}</button>`).join("")}</div>`;
+const semPermissao = () => tela(topo("Sem permissão", true), `<div class="aviso-caixa erro">${ic("cadeado")}<p>Esta tela é só da Comissão e da administração. No protótipo, troque o perfil em "Ver como".</p></div>`);
 function telaNovoAviso() {
   if (!gestao()) return semPermissao();
   return tela(topo("Novo aviso", true), `
     <form onsubmit="event.preventDefault(); publicar()">
       <label for="t">Título</label><input id="t" type="text" required maxlength="120">
-      <label for="x">Texto</label><textarea id="x" required></textarea>
-      <label>Anexos <span class="meta">(opcional · PDF ou foto, até 10 MB cada)</span></label>
-      <button type="button" class="btn sec" onclick="toast('Abre a galeria/arquivos. Fotos são reduzidas antes de enviar.')">📎 Adicionar anexo</button>
+      <label for="x">Texto do aviso</label><textarea id="x" required></textarea>
+      <label>Anexo, se tiver</label>
+      <button type="button" class="botao leve" onclick="recado('Abre os arquivos. Fotos são reduzidas antes de enviar.')">${ic("clipe")} Anexar PDF ou foto</button>
+      <p class="ajuda">Até 10 MB cada.</p>
       ${destino()}
-      <label class="opcao" style="margin-top:14px"><input type="checkbox"> 📌 Fixar no topo do mural</label>
-      <div class="caixa info">Vai para <b id="alvo">320</b> unidades, por notificação e por e-mail (para quem cadastrou).</div>
-      <button class="btn" type="submit">Ver prévia e publicar</button>
+      <label class="opcao" style="margin-top:18px"><input type="checkbox"> Fixar no topo do mural</label>
+      <div class="aviso-caixa info">${ic("sino")}<p>Vai para <b id="alvo">320</b> apartamentos, com notificação, e por e-mail para quem cadastrou.</p></div>
+      <button class="botao" type="submit">Publicar aviso</button>
     </form>`);
 }
 window.publicar = () => {
-  const t = document.getElementById("t").value, x = document.getElementById("x").value;
-  avisos.push({ id: avisos.length + 1, titulo: t, texto: x, data: "hoje", fixado: false, blocos: null, lido: { [perfil]: true }, leram: 1 });
-  location.hash = "#avisos"; setTimeout(() => toast("Aviso publicado e notificação enviada"), 50);
+  avisos.push({ id: avisos.length + 1, titulo: document.getElementById("t").value, texto: document.getElementById("x").value, data: "hoje", blocos: null, leram: 1, lido: { [perfil]: 1 } });
+  location.hash = "#avisos"; setTimeout(() => recado("Aviso publicado. As notificações foram enviadas."), 60);
 };
 function telaNovaEnquete() {
   if (!gestao()) return semPermissao();
   return tela(topo("Nova enquete", true), `
-    <form onsubmit="event.preventDefault(); location.hash='#enquetes'; setTimeout(()=>toast('Enquete publicada'),50)">
+    <form onsubmit="event.preventDefault(); location.hash='#enquetes'; setTimeout(()=>recado('Enquete publicada.'),60)">
       <label for="p">Pergunta</label><input id="p" type="text" required>
-      <label>Opções <span class="meta">(de 2 a 10)</span></label>
-      <input type="text" placeholder="Opção 1" required style="margin-bottom:8px">
-      <input type="text" placeholder="Opção 2" required style="margin-bottom:8px">
-      <button type="button" class="link" onclick="this.insertAdjacentHTML('beforebegin','<input type=text placeholder=\\'Nova opção\\' style=margin-bottom:8px>')">＋ Adicionar opção</button>
-      <label class="opcao" style="margin-top:14px"><input type="checkbox"> Permitir marcar mais de uma opção</label>
-      <label for="enc">Encerra em</label><input id="enc" type="datetime-local" required>
-      <label for="res">Mostrar o resultado</label>
-      <select id="res"><option>Durante a votação</option><option>Só depois de encerrar</option></select>
+      <label>Opções de resposta</label>
+      <input type="text" aria-label="Opção 1" required style="margin-bottom:8px">
+      <input type="text" aria-label="Opção 2" required style="margin-bottom:8px">
+      <button type="button" class="texto-link" onclick="this.insertAdjacentHTML('beforebegin','<input type=text aria-label=\\'Outra opção\\' style=margin-bottom:8px>')">Adicionar opção</button>
+      <p class="ajuda">De 2 a 10 opções.</p>
+      <label class="opcao" style="margin-top:18px"><input type="checkbox"> Pode marcar mais de uma</label>
+      <div class="lado">
+        <div><label for="enc">Termina em</label><input id="enc" type="datetime-local" required></div>
+        <div><label for="res">Mostrar o resultado</label><select id="res"><option>Durante a votação</option><option>Só quando terminar</option></select></div>
+      </div>
       ${destino()}
-      <div class="caixa alerta">Depois do primeiro voto, a pergunta e as opções não podem mais ser alteradas.</div>
-      <button class="btn" type="submit">Publicar enquete</button>
+      <div class="aviso-caixa atencao">${ic("alerta")}<p>Depois do primeiro voto, a pergunta e as opções não podem mais mudar.</p></div>
+      <button class="botao" type="submit">Publicar enquete</button>
     </form>`);
 }
 function telaNovoDocumento() {
   if (!gestao()) return semPermissao();
   return tela(topo("Novo documento", true), `
-    <form onsubmit="event.preventDefault(); location.hash='#documentos'; setTimeout(()=>toast('Documento publicado'),50)">
+    <form onsubmit="event.preventDefault(); location.hash='#documentos'; setTimeout(()=>recado('Documento publicado.'),60)">
       <label for="dt">Título</label><input id="dt" type="text" required>
-      <label for="dc">Categoria</label>
-      <select id="dc"><option>Obra</option><option>Convenção</option><option>Regimento</option><option>Atas</option><option>Contratos</option><option>Outros</option></select>
-      <label for="dd">Data do documento</label><input id="dd" type="text" placeholder="dd/mm/aaaa">
-      <label>Arquivo <span class="meta">(PDF ou foto, até 20 MB)</span></label>
-      <button type="button" class="btn sec" onclick="toast('Abre os arquivos do celular')">📎 Escolher arquivo</button>
+      <div class="lado">
+        <div><label for="dc">Assunto</label><select id="dc"><option>Obra</option><option>Convenção</option><option>Regimento</option><option>Atas</option><option>Contratos</option><option>Orientações</option></select></div>
+        <div><label for="dd">Data do documento</label><input id="dd" type="text" inputmode="numeric"></div>
+      </div>
+      <label>Arquivo</label>
+      <button type="button" class="botao leve" onclick="recado('Abre os arquivos.')">${ic("clipe")} Escolher PDF ou foto</button>
+      <p class="ajuda">Até 20 MB.</p>
       <label for="na">Quem pode ver</label>
-      <select id="na"><option>Compradores (unidades ativadas)</option><option>Público (qualquer pessoa, até sem entrar)</option><option>Só gestão</option></select>
-      <label class="opcao" style="margin-top:14px"><input type="checkbox" checked> Avisar as unidades com um aviso automático</label>
-      <button class="btn" type="submit">Publicar documento</button>
+      <select id="na"><option>Todos os apartamentos que já entraram</option><option>Qualquer pessoa, mesmo sem entrar</option><option>Só a Comissão</option></select>
+      <label class="opcao" style="margin-top:18px"><input type="checkbox" checked> Avisar os apartamentos</label>
+      <button class="botao" type="submit">Publicar documento</button>
     </form>`);
 }
 
-/* ===================== Telas: administração ===================== */
+/* ===================== Administração ===================== */
 function telaAdmin() {
   if (eu().papel !== "admin") return semPermissao();
   const at = UNIDADES.filter(u => u.ativa).length;
-  return tela(topo("Painel de ativação"), `
-    <div class="numeros"><div><b>${at}</b>ativadas</div><div><b>${320 - at}</b>não ativadas</div><div><b>${Math.round(at * 100 / 320)}%</b>adesão</div></div>
-    <p class="meta">Verde = ativada · contorno amarelo = papel de gestão. Toque numa unidade para ver detalhes, resetar ou dar papel.</p>
+  return tela(topo("Unidades"), `
+    <div class="resumo"><div><b>${at}</b>já entraram</div><div><b>${320 - at}</b>ainda não</div><div><b>${Math.round(at * 100 / 320)}%</b>adesão</div></div>
+    <div class="legenda"><span><i style="background:var(--mata);border-color:var(--mata)"></i>já entrou</span><span><i></i>ainda não</span><span><i style="box-shadow:inset 0 -4px 0 var(--ipe-forte)"></i>Comissão ou administrador</span></div>
     ${[1, 2, 3, 4, 5].map(b => {
       const us = UNIDADES.filter(u => u.bloco === b), a = us.filter(u => u.ativa).length;
-      return `<div class="secao">Bloco ${b} · ${a} de 64</div>
-      <div class="grade">${us.slice().reverse().map(u => `<a href="#unidade/${u.login}" class="${u.ativa ? "at" : ""} ${GESTAO[u.login] ? "gest" : ""}" title="${u.login}">${u.login.slice(1)}</a>`).join("")}</div>`;
+      return `<p class="secao">Bloco ${b}: ${a} de 64</p><div class="grade" aria-label="Bloco ${b}, do 7º andar ao térreo">
+        ${us.slice().reverse().map(u => `<a href="#unidade/${u.login}" class="${u.ativa ? "at" : ""} ${GESTAO[u.login] ? "ge" : ""}" aria-label="Apartamento ${u.login.slice(1)}, ${u.ativa ? "já entrou" : "ainda não entrou"}">${u.login.slice(1)}</a>`).join("")}</div>`;
     }).join("")}
-    <div style="height:16px"></div>
-    <a class="btn sec" href="#historico">Histórico de ações</a>`, "admin");
+    <div style="height:20px"></div>
+    <a class="botao leve" href="#historico">${ic("relogio")} Histórico de ações</a>`, "admin");
 }
 function telaUnidade(login) {
   if (eu().papel !== "admin") return semPermissao();
-  const u = UNIDADES.find(x => x.login === login) || { login, ativa: false };
-  const g = GESTAO[login];
-  return tela(topo("Unidade " + login, true), `
-    <div class="cartao">
-      <div class="linha"><span>Situação</span><b>${u.ativa ? "✅ Ativada" : "⏳ Não ativada"}</b></div>
-      ${u.ativa ? `<div class="linha"><span>Primeiro acesso</span><b>29/10/2026 20:14</b></div>
-      <div class="linha"><span>Responsável</span><b>Nome Fictício</b></div>
-      <div class="linha"><span>Celular</span><b>(81) 9 0000-0000</b></div>` : ""}
-      <div class="linha"><span>Papel</span><b>${g || "Unidade comum"}</b></div>
-    </div>
-    ${u.ativa ? `<button class="btn perigo" onclick="toast('Confirma? Senha volta a ser a inicial, contatos apagados, aparelhos desconectados, papel retirado. Votos continuam.')">Resetar unidade</button>` : ""}
-    ${g === "Admin" ? `<div class="caixa info">Esta é a única unidade administradora: o papel não pode ser retirado.</div>` :
-      g ? `<button class="btn sec" onclick="toast('Papel de Comissão retirado. As opções somem na hora.')">Retirar papel de Comissão</button>` :
-      `<button class="btn sec" onclick="toast('Papel de Comissão dado à unidade ${login}')">Dar papel: Comissão</button>`}`);
+  const u = UNIDADES.find(x => x.login === login) || { login, ativa: false }, g = GESTAO[login];
+  return tela(topo("Unidade", true), `
+    <div style="text-align:center;margin-bottom:16px">${placa(login, "grande" + (g ? " gestao" : ""))}</div>
+    <dl class="ficha">
+      <div><dt>Situação</dt><dd>${u.ativa ? "Já entrou" : "Ainda não entrou"}</dd></div>
+      ${u.ativa ? `<div><dt>Primeiro acesso</dt><dd>29 out., 20h14</dd></div>
+      <div><dt>Responsável</dt><dd>Nome fictício</dd></div><div><dt>Celular</dt><dd>(81) 9 0000-0000</dd></div>` : ""}
+      <div><dt>Papel</dt><dd>${g || "Apartamento comum"}</dd></div>
+    </dl>
+    ${u.ativa ? `<p class="ajuda">Resetar volta a senha para a inicial, apaga os contatos, desconecta os aparelhos e tira o papel de gestão. Os votos continuam.</p>
+      <div style="height:12px"></div>
+      <button class="botao perigo" onclick="recado('Pede confirmação antes de resetar.')">Resetar este apartamento</button><div style="height:12px"></div>` : ""}
+    ${g === "Administrador" ? `<div class="aviso-caixa info">${ic("info")}<p>Único administrador. Esse papel não pode ser tirado daqui.</p></div>` :
+      g ? `<button class="botao leve" onclick="recado('Papel de Comissão retirado. As opções somem na hora.')">Tirar papel de Comissão</button>` :
+      `<button class="botao leve" onclick="recado('Agora o apartamento ${login.slice(1)} do Bloco ${login[0]} é da Comissão.')">Dar papel de Comissão</button>`}`);
 }
 function telaHistorico() {
   if (eu().papel !== "admin") return semPermissao();
-  const h = [
-    ["03/11 09:12", "2304", "publicou o aviso “Vistoria da obra no dia 15/11”"],
-    ["02/11 22:40", "sistema", "bloqueou a unidade 5307 por 15 min (5 senhas erradas)"],
-    ["02/11 18:03", "1101", "resetou a unidade 1106"],
-    ["01/11 10:30", "2304", "publicou o aviso “Fundação do Bloco 4 concluída”"],
-    ["29/10 20:14", "1203", "concluiu o primeiro acesso"],
-    ["28/10 19:00", "1101", "deu papel de Comissão à unidade 2304"],
-  ];
-  return tela(topo("Histórico", true), `<p class="meta">Só o administrador vê. Ninguém consegue apagar.</p>
-    <div class="cartao">${h.map(([d, u, t]) => `<div class="linha"><span><b>${u}</b> ${t}</span><span class="meta" style="white-space:nowrap">${d}</span></div>`).join("")}</div>`);
+  const h = [["3 nov., 9h12", "2304", "publicou o aviso “Vistoria da obra no dia 15 de novembro”"],
+    ["2 nov., 22h40", "Portal", "bloqueou o 5307 por 15 minutos, depois de 5 senhas erradas"],
+    ["2 nov., 18h03", "1101", "resetou o 1106"],
+    ["1 nov., 10h30", "2304", "publicou o aviso “Fundação do Bloco 4 concluída”"],
+    ["29 out., 20h14", "1203", "entrou pela primeira vez"],
+    ["28 out., 19h00", "1101", "deu papel de Comissão ao 2304"]];
+  return tela(topo("Histórico", true), `<p class="suave">Só o administrador vê. Ninguém consegue apagar.</p>
+    <div class="folha">${h.map(([d, u, t]) => `<div class="item"><h3><b>${u}</b> ${t}</h3><span class="linha-meta">${d}</span></div>`).join("")}</div>`);
 }
 
 /* ===================== Roteador ===================== */
 function render() {
-  const [r, p] = (location.hash.slice(1) || "entrar").split("/");
-  const n = Number(p);
+  const [r, p] = (location.hash.slice(1) || "entrar").split("/"), n = Number(p);
   const rotas = {
     "entrar": () => telaEntrar(), "entrar-erro": () => telaEntrar("erro"), "entrar-bloqueio": () => telaEntrar("bloqueio"),
-    "esqueci": () => telaEsqueci(false), "esqueci-ok": () => telaEsqueci(true),
-    "primeiro-acesso": telaPrimeiroAcesso, "instalar": telaInstalar, "publicos": telaPublicos,
-    "avisos": telaAvisos, "aviso": () => telaAviso(n), "leitura": () => telaLeitura(n),
-    "enquetes": telaEnquetes, "enquete": () => telaEnquete(n),
-    "documentos": telaDocumentos, "minha-unidade": telaMinhaUnidade,
-    "novo-aviso": telaNovoAviso, "nova-enquete": telaNovaEnquete, "novo-documento": telaNovoDocumento,
-    "admin": telaAdmin, "unidade": () => telaUnidade(p), "historico": telaHistorico,
+    "esqueci": () => telaEsqueci(false), "esqueci-ok": () => telaEsqueci(true), "primeiro-acesso": telaPrimeiroAcesso,
+    "instalar": telaInstalar, "publicos": telaPublicos, "avisos": telaAvisos, "aviso": () => telaAviso(n),
+    "leitura": () => telaLeitura(n), "enquetes": telaEnquetes, "enquete": () => telaEnquete(n), "documentos": telaDocumentos,
+    "minha-unidade": telaMinhaUnidade, "novo-aviso": telaNovoAviso, "nova-enquete": telaNovaEnquete,
+    "novo-documento": telaNovoDocumento, "admin": telaAdmin, "unidade": () => telaUnidade(p), "historico": telaHistorico,
   };
   app.innerHTML = (rotas[r] || telaEntrar)();
-  const main = app.querySelector(".conteudo"); if (main) main.scrollTop = 0;
+  app.classList.toggle("pc", modo === "pc");
+  app.classList.toggle("sem-nav", !app.querySelector(".nav"));
+  const m = app.querySelector(".conteudo"); if (m) m.scrollTop = 0;
 }
 document.getElementById("perfil").addEventListener("change", e => { perfil = e.target.value; render(); });
+document.getElementById("modo").addEventListener("change", e => { modo = e.target.value; render(); });
+document.getElementById("tema").addEventListener("change", e => app.classList.toggle("escuro", e.target.value === "escuro"));
 addEventListener("hashchange", render);
 render();
 </script>

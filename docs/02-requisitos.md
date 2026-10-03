@@ -185,7 +185,7 @@ Comissão entra com a conta do apartamento dele, que ganha os poderes de gestão
 ### Uso
 | Código | Requisito |
 |---|---|
-| RNF-01 | Funciona no navegador do celular e do computador e pode ser **instalado** como aplicativo (PWA). |
+| RNF-01 | Funciona no navegador do celular **e do computador**, com layout próprio para cada um (no computador, a partir de 900 px: menu lateral e coluna de leitura), e pode ser **instalado** como aplicativo (PWA) nos dois. |
 | RNF-02 | **Usuário leigo:** as tarefas principais (ler aviso, votar, abrir documento) se fazem em no máximo 3 toques a partir da tela inicial, sem treinamento. |
 | RNF-03 | Login explicável numa frase no grupo: "seu usuário é o bloco e o apartamento juntos, a senha inicial é mudar123". Senha guardada só como hash (nunca em texto), com mínimo de 8 caracteres na troca e diferente de `mudar123`. |
 | RNF-04 | Acessibilidade WCAG 2.1 nível AA: contraste, texto ampliável, navegação por teclado e leitor de tela. |
