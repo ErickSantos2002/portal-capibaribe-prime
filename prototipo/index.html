@@ -260,6 +260,20 @@
   }
   .chip[aria-pressed=true] { border-color: var(--mata); background: var(--mata-suave); font-weight: 700; }
 
+  /* Bloco na entrada: 5 botões grandes, um por bloco (rádio de verdade, só com outra roupa). */
+  .blocos { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .blocos legend { padding: 0; font-weight: 700; margin: 18px 0 6px; }
+  .blocos-op { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .blocos-op label { margin: 0; }
+  .blocos-op input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .blocos-op span {
+    display: grid; place-items: center; min-height: 56px; border: 2px solid var(--linha); border-radius: var(--r-pequeno);
+    background: var(--folha); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer;
+  }
+  .blocos-op input:checked + span { border-color: var(--mata); background: var(--mata-suave); color: var(--mata-forte); box-shadow: inset 0 -4px 0 var(--mata); }
+  .blocos-op input:focus-visible + span { outline: 3px solid var(--ipe-forte); outline-offset: 2px; }
+  input.apto { font-size: 24px; font-weight: 700; letter-spacing: .08em; font-variant-numeric: tabular-nums; max-width: 160px; }
+
   /* ---------- resultado de enquete ---------- */
   .res { margin-bottom: 14px; }
   .res-topo { display: flex; justify-content: space-between; gap: 12px; }
@@ -400,7 +414,7 @@
   <p><b>Nada aqui é real.</b> Nomes e avisos são inventados, e o que você digitar não é salvo nem enviado a ninguém.</p>
   <p style="margin-bottom:0"><b>Experimente:</b></p>
   <ol>
-    <li>Entrar com o <b>seu</b> bloco e apartamento (ex.: Bloco 1, apto 101 = <b>1101</b>) e qualquer senha.</li>
+    <li>Entrar com o <b>seu</b> bloco e apartamento e qualquer senha.</li>
     <li>Abrir o aviso fixado e o que tem PDF.</li>
     <li>Votar na enquete.</li>
     <li>Achar um documento.</li>
@@ -542,7 +556,7 @@ const tela = (cab, corpo, aba, extra = "") =>
 /* ===================== Acesso ===================== */
 function telaEntrar(estado) {
   const msg = {
-    erro: `<div class="aviso-caixa erro" role="alert">${ic("alerta")}<p>Bloco e apartamento ou senha incorretos. Confira os números e tente de novo.</p></div>`,
+    erro: `<div class="aviso-caixa erro" role="alert">${ic("alerta")}<p>Bloco, apartamento ou senha incorretos. Confira e tente de novo.</p></div>`,
     bloqueio: `<div class="aviso-caixa erro" role="alert">${ic("cadeado")}<div><p><b>Entrada bloqueada por 12 minutos</b> depois de várias senhas erradas.</p><p>Se não foi você, avise a administração do Portal no grupo do WhatsApp.</p></div></div>`,
   }[estado] || "";
   return tela(botaoTema("solto"), `
@@ -550,10 +564,8 @@ function telaEntrar(estado) {
       <div class="titulo">Portal Capibaribe Prime</div>
       <p class="suave">Os avisos oficiais do condomínio, num lugar só.</p></div>
     ${msg}
-    <form onsubmit="event.preventDefault(); entrarComo(this.login.value)">
-      <label for="login">Bloco e apartamento</label>
-      <input id="login" type="text" inputmode="numeric" autocomplete="username" required aria-describedby="ajuda-login">
-      <p class="ajuda" id="ajuda-login">Escreva o número do bloco e, colado nele, o do apartamento, como na placa acima: Bloco 1, apartamento 101 vira <b>1101</b>.</p>
+    <form onsubmit="event.preventDefault(); entrarComo(this.bloco.value, this.apto.value)">
+      ${campoUnidade("login")}
       <label for="senha">Senha</label>
       <input id="senha" type="password" autocomplete="current-password" required aria-describedby="ajuda-senha">
       <p class="ajuda" id="ajuda-senha">Primeira vez aqui? Use a senha que a Comissão mandou no grupo.</p>
@@ -563,10 +575,20 @@ function telaEntrar(estado) {
     <p style="text-align:center;margin:12px 0 0"><a class="texto-link" href="#esqueci">Esqueci minha senha</a></p>
     <p style="text-align:center"><a class="texto-link" href="#publicos">Ver documentos públicos</a></p>`);
 }
+/* Bloco em botões (são só 5) e apartamento num campo à parte: ninguém precisa saber que
+   "Bloco 1, apto 101" vira 1101. A tela junta os dois e manda o login de sempre para a API. */
+function campoUnidade(id) {
+  return `<fieldset class="blocos" role="radiogroup"><legend>Bloco</legend>
+      <div class="blocos-op">${[1, 2, 3, 4, 5].map(b =>
+        `<label><input type="radio" name="bloco" value="${b}" required aria-label="Bloco ${b}"><span>${b}</span></label>`).join("")}</div></fieldset>
+    <label for="${id}">Apartamento</label>
+    <input id="${id}" name="apto" class="apto" type="text" inputmode="numeric" maxlength="3" pattern="[0-9]{1,3}" oninput="this.value = this.value.replace(/\\D/g, '')" autocomplete="off" required aria-describedby="ajuda-${id}">
+    <p class="ajuda" id="ajuda-${id}">O número da porta, como 101. No térreo, 007 ou só 7.</p>`;
+}
 /* Quem testa entra com a própria unidade e passa a ver a própria placa.
    Bloco 1–5, andar 0–7, posição 01–08: 1203, 1101, 5708… Fora disso, a mesma mensagem do app real. */
-function entrarComo(valor) {
-  const u = valor.replace(/\D/g, "");
+function entrarComo(bloco, apto) {
+  const u = bloco + apto.replace(/\D/g, "").padStart(3, "0");
   if (!/^[1-5][0-7]0[1-8]$/.test(u)) { location.hash = "#entrar-erro"; return; }
   PERFIS.voce = { unidade: u, nome: "Você", papel: null, email: null };
   const sel = document.getElementById("perfil");
@@ -583,7 +605,7 @@ function telaEsqueci(ok) {
     <p>Sem e-mail cadastrado, fale com a administração do Portal no grupo do WhatsApp. Ela volta sua senha para a inicial.</p>
     <a class="botao leve" href="#entrar">Voltar para a entrada</a>` : `
     <p>Escreva o bloco e o apartamento. Se houver e-mail cadastrado, mandamos um link para criar uma senha nova.</p>
-    <label for="l2">Bloco e apartamento</label><input id="l2" type="text" inputmode="numeric">
+    ${campoUnidade("l2")}
     <div style="height:20px"></div>
     <button class="botao" onclick="location.hash='#esqueci-ok'">Mandar link</button>`);
 }

@@ -73,7 +73,7 @@ Comissão entra com a conta do apartamento dele, que ganha os poderes de gestão
 |---|---|
 | RF-01 | O sistema traz as **320 unidades** já cadastradas: 5 blocos × 8 pavimentos (térreo + 7) × 8 posições, numeradas `<andar><posição>` (ex.: 502 = 5º andar, posição 02). |
 | RF-02 | O administrador pode **editar** blocos e unidades. O sistema parte de 320 unidades sem ter visto a convenção (visão, seção 12), então precisa aceitar correção sem mexer em código. |
-| RF-03 | Cada unidade já nasce com **uma conta**. Login = **bloco + apartamento**, sem separador: Bloco 1, apto 101 → `1101`; térreo: Bloco 1, apto 007 → `1007`. O campo aceita também `1-101` e `01101`. Senha inicial de todas: **`mudar123`**. |
+| RF-03 | Cada unidade já nasce com **uma conta**. Login = **bloco + apartamento**, sem separador: Bloco 1, apto 101 → `1101`; térreo: Bloco 1, apto 007 → `1007`. Na tela, bloco e apartamento são **campos separados** (bloco em 5 botões; apartamento só números, até 3 dígitos) e a tela monta o login. Senha inicial de todas: **`mudar123`**. |
 | RF-04 | No **primeiro acesso**, a conta obriga a trocar a senha e pede o nome de um responsável e um celular. E-mail é **opcional**: quem informar pode recuperar a senha sozinho. |
 | RF-05 | Depois de **5 tentativas erradas**, o login daquela unidade fica bloqueado por 15 minutos. |
 | RF-06 | O administrador vê um **painel de ativação**: cada unidade com ativada / não ativada, data do primeiro acesso e responsável informado. Serve para medir a adesão e para perceber conta tomada. |

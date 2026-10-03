@@ -23,9 +23,21 @@ await p.click('#boasVindas button'); await new Promise(r=>setTimeout(r,100));
 console.log('boas-vindas fechada:', !(await p.$eval('#boasVindas', d => d.open)));
 // login com a unidade de quem testa; número que não existe cai no erro
 await p.evaluate(()=>location.hash='#entrar'); await new Promise(r=>setTimeout(r,100));
-await p.type('#login','9999'); await p.type('#senha','x'); await p.click('form button[type=submit]'); await new Promise(r=>setTimeout(r,100));
-console.log('9999 dá erro:', await p.evaluate(()=>location.hash) === '#entrar-erro');
-await p.$eval('#login', e => e.value = ''); await p.type('#login','2704'); await p.type('#senha','x'); await p.click('form button[type=submit]'); await new Promise(r=>setTimeout(r,100));
+await p.screenshot({ path: '/tmp/prototipo-prints/entrar-vazio.png' });
+const entrar = async (bl, ap) => {
+  await p.click(`.blocos-op input[value="${bl}"] + span`); await p.$eval('#login', e => e.value = '');
+  await p.type('#login', ap); await p.type('#senha','x'); await p.click('form button[type=submit]'); await new Promise(r=>setTimeout(r,100));
+};
+await p.$eval('#login', e => e.value = ''); await p.type('#login', '5a-02x9');
+console.log('apto só aceita número e 3 dígitos:', await p.$eval('#login', e => e.value) === '502');
+await entrar(2, '999');
+console.log('Bloco 2, apto 999 dá erro:', await p.evaluate(()=>location.hash) === '#entrar-erro');
+await entrar(1, '7');
+console.log('Bloco 1, apto 7 vira 1007:', (await p.$eval('#app', e => e.innerText)).includes('Bloco 1, apartamento 007'));
+await p.evaluate(()=>location.hash='#entrar'); await new Promise(r=>setTimeout(r,100));
+await p.click('.blocos-op input[value="2"] + span'); await p.type('#login', '704');
+await p.screenshot({ path: '/tmp/prototipo-prints/entrar-preenchido.png' });
+await p.type('#senha','x'); await p.click('form button[type=submit]'); await new Promise(r=>setTimeout(r,100));
 console.log('2704 vê a própria placa:', (await p.$eval('#app', e => e.innerText)).includes('Bloco 2, apartamento 704'));
 await p.select('#perfil','voce'); await p.evaluate(()=>location.hash='#avisos'); await new Promise(r=>setTimeout(r,100));
 console.log('2704 no mural:', (await p.$eval('#app', e => e.innerText)).includes('704'));

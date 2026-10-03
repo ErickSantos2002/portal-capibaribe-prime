@@ -60,7 +60,10 @@ divulgou, **para** começar a usar o Portal sem esperar ninguém me aprovar.
   registradas, e a pessoa cai no mural.
 - **Dado** o primeiro acesso não concluído (fechou o app no meio), **quando** entrar de novo com
   `mudar123`, **então** volta para a tela "Primeiro acesso".
-- **Quando** alguém digita `1-101`, ` 1101 ` ou `01101`, **então** o sistema entende como `1101`.
+- **Dado** a tela de entrada, **então** o bloco é escolhido em 5 botões (1 a 5) e o apartamento é
+  um campo à parte, só com números e no máximo 3 dígitos (letra ou traço nem aparecem). A tela
+  junta os dois: Bloco 1 + `101` vira o login `1101`; Bloco 1 + `7` ou `07` vira `1007`.
+  (Mudança de 03/10/2026, sugestão de um vizinho no teste: o código colado `1101` era um enigma.)
 - **Antes** de concluir, a tela mostra o aviso: *"Se você não é desta unidade, não continue. A
   conta é da família que mora ou vai morar aqui."*
 
