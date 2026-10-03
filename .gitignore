@@ -1,0 +1,14 @@
+# Documentos de referência (contrato, memorial, e-book) ficam fora do repo:
+# têm dado pessoal ou são material da construtora.
+*.pdf
+
+# Dados reais de moradores nunca entram no repositório (LGPD).
+*.xlsx
+*.xls
+*.csv
+dados-reais/
+
+# Segredos
+.env
+.env.*
+!.env.example
