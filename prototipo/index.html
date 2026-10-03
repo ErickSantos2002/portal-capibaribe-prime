@@ -77,6 +77,7 @@
     background: #1d2420; color: #f1f4f2; font-size: 14px; padding: 10px 16px;
     display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
   }
+  .proto[hidden] { display: none; }
   .proto b { color: #f0c14b; }
   .proto select { font-size: 14px; padding: 4px 6px; border-radius: 6px; color: #17231c; }
   .proto a { color: #cfe3d6; margin-right: 10px; display: inline-block; }
@@ -341,6 +342,9 @@
   .pc .recado { left: auto; right: 40px; bottom: 100px; width: 400px; }
   .pc .grade a { font-size: 13px; padding: 9px 0; }
   .pc .lado { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+  /* Link público (sem ?dev): sem moldura, o app ocupa a janela como o real. */
+  .publico .palco { padding: 0; height: 100dvh; }
+  .publico .app.pc { max-width: none; height: 100%; max-height: none; border: 0; border-radius: 0; box-shadow: none; }
   .so-pc { display: none; }
   .pc .so-pc { display: block; }
   .pc .so-cel { display: none; }
@@ -392,7 +396,6 @@
     <li>Abrir o aviso fixado e o que tem PDF.</li>
     <li>Votar na enquete.</li>
     <li>Achar um documento.</li>
-    <li>Em <b>Ver como</b>, na barra escura de cima, escolher a <b>Carla, da Comissão</b>, para ver o lado de quem publica.</li>
   </ol>
   <p class="grupo">Depois, conta no <b>grupo do WhatsApp</b>: o que foi fácil, onde travou e o que faltou. Crítica sincera ajuda mais que elogio.</p>
   <form method="dialog"><button>Começar</button></form>
@@ -894,6 +897,13 @@ document.getElementById("perfil").addEventListener("change", e => { perfil = e.t
 document.getElementById("modo").addEventListener("change", e => { modo = e.target.value; render(); });
 document.getElementById("tema").addEventListener("change", e => app.classList.toggle("escuro", e.target.value === "escuro"));
 addEventListener("hashchange", render);
+// A barra escura é ferramenta de quem desenha o Portal: só aparece com ?dev no endereço.
+// Sem ela, quem testa vê o app como ele seria: celular em tela cheia, computador na versão de computador.
+if (!new URLSearchParams(location.search).has("dev")) {
+  document.querySelector(".proto").hidden = true;
+  document.body.classList.add("publico");
+  if (innerWidth >= 900) document.getElementById("modo").value = modo = "pc";
+}
 // Começa no tema do aparelho de quem abre.
 if (matchMedia("(prefers-color-scheme: dark)").matches) { document.getElementById("tema").value = "escuro"; app.classList.add("escuro"); }
 render();

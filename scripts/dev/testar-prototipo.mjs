@@ -1,7 +1,7 @@
 // Testa o protótipo num Chrome automatizado. Uso: mkdir -p /tmp/prototipo-prints && node scripts/dev/testar-prototipo.mjs
 // Requer puppeteer-core (hoje vem do cache do npx do mermaid-cli) e o google-chrome-stable.
 import puppeteer from '/home/erick/.npm/_npx/668c188756b835f3/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js';
-const url = 'file://' + new URL('../../prototipo/index.html', import.meta.url).pathname;
+const url = 'file://' + new URL('../../prototipo/index.html', import.meta.url).pathname + '?dev';
 const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome-stable', args: ['--no-sandbox'] });
 const p = await b.newPage();
 const erros = [];
@@ -57,5 +57,11 @@ await p.setViewport({ width: 390, height: 844 }); await p.evaluate(()=>location.
 await p.screenshot({ path: '/tmp/prototipo-prints/mobile-avisos.png' });
 const alt = await p.evaluate(() => [document.querySelector('.proto').offsetHeight, document.documentElement.scrollHeight, innerHeight]);
 console.log('celular: barra', alt[0] + 'px, página', alt[1], 'x tela', alt[2], alt[1] <= alt[2] ? '(sem rolar a página)' : '(PÁGINA ROLA)');
+// sem ?dev (o link do grupo): sem barra; no computador abre na versão de computador
+await p.setViewport({ width: 1300, height: 900 }); await p.goto(url.replace('?dev', '') + '#avisos'); await new Promise(r=>setTimeout(r,500));
+console.log('público: barra escondida', await p.$eval('.proto', e => e.offsetHeight === 0), '| modo pc', await p.$eval('#app', e => e.classList.contains('pc')));
+await p.evaluate(() => boasVindas.close()); await p.screenshot({ path: '/tmp/prototipo-prints/publico-pc.png' });
+await p.setViewport({ width: 390, height: 844 }); await p.reload(); await new Promise(r=>setTimeout(r,500)); await p.evaluate(() => boasVindas.open && boasVindas.close());
+await p.screenshot({ path: '/tmp/prototipo-prints/publico-cel.png' });
 console.log('ERROS:', erros.length ? erros : 'nenhum');
 await b.close();
