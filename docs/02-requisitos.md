@@ -38,11 +38,14 @@ Cada entrega precisa funcionar **sozinha**. Se o projeto parar depois da E1, a E
 > outra unidade antes do dono; isso é tratado com detecção e reset rápido (RF-04 a RF-07), não
 > com burocracia na entrada. Pode ser revisto se os moradores pedirem.
 
-Há dois tipos de conta:
+**Só existem contas de unidade.** Gestão (Administrador, Comissão, depois síndico e conselho) é
+um **papel dado à conta da unidade** de quem faz parte dela. Ninguém tem dois logins: o membro da
+Comissão entra com a conta do apartamento dele, que ganha os poderes de gestão.
 
-- **Conta da unidade** (compartilhada pela família ou por quem mora lá): é quem vota e recebe avisos.
-- **Conta pessoal de gestão** (Administrador, Comissão, depois síndico/conselho): individual,
-  separada da conta da unidade. Assim o poder de publicar fica com a pessoa, não com a família.
+> **Decisão (02/10/2026):** sem senha separada para gestão. **Risco aceito:** qualquer pessoa da
+> família logada nessa conta pode publicar em nome da Comissão, e o registro mostra a unidade,
+> não a pessoa. Se precisar de mais controle no futuro, dá para acrescentar uma senha de gestão
+> sem mudar o resto.
 
 | Perfil | Entra em | Resumo |
 |---|---|---|
@@ -74,9 +77,9 @@ Há dois tipos de conta:
 | RF-04 | No **primeiro acesso**, a conta obriga a trocar a senha e pede o nome de um responsável e um celular. E-mail é **opcional**: quem informar pode recuperar a senha sozinho. |
 | RF-05 | Depois de **5 tentativas erradas**, o login daquela unidade fica bloqueado por 15 minutos. |
 | RF-06 | O administrador vê um **painel de ativação**: cada unidade com ativada / não ativada, data do primeiro acesso e responsável informado. Serve para medir a adesão e para perceber conta tomada. |
-| RF-07 | O administrador pode **resetar a conta de uma unidade**: a senha volta para `mudar123`, os dados de contato são apagados e a conta volta a "não ativada". Os votos já dados pela unidade continuam valendo, mas o reset fica registrado (RNF-14). |
+| RF-07 | O administrador pode **resetar a conta de uma unidade** (o papel de gestão, se houver, é retirado junto): a senha volta para `mudar123`, os dados de contato são apagados e a conta volta a "não ativada". Os votos já dados pela unidade continuam valendo, mas o reset fica registrado (RNF-14). |
 | RF-08 | A unidade pode editar os próprios dados e pedir a **exclusão dos dados de contato**. A conta em si não some, porque pertence à unidade, e volta a "não ativada" (LGPD). |
-| RF-09 | O administrador e a Comissão têm **contas pessoais**, criadas pelo administrador, separadas das contas das unidades. |
+| RF-09 | O administrador dá ou retira o papel de **Comissão** (ou, depois, síndico/conselho) de uma conta de unidade. O papel de administrador fica na conta da unidade do Erick. Quando a conta perde o papel, volta a ser uma unidade comum. |
 
 ### 3.2 Avisos — E1
 
@@ -175,7 +178,7 @@ Há dois tipos de conta:
 | RN-03 | Enquete é **consulta**, sem valor legal. O sistema mostra isso em toda enquete. |
 | RN-04 | Dado de um morador (contato, situação financeira) só é visto pelo próprio morador e pela gestão. |
 | RN-05 | O que é oficial (aviso, documento, resultado de enquete) não some: corrige-se ou arquiva-se, sempre com histórico. |
-| RN-06 | A Comissão de Representantes perde os poderes de gestão quando o síndico eleito assume. Esses poderes passam ao síndico. |
+| RN-06 | As unidades da Comissão perdem o papel de gestão quando o síndico eleito assume. O papel passa para a unidade do síndico (e do conselho). |
 
 ## 5. Requisitos não funcionais
 
@@ -195,7 +198,7 @@ Há dois tipos de conta:
 | RNF-11 | Cada dado pessoal tem uma finalidade escrita na política de privacidade, que fica visível no Portal antes do cadastro. |
 | RNF-12 | O titular pode ver, corrigir e excluir os próprios dados (RF-08). |
 | RNF-13 | Permissões verificadas **no servidor**, não só na tela. |
-| RNF-14 | Toda ação de gestão (resetar conta, publicar, editar, arquivar) fica registrada com quem fez e quando. |
+| RNF-14 | Toda ação de gestão (resetar conta, dar/retirar papel, publicar, editar, arquivar) fica registrada com a unidade que fez e quando. |
 | RNF-15 | Conexão sempre criptografada (HTTPS). |
 | RNF-16 | Dados reais nunca no repositório. Desenvolvimento e testes com dados fictícios. |
 
