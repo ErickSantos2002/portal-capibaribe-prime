@@ -90,7 +90,7 @@ Comissão entra com a conta do apartamento dele, que ganha os poderes de gestão
 | RF-12 | Um aviso pode ser **fixado** no topo do mural. |
 | RF-13 | O mural mostra os avisos do mais novo para o mais antigo, com busca por texto. |
 | RF-14 | Aviso publicado **não é apagado**: pode ser corrigido (fica o histórico da edição) ou arquivado. O oficial precisa ser rastreável (objetivo O1). |
-| RF-15 | Quem publica vê quantas pessoas leram o aviso. |
+| RF-15 | Quem publica vê quantas unidades do destino já leram o aviso. |
 
 ### 3.3 Enquetes — E1
 
