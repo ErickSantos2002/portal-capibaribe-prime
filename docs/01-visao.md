@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | Rascunho v0.2 |
+| **Status** | Rascunho v0.3 |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 24/09/2026 |
-| **Atualizado em** | 02/10/2026: fatos do condomínio conferidos em contrato, matrícula, memorial e e-book |
+| **Atualizado em** | 02/10/2026: fatos do condomínio conferidos nos documentos; acesso por conta de unidade |
 | **Próximo documento** | `02-requisitos.md` |
 
 ---
@@ -91,9 +91,11 @@ acompanhamento.
 | **Funcionários** | Portaria, zeladoria, limpeza | Encomendas, visitantes, chamados atribuídos, tarefas do dia |
 | **Comissão de Representantes** *(só na fase de obra)* | Compradores eleitos para acompanhar a obra, exigidos pela Lei 4.591/64 | Avisos e documentos da obra, comunicação com os compradores |
 
-> **Decisão:** proprietário e inquilino são **vínculos diferentes** com a unidade. Uma unidade
-> tem um ou mais proprietários e pode ter inquilinos. Isso reflete como o condomínio funciona
-> na lei (quem vota e quem responde pela taxa).
+> **Decisão (revista em 02/10/2026):** o acesso é por **uma conta por unidade**, compartilhada
+> pela família ou por quem mora lá. Quem está com a conta vota pela unidade, com o consentimento
+> implícito do proprietário. Proprietário e inquilino continuam sendo papéis diferentes na lei
+> (quem responde pela taxa), mas o sistema não os separa por enquanto. Detalhes e riscos em
+> `02-requisitos.md`, seção 2.
 
 ## 6. Escopo — o que o sistema faz
 

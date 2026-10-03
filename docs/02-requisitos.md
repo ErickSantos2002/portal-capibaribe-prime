@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | v0.1 |
+| **Status** | v0.2 — conta por unidade (decisão de 02/10/2026) |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 02/10/2026 |
 | **Base** | `01-visao.md` v0.2 |
@@ -31,27 +31,36 @@ Cada entrega precisa funcionar **sozinha**. Se o projeto parar depois da E1, a E
 
 ## 2. Perfis e permissões
 
-Os perfis da visão, mais um técnico. Uma pessoa pode ter mais de um perfil (um proprietário
-pode ser da Comissão, por exemplo).
+> **Decisão (02/10/2026): uma conta por unidade.** A família inteira usa a mesma conta. O login
+> segue um padrão que se explica numa frase no grupo, e a senha inicial é igual para todas as
+> unidades, com troca obrigatória no primeiro acesso. **Motivo:** dispensa aprovar e conferir
+> centenas de pessoas uma a uma. **Risco aceito:** quem souber o padrão pode ativar a conta de
+> outra unidade antes do dono; isso é tratado com detecção e reset rápido (RF-04 a RF-07), não
+> com burocracia na entrada. Pode ser revisto se os moradores pedirem.
+
+Há dois tipos de conta:
+
+- **Conta da unidade** (compartilhada pela família ou por quem mora lá): é quem vota e recebe avisos.
+- **Conta pessoal de gestão** (Administrador, Comissão, depois síndico/conselho): individual,
+  separada da conta da unidade. Assim o poder de publicar fica com a pessoa, não com a família.
 
 | Perfil | Entra em | Resumo |
 |---|---|---|
-| **Administrador do sistema** | E1 | Mantém o Portal funcionando: aprova cadastros, gerencia perfis. Na E1 é o Erick. |
+| **Administrador do sistema** | E1 | Mantém o Portal funcionando: reseta contas de unidade, gerencia perfis. Na E1 é o Erick. |
 | **Comissão de Representantes** | E1 | Publica avisos e documentos da obra, cria enquetes. Deixa de existir após a entrega. |
-| **Proprietário** | E1 | Vê tudo o que é público aos compradores, vota em enquetes pela sua unidade. |
-| **Inquilino / morador** | E2 | Uso do dia a dia. Não vota. |
+| **Unidade** | E1 | Conta compartilhada da unidade. Vê o que é dos compradores, vota em enquetes. Quem estiver com a conta vota pela unidade, com o consentimento implícito do proprietário (RN-02). |
 | **Síndico e conselho** | E2 | Herdam os poderes da Comissão e ganham os de gestão. |
 | **Funcionários** | E2 | Portaria e zeladoria: encomendas, visitantes, chamados atribuídos. |
 
-| Ação | Admin | Comissão / Síndico | Proprietário | Inquilino | Funcionário |
-|---|:-:|:-:|:-:|:-:|:-:|
-| Aprovar cadastro e vínculo com unidade | ✅ | ✅ | — | — | — |
-| Publicar aviso oficial | ✅ | ✅ | — | — | — |
-| Criar enquete | ✅ | ✅ | — | — | — |
-| Votar em enquete | — | pela sua unidade | ✅ | — | — |
-| Publicar documento | ✅ | ✅ | — | — | — |
-| Ver documento (RF-31) | todos | todos | público + compradores | público + compradores | público |
-| Ver dados de contato de outros moradores | ✅ | ✅ | — | — | — |
+| Ação | Admin | Comissão / Síndico | Unidade | Funcionário |
+|---|:-:|:-:|:-:|:-:|
+| Resetar conta de unidade | ✅ | — | — | — |
+| Publicar aviso oficial | ✅ | ✅ | — | — |
+| Criar enquete | ✅ | ✅ | — | — |
+| Votar em enquete | — | — (vota pela conta da unidade) | ✅ | — |
+| Publicar documento | ✅ | ✅ | — | — |
+| Ver documento (RF-31) | todos | todos | público + compradores | público |
+| Ver dados de contato das unidades | ✅ | ✅ | — | — |
 
 ## 3. Requisitos funcionais
 
@@ -61,18 +70,20 @@ pode ser da Comissão, por exemplo).
 |---|---|
 | RF-01 | O sistema traz as **320 unidades** já cadastradas: 5 blocos × 8 pavimentos (térreo + 7) × 8 posições, numeradas `<andar><posição>` (ex.: 502 = 5º andar, posição 02). |
 | RF-02 | O administrador pode **editar** blocos, unidades e a que módulo cada bloco pertence, porque a convenção ainda pode mudar o que é "o condomínio" (visão, seção 12). |
-| RF-03 | Uma pessoa cria conta informando nome, e-mail e celular, e **pede vínculo** com uma unidade, dizendo se é proprietária. |
-| RF-04 | O vínculo só vale depois de **aprovado** pelo administrador ou pela Comissão. Até lá a pessoa vê só os avisos públicos. |
-| RF-05 | Uma unidade pode ter mais de um proprietário (ex.: casal que comprou junto). |
-| RF-06 | A pessoa pode editar os próprios dados e **excluir a própria conta** (RNF de LGPD). |
-| RF-07 | O administrador vê a lista de unidades com e sem cadastro, para saber a adesão. |
+| RF-03 | Cada unidade já nasce com **uma conta**. Login = **bloco + apartamento**, sem separador: Bloco 1, apto 101 → `1101`; térreo: Bloco 1, apto 007 → `1007`. O campo aceita também `1-101` e `01101`. Senha inicial de todas: **`mudar123`**. |
+| RF-04 | No **primeiro acesso**, a conta obriga a trocar a senha e pede o nome de um responsável e um celular. E-mail é **opcional**: quem informar pode recuperar a senha sozinho. |
+| RF-05 | Depois de **5 tentativas erradas**, o login daquela unidade fica bloqueado por 15 minutos. |
+| RF-06 | O administrador vê um **painel de ativação**: cada unidade com ativada / não ativada, data do primeiro acesso e responsável informado. Serve para medir a adesão e para perceber conta tomada. |
+| RF-07 | O administrador pode **resetar a conta de uma unidade**: a senha volta para `mudar123`, os dados de contato são apagados e a conta volta a "não ativada". Os votos já dados pela unidade continuam valendo, mas o reset fica registrado (RNF-14). |
+| RF-08 | A unidade pode editar os próprios dados e pedir a **exclusão dos dados de contato**. A conta em si não some, porque pertence à unidade, e volta a "não ativada" (LGPD). |
+| RF-09 | O administrador e a Comissão têm **contas pessoais**, criadas pelo administrador, separadas das contas das unidades. |
 
 ### 3.2 Avisos — E1
 
 | Código | Requisito |
 |---|---|
 | RF-10 | Comissão e administrador publicam avisos com título, texto, anexos (imagem ou PDF) e destino: todos, um bloco ou um módulo. |
-| RF-11 | Ao publicar, quem tem vínculo aprovado no destino recebe **notificação** no celular e por e-mail. |
+| RF-11 | Ao publicar, as unidades do destino recebem **notificação** em todo aparelho em que a conta estiver conectada, e por e-mail quando houver e-mail informado. |
 | RF-12 | Um aviso pode ser **fixado** no topo do mural. |
 | RF-13 | O mural mostra os avisos do mais novo para o mais antigo, com busca por texto. |
 | RF-14 | Aviso publicado **não é apagado**: pode ser corrigido (fica o histórico da edição) ou arquivado. O oficial precisa ser rastreável (objetivo O1). |
@@ -83,7 +94,7 @@ pode ser da Comissão, por exemplo).
 | Código | Requisito |
 |---|---|
 | RF-20 | Comissão e administrador criam enquetes com pergunta, opções (escolha única ou múltipla), prazo e destino. |
-| RF-21 | **Um voto por unidade** (RN-01), dado por qualquer proprietário vinculado a ela. |
+| RF-21 | **Um voto por unidade** (RN-01), dado pela conta da unidade. |
 | RF-22 | O voto pode ser trocado até o prazo terminar. |
 | RF-23 | Quem cria escolhe se o resultado aparece durante a votação ou só no fim. |
 | RF-24 | O resultado mostra votos por opção, unidades que votaram e participação (% das unidades). |
@@ -94,7 +105,7 @@ pode ser da Comissão, por exemplo).
 | Código | Requisito |
 |---|---|
 | RF-30 | Comissão e administrador publicam documentos (PDF ou imagem) com título, categoria e data. Categorias iniciais: convenção, regimento, atas, contratos, obra, outros. |
-| RF-31 | Cada documento tem um nível de acesso: **público** (qualquer visitante), **compradores** (vínculo aprovado) ou **gestão** (Comissão / síndico / conselho). |
+| RF-31 | Cada documento tem um nível de acesso: **público** (qualquer visitante), **compradores** (conta de unidade ativada) ou **gestão** (Comissão / síndico / conselho). |
 | RF-32 | Uma nova versão de documento não apaga a anterior: o histórico de versões fica disponível. |
 | RF-33 | Publicar documento gera aviso automático (RF-11) se quem publica marcar essa opção. |
 
@@ -159,8 +170,8 @@ pode ser da Comissão, por exemplo).
 
 | Código | Regra |
 |---|---|
-| RN-01 | **Enquete vale um voto por unidade**, não por pessoa. É como o condomínio decide, e evita que unidade com mais cadastros pese mais. |
-| RN-02 | Só **proprietário** vota. Inquilino não vota (visão, seção 5). |
+| RN-01 | **Enquete vale um voto por unidade**, não por pessoa. É como o condomínio decide. Com uma conta por unidade, isso sai naturalmente. |
+| RN-02 | **Quem está com a conta da unidade vota por ela.** Se um inquilino ou parente tem a conta, considera-se que o proprietário consentiu. Vale para enquete, que é consulta (RN-03); voto com valor legal, se um dia existir, terá regra própria. |
 | RN-03 | Enquete é **consulta**, sem valor legal. O sistema mostra isso em toda enquete. |
 | RN-04 | Dado de um morador (contato, situação financeira) só é visto pelo próprio morador e pela gestão. |
 | RN-05 | O que é oficial (aviso, documento, resultado de enquete) não some: corrige-se ou arquiva-se, sempre com histórico. |
@@ -173,18 +184,18 @@ pode ser da Comissão, por exemplo).
 |---|---|
 | RNF-01 | Funciona no navegador do celular e do computador e pode ser **instalado** como aplicativo (PWA). |
 | RNF-02 | **Usuário leigo:** as tarefas principais (ler aviso, votar, abrir documento) se fazem em no máximo 3 toques a partir da tela inicial, sem treinamento. |
-| RNF-03 | Entrar no Portal **sem precisar decorar senha** (ex.: link de acesso por e-mail). A forma exata é decidida na arquitetura. |
+| RNF-03 | Login explicável numa frase no grupo: "seu usuário é o bloco e o apartamento juntos, a senha inicial é mudar123". Senha guardada só como hash (nunca em texto), com mínimo de 8 caracteres na troca e diferente de `mudar123`. |
 | RNF-04 | Acessibilidade WCAG 2.1 nível AA: contraste, texto ampliável, navegação por teclado e leitor de tela. |
 | RNF-05 | Interface em português do Brasil. |
 
 ### Segurança e LGPD
 | Código | Requisito |
 |---|---|
-| RNF-10 | Coletar **só o dado necessário**. Na E1: nome, e-mail, celular e unidade. **Não** pedir CPF, RG, contrato ou renda. |
+| RNF-10 | Coletar **só o dado necessário**. Na E1: nome de um responsável, celular e, opcionalmente, e-mail, por unidade. **Não** pedir CPF, RG, contrato ou renda. |
 | RNF-11 | Cada dado pessoal tem uma finalidade escrita na política de privacidade, que fica visível no Portal antes do cadastro. |
-| RNF-12 | O titular pode ver, corrigir e excluir os próprios dados (RF-06). |
+| RNF-12 | O titular pode ver, corrigir e excluir os próprios dados (RF-08). |
 | RNF-13 | Permissões verificadas **no servidor**, não só na tela. |
-| RNF-14 | Toda ação de gestão (aprovar, publicar, editar, arquivar) fica registrada com quem fez e quando. |
+| RNF-14 | Toda ação de gestão (resetar conta, publicar, editar, arquivar) fica registrada com quem fez e quando. |
 | RNF-15 | Conexão sempre criptografada (HTTPS). |
 | RNF-16 | Dados reais nunca no repositório. Desenvolvimento e testes com dados fictícios. |
 
@@ -198,8 +209,8 @@ pode ser da Comissão, por exemplo).
 
 ## 6. O que a E1 entrega, em uma frase
 
-> Um comprador do Capibaribe Prime entra no Portal pelo celular, se cadastra na sua unidade,
-> é aprovado, e a partir daí recebe os avisos oficiais, vota nas enquetes pela sua unidade e
+> Um comprador do Capibaribe Prime entra no Portal pelo celular com o número do bloco e do
+> apartamento, troca a senha, e a partir daí recebe os avisos oficiais, vota nas enquetes e
 > encontra os documentos da obra, tudo num lugar que não se perde como o grupo de WhatsApp.
 
 Requisitos da E1: RF-01 a RF-33, RN-01 a RN-06 e todos os RNF.
@@ -215,5 +226,4 @@ Requisitos da E1: RF-01 a RF-33, RN-01 a RN-06 e todos os RNF.
 
 ## 8. Questões em aberto
 
-- [ ] Quem aprova cadastros na E1, se a Comissão de Representantes não existir ou não quiser usar o Portal? (padrão: o administrador)
 - [ ] O destino "módulo" (RF-10) só faz sentido se a convenção separar o Módulo I dos blocos 04 e 05. Confirmar na certidão da convenção.
