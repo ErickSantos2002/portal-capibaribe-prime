@@ -242,6 +242,18 @@ dado sobre o comportamento das pessoas, sem uso.
 | `entidade`, `entidade_id` | text, bigint | o que foi afetado, ex.: (`unidade`, 42) |
 | `detalhes` | jsonb | contexto, **sem dado pessoal e sem senha** |
 
+**`erro`** — erros da API, porque os logs da Vercel grátis duram só 1 hora (arquitetura, seção 8)
+
+| Coluna | Tipo | Regra |
+|---|---|---|
+| `id` | bigint | PK |
+| `ocorrido_em` | timestamptz | |
+| `rota` | text | ex.: `POST /api/avisos` |
+| `tipo`, `mensagem` | text | classe e mensagem da exceção, **sem dado pessoal e sem corpo da requisição** |
+| `unidade_id` | FK `unidade` | quem estava logado, se houver |
+
+Apagado automaticamente após 90 dias (é a única tabela com limpeza programada).
+
 ## 4. Onde cada regra é garantida
 
 Regra importante não pode depender só da tela (RNF-13). Quando o banco consegue garantir, garante.
