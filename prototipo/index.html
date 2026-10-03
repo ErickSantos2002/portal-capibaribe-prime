@@ -220,6 +220,9 @@
     width: 100%; min-height: 54px; padding: 12px 14px; font-size: 18px; background: var(--folha);
     border: 2px solid var(--linha); border-radius: var(--r-pequeno);
   }
+  /* Campo de uma linha com a mesma altura dos botões (56px): a coluna fica com um ritmo só. */
+  .app :is(input[type=text], input[type=password], input[type=tel], input[type=email], input[type=search],
+  input[type=datetime-local], select) { height: 56px; padding-block: 0; }
   input:hover, textarea:hover, select:hover { border-color: var(--tinta-suave); }
   textarea { min-height: 140px; resize: vertical; }
   :focus-visible { outline: 3px solid var(--ipe-forte); outline-offset: 2px; }
@@ -272,7 +275,7 @@
   }
   .blocos-op input:checked + span { border-color: var(--mata); background: var(--mata-suave); color: var(--mata-forte); box-shadow: inset 0 -4px 0 var(--mata); }
   .blocos-op input:focus-visible + span { outline: 3px solid var(--ipe-forte); outline-offset: 2px; }
-  input.apto { font-size: 24px; font-weight: 700; letter-spacing: .08em; font-variant-numeric: tabular-nums; max-width: 160px; }
+  input.apto { font-size: 24px; font-weight: 700; letter-spacing: .08em; font-variant-numeric: tabular-nums; }
 
   /* ---------- resultado de enquete ---------- */
   .res { margin-bottom: 14px; }
