@@ -89,7 +89,7 @@ acompanhamento.
 | **Inquilino / morador** | Quem vive na unidade sem ser dono (inclui familiares) | Uso do dia a dia: reservas, chamados, encomendas, visitantes, avisos |
 | **Síndico e conselho** | Gestão eleita em assembleia | Pagamentos, prestação de contas, documentos oficiais, avisos, aprovações |
 | **Funcionários** | Portaria, zeladoria, limpeza | Encomendas, visitantes, chamados atribuídos, tarefas do dia |
-| **Comissão de Representantes** *(só na fase de obra)* | Compradores eleitos para acompanhar a obra, exigidos pela Lei 4.591/64 | Avisos e documentos da obra, comunicação com os compradores |
+| **Comissão** *(só na fase de obra)* | Hoje, os **5 administradores do grupo de WhatsApp** dos compradores. A Lei 4.591/64 exige uma Comissão de Representantes durante a obra; se esse grupo é ela formalmente, não importa para o sistema | Avisos, enquetes e documentos da obra |
 
 > **Decisão (revista em 02/10/2026):** o acesso é por **uma conta por unidade**, compartilhada
 > pela família ou por quem mora lá. Quem está com a conta vota pela unidade, com o consentimento
@@ -173,8 +173,7 @@ As funções abaixo entram **em algum momento**. A ordem fica no roadmap.
 
 ## 11. Critérios de sucesso
 
-*Base: 320 unidades (a confirmar na convenção, ver seção 12). Os percentuais ficam para o
-roadmap.*
+*Base: 320 unidades (seção 12). Os percentuais ficam para o roadmap.*
 
 - X% das unidades com pelo menos um morador cadastrado nos primeiros 3 meses
 - Todas as reservas de áreas comuns feitas pelo sistema
@@ -184,12 +183,12 @@ roadmap.*
 ## 12. Questões em aberto
 
 - [x] ~~Quantas unidades tem o condomínio?~~ 320 no Capibaribe Prime, 192 no Módulo I (seção 2).
-- [ ] A convenção (RA 939) cobre só o Módulo I, o Capibaribe Prime inteiro ou o Reserva do
-      Capibaribe? Define quem vota e quantas unidades o sistema atende. **Pedir certidão da
-      convenção ao 7º RI.**
+- [x] ~~O que a convenção cobre?~~ A certidão não foi obtida (02/10/2026). **Decisão:** o sistema
+      atende o Capibaribe Prime inteiro, **320 unidades em 5 blocos**, porque o lazer é do
+      empreendimento todo. Blocos e unidades são editáveis (RF-02) se a convenção disser outra coisa.
 - [ ] Quais áreas comuns serão entregues de fato (memorial × e-book)?
-- [ ] A Comissão de Representantes da obra já existe? Quem faz parte?
-- [ ] Haverá administradora? (a convenção pode dizer)
+- [x] ~~A Comissão existe?~~ Sim: os 5 administradores do grupo de WhatsApp (seção 5).
+- [ ] Haverá administradora? (sem a convenção, só se sabe após a entrega)
 - [ ] Votação com valor legal: entra ou não?
 
 ---

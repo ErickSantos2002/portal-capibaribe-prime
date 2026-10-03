@@ -16,7 +16,7 @@ Cada requisito tem um código e uma **entrega** (quando entra):
 
 | Entrega | Nome | Quando | Para quê |
 |---|---|---|---|
-| **E1** | Fase de obra | 2026–2027 | Comunicação oficial entre compradores, Comissão de Representantes e (depois) gestão. Útil antes da entrega das chaves. |
+| **E1** | Fase de obra | 2026–2027 | Comunicação oficial entre compradores, Comissão e (depois) gestão. Útil antes da entrega das chaves. |
 | **E2** | Mudança e dia a dia | Perto da entrega (2028) | Reservas, chamados, encomendas, visitantes e garantia da construtora |
 | **E3** | Gestão | Após a 1ª assembleia | Financeiro, assembleias, manutenção, funcionários |
 
@@ -47,7 +47,7 @@ Há dois tipos de conta:
 | Perfil | Entra em | Resumo |
 |---|---|---|
 | **Administrador do sistema** | E1 | Mantém o Portal funcionando: reseta contas de unidade, gerencia perfis. Na E1 é o Erick. |
-| **Comissão de Representantes** | E1 | Publica avisos e documentos da obra, cria enquetes. Deixa de existir após a entrega. |
+| **Comissão** | E1 | Os 5 administradores do grupo de WhatsApp dos compradores. Publicam avisos e documentos da obra e criam enquetes. Deixa de existir após a entrega. |
 | **Unidade** | E1 | Conta compartilhada da unidade. Vê o que é dos compradores, vota em enquetes. Quem estiver com a conta vota pela unidade, com o consentimento implícito do proprietário (RN-02). |
 | **Síndico e conselho** | E2 | Herdam os poderes da Comissão e ganham os de gestão. |
 | **Funcionários** | E2 | Portaria e zeladoria: encomendas, visitantes, chamados atribuídos. |
@@ -69,7 +69,7 @@ Há dois tipos de conta:
 | Código | Requisito |
 |---|---|
 | RF-01 | O sistema traz as **320 unidades** já cadastradas: 5 blocos × 8 pavimentos (térreo + 7) × 8 posições, numeradas `<andar><posição>` (ex.: 502 = 5º andar, posição 02). |
-| RF-02 | O administrador pode **editar** blocos, unidades e a que módulo cada bloco pertence, porque a convenção ainda pode mudar o que é "o condomínio" (visão, seção 12). |
+| RF-02 | O administrador pode **editar** blocos e unidades. O sistema parte de 320 unidades sem ter visto a convenção (visão, seção 12), então precisa aceitar correção sem mexer em código. |
 | RF-03 | Cada unidade já nasce com **uma conta**. Login = **bloco + apartamento**, sem separador: Bloco 1, apto 101 → `1101`; térreo: Bloco 1, apto 007 → `1007`. O campo aceita também `1-101` e `01101`. Senha inicial de todas: **`mudar123`**. |
 | RF-04 | No **primeiro acesso**, a conta obriga a trocar a senha e pede o nome de um responsável e um celular. E-mail é **opcional**: quem informar pode recuperar a senha sozinho. |
 | RF-05 | Depois de **5 tentativas erradas**, o login daquela unidade fica bloqueado por 15 minutos. |
@@ -82,7 +82,7 @@ Há dois tipos de conta:
 
 | Código | Requisito |
 |---|---|
-| RF-10 | Comissão e administrador publicam avisos com título, texto, anexos (imagem ou PDF) e destino: todos, um bloco ou um módulo. |
+| RF-10 | Comissão e administrador publicam avisos com título, texto, anexos (imagem ou PDF) e destino: todos ou blocos escolhidos. |
 | RF-11 | Ao publicar, as unidades do destino recebem **notificação** em todo aparelho em que a conta estiver conectada, e por e-mail quando houver e-mail informado. |
 | RF-12 | Um aviso pode ser **fixado** no topo do mural. |
 | RF-13 | O mural mostra os avisos do mais novo para o mais antigo, com busca por texto. |
@@ -226,4 +226,5 @@ Requisitos da E1: RF-01 a RF-33, RN-01 a RN-06 e todos os RNF.
 
 ## 8. Questões em aberto
 
-- [ ] O destino "módulo" (RF-10) só faz sentido se a convenção separar o Módulo I dos blocos 04 e 05. Confirmar na certidão da convenção.
+Nenhuma bloqueando a E1. A convenção não foi obtida; a decisão de seguir com 320 unidades está
+na visão, seção 12.
