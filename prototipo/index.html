@@ -140,6 +140,14 @@
     display: grid; place-items: center; cursor: pointer; border-radius: var(--r-pequeno);
   }
 
+  /* Botão de tema: no topo, à direita; na entrada (sem topo), solto no canto. */
+  .tema-btn {
+    background: none; border: 0; color: inherit; width: 44px; height: 44px; margin-right: -8px; flex: none;
+    display: grid; place-items: center; cursor: pointer; border-radius: var(--r-pequeno);
+  }
+  .tema-btn:focus-visible { outline: 3px solid var(--ipe); outline-offset: 2px; }
+  .tema-btn.solto { position: absolute; top: 10px; right: 18px; color: var(--tinta-suave); z-index: 2; }
+
   /* ---------- a placa do apartamento (o elemento-assinatura) ---------- */
   .placa {
     display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
@@ -410,6 +418,8 @@ const P = {
   casa: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/>',
   painel: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   voltar: '<path d="M15 18l-6-6 6-6"/>',
+  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
+  lua: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   seta: '<path d="M9 6l6 6-6 6"/>',
   pino: '<path d="M12 16v5"/><path d="M8.5 3.5h7l-1 5.5 3 3.5h-11l3-3.5z"/>',
   clipe: '<path d="M20.5 11.5l-8.2 8.2a5 5 0 0 1-7-7l8.6-8.6a3.4 3.4 0 0 1 4.8 4.8l-8.6 8.6a1.8 1.8 0 0 1-2.5-2.5L15.5 7"/>',
@@ -498,8 +508,24 @@ function topo(titulo, voltar) {
     ${voltar ? `<button class="voltar" onclick="history.back()">${ic("voltar", 28, "Voltar")}</button>` : ""}
     <h1>${titulo}</h1>
     ${voltar === undefined ? placa(eu().unidade, gestao() ? "gestao" : "") : ""}
+    ${botaoTema()}
   </header>`;
 }
+/* O botão mostra para onde vai: no claro, a lua (escurecer); no escuro, o sol (clarear). */
+const escuro = () => app.classList.contains("escuro");
+const botaoTema = (extra = "") =>
+  `<button type="button" class="tema-btn ${extra}" onclick="trocarTema()">${ic(escuro() ? "sol" : "lua", 24, escuro() ? "Usar tema claro" : "Usar tema escuro")}</button>`;
+function aplicarTema(t) {
+  app.classList.toggle("escuro", t === "escuro");
+  document.getElementById("tema").value = t;
+  app.querySelectorAll(".tema-btn").forEach(b => b.outerHTML = botaoTema(b.classList.contains("solto") ? "solto" : ""));
+  try { localStorage.setItem("portal-tema", t); } catch {}
+}
+function trocarTema() {
+  aplicarTema(escuro() ? "claro" : "escuro");
+  app.querySelector(".tema-btn")?.focus();
+}
+window.trocarTema = trocarTema;
 function nav(ativa) {
   const it = [["avisos", "avisos", "Avisos"], ["enquetes", "enquetes", "Enquetes"], ["documentos", "documentos", "Documentos"], ["minha-unidade", "casa", "Minha unidade"]];
   if (eu().papel === "admin") it.push(["admin", "painel", "Unidades"]);
@@ -519,7 +545,7 @@ function telaEntrar(estado) {
     erro: `<div class="aviso-caixa erro" role="alert">${ic("alerta")}<p>Bloco e apartamento ou senha incorretos. Confira os números e tente de novo.</p></div>`,
     bloqueio: `<div class="aviso-caixa erro" role="alert">${ic("cadeado")}<div><p><b>Entrada bloqueada por 12 minutos</b> depois de várias senhas erradas.</p><p>Se não foi você, avise a administração do Portal no grupo do WhatsApp.</p></div></div>`,
   }[estado] || "";
-  return tela("", `
+  return tela(botaoTema("solto"), `
     <div class="entrada">${placa("1101", "grande")}
       <div class="titulo">Portal Capibaribe Prime</div>
       <p class="suave">Os avisos oficiais do condomínio, num lugar só.</p></div>
@@ -895,7 +921,7 @@ function render() {
 }
 document.getElementById("perfil").addEventListener("change", e => { perfil = e.target.value; render(); });
 document.getElementById("modo").addEventListener("change", e => { modo = e.target.value; render(); });
-document.getElementById("tema").addEventListener("change", e => app.classList.toggle("escuro", e.target.value === "escuro"));
+document.getElementById("tema").addEventListener("change", e => aplicarTema(e.target.value));
 addEventListener("hashchange", render);
 // A barra escura é ferramenta de quem desenha o Portal: só aparece com ?dev no endereço.
 // Sem ela, quem testa vê o app como ele seria: celular em tela cheia, computador na versão de computador.
@@ -904,8 +930,10 @@ if (!new URLSearchParams(location.search).has("dev")) {
   document.body.classList.add("publico");
   if (innerWidth >= 900) document.getElementById("modo").value = modo = "pc";
 }
-// Começa no tema do aparelho de quem abre.
-if (matchMedia("(prefers-color-scheme: dark)").matches) { document.getElementById("tema").value = "escuro"; app.classList.add("escuro"); }
+// Começa no claro (o escuro do aparelho confundia quem testava); quem trocar pelo botão, fica com a escolha.
+let temaSalvo = null;
+try { temaSalvo = localStorage.getItem("portal-tema"); } catch {}
+if (temaSalvo === "escuro") { document.getElementById("tema").value = "escuro"; app.classList.add("escuro"); }
 render();
 
 // Boas-vindas só na primeira visita; depois, pelo botão "Como testar".

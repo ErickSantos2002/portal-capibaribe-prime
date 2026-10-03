@@ -63,5 +63,23 @@ console.log('público: barra escondida', await p.$eval('.proto', e => e.offsetHe
 await p.evaluate(() => boasVindas.close()); await p.screenshot({ path: '/tmp/prototipo-prints/publico-pc.png' });
 await p.setViewport({ width: 390, height: 844 }); await p.reload(); await new Promise(r=>setTimeout(r,500)); await p.evaluate(() => boasVindas.open && boasVindas.close());
 await p.screenshot({ path: '/tmp/prototipo-prints/publico-cel.png' });
+// tema: aparelho no escuro ainda abre no claro; o botão troca e a escolha fica gravada
+await p.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
+await p.evaluate(() => localStorage.removeItem('portal-tema')); await p.reload(); await new Promise(r=>setTimeout(r,400));
+await p.evaluate(() => boasVindas.open && boasVindas.close());
+console.log('tema: aparelho escuro abre claro', !(await p.$eval('#app', e => e.classList.contains('escuro'))));
+await p.click('.tema-btn'); await new Promise(r=>setTimeout(r,100));
+console.log('tema: botão escurece', await p.$eval('#app', e => e.classList.contains('escuro')), '| rótulo', await p.$eval('.tema-btn svg', e => e.getAttribute('aria-label')));
+await p.screenshot({ path: '/tmp/prototipo-prints/publico-cel-escuro.png' });
+await p.reload(); await new Promise(r=>setTimeout(r,400));
+console.log('tema: escolha sobrevive ao recarregar', await p.$eval('#app', e => e.classList.contains('escuro')));
+await p.evaluate(() => { location.hash = '#entrar'; }); await new Promise(r=>setTimeout(r,100));
+await p.click('.tema-btn'); await new Promise(r=>setTimeout(r,100));
+console.log('tema: botão da entrada clareia', !(await p.$eval('#app', e => e.classList.contains('escuro'))));
+await p.screenshot({ path: '/tmp/prototipo-prints/publico-cel-entrar-claro.png' });
+await p.setViewport({ width: 1300, height: 900 }); await p.reload(); await new Promise(r=>setTimeout(r,400));
+await p.screenshot({ path: '/tmp/prototipo-prints/publico-pc-entrar.png' });
+await p.evaluate(() => { location.hash = '#avisos'; }); await new Promise(r=>setTimeout(r,100));
+await p.screenshot({ path: '/tmp/prototipo-prints/publico-pc-avisos.png' });
 console.log('ERROS:', erros.length ? erros : 'nenhum');
 await b.close();
