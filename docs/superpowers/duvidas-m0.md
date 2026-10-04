@@ -60,14 +60,24 @@ Revisar antes de fechar o marco; o que virar regra vai para os docs 04/05 ou par
   variável, ou com cabeçalho errado, 404 idêntico ao de rota inexistente.
 - **Por quê:** o critério do M0 pede um erro forçado em produção sem abrir porta. Depois de
   verificar, a variável pode ser apagada na Vercel e a rota volta a ser 404 para todo mundo.
+- **Revisão:** a rota aceita todos os métodos e responde o mesmo 404 em qualquer um que não seja
+  POST com o segredo; antes, um GET recebia 405 com `Allow`, o que revelava a rota.
 
 ## 9. Mensagem da tabela `erro` sem dado pessoal
-- **Decisão:** erro do banco vira só classe + SQLSTATE + nome da restrição/tabela/coluna; erro
-  do pydantic vira campo + tipo; outros, a primeira linha da mensagem (máx. 500 caracteres).
-  A rota é gravada pelo molde (`/api/avisos/{aviso_id}`), não pela URL real.
-- **Por quê:** a mensagem do Postgres traz valores (`DETAIL: Key (email)=(...)`) e a do
-  SQLAlchemy traz os parâmetros. Fica a regra para o código do Portal: nunca pôr dado pessoal na
-  mensagem de uma exceção.
+- **Decisão (revista após a revisão independente):** erro do banco vira só classe + SQLSTATE +
+  nome da restrição/tabela/coluna; erro do pydantic vira campo (1º nível) + tipo; `ErroDoPortal`
+  (exceções nossas) leva a primeira linha da mensagem; **qualquer outra** (`ValueError`,
+  `KeyError`...) vira só tipo + `arquivo:linha` de onde foi levantada. Máx. 500 caracteres. A
+  rota é gravada pelo molde (`/api/avisos/{aviso_id}`), não pela URL real.
+- **Por quê:** a mensagem do Postgres traz valores (`DETAIL: Key (email)=(...)`), a do
+  SQLAlchemy traz os parâmetros, e as do Python repetem o valor que causou o erro
+  (`invalid literal for int(): '81 9...'`). Regra para o código do Portal: exceção com texto
+  próprio herda de `ErroDoPortal` e nunca leva dado pessoal.
+- **Captura:** middleware ASGI próprio (`RegistroDeErros`), não `exception_handler(Exception)`.
+  O `ServerErrorMiddleware` do Starlette relança a exceção depois do handler, e o servidor
+  imprime o traceback com `str(exc)` no log. O middleware grava, loga só a versão segura e
+  responde 500 sem relançar. Efeito colateral aceito: o log do servidor não tem mais o
+  traceback; o `arquivo:linha` em `erro` é o ponto de partida para investigar.
 
 ## 10. Conexão: `NullPool` e sem prepared statements
 - **Decisão:** psycopg 3, `NullPool`, `prepare_threshold=None`; `postgres://` e `postgresql://`
@@ -80,14 +90,20 @@ Revisar antes de fechar o marco; o que virar regra vai para os docs 04/05 ou par
   mesmo projeto): serviço `web` (Vite, com rewrite de SPA para `/index.html`) e `api`
   (FastAPI, `entrypoint: app.main:app`, também em `[tool.vercel]` do pyproject); rewrites
   `/api/(.*)` → `api` e o resto → `web`; `regions: ["gru1"]`. As rotas da FastAPI já têm o
-  prefixo `/api` (a Vercel repassa o caminho original). Cabeçalhos básicos (`nosniff`,
-  `Referrer-Policy`, `X-Frame-Options`).
+  prefixo `/api` (a Vercel repassa o caminho original). Cabeçalhos: CSP
+  (`default-src 'self'`, `frame-ancestors 'none'`, `base-uri`, `form-action`, `object-src 'none'`),
+  `Permissions-Policy` negando câmera, microfone, localização etc., `nosniff`,
+  `Referrer-Policy` e `X-Frame-Options`. A função da API exclui `testes/`, `migracoes/` e caches
+  (`services.api.functions["app/main.py"].excludeFiles`, aceito pelo schema).
 - **Validado:** o arquivo passa no JSON Schema oficial (`openapi.vercel.sh/vercel.json`);
-  `uvicorn` e `vite build`/`vite preview` funcionam com os mesmos caminhos.
+  `uvicorn` e `vite build`/`vite preview` funcionam com os mesmos caminhos. O `vite preview`
+  aplica os cabeçalhos lidos do próprio `vercel.json` (`web/cabecalhos.ts`) e a página carregou
+  no navegador com a CSP, a fonte e `/api/saude`, sem mensagem no console (`npm test` confere).
 - **Não validado (precisa de deploy):** detecção do Python 3.12 pelo `.python-version` dentro de
-  `api/`, instalação pelo `uv.lock`, se `regions` vale para a função do serviço, e se a pasta
-  `testes/` entra no pacote da função (inofensivo, mas pode ser excluída depois). A CSP
-  restritiva da arquitetura (seção 4) ficou para o M1, testada junto das telas.
+  `api/`, instalação pelo `uv.lock`, se `regions` vale para a função do serviço, e se a chave
+  `app/main.py` do `functions` casa com a função gerada pelo `entrypoint` em módulo (a doc da
+  FastAPI usa esse formato; se a Vercel recusar o build com "não casa com nenhuma função",
+  remover o bloco `functions` resolve, porque a exclusão é só otimização).
 
 ## 12. ESLint em vez do oxlint do template
 - **Dúvida:** o `create-vite` atual gera o projeto com oxlint, não ESLint.
@@ -127,3 +143,43 @@ Revisar antes de fechar o marco; o que virar regra vai para os docs 04/05 ou par
 ## 18. `httpx2` nos testes
 - **Decisão:** a dependência de teste é `httpx2`, não `httpx`.
 - **Por quê:** o Starlette atual marca o `TestClient` com `httpx` como obsoleto e pede `httpx2`.
+
+## 19. Migração 0001 editada no lugar depois da revisão
+- **Decisão:** as correções de banco da revisão (search_path, CHECK do login, TEMPORARY, data do
+  histórico) entraram na própria `0001`, não numa `0002`.
+- **Por quê:** a 0001 ainda não rodou em produção nem em banco nenhum que precise ser preservado.
+  A partir do primeiro `upgrade` no Neon, toda mudança vira migração nova.
+
+## 20. Endurecimento do banco contra o próprio `app`
+- **Decisão:** funções de trigger com `set search_path = pg_catalog, public, pg_temp` e nomes
+  qualificados; `revoke temporary on database <current_database()> from public` (feito num
+  bloco `DO`, então a migração não precisa saber o nome do banco); CHECK
+  `login ~ '^[1-9][0-7][0-9]{2}$'` (bloco 1–9 + andar 0–7 + posição, mais estrito que só 4
+  dígitos, coerente com os CHECKs de `andar`); `historico.ocorrido_em` carimbado com `now()`
+  por trigger.
+- **Por quê:** como `app`, uma tabela temporária `bloco` fazia o trigger forjar o login
+  (`admin101`). O `pg_temp` precisa ir explicitamente por último: se não aparece no
+  search_path, o Postgres o procura primeiro. O dono do banco continua podendo criar tabela
+  temporária (privilégio de dono, não do PUBLIC).
+- **Fica aberto:** `unidade_papel.concedido_em` e `erro.ocorrido_em` ainda aceitam data mandada
+  pelo `app`. Não é histórico oficial; carimbar também se o M1 mostrar essas datas como prova.
+
+## 21. Actions fixadas por SHA
+- **Decisão:** todo `uses:` aponta para o SHA da release, com a versão em comentário;
+  `scripts/dev/conferir-actions.sh` (no pre-commit, quando um workflow muda) recusa tag e SHA
+  inexistente.
+- **Por quê:** `astral-sh/setup-uv@v10` não existe (o projeto aboliu as tags flutuantes desde
+  a v8). O Dependabot atualiza SHA com comentário de versão. O hook usa o `gh` logado.
+
+## 22. Testes do front com `node:test`, sem Vitest
+- **Decisão:** `web/testes/*.test.ts` rodam com `node --test` (Node executa TypeScript direto):
+  cabeçalhos do `vite preview`, HTML sem script/estilo embutido, fonte local e o roteamento do
+  `vercel.json`. Rodam no CI depois do build.
+- **Por quê:** são testes de configuração, não de componente; Vitest entra no M1 com as telas
+  (item 16).
+
+## 23. Pyright fora do CI
+- **Decisão:** `pyrightconfig.json` na raiz (venv `api/.venv`, Python 3.12, raiz de execução
+  `api`) para o editor; `pyright` na raiz dá 0 erros, mas não entrou no CI nem no pre-commit.
+- **Por quê:** o pedido era o LSP do editor resolver os imports. Pôr o pyright no CI exige
+  instalar o binário (Node) no job da API; fica como sugestão para o M1.
