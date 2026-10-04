@@ -54,9 +54,19 @@ def test_diagnostico_com_variavel_vazia_e_404(cliente, monkeypatch):
     assert cliente.post(ROTA, headers={"X-Portal-Diagnostico": ""}).status_code == 404
 
 
-def test_diagnostico_por_get_nao_dispara(cliente, monkeypatch, engine_dono):
+@pytest.mark.parametrize("metodo", ["GET", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
+@pytest.mark.parametrize("com_segredo", [False, True])
+def test_diagnostico_por_outro_metodo_e_404_identico(
+    cliente, monkeypatch, engine_dono, metodo, com_segredo
+):
+    # 405 revelaria que a rota existe: qualquer outro método responde igual a rota inexistente.
     monkeypatch.setenv("PORTAL_DIAGNOSTICO_SEGREDO", SEGREDO)
-    assert cliente.get(ROTA, headers={"X-Portal-Diagnostico": SEGREDO}).status_code in (404, 405)
+    headers = {"X-Portal-Diagnostico": SEGREDO} if com_segredo else {}
+    resposta = cliente.request(metodo, ROTA, headers=headers)
+    inexistente = cliente.request(metodo, "/api/diagnostico/nao-existe", headers=headers)
+    assert resposta.status_code == inexistente.status_code == 404
+    assert resposta.content == inexistente.content
+    assert "allow" not in resposta.headers
     assert _erros(engine_dono) == []
 
 

@@ -9,7 +9,7 @@ import hmac
 import os
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.servicos.erros import ErroDoPortal
 
@@ -27,10 +27,16 @@ def _segredo_confere(recebido: str | None) -> bool:
     return hmac.compare_digest(recebido.encode(), esperado.encode())
 
 
-@rotas.post("/api/diagnostico/erro", include_in_schema=False)
+# Aceita todos os métodos e responde 404 em qualquer um que não seja POST com o segredo: se a
+# rota só aceitasse POST, um GET receberia 405 e revelaria que ela existe.
+TODOS_OS_METODOS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+
+
+@rotas.api_route("/api/diagnostico/erro", methods=TODOS_OS_METODOS, include_in_schema=False)
 def forcar_erro(
+    request: Request,
     x_portal_diagnostico: Annotated[str | None, Header()] = None,
 ) -> None:
-    if not _segredo_confere(x_portal_diagnostico):
+    if request.method != "POST" or not _segredo_confere(x_portal_diagnostico):
         raise HTTPException(status_code=404, detail="Not Found")
     raise ErroDiagnostico("Erro forçado pela rota de diagnóstico")
