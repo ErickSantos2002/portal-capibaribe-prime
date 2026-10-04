@@ -59,6 +59,14 @@ repos:
         files: ^web/(.*\.(ts|tsx)|tsconfig.*\.json|package(-lock)?\.json)$
         pass_filenames: false
 
+      # Mudou um workflow? Toda action precisa existir e estar fixada por SHA (usa o gh).
+      - id: conferir-actions
+        name: actions fixadas por SHA
+        entry: scripts/dev/conferir-actions.sh
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+        pass_filenames: false
+
       # Mudou o protótipo? Roda o teste no Chrome; falha barra o commit.
       - id: testar-prototipo
         name: teste do protótipo
