@@ -31,13 +31,19 @@ def test_url_sqlalchemy_recusa_o_que_nao_e_postgres(entrada):
         url_sqlalchemy(entrada)
 
 
-def test_engine_sem_pool_e_sem_prepared_statements(monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", "postgresql://app:s@127.0.0.1:1/db")
+def test_engine_sem_pool_e_sem_prepared_statements(monkeypatch, url_app):
+    # Conexão de verdade: o que vale é o que o psycopg recebeu, não a configuração.
+    monkeypatch.setenv("DATABASE_URL", url_app)
     banco.obter_engine.cache_clear()
     try:
         engine = banco.obter_engine()
         assert isinstance(engine.pool, NullPool)
         assert engine.dialect.driver == "psycopg"
+        with engine.connect() as con:
+            psycopg_con = con.connection.driver_connection
+            # None = nunca prepara (o pooler do Neon em modo transação não suporta bem).
+            assert psycopg_con.prepare_threshold is None
+            con.exec_driver_sql("select 1")
     finally:
         banco.obter_engine.cache_clear()
 
