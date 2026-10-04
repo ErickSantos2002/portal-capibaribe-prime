@@ -11,10 +11,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
 
+from app.servicos.erros import ErroDoPortal
+
 rotas = APIRouter()
 
 
-class ErroDiagnostico(RuntimeError):
+class ErroDiagnostico(ErroDoPortal):
     """Exceção de propósito, que nenhum outro código levanta."""
 
 

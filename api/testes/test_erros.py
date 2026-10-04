@@ -1,7 +1,10 @@
 """Exceções não tratadas vão para a tabela `erro`, sem dado pessoal (modelo, seção 3.6)."""
 
+import logging
+
 import psycopg
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import text
@@ -9,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import banco
 from app.main import app
-from app.servicos.erros import mensagem_segura
+from app.servicos.erros import ErroDoPortal, RegistroDeErros, mensagem_segura
 
 pytestmark = pytest.mark.usefixtures("banco_limpo")
 
@@ -124,10 +127,94 @@ def test_mensagem_de_validacao_nao_leva_o_valor():
     assert "idade" in mensagem
 
 
-def test_mensagem_comum_fica_so_na_primeira_linha_e_limitada():
-    assert mensagem_segura(RuntimeError("linha 1\nlinha 2")) == "linha 1"
-    assert len(mensagem_segura(RuntimeError("x" * 5000))) == 500
-    assert mensagem_segura(RuntimeError()) == ""
+def test_mensagem_do_portal_fica_so_na_primeira_linha_e_limitada():
+    assert mensagem_segura(ErroDoPortal("linha 1\nlinha 2")) == "linha 1"
+    assert len(mensagem_segura(ErroDoPortal("x" * 5000))) == 500
+    assert mensagem_segura(ErroDoPortal()) == ""
+
+
+def _levantar(funcao):
+    try:
+        funcao()
+    except Exception as exc:  # noqa: BLE001
+        return exc
+    raise AssertionError("não levantou")
+
+
+def test_value_error_de_conversao_nao_leva_o_que_foi_digitado():
+    exc = _levantar(lambda: int("81 99876-5432"))
+    mensagem = mensagem_segura(exc)
+    assert "99876" not in mensagem
+    assert mensagem.startswith("ValueError em ")
+    assert "test_erros.py:" in mensagem  # onde aconteceu, para achar no código
+
+
+def test_key_error_nao_leva_a_chave():
+    exc = _levantar(lambda: {}["joao.silva@gmail.com"])
+    mensagem = mensagem_segura(exc)
+    assert "joao" not in mensagem
+    assert mensagem.startswith("KeyError em ")
+
+
+def test_excecao_generica_com_dado_na_mensagem_nao_leva_o_dado():
+    def falhar():
+        raise RuntimeError("cadastro de Maria Souza, celular (81) 99876-5432")
+
+    mensagem = mensagem_segura(_levantar(falhar))
+    assert "Maria" not in mensagem and "99876" not in mensagem
+    assert mensagem.startswith("RuntimeError em ")
+
+
+def test_excecao_generica_sem_traceback_fica_so_com_o_tipo():
+    assert mensagem_segura(ValueError("joao.silva@gmail.com")) == "ValueError"
+
+
+# --- o log do servidor também não leva dado pessoal ----------------------------------------
+
+
+@pytest.fixture
+def cliente_com_falhas(cliente):
+    """Uma API mínima com o mesmo tratamento de erro da principal e rotas que falham."""
+    falhas = FastAPI()
+    falhas.add_middleware(RegistroDeErros)
+
+    @falhas.post("/api/falha/{tipo}")
+    def falhar(tipo: str):
+        if tipo == "conversao":
+            int("81 99876-5432")
+        if tipo == "chave":
+            _ = {}["joao.silva@gmail.com"]
+        with banco.fabrica_de_sessoes()() as sessao:
+            # IntegrityError do Postgres: DETAIL leva o valor duplicado.
+            sessao.execute(text("insert into bloco (numero, nome) values (1, 'joao.silva')"))
+            sessao.execute(text("insert into bloco (numero, nome) values (1, 'joao.silva')"))
+
+    return TestClient(falhas, raise_server_exceptions=True)
+
+
+@pytest.mark.parametrize("tipo", ["conversao", "chave", "integridade"])
+def test_excecao_nao_e_relancada_e_o_log_nao_leva_dado(
+    cliente_com_falhas, engine_dono, caplog, tipo
+):
+    caplog.set_level(logging.DEBUG)
+    # raise_server_exceptions=True: se a exceção fosse relançada (e chegasse ao log do
+    # servidor com o traceback), o TestClient a levantaria aqui.
+    resposta = cliente_com_falhas.post(f"/api/falha/{tipo}")
+    assert resposta.status_code == 500
+    assert resposta.json() == {"detail": "Erro interno"}
+    assert "99876" not in caplog.text
+    assert "joao" not in caplog.text
+    assert "Erro não tratado em POST /api/falha/{tipo}" in caplog.text
+    [(rota, _tipo, mensagem, _u)] = _erros(engine_dono)
+    assert rota == "POST /api/falha/{tipo}"
+    assert "joao" not in mensagem and "99876" not in mensagem
+
+
+def test_api_principal_nao_relanca_a_excecao(cliente, monkeypatch):
+    monkeypatch.setenv("PORTAL_DIAGNOSTICO_SEGREDO", SEGREDO)
+    estrita = TestClient(app, raise_server_exceptions=True)
+    resposta = estrita.post(ROTA, headers={"X-Portal-Diagnostico": SEGREDO})
+    assert resposta.status_code == 500
 
 
 def test_conexao_recusada_nao_leva_a_url():
