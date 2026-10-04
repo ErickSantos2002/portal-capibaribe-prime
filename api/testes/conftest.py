@@ -14,6 +14,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
 import pytest
+from fastapi.testclient import TestClient
 from psycopg import sql
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.pool import NullPool
@@ -88,6 +89,18 @@ def engine_dono(url_dono: str) -> Engine:
 @pytest.fixture(scope="session")
 def engine_app(url_app: str) -> Engine:
     return _engine(url_app)
+
+
+@pytest.fixture
+def cliente(url_app: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    """A API como em produção: conectada como `app`. Erro 500 vira resposta, não exceção."""
+    from app import banco
+    from app.main import app
+
+    monkeypatch.setenv("DATABASE_URL", url_app)
+    banco.obter_engine.cache_clear()
+    yield TestClient(app, raise_server_exceptions=False)
+    banco.obter_engine.cache_clear()
 
 
 @pytest.fixture
