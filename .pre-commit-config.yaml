@@ -12,6 +12,8 @@ repos:
         args: [--fix=lf]
       - id: check-yaml
       - id: check-json
+        # tsconfig aceita comentários (JSONC), que o check-json recusa; o tsc confere esses.
+        exclude: ^web/tsconfig.*\.json$
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=500]
@@ -40,6 +42,21 @@ repos:
         entry: uv run --directory api --frozen ruff check .
         language: system
         files: ^api/.*\.py$
+        pass_filenames: false
+
+      # Front (web/): ESLint e checagem de tipos com as versões do package-lock.json.
+      # Requer `npm ci --prefix web` uma vez por clone.
+      - id: eslint
+        name: eslint (web)
+        entry: npm --prefix web run --silent lint
+        language: system
+        files: ^web/.*\.(ts|tsx|js)$
+        pass_filenames: false
+      - id: tsc
+        name: tsc (web)
+        entry: npm --prefix web run --silent typecheck
+        language: system
+        files: ^web/(.*\.(ts|tsx)|tsconfig.*\.json|package(-lock)?\.json)$
         pass_filenames: false
 
       # Mudou o protótipo? Roda o teste no Chrome; falha barra o commit.

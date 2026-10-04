@@ -1,0 +1,119 @@
+/* Tokens do protótipo (docs/06-prototipo.md, seção 3).
+   mata = a reserva verde · ipê = os ipês-amarelos do empreendimento */
+:root {
+  --mata: #1f5e3b;
+  --mata-forte: #154129;
+  --ipe: #e8b22a;
+  --ipe-suave: #fbf0cf;
+  --ipe-forte: #9a6a00;
+  --papel: #f4f6f2;
+  --folha: #ffffff;
+  --tinta: #17231c;
+  --tinta-suave: #4a5a50;
+  --linha: #cfd8d1;
+  --sombra: 0 1px 0 rgba(23, 35, 28, 0.06);
+  --fonte: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r-medio: 12px;
+  color-scheme: light dark;
+}
+
+/* Tema escuro do protótipo, seguindo o aparelho. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mata: #7fc79a;
+    --mata-forte: #a6dcb9;
+    --ipe: #f0c14b;
+    --ipe-suave: #3a3215;
+    --ipe-forte: #f0c14b;
+    --papel: #101713;
+    --folha: #18221c;
+    --tinta: #e8efe9;
+    --tinta-suave: #a9b8ae;
+    --linha: #314038;
+    --sombra: none;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--fonte);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.entrada {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 56px 16px 32px;
+  text-align: center;
+}
+
+.entrada h1 {
+  margin: 18px 0 4px;
+  color: var(--mata-forte);
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.suave {
+  margin: 0;
+  color: var(--tinta-suave);
+}
+
+/* A placa do apartamento, aqui como marca do Portal (sem número). */
+.placa {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  border: 3px solid currentColor;
+  border-radius: 10px;
+  padding: 8px 22px 10px;
+  color: var(--mata-forte);
+  line-height: 1;
+}
+
+.placa small {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.placa strong {
+  font-size: 44px;
+  letter-spacing: 0.08em;
+}
+
+.cartao {
+  margin-top: 32px;
+  padding: 20px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+  box-shadow: var(--sombra);
+}
+
+.cartao p {
+  margin: 0;
+}
+
+.cartao .selo {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--ipe-suave);
+  color: var(--tinta);
+  font-size: 14px;
+  font-weight: 700;
+}
