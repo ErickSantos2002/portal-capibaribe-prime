@@ -56,7 +56,8 @@ create table unidade (
     bloco_id              bigint not null references bloco (id),
     numero                text not null check (numero ~ '^[0-9]{3}$'),
     andar                 smallint not null check (andar between 0 and 7),
-    login                 text not null unique,
+    -- Bloco 1-9 + andar 0-7 + posição: 4 dígitos, começando por 1-9 (RF-03).
+    login                 text not null unique check (login ~ '^[1-9][0-7][0-9]{2}$'),
     ativa                 boolean not null default true,
     senha_hash            text not null,
     precisa_trocar_senha  boolean not null default true,
@@ -71,23 +72,30 @@ create table unidade (
 
 -- Login = número do bloco + número do apartamento ('1' + '101' = '1101'). O banco calcula e
 -- ignora o que a aplicação mandar, então nenhum login sai do padrão (RF-03).
-create function unidade_definir_login() returns trigger
-language plpgsql as $$
+-- Toda função de trigger fixa o search_path (pg_temp por último) e usa nomes qualificados:
+-- sem isso, uma tabela temporária chamada "bloco" seria lida no lugar da verdadeira.
+create function public.unidade_definir_login() returns trigger
+language plpgsql
+set search_path = pg_catalog, public, pg_temp
+as $$
 begin
-    select b.numero::text || new.numero into new.login from bloco b where b.id = new.bloco_id;
+    select b.numero::text || new.numero into new.login
+      from public.bloco b where b.id = new.bloco_id;
     return new;
 end;
 $$;
 
 create trigger unidade_login
     before insert or update on unidade
-    for each row execute function unidade_definir_login();
+    for each row execute function public.unidade_definir_login();
 
 -- Se o número do bloco mudar (H-10), os logins das unidades acompanham.
-create function bloco_atualizar_logins() returns trigger
-language plpgsql as $$
+create function public.bloco_atualizar_logins() returns trigger
+language plpgsql
+set search_path = pg_catalog, public, pg_temp
+as $$
 begin
-    update unidade set numero = numero where bloco_id = new.id;
+    update public.unidade set numero = numero where bloco_id = new.id;
     return null;
 end;
 $$;
@@ -95,7 +103,7 @@ $$;
 create trigger bloco_logins
     after update of numero on bloco
     for each row when (old.numero is distinct from new.numero)
-    execute function bloco_atualizar_logins();
+    execute function public.bloco_atualizar_logins();
 
 -- Papel de gestão (RF-09, H-09). Retirar preenche retirado_em; a linha fica.
 create table unidade_papel (
@@ -136,6 +144,21 @@ create table historico (
 );
 create index historico_ocorrido_em on historico (ocorrido_em);
 
+-- A data do histórico é sempre a do banco: o app não consegue registrar uma ação no passado.
+create function public.historico_carimbar_data() returns trigger
+language plpgsql
+set search_path = pg_catalog, public, pg_temp
+as $$
+begin
+    new.ocorrido_em := now();
+    return new;
+end;
+$$;
+
+create trigger historico_data
+    before insert on historico
+    for each row execute function public.historico_carimbar_data();
+
 -- Erros da API: os logs grátis da Vercel duram 1 hora. Sem dado pessoal.
 create table erro (
     id           bigint generated always as identity primary key,
@@ -157,11 +180,26 @@ grant select, insert                 on historico to {app};
 grant select, insert, delete         on erro to {app};
 """
 
+# Sem tabela temporária para ninguém além do dono: tabela temporária é o caminho clássico para
+# sequestrar nomes de tabela em funções. O nome do banco vem de current_database(), então a
+# migração serve igual no Neon, no CI e nos testes.
+SEM_TEMPORARIA = """
+do $$
+begin
+    execute format('revoke temporary on database %I from public', current_database());
+end;
+$$;
+"""
+COM_TEMPORARIA = SEM_TEMPORARIA.replace("revoke temporary", "grant temporary").replace(
+    "from public", "to public"
+)
+
 
 def upgrade() -> None:
     app = _papel_app()
     op.execute(TABELAS)
     op.execute(PERMISSOES.format(app=app))
+    op.execute(SEM_TEMPORARIA)
 
 
 def downgrade() -> None:
@@ -169,9 +207,11 @@ def downgrade() -> None:
     op.execute(
         """
         drop table erro, historico, sessao, unidade_papel, unidade, bloco;
-        drop function bloco_atualizar_logins();
-        drop function unidade_definir_login();
+        drop function public.historico_carimbar_data();
+        drop function public.bloco_atualizar_logins();
+        drop function public.unidade_definir_login();
         drop type papel;
         """
     )
     op.execute(f"revoke usage on schema public from {app};")
+    op.execute(COM_TEMPORARIA)

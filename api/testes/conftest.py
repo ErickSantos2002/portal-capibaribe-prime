@@ -91,6 +91,13 @@ def engine_app(url_app: str) -> Engine:
     return _engine(url_app)
 
 
+@pytest.fixture(scope="session")
+def engine_superusuario(url_dono: str) -> Engine:
+    """Superusuário no banco de teste: só para simular ataques que pulam as regras do app."""
+    partes = urlsplit(ADMIN_URL)
+    return _engine(urlunsplit((partes.scheme, partes.netloc, f"/{BANCO}", "", "")))
+
+
 @pytest.fixture
 def cliente(url_app: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """A API como em produção: conectada como `app`. Erro 500 vira resposta, não exceção."""
