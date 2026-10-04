@@ -60,6 +60,9 @@ jobs:
         working-directory: web
       - run: npm run build
         working-directory: web
+      - name: Cabeçalhos de segurança no build (CSP do vercel.json via vite preview)
+        run: npm test
+        working-directory: web
 
   api:
     name: Testes da API (Postgres 17)
