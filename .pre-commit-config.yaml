@@ -27,6 +27,21 @@ repos:
         language: system
         pass_filenames: false
 
+      # Python da API: o ruff vem do uv.lock (mesma versão do CI e do Dependabot).
+      # `format` conserta sozinho; o commit para e é só adicionar de novo.
+      - id: ruff-format
+        name: ruff format (api)
+        entry: uv run --directory api --frozen ruff format .
+        language: system
+        files: ^api/.*\.py$
+        pass_filenames: false
+      - id: ruff-check
+        name: ruff check (api)
+        entry: uv run --directory api --frozen ruff check .
+        language: system
+        files: ^api/.*\.py$
+        pass_filenames: false
+
       # Mudou o protótipo? Roda o teste no Chrome; falha barra o commit.
       - id: testar-prototipo
         name: teste do protótipo
