@@ -14,7 +14,8 @@ enquetes e documentos** na fase de obra; reservas, chamados e encomendas depois 
 | Visão, requisitos, histórias, modelo de dados, arquitetura | Feito (`docs/01` a `05`) |
 | Protótipo de alta fidelidade | Feito e publicado (`prototipo/`, `docs/06`) |
 | Teste com moradores | Em andamento |
-| Roadmap e código do app | Próximo |
+| Roadmap | Feito (`docs/07`): 6 marcos na E1, primeiro uso real no M1 |
+| Código do app | Próximo: marco M0 (fundação) |
 
 ## Como foi pensado
 
@@ -34,7 +35,7 @@ React + TypeScript (Vite, PWA) · FastAPI + SQLAlchemy + Alembic · PostgreSQL.
 ## Estrutura
 
 ```
-docs/              visão, requisitos, histórias, modelo de dados, arquitetura, protótipo
+docs/              visão, requisitos, histórias, modelo de dados, arquitetura, protótipo, roadmap
 docs/adr/          registros de decisão de arquitetura
 prototipo/         protótipo em HTML único, publicado na Vercel
 scripts/dev/       teste automatizado do protótipo e gerador da imagem de prévia

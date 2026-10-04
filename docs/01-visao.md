@@ -173,7 +173,7 @@ As funções abaixo entram **em algum momento**. A ordem fica no roadmap.
 
 ## 11. Critérios de sucesso
 
-*Base: 320 unidades (seção 12). Os percentuais ficam para o roadmap.*
+*Base: 320 unidades (seção 12). As metas em números estão em `07-roadmap.md`, seção 6.*
 
 - X% das unidades com pelo menos um morador cadastrado nos primeiros 3 meses
 - Todas as reservas de áreas comuns feitas pelo sistema
