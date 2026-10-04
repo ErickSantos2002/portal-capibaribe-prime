@@ -1,0 +1,8 @@
+{
+  "include": ["api"],
+  "exclude": ["**/node_modules", "**/__pycache__", "**/.venv"],
+  "venvPath": "api",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "executionEnvironments": [{ "root": "api" }]
+}

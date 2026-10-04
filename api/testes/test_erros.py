@@ -131,7 +131,7 @@ def test_mensagem_de_validacao_nao_leva_o_valor():
         idade: int
 
     with pytest.raises(ValidationError) as erro:
-        Contato(idade="fulano@example.com")
+        Contato.model_validate({"idade": "fulano@example.com"})
     mensagem = mensagem_segura(erro.value)
     assert "fulano" not in mensagem
     assert "idade" in mensagem

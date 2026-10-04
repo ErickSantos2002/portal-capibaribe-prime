@@ -25,7 +25,7 @@ def _carregar(engine, admin=ADMIN):
 
 def _contar(engine, modelo) -> int:
     with Session(engine) as sessao:
-        return sessao.scalar(select(func.count()).select_from(modelo))
+        return sessao.execute(select(func.count()).select_from(modelo)).scalar_one()
 
 
 def test_logins_planejados():

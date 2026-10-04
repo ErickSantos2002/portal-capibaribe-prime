@@ -41,6 +41,7 @@ def test_engine_sem_pool_e_sem_prepared_statements(monkeypatch, url_app):
         assert engine.dialect.driver == "psycopg"
         with engine.connect() as con:
             psycopg_con = con.connection.driver_connection
+            assert psycopg_con is not None
             # None = nunca prepara (o pooler do Neon em modo transação não suporta bem).
             assert psycopg_con.prepare_threshold is None
             con.exec_driver_sql("select 1")

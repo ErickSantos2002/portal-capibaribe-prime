@@ -41,7 +41,7 @@ def test_preenche_so_dado_ficticio(engine_app, carregado):
     assert len(ativas) < 320  # parte do prédio continua "não ativada", como na vida real
     for u in ativas:
         assert u.responsavel_nome
-        assert u.celular.startswith("(81) 90000-")
+        assert u.celular is not None and u.celular.startswith("(81) 90000-")
         assert u.email is None or u.email.endswith("@example.com")
         assert not u.precisa_trocar_senha
 

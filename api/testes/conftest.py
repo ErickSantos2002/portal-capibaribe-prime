@@ -114,4 +114,5 @@ def cliente(url_app: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClien
 def banco_limpo(url_dono: str) -> None:
     """Esvazia as tabelas (como `dono`) antes do teste. O `app` não poderia fazer isso."""
     with psycopg.connect(url_dono, autocommit=True) as con:
-        con.execute(f"truncate {', '.join(TABELAS)} restart identity cascade")
+        tabelas = sql.SQL(", ").join(sql.Identifier(t) for t in TABELAS)
+        con.execute(sql.SQL("truncate {} restart identity cascade").format(tabelas))
