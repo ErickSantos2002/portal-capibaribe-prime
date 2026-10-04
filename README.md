@@ -15,7 +15,7 @@ enquetes e documentos** na fase de obra; reservas, chamados e encomendas depois 
 | Protótipo de alta fidelidade | Feito e publicado (`prototipo/`, `docs/06`) |
 | Teste com moradores | Em andamento |
 | Roadmap | Feito (`docs/07`): 6 marcos na E1, primeiro uso real no M1 |
-| Código do app | Próximo: marco M0 (fundação) |
+| Código do app | Marco M0 (fundação) em revisão: `web/`, `api/`, CI e migração inicial |
 
 ## Como foi pensado
 
@@ -28,17 +28,51 @@ enquetes e documentos** na fase de obra; reservas, chamados e encomendas depois 
   Cada escolha está justificada, com o que foi descartado, em [`docs/adr/`](docs/adr/README.md).
 - **LGPD desde o modelo de dados:** só nome, celular, e-mail e unidade. Sem CPF, contrato ou renda.
 
-## Stack planejada
+## Stack
 
-React + TypeScript (Vite, PWA) · FastAPI + SQLAlchemy + Alembic · PostgreSQL.
+React + TypeScript (Vite) · FastAPI + SQLAlchemy 2 + Alembic (Python 3.12) · PostgreSQL 17.
 
 ## Estrutura
 
 ```
+web/               front-end React (Vite)
+api/               FastAPI: app/ (rotas, serviços, modelos, comandos), migracoes/, testes/
 docs/              visão, requisitos, histórias, modelo de dados, arquitetura, protótipo, roadmap
 docs/adr/          registros de decisão de arquitetura
 prototipo/         protótipo em HTML único, publicado na Vercel
 scripts/dev/       teste automatizado do protótipo e gerador da imagem de prévia
+vercel.json        front + API no mesmo projeto: /api/* vai para a FastAPI, o resto para o front
 ```
+
+## Rodar localmente
+
+Precisa de Docker, [uv](https://docs.astral.sh/uv/) e Node. O Python (3.12) vem do uv.
+
+```sh
+# 1. Postgres de desenvolvimento (só em 127.0.0.1)
+docker run -d --name portal-pg-m0 -e POSTGRES_PASSWORD=teste -p 127.0.0.1:55432:5432 postgres:17
+
+# 2. Testes da API: criam sozinhos os papéis dono e app e um banco descartável
+cd api && uv run pytest
+
+# 3. Banco de desenvolvimento: papéis, migração (como dono), carga e dados fictícios (como app)
+docker exec portal-pg-m0 psql -U postgres -c "create database portal_dev owner dono"
+cp .env.example .env
+uv run --env-file .env alembic upgrade head
+uv run --env-file .env python -m app.comandos.carga_inicial
+uv run --env-file .env python -m app.comandos.dados_ficticios
+
+# 4. API em http://127.0.0.1:8000/api/saude
+uv run --env-file .env uvicorn app.main:app --reload
+
+# 5. Front em http://localhost:5173 (o Vite repassa /api para a API)
+cd ../web && npm ci && npm run dev
+```
+
+Os papéis `dono` e `app` só existem no Postgres local depois que os testes rodaram uma vez
+(passo 2). As variáveis estão explicadas em `api/.env.example`.
+
+Antes do primeiro commit: `pre-commit install` e `npm ci --prefix web` (o pre-commit roda ruff,
+eslint e tsc).
 
 Autor: Erick Santos Dantas

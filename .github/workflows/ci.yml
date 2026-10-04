@@ -1,0 +1,136 @@
+# Integração contínua (arquitetura, seção 8): lint, build do front, testes da API contra um
+# Postgres de verdade e "as migrações aplicam do zero". O deploy é da integração Git da Vercel
+# (push na main = produção); este workflow só confere.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Postgres 17 nos jobs com banco: a mesma versão do Neon de produção.
+jobs:
+  lint:
+    name: Lint (ruff, eslint, tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: api
+          enable-cache: true
+      - name: ruff check
+        working-directory: api
+        run: uv run --frozen ruff check .
+      - name: ruff format --check
+        working-directory: api
+        run: uv run --frozen ruff format --check .
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - name: eslint
+        working-directory: web
+        run: npm run lint
+      - name: tsc
+        working-directory: web
+        run: npm run typecheck
+
+  web:
+    name: Build do front (vite build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+
+  api:
+    name: Testes da API (Postgres 17)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Superusuário do container; os testes criam os papéis dono e app, como em produção.
+      PORTAL_TESTE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: api
+          enable-cache: true
+      - name: pytest
+        working-directory: api
+        run: uv run --frozen pytest -W error::DeprecationWarning
+
+  migracoes:
+    name: Migrações do zero (upgrade, downgrade, upgrade) e carga
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      # Senhas descartáveis: o banco só existe durante o job.
+      DATABASE_URL_DONO: postgresql://dono:dono-ci@127.0.0.1:5432/portal
+      DATABASE_URL: postgresql://app:app-ci@127.0.0.1:5432/portal
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: api
+          enable-cache: true
+      - name: Papéis dono e app (como em produção) e banco vazio
+        run: |
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+          create role dono login password 'dono-ci';
+          create role app login password 'app-ci';
+          create database portal owner dono;
+          SQL
+      - name: alembic upgrade head (banco vazio)
+        working-directory: api
+        run: uv run --frozen alembic upgrade head
+      - name: alembic downgrade base
+        working-directory: api
+        run: uv run --frozen alembic downgrade base
+      - name: alembic upgrade head (de novo)
+        working-directory: api
+        run: uv run --frozen alembic upgrade head
+      - name: Carga inicial como app, duas vezes (idempotente)
+        working-directory: api
+        env:
+          PORTAL_ADMIN_UNIDADE: "1101"
+        run: |
+          uv run --frozen python -m app.comandos.carga_inicial
+          uv run --frozen python -m app.comandos.carga_inicial
+      - name: Confere 320 unidades e 1 admin
+        run: |
+          test "$(psql -h 127.0.0.1 -U postgres -d portal -tAc 'select count(*) from unidade')" = 320
+          test "$(psql -h 127.0.0.1 -U postgres -d portal -tAc "select count(*) from unidade_papel where papel = 'admin'")" = 1
