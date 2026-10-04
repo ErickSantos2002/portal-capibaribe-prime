@@ -27,3 +27,6 @@ dist/
 
 # Vercel (vercel link / vercel build)
 .vercel/
+
+# Cópias de trabalho dos agentes (Claude Code)
+.claude/
