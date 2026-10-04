@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | v0.1 — documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.2 — sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
@@ -15,18 +15,15 @@
 O roadmap é uma **sequência de marcos**, não um calendário. Cada marco termina com algo
 **no ar ou verificável**, e só se começa o seguinte quando o anterior fechou.
 
-**Por que não há datas fixas:** o Portal é feito à noite, sem cobrança externa, e as chaves só
-saem em 2028. Data apertada num projeto assim vira culpa, não velocidade. O que mantém o projeto
-andando é o marco ser **pequeno e útil sozinho**: se tudo parar depois dele, o que já está no ar
-continua servindo. As janelas da seção 3 são estimativas para conferir se o ritmo dá folga até
-a entrega, e não prazos.
+**Sem prazo nem estimativa de tempo** (decisão de 04/10/2026): o ritmo é livre. O que mantém o
+projeto seguro é o marco ser **pequeno e útil sozinho**: se tudo parar depois dele, o que já
+está no ar continua servindo.
 
 Cada marco tem:
 
 - **Entra:** as histórias (`03-historias.md`) e o trabalho técnico.
 - **Fica de fora:** o que parece caber, mas foi empurrado de propósito, e por quê.
 - **Pronto quando:** o critério objetivo para fechar o marco.
-- **Tamanho:** P (poucas noites), M (umas duas semanas de noites), G (um mês ou mais).
 
 ## 2. Princípios
 
@@ -58,26 +55,22 @@ flowchart LR
     E2 --> E3["E3 · Gestão<br/>financeiro,<br/>assembleias"]
 ```
 
-| Marco | Resumo | Tamanho | Janela estimada |
-|---|---|---|---|
-| **M0** | Esqueleto: repositório, CI, Vercel + Neon, banco com as 320 unidades | M | out–nov/2026 |
-| **M1** | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real.** | G | nov/2026–jan/2027 |
-| **M2** | Notificação no celular, e-mail e "esqueci a senha" | M | fev–mar/2027 |
-| **M3** | Documentos e anexos nos avisos (Cloudflare R2) | M | mar–mai/2027 |
-| **M4** | Enquetes com um voto por unidade | M | mai–jul/2027 |
-| **M5** | Acessibilidade real, ajustes, medição e balanço da E1 | P | ago–set/2027 |
-| **E2** | Histórias escritas a partir de ~out/2027; código no 1º semestre de 2028 | — | até as chaves |
-| **E3** | Depois da primeira assembleia | — | após a entrega |
-
-Conta da folga: a E1 termina perto de set/2027, e o prazo de obra é 24/01/2028 (podendo ir a
-jul/2028, mais 60 dias para as chaves). Sobram de 4 a 10 meses para a E2. Se um marco atrasar
-um trimestre inteiro, a E2 ainda chega antes das chaves.
+| Marco | Resumo |
+|---|---|
+| **M0** | Esqueleto: repositório, CI, Vercel + Neon, banco com as 320 unidades |
+| **M1** | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real.** |
+| **M2** | Notificação no celular, e-mail e "esqueci a senha" |
+| **M3** | Documentos e anexos nos avisos (Cloudflare R2) |
+| **M4** | Enquetes com um voto por unidade |
+| **M5** | Acessibilidade real, ajustes, medição e balanço da E1 |
+| **E2** | Histórias escritas quando a entrega se aproximar; código antes das chaves |
+| **E3** | Depois da primeira assembleia |
 
 ---
 
 ## 4. E1 · Fase de obra
 
-### M0 · Fundação — tamanho M
+### M0 · Fundação
 
 Nenhuma tela de morador. O objetivo é o caminho inteiro funcionando de ponta a ponta, vazio.
 
@@ -99,7 +92,7 @@ Nenhuma tela de morador. O objetivo é o caminho inteiro funcionando de ponta a 
 **Pronto quando:** um push na `main` passa no CI e publica sozinho; `/api/saude` responde com o
 número de unidades lido do Neon (320); um erro forçado aparece na tabela `erro`.
 
-### M1 · Acesso e mural — tamanho G · 🚀 primeiro no ar
+### M1 · Acesso e mural · 🚀 primeiro no ar
 
 O menor Portal que já resolve algo: **o aviso oficial ganha um endereço que não se perde no
 grupo**. A Comissão publica no Portal e manda o link no grupo; quem abre fica sabendo, e o
@@ -139,7 +132,7 @@ E também: layout de celular e de computador, tema claro/escuro (como no protót
 **Pronto quando:** todos os critérios de aceite das histórias acima passam como teste, o portão
 está cumprido e o link foi anunciado no grupo.
 
-### M2 · Notificações — tamanho M
+### M2 · Notificações
 
 **Entra:** H-05 instalar e ativar notificações · H-13 ser avisado (push e e-mail) · H-04
 esqueci a senha. Conta Gmail do Portal (ADR-0006, ADR-0008) e PWA instalável.
@@ -150,7 +143,7 @@ instalado, e não chega no Bloco 2; o link de recuperação expira em 1 hora e s
 **Atenção:** iPhone só recebe push com o Portal instalado na tela inicial (iOS 16.4+). Testar
 num iPhone de verdade antes de fechar; se ninguém da família tiver, pedir a um vizinho.
 
-### M3 · Documentos e anexos — tamanho M
+### M3 · Documentos e anexos
 
 **Entra:** H-17 publicar documento · H-18 consultar (inclusive os públicos na tela de entrada)
 · H-19 nova versão · anexos de imagem e PDF nos avisos (H-12, parte que ficou de fora).
@@ -163,7 +156,7 @@ comum; arquivo com extensão trocada (um `.exe` renomeado para `.pdf`) é recusa
 subir o primeiro documento real, definir como os arquivos ficam protegidos contra perda (nova
 ADR).
 
-### M4 · Enquetes — tamanho M
+### M4 · Enquetes
 
 **Entra:** H-20 criar enquete · H-21 votar · H-22 ver resultado. As regras que o banco garante
 (um voto por unidade, nada de voto depois do prazo, nada de editar depois do 1º voto) ganham
@@ -172,7 +165,7 @@ teste que tenta burlar cada uma direto no banco.
 **Pronto quando:** dois celulares da mesma unidade votando ao mesmo tempo resultam em um voto
 só; a primeira enquete real da Comissão roda no Portal.
 
-### M5 · Fechamento da E1 — tamanho P
+### M5 · Fechamento da E1
 
 **Entra:**
 - H-10 corrigir blocos e unidades.
@@ -189,8 +182,8 @@ só; a primeira enquete real da Comissão roda no Portal.
 
 ### E2 · Mudança e dia a dia
 
-Começa quando a construtora anunciar a vistoria ou a data de entrega, ou em out/2027, o que vier
-primeiro. O primeiro passo é escrever as histórias da E2, com o prédio já quase pronto.
+Começa quando a E1 fechar ou quando a construtora anunciar a vistoria ou a data de entrega, o
+que vier primeiro. O primeiro passo é escrever as histórias da E2, com o prédio já quase pronto.
 
 **Ordem proposta**, pelo que pesa no dia da entrega:
 
@@ -236,7 +229,6 @@ para um Portal que ninguém abre seria desperdício.
 | Risco | Mitigação |
 |---|---|
 | O projeto parar no meio (o maior risco, visão seção 10) | Marcos pequenos e úteis sozinhos; o M1 já entrega valor. Parou depois do M1, o mural continua no ar. |
-| Ritmo cair por meses | Sem prazo fixo por desenho; a folga até as chaves aguenta um trimestre de atraso. |
 | A Comissão não topar publicar pelo Portal | É item do portão do M1: conversar antes de construir o resto. Sem Comissão, a E1 vira só portfólio, que ainda cumpre o O4. |
 | Plano gratuito mudar no meio do caminho | Revisar limites no fim de cada marco (arquitetura, seção 5). Tudo é padrão (Postgres, S3), migra sem reescrever. |
 | Opinião do grupo pedir mudança grande | Mudança de regra volta para os requisitos antes do código; mudança de tela entra no marco em andamento. |
