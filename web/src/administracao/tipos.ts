@@ -6,7 +6,8 @@ export type Situacao = 'todas' | 'ativadas' | 'nao_ativadas' | 'gestao'
 export type PapelGerenciavel = 'comissao' | 'admin'
 
 export interface ConfirmarReset {
-  confirmo: true
+  // A API recusa qualquer valor diferente de true (422).
+  confirmo: boolean
 }
 
 export interface ResumoAtivacao {

@@ -27,7 +27,8 @@ export interface TrocarSenha {
 }
 
 export interface ApagarDados {
-  confirmo: true
+  // A API recusa qualquer valor diferente de true (422).
+  confirmo: boolean
 }
 
 export interface Aparelho {
