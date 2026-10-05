@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { cabecalhosDoVercel } from './cabecalhos.ts'
@@ -10,6 +11,13 @@ export default defineConfig({
     proxy: {
       '/api': 'http://127.0.0.1:8000',
     },
+  },
+  // Testes de componente (Vitest + jsdom). Os testes de configuração em testes/ rodam com
+  // node --test depois do build (ver package.json).
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'],
+    restoreMocks: true,
   },
   preview: {
     // O build servido localmente recebe os mesmos cabeçalhos de produção (vercel.json).

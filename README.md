@@ -60,7 +60,7 @@ docker exec portal-pg-m0 psql -U postgres -c "create database portal_dev owner d
 cp .env.example .env
 uv run --env-file .env alembic upgrade head
 uv run --env-file .env python -m app.comandos.carga_inicial
-uv run --env-file .env python -m app.comandos.dados_ficticios
+uv run --env-file .env python -m app.comandos.dados_ficticios   # inclui um admin fictício
 
 # 4. API em http://127.0.0.1:8000/api/saude
 uv run --env-file .env uvicorn app.main:app --reload
@@ -71,6 +71,27 @@ cd ../web && npm ci && npm run dev
 
 Os papéis `dono` e `app` só existem no Postgres local depois que os testes rodaram uma vez
 (passo 2). As variáveis estão explicadas em `api/.env.example`.
+
+## O primeiro administrador (produção)
+
+A carga inicial não dá papel nenhum: uma conta de administrador com a senha inicial, que todo
+mundo conhece, seria tomada por quem conhece o padrão. A sequência é:
+
+1. deploy (migrações aplicadas e carga feita);
+2. o administrador faz o **primeiro acesso** na unidade dele, pelo Portal;
+3. de `api/`, com a URL do usuário `app`:
+   `uv run python -m app.comandos.promover_admin <login>` (recusa unidade que ainda não fez o
+   primeiro acesso; rodar de novo não muda nada; fica registrado no histórico).
+
+A unidade real só aparece na linha de comando, nunca no repositório. Detalhes em
+`docs/superpowers/specs/m1-contrato.md`, seção 2.5.
+
+Várias cópias de trabalho ao mesmo tempo (um agente por épico): cada uma usa o próprio banco de
+teste, com `PORTAL_TESTE_BANCO=portal_teste_<nome> uv run pytest`. Um `portal_dev` criado antes
+da migração 0002 (celulares com máscara) precisa ser recriado.
+
+Testes do front: `npm test` em `web/` roda os testes de componente (Vitest) e, depois do
+`npm run build`, os de configuração (cabeçalhos e `vercel.json`).
 
 Antes do primeiro commit: `pre-commit install` e `npm ci --prefix web` (o pre-commit roda ruff,
 eslint e tsc).

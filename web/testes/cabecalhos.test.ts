@@ -55,6 +55,16 @@ test('o HTML do build não tem script nem estilo embutido (a CSP bloquearia)', a
   assert.doesNotMatch(html, /https?:\/\/(?!www\.w3\.org)/i, 'recurso de terceiros')
 })
 
+test('o tema escolhido é aplicado por arquivo próprio, antes do React', async () => {
+  const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8')
+  const tema = html.indexOf('<script src="/tema.js">')
+  assert.ok(tema > 0, 'index.html sem /tema.js')
+  assert.ok(tema < html.indexOf('type="module"'), '/tema.js precisa vir antes do app')
+  const resposta = await fetch(new URL('/tema.js', base))
+  assert.equal(resposta.status, 200)
+  assert.match(await resposta.text(), /portal-tema/)
+})
+
 test('a fonte vem do próprio Portal, não de terceiros', async () => {
   const resposta = await fetch(base)
   const html = await resposta.text()

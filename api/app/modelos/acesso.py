@@ -5,6 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    CheckConstraint,
     Enum,
     FetchedValue,
     ForeignKey,
@@ -28,6 +29,7 @@ class Papel(enum.StrEnum):
 
 class Bloco(Base):
     __tablename__ = "bloco"
+    __table_args__ = (CheckConstraint("numero between 1 and 9", name="bloco_numero_check"),)
 
     id: Mapped[int] = chave_primaria()
     numero: Mapped[int] = mapped_column(SmallInteger, unique=True)
@@ -39,7 +41,32 @@ class Unidade(Base):
     """Um apartamento e a conta de acesso dele (uma conta por unidade, ADR-0005)."""
 
     __tablename__ = "unidade"
-    __table_args__ = (UniqueConstraint("bloco_id", "numero"),)
+    __table_args__ = (
+        UniqueConstraint("bloco_id", "numero"),
+        # Migração 0001 (RF-03): número com 3 dígitos, andar 0 a 7, login no padrão.
+        CheckConstraint("numero ~ '^[0-9]{3}$'", name="unidade_numero_check"),
+        CheckConstraint("andar between 0 and 7", name="unidade_andar_check"),
+        CheckConstraint("login ~ '^[1-9][0-7][0-9]{2}$'", name="unidade_login_check"),
+        # Migração 0002 (RF-04): os contatos são obrigatórios depois de ativar, e cada um tem
+        # formato único. O celular é guardado só com dígitos; a tela formata.
+        CheckConstraint(
+            "ativada_em is null or (responsavel_nome is not null and celular is not null)",
+            name="unidade_ativada_tem_contato",
+        ),
+        CheckConstraint(
+            "responsavel_nome is null or (char_length(responsavel_nome) between 1 and 100"
+            " and responsavel_nome = btrim(responsavel_nome))",
+            name="unidade_nome_formato",
+        ),
+        CheckConstraint(
+            "celular is null or celular ~ '^[0-9]{10,11}$'", name="unidade_celular_formato"
+        ),
+        CheckConstraint(
+            "email is null or (char_length(email) <= 254 and email = lower(email)"
+            " and email ~ '^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$')",
+            name="unidade_email_formato",
+        ),
+    )
 
     id: Mapped[int] = chave_primaria()
     bloco_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("bloco.id"))
@@ -59,10 +86,19 @@ class Unidade(Base):
     email: Mapped[str | None]
     tentativas_falhas: Mapped[int] = mapped_column(SmallInteger, server_default="0")
     bloqueada_ate: Mapped[datetime | None]
+    # Data do banco da última troca de senha (migração 0002). Sessão criada antes não vale.
+    senha_trocada_em: Mapped[datetime] = mapped_column(
+        server_default=func.now(), server_onupdate=FetchedValue()
+    )
 
 
 class UnidadePapel(Base):
-    """Papel de gestão. Retirar preenche `retirado_em`; a linha nunca é apagada."""
+    """Papel de gestão. Retirar preenche `retirado_em`; a linha nunca é apagada.
+
+    Banco (migração 0002): datas carimbadas com now(); o `app` só altera `retirado_em` e
+    `retirado_por`; papel retirado não volta; o último `admin` não pode ser retirado (falha com
+    a restrição `ultimo_admin`).
+    """
 
     __tablename__ = "unidade_papel"
     # Um papel em vigor por tipo por unidade.
@@ -81,7 +117,7 @@ class UnidadePapel(Base):
     papel: Mapped[Papel] = mapped_column(Enum(Papel, name="papel"))
     concedido_em: Mapped[datetime] = mapped_column(server_default=func.now())
     concedido_por: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("unidade.id"))
-    retirado_em: Mapped[datetime | None]
+    retirado_em: Mapped[datetime | None] = mapped_column(server_onupdate=FetchedValue())
     retirado_por: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("unidade.id"))
 
 

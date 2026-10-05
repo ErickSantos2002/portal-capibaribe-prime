@@ -128,12 +128,11 @@ jobs:
         run: uv run --frozen alembic upgrade head
       - name: Carga inicial como app, duas vezes (idempotente)
         working-directory: api
-        env:
-          PORTAL_ADMIN_UNIDADE: "1101"
         run: |
           uv run --frozen python -m app.comandos.carga_inicial
           uv run --frozen python -m app.comandos.carga_inicial
-      - name: Confere 320 unidades e 1 admin
+      # A carga não dá papel nenhum: o admin vem por promover_admin, depois do primeiro acesso.
+      - name: Confere 320 unidades e nenhum papel
         run: |
           test "$(psql -h 127.0.0.1 -U postgres -d portal -tAc 'select count(*) from unidade')" = 320
-          test "$(psql -h 127.0.0.1 -U postgres -d portal -tAc "select count(*) from unidade_papel where papel = 'admin'")" = 1
+          test "$(psql -h 127.0.0.1 -U postgres -d portal -tAc 'select count(*) from unidade_papel')" = 0

@@ -1,4 +1,4 @@
-"""Dados fictícios para desenvolvimento (RNF-16): nunca rodam fora de local/teste."""
+"""Dados fictícios para desenvolvimento (RNF-16): só rodam em local, teste ou prévia."""
 
 import pytest
 from argon2 import PasswordHasher
@@ -17,7 +17,7 @@ HASHER_RAPIDO = PasswordHasher(time_cost=1, memory_cost=1024, parallelism=1)
 @pytest.fixture
 def carregado(engine_app):
     with Session(engine_app) as sessao:
-        carregar(sessao, "1101", hasher=HASHER_RAPIDO)
+        carregar(sessao, hasher=HASHER_RAPIDO)
         sessao.commit()
 
 
@@ -25,6 +25,12 @@ def carregado(engine_app):
 def test_recusa_fora_de_local_e_teste(engine_app, carregado, ambiente):
     with Session(engine_app) as sessao, pytest.raises(ErroAmbiente, match="PORTAL_AMBIENTE"):
         preencher_ficticios(sessao, ambiente)
+
+
+def test_aceita_o_banco_das_previas(engine_app, carregado):
+    # Branch do Neon só de estrutura usado pelas prévias da Vercel (spec do M1, seção 6).
+    with Session(engine_app) as sessao:
+        assert preencher_ficticios(sessao, "previa") > 0
 
 
 def test_recusa_sem_carga_inicial(engine_app):
@@ -41,7 +47,7 @@ def test_preenche_so_dado_ficticio(engine_app, carregado):
     assert len(ativas) < 320  # parte do prédio continua "não ativada", como na vida real
     for u in ativas:
         assert u.responsavel_nome
-        assert u.celular is not None and u.celular.startswith("(81) 90000-")
+        assert u.celular is not None and u.celular.startswith("8190000") and len(u.celular) == 11
         assert u.email is None or u.email.endswith("@example.com")
         assert not u.precisa_trocar_senha
 
@@ -52,6 +58,30 @@ def test_da_papel_de_comissao_ficticio(engine_app, carregado):
         sessao.commit()
         papeis = sessao.scalars(select(UnidadePapel.papel)).all()
     assert sorted(p.value for p in papeis).count("comissao") >= 1
+
+
+def test_local_tem_um_admin_ficticio_numa_unidade_ativada(engine_app, carregado):
+    # A carga não dá admin (revisão do M1); para desenvolver, a semente fictícia dá a uma
+    # unidade fictícia já ativada.
+    with Session(engine_app) as sessao:
+        preencher_ficticios(sessao, "local")
+        sessao.commit()
+        admins = sessao.scalars(
+            select(Unidade)
+            .join(UnidadePapel, UnidadePapel.unidade_id == Unidade.id)
+            .where(UnidadePapel.papel == "admin")
+        ).all()
+    assert len(admins) == 1
+    assert admins[0].ativada_em is not None
+
+
+def test_previa_nao_da_papel_nenhum(engine_app, carregado):
+    # A prévia é pública atrás da proteção da Vercel: nenhuma conta de gestão com mudar123.
+    # Quem revisa faz o primeiro acesso e roda promover_admin, como em produção.
+    with Session(engine_app) as sessao:
+        preencher_ficticios(sessao, "previa")
+        sessao.commit()
+        assert sessao.scalars(select(UnidadePapel)).all() == []
 
 
 def test_rodar_de_novo_nao_muda_nada(engine_app, carregado):

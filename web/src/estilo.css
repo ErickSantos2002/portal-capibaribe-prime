@@ -1,37 +1,52 @@
-/* Tokens do protótipo (docs/06-prototipo.md, seção 3).
-   mata = a reserva verde · ipê = os ipês-amarelos do empreendimento */
+/* ============================================================
+   Tokens do protótipo (docs/06-prototipo.md, seção 3).
+   mata = a reserva verde · ipê = os ipês-amarelos do empreendimento
+   Arquivo comum: os épicos não editam. Estilo próprio de um épico vai em
+   web/src/<épico>/<épico>.css, importado pelas páginas dele.
+   ============================================================ */
 :root {
   --mata: #1f5e3b;
   --mata-forte: #154129;
+  --mata-suave: #e3eee6;
   --ipe: #e8b22a;
   --ipe-suave: #fbf0cf;
-  --ipe-forte: #9a6a00;
+  --ipe-forte: #9a6a00; /* foco e marcações sobre fundo claro: 4,35:1 */
   --papel: #f4f6f2;
   --folha: #ffffff;
   --tinta: #17231c;
   --tinta-suave: #4a5a50;
-  --linha: #cfd8d1;
+  --linha: #cfd8d1; /* divisória de cartão (decorativa) */
+  --borda: #7a8a80; /* borda de controle: 3,6:1 no branco, WCAG 1.4.11 */
+  --erro: #a3322a;
+  --erro-suave: #f8e4e1;
+  --sobre-mata: #ffffff;
   --sombra: 0 1px 0 rgba(23, 35, 28, 0.06);
   --fonte: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r-pequeno: 8px;
   --r-medio: 12px;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
-/* Tema escuro do protótipo, seguindo o aparelho. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --mata: #7fc79a;
-    --mata-forte: #a6dcb9;
-    --ipe: #f0c14b;
-    --ipe-suave: #3a3215;
-    --ipe-forte: #f0c14b;
-    --papel: #101713;
-    --folha: #18221c;
-    --tinta: #e8efe9;
-    --tinta-suave: #a9b8ae;
-    --linha: #314038;
-    --sombra: none;
-  }
+/* Tema escuro: escolhido pelo botão sol/lua (localStorage `portal-tema`). Começa no claro, como o
+   protótipo: o escuro do aparelho confundia quem testava. */
+:root[data-tema='escuro'] {
+  --mata: #7fc79a;
+  --mata-forte: #a6dcb9;
+  --mata-suave: #1c2e23;
+  --ipe: #f0c14b;
+  --ipe-suave: #3a3215;
+  --ipe-forte: #f0c14b;
+  --papel: #101713;
+  --folha: #18221c;
+  --tinta: #e8efe9;
+  --tinta-suave: #a9b8ae;
+  --linha: #314038;
+  --borda: #6b7d72;
+  --erro: #f19a90;
+  --erro-suave: #3a1d1a;
+  --sobre-mata: #0d1a12;
+  --sombra: none;
+  color-scheme: dark;
 }
 
 * {
@@ -44,7 +59,7 @@ body {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--papel);
   color: var(--tinta);
   font-family: var(--fonte);
@@ -52,68 +67,1045 @@ body {
   line-height: 1.5;
 }
 
-.entrada {
-  max-width: 34rem;
-  margin: 0 auto;
-  padding: 56px 16px 32px;
-  text-align: center;
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
 }
 
-.entrada h1 {
-  margin: 18px 0 4px;
-  color: var(--mata-forte);
-  font-size: 30px;
-  line-height: 1.1;
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
-.suave {
+/* ---------- moldura: celular ---------- */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.pular {
+  position: absolute;
+  left: 8px;
+  top: -60px;
+  z-index: 10;
+  padding: 10px 16px;
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  color: var(--mata);
+  font-weight: 700;
+}
+
+.pular:focus {
+  top: 8px;
+}
+
+/* ---------- topo ---------- */
+.topo {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 64px;
+  padding: 12px 16px;
+  background: var(--mata);
+  color: var(--sobre-mata);
+}
+
+.topo h1 {
+  flex: 1;
   margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+[data-tema='escuro'] .topo {
+  background: var(--folha);
+  color: var(--tinta);
+  border-bottom: 1px solid var(--linha);
+}
+
+.voltar,
+.tema-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--r-pequeno);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.voltar {
+  margin-left: -10px;
+}
+
+.tema-btn {
+  margin-right: -8px;
+}
+
+/* Na entrada (sem topo), o botão de tema fica solto no canto. */
+.tema-btn.solto {
+  position: absolute;
+  top: 10px;
+  right: 18px;
+  z-index: 2;
   color: var(--tinta-suave);
 }
 
-/* A placa do apartamento, aqui como marca do Portal (sem número). */
+/* ---------- a placa do apartamento (o elemento-assinatura) ---------- */
 .placa {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  border: 3px solid currentColor;
-  border-radius: 10px;
-  padding: 8px 22px 10px;
-  color: var(--mata-forte);
+  justify-content: center;
+  min-width: 64px;
+  padding: 2px 10px 3px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .placa small {
-  font-size: 16px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  opacity: 0.9;
 }
 
 .placa strong {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.placa.grande {
+  padding: 8px 22px 10px;
+  border-width: 3px;
+  border-radius: 10px;
+  color: var(--mata-forte);
+}
+
+.placa.grande small {
+  font-size: 16px;
+}
+
+.placa.grande strong {
+  font-size: 52px;
+}
+
+.placa.gestao {
+  box-shadow: inset 0 -4px 0 var(--ipe);
+}
+
+/* Na entrada, a placa é a marca do Portal, sem número. */
+.placa.marca strong {
   font-size: 44px;
   letter-spacing: 0.08em;
 }
 
-.cartao {
-  margin-top: 32px;
-  padding: 20px;
+/* ---------- conteúdo ---------- */
+.conteudo {
+  flex: 1;
+  width: 100%;
+  padding: 20px 16px 28px;
+}
+
+.conteudo:focus {
+  outline: none;
+}
+
+.conteudo > :first-child {
+  margin-top: 0;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+h3 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.3;
+}
+
+p {
+  margin: 0 0 14px;
+}
+
+.suave {
+  color: var(--tinta-suave);
+  font-size: 16px;
+}
+
+.secao {
+  margin: 28px 0 10px;
+  color: var(--tinta);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* Texto do aviso: texto puro, parágrafo = linha em branco, quebra simples continua quebra. */
+.texto-aviso p {
+  white-space: pre-line;
+}
+
+/* ---------- navegação: abas embaixo no celular ---------- */
+.nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  background: var(--folha);
+  border-top: 1px solid var(--linha);
+}
+
+.nav a {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 10px 2px 8px;
+  color: var(--tinta-suave);
+  font-size: 13px;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+}
+
+.nav a[aria-current='page'] {
+  color: var(--mata);
+  font-weight: 700;
+}
+
+.nav a[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24%;
+  right: 24%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--mata);
+}
+
+.nav .conta {
+  position: absolute;
+  top: 7px;
+  left: calc(50% + 6px);
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--ipe);
+  color: #17231c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.nav-marca,
+.nav-placa {
+  display: none;
+}
+
+/* Tela de detalhe no celular: seta de voltar no topo e sem abas (mais espaço). */
+.app.detalhe .nav {
+  display: none;
+}
+
+/* ---------- lista do mural (folha contínua, não cartões soltos) ---------- */
+.folha {
   border: 1px solid var(--linha);
   border-radius: var(--r-medio);
   background: var(--folha);
   box-shadow: var(--sombra);
 }
 
-.cartao p {
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 72px;
+  padding: 16px;
+  border-top: 1px solid var(--linha);
+  color: inherit;
+  text-decoration: none;
+}
+
+.item:first-child {
+  border-top: 0;
+}
+
+a.item:hover {
+  background: var(--mata-suave);
+}
+
+.item h3 {
+  font-weight: 400;
+}
+
+.item.novo h3 {
+  font-weight: 700;
+}
+
+.item .linha-meta {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  color: var(--tinta-suave);
+  font-size: 15px;
+}
+
+.item .seta {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  color: var(--tinta-suave);
+}
+
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.selo.novo {
+  color: var(--mata);
+}
+
+.selo.novo::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--mata);
+}
+
+.com-icone {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* aviso fixado: o único bloco que ganha cor de fundo no mural */
+.fixado {
+  display: block;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--ipe);
+  border-radius: var(--r-medio);
+  background: var(--ipe-suave);
+  color: inherit;
+  text-decoration: none;
+}
+
+.fixado .rotulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.fixado p {
+  margin: 6px 0 0;
+  color: var(--tinta-suave);
+  font-size: 16px;
+}
+
+.previa {
+  margin: 18px 0 0;
+  padding: 12px;
+  border: 2px dashed var(--borda);
+  border-radius: var(--r-medio);
+}
+
+/* ---------- formulário ---------- */
+label {
+  display: block;
+  margin: 18px 0 6px;
+  font-weight: 700;
+}
+
+.ajuda {
+  margin: 6px 0 0;
+  color: var(--tinta-suave);
+  font-size: 16px;
+}
+
+input[type='text'],
+input[type='password'],
+input[type='tel'],
+input[type='email'],
+input[type='search'],
+input[type='datetime-local'],
+textarea,
+select {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 14px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  font-size: 18px;
+}
+
+/* Campo de uma linha com a mesma altura dos botões (56px). */
+:is(
+    input[type='text'],
+    input[type='password'],
+    input[type='tel'],
+    input[type='email'],
+    input[type='search'],
+    input[type='datetime-local'],
+    select
+  ) {
+  height: 56px;
+  padding-block: 0;
+}
+
+input:hover,
+textarea:hover,
+select:hover {
+  border-color: var(--tinta-suave);
+}
+
+textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
+/* Sobre o verde (topo e menu lateral), o ipê-forte some (1,6:1); o ipê claro dá 4:1. */
+.topo :focus-visible,
+.nav :focus-visible {
+  outline-color: var(--ipe);
+}
+
+/* O título recebe foco a cada tela só para o leitor de tela anunciar; não é controle. */
+h1[tabindex='-1']:focus {
+  outline: none;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: var(--mata);
+}
+
+.campo-erro {
+  border-color: var(--erro) !important;
+}
+
+.botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 18px;
+  border: 2px solid var(--mata);
+  border-radius: var(--r-pequeno);
+  background: var(--mata);
+  color: var(--sobre-mata);
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.botao:hover {
+  border-color: var(--mata-forte);
+  background: var(--mata-forte);
+}
+
+.botao:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.botao.leve {
+  background: transparent;
+  color: var(--mata);
+}
+
+.botao.leve:hover {
+  background: var(--mata-suave);
+}
+
+.botao.perigo {
+  border-color: var(--erro);
+  background: var(--erro);
+  color: var(--folha);
+}
+
+.botao + .botao {
+  margin-top: 12px;
+}
+
+.texto-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--mata);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.aviso-caixa {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0;
+  padding: 14px;
+  border-radius: var(--r-medio);
+  font-size: 16px;
+}
+
+.aviso-caixa svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.aviso-caixa.atencao {
+  border: 1px solid var(--ipe);
+  background: var(--ipe-suave);
+}
+
+.aviso-caixa.erro {
+  border: 1px solid var(--erro);
+  background: var(--erro-suave);
+}
+
+.aviso-caixa.info {
+  border: 1px solid var(--linha);
+  background: var(--mata-suave);
+}
+
+.aviso-caixa p:last-child {
   margin: 0;
 }
 
-.cartao .selo {
-  display: inline-block;
+.opcao {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
   margin: 0 0 10px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--ipe-suave);
-  color: var(--tinta);
-  font-size: 14px;
+  padding: 12px 16px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.opcao input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--mata);
+}
+
+.opcao:has(input:checked) {
+  border-color: var(--mata);
+  background: var(--mata-suave);
   font-weight: 700;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 2px solid var(--borda);
+  border-radius: 22px;
+  background: var(--folha);
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--mata);
+  background: var(--mata-suave);
+  font-weight: 700;
+}
+
+/* Bloco na entrada: 5 botões grandes (rádio de verdade, só com outra roupa). */
+.blocos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.blocos legend {
+  margin: 18px 0 6px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.blocos-op {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.blocos-op label {
+  margin: 0;
+}
+
+.blocos-op input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.blocos-op span {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.blocos-op input:checked + span {
+  border-color: var(--mata);
+  background: var(--mata-suave);
+  color: var(--mata-forte);
+  box-shadow: inset 0 -4px 0 var(--mata);
+}
+
+.blocos-op input:focus-visible + span {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
+input.apto {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- painel de ativação ---------- */
+.resumo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.resumo div {
+  padding: 12px 8px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+  font-size: 15px;
+  text-align: center;
+}
+
+.resumo b {
+  display: block;
+  color: var(--mata);
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.grade a {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border: 1px solid var(--borda);
+  border-radius: 5px;
+  background: var(--folha);
+  color: var(--tinta-suave);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+.grade a.at {
+  border-color: var(--mata);
+  background: var(--mata);
+  color: var(--sobre-mata);
+}
+
+.grade a.ge {
+  box-shadow: inset 0 -4px 0 var(--ipe-forte);
+}
+
+.grade a.at.ge {
+  box-shadow: inset 0 -4px 0 var(--ipe);
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  color: var(--tinta-suave);
+  font-size: 15px;
+}
+
+.legenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legenda i {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--linha);
+  border-radius: 4px;
+  background: var(--folha);
+}
+
+.ficha {
+  margin: 0 0 16px;
+  padding: 4px 16px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+}
+
+.ficha div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--linha);
+  font-size: 17px;
+}
+
+.ficha div:first-child {
+  border-top: 0;
+}
+
+.ficha dt {
+  color: var(--tinta-suave);
+}
+
+.ficha dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* ---------- entrada ---------- */
+.entrada {
+  padding-top: 12px;
+  text-align: center;
+}
+
+.entrada h1.titulo {
+  margin: 14px 0 4px;
+  color: var(--mata-forte);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.centro {
+  text-align: center;
+}
+
+/* ---------- botão flutuante e recado ---------- */
+.flutuante {
+  position: fixed;
+  right: 16px;
+  bottom: 82px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 20px;
+  border-radius: 28px;
+  background: var(--mata);
+  color: var(--sobre-mata);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+}
+
+.recado {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 92px;
+  z-index: 5;
+  padding: 14px 16px;
+  border-radius: var(--r-medio);
+  background: var(--tinta);
+  color: var(--papel);
+  font-size: 16px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  pointer-events: none;
+}
+
+.recado.on {
+  opacity: 1;
+  transform: none;
+}
+
+.vazio {
+  margin: 0;
+  padding: 32px 8px;
+  color: var(--tinta-suave);
+  text-align: center;
+}
+
+.em-construcao {
+  border-style: dashed;
+}
+
+details summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+details summary::after {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-left: auto;
+  border: solid currentColor;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg) translate(-3px, -3px);
+}
+
+details[open] > summary::after {
+  transform: rotate(-135deg) translate(-3px, -3px);
+}
+
+.oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.so-pc {
+  display: none;
+}
+
+/* ============================================================
+   Computador (≥ 900 px): menu lateral verde e coluna de leitura de até 720 px
+   ============================================================ */
+@media (min-width: 900px) {
+  .app {
+    display: grid;
+    grid-template-columns: 264px 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'nav topo'
+      'nav main';
+  }
+
+  .app.sem-nav {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'topo'
+      'main';
+  }
+
+  .topo {
+    grid-area: topo;
+    padding: 14px 40px;
+    border-bottom: 1px solid var(--linha);
+    background: var(--folha);
+    color: var(--tinta);
+  }
+
+  .topo .placa {
+    display: none;
+  }
+
+  .conteudo {
+    grid-area: main;
+    padding: 32px max(40px, calc((100% - 720px) / 2)) 48px;
+  }
+
+  .nav,
+  .app.detalhe .nav {
+    grid-area: nav;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    height: 100dvh;
+    padding: 20px 14px;
+    border-top: 0;
+    background: var(--mata);
+  }
+
+  /* Mesmo peso de seletor que `.app.detalhe .nav`, e depois dele: o escuro vale em toda tela. */
+  [data-tema='escuro'] .app .nav {
+    border-right: 1px solid var(--linha);
+    background: var(--folha);
+  }
+
+  .nav a {
+    flex: 0;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 14px;
+    border-radius: var(--r-pequeno);
+    color: var(--sobre-mata);
+    font-size: 17px;
+    text-align: left;
+    opacity: 0.88;
+  }
+
+  [data-tema='escuro'] .nav a,
+  [data-tema='escuro'] .nav-marca,
+  [data-tema='escuro'] .nav-placa {
+    color: var(--tinta);
+  }
+
+  .nav a:hover {
+    background: rgba(255, 255, 255, 0.08);
+    opacity: 1;
+  }
+
+  .nav a[aria-current='page'] {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--sobre-mata);
+    opacity: 1;
+  }
+
+  [data-tema='escuro'] .nav a[aria-current='page'] {
+    color: var(--tinta);
+  }
+
+  .nav a[aria-current='page']::before {
+    top: 12px;
+    bottom: 12px;
+    left: 0;
+    right: auto;
+    width: 4px;
+    height: auto;
+    border-radius: 0 3px 3px 0;
+    background: var(--ipe);
+  }
+
+  .nav .conta {
+    position: static;
+    margin-left: auto;
+  }
+
+  .nav-marca {
+    display: block;
+    padding: 4px 14px 24px;
+    color: var(--sobre-mata);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .nav-placa {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: auto;
+    padding: 16px 14px 4px;
+    color: var(--sobre-mata);
+    font-size: 15px;
+  }
+
+  .flutuante {
+    right: 40px;
+    bottom: 32px;
+  }
+
+  .recado {
+    left: auto;
+    right: 40px;
+    bottom: 100px;
+    width: 400px;
+  }
+
+  .lado {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+  }
+
+  .so-pc {
+    display: block;
+  }
+
+  .so-cel {
+    display: none;
+  }
 }

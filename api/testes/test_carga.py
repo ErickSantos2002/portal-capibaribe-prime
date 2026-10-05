@@ -1,4 +1,9 @@
-"""Carga inicial: 5 blocos, 320 unidades e o admin (modelo de dados, seção 7)."""
+"""Carga inicial: 5 blocos e 320 unidades (modelo de dados, seção 7).
+
+Desde a revisão do M1, a carga não dá papel nenhum: uma conta de admin com a senha que todo
+mundo conhece seria tomada por quem conhece o padrão. O admin vem depois, pelo comando
+`promover_admin`, numa unidade que já fez o primeiro acesso (test_promover_admin.py).
+"""
 
 import pytest
 from argon2 import PasswordHasher
@@ -7,18 +12,17 @@ from sqlalchemy.orm import Session
 
 from app.comandos import carga_inicial as comando
 from app.modelos import Bloco, Historico, Unidade, UnidadePapel
-from app.servicos.carga_inicial import ErroCarga, carregar, logins_planejados
+from app.servicos.carga_inicial import carregar, logins_planejados
 
 pytestmark = pytest.mark.usefixtures("banco_limpo")
 
 # Argon2id com custo baixo só para o teste não levar 15 s; a produção usa o padrão.
 HASHER_RAPIDO = PasswordHasher(time_cost=1, memory_cost=1024, parallelism=1)
-ADMIN = "1101"  # unidade fictícia; a real vem de PORTAL_ADMIN_UNIDADE em produção
 
 
-def _carregar(engine, admin=ADMIN):
+def _carregar(engine):
     with Session(engine) as sessao:
-        resumo = carregar(sessao, admin, hasher=HASHER_RAPIDO)
+        resumo = carregar(sessao, hasher=HASHER_RAPIDO)
         sessao.commit()
     return resumo
 
@@ -39,11 +43,7 @@ def test_logins_planejados():
 
 def test_carga_cria_blocos_e_unidades(engine_app):
     resumo = _carregar(engine_app)
-    assert (resumo.blocos_criados, resumo.unidades_criadas, resumo.admin_concedido) == (
-        5,
-        320,
-        True,
-    )
+    assert (resumo.blocos_criados, resumo.unidades_criadas) == (5, 320)
     with Session(engine_app) as sessao:
         assert sessao.scalars(select(Bloco.nome).order_by(Bloco.numero)).all() == [
             f"Bloco {n}" for n in range(1, 6)
@@ -66,15 +66,9 @@ def test_unidades_nascem_com_senha_inicial_e_nao_ativadas(engine_app):
     assert len({u.senha_hash for u in unidades}) == 320
 
 
-def test_admin_na_unidade_da_variavel(engine_app):
-    _carregar(engine_app, admin="2304")
-    with Session(engine_app) as sessao:
-        papeis = sessao.execute(
-            select(Unidade.login, UnidadePapel.papel).join(
-                Unidade, Unidade.id == UnidadePapel.unidade_id
-            )
-        ).all()
-    assert [(login, papel.value) for login, papel in papeis] == [("2304", "admin")]
+def test_carga_nao_da_papel_nenhum(engine_app):
+    _carregar(engine_app)
+    assert _contar(engine_app, UnidadePapel) == 0
 
 
 def test_rodar_duas_vezes_nao_duplica_nem_troca_a_senha(engine_app):
@@ -82,14 +76,10 @@ def test_rodar_duas_vezes_nao_duplica_nem_troca_a_senha(engine_app):
     with Session(engine_app) as sessao:
         hash_antes = sessao.scalar(select(Unidade.senha_hash).where(Unidade.login == "1101"))
     resumo = _carregar(engine_app)
-    assert (resumo.blocos_criados, resumo.unidades_criadas, resumo.admin_concedido) == (
-        0,
-        0,
-        False,
-    )
+    assert (resumo.blocos_criados, resumo.unidades_criadas) == (0, 0)
     assert _contar(engine_app, Bloco) == 5
     assert _contar(engine_app, Unidade) == 320
-    assert _contar(engine_app, UnidadePapel) == 1
+    assert _contar(engine_app, UnidadePapel) == 0
     with Session(engine_app) as sessao:
         assert sessao.scalar(select(Unidade.senha_hash).where(Unidade.login == "1101")) == (
             hash_antes
@@ -99,19 +89,10 @@ def test_rodar_duas_vezes_nao_duplica_nem_troca_a_senha(engine_app):
 def test_carga_completa_o_que_falta(engine_app, engine_dono):
     _carregar(engine_app)
     with engine_dono.begin() as con:
-        con.execute(text("delete from unidade_papel"))
         con.execute(text("delete from unidade where login in ('5708', '5707')"))
     resumo = _carregar(engine_app)
-    assert (resumo.unidades_criadas, resumo.admin_concedido) == (2, True)
+    assert resumo.unidades_criadas == 2
     assert _contar(engine_app, Unidade) == 320
-
-
-@pytest.mark.parametrize("admin", [None, "", "  ", "9999", "1009", "6101", "abcd", "11011"])
-def test_admin_invalido_falha_sem_gravar_nada(engine_app, admin):
-    with pytest.raises(ErroCarga, match="PORTAL_ADMIN_UNIDADE"):
-        _carregar(engine_app, admin=admin)
-    assert _contar(engine_app, Bloco) == 0
-    assert _contar(engine_app, Unidade) == 0
 
 
 def test_carga_registra_no_historico(engine_app):
@@ -119,22 +100,15 @@ def test_carga_registra_no_historico(engine_app):
     _carregar(engine_app)
     with Session(engine_app) as sessao:
         registros = sessao.scalars(select(Historico).order_by(Historico.id)).all()
-    assert [r.acao for r in registros] == ["carga_inicial", "papel_concedido"]
+    assert [r.acao for r in registros] == ["carga_inicial"]
     assert registros[0].detalhes == {"blocos": 5, "unidades": 320}
-    assert registros[1].detalhes == {"papel": "admin"}
-    assert registros[1].entidade == "unidade"
 
 
-def test_comando_usa_a_variavel_de_ambiente(cliente, monkeypatch, capsys):
-    # `cliente` já aponta DATABASE_URL para o usuário app.
-    monkeypatch.setenv("PORTAL_ADMIN_UNIDADE", ADMIN)
+def test_comando_carrega_o_predio(cliente, monkeypatch, capsys):
+    # `cliente` já aponta DATABASE_URL para o usuário app. Não precisa de variável de admin.
+    monkeypatch.delenv("PORTAL_ADMIN_UNIDADE", raising=False)
     monkeypatch.setattr(comando, "HASHER", HASHER_RAPIDO)
     assert comando.main() == 0
-    assert "320 unidades" in capsys.readouterr().out
+    saida = capsys.readouterr().out
+    assert "320 unidades" in saida and "promover_admin" in saida
     assert cliente.get("/api/saude").json() == {"status": "ok", "unidades": 320}
-
-
-def test_comando_sem_variavel_explica_e_sai_com_erro(cliente, monkeypatch, capsys):
-    monkeypatch.delenv("PORTAL_ADMIN_UNIDADE", raising=False)
-    assert comando.main() == 1
-    assert "PORTAL_ADMIN_UNIDADE" in capsys.readouterr().err
