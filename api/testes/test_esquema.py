@@ -1,5 +1,7 @@
 """Regras que o próprio banco garante nas tabelas de acesso."""
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -84,7 +86,15 @@ def test_unidade_unica_dentro_do_bloco(engine_app):
 
 def test_um_papel_em_vigor_por_tipo(engine_app):
     with engine_app.begin() as con:
-        u = _unidade(con, _bloco(con, 1), "101")
+        # Papel só em unidade já ativada (migração 0002).
+        u = _unidade(
+            con,
+            _bloco(con, 1),
+            "101",
+            ativada_em=datetime(2026, 10, 1, tzinfo=UTC),
+            responsavel_nome="Fulano (fictício)",
+            celular="81900000000",
+        )
         # Comissão, não admin: retirar o último admin é recusado (migração 0002).
         inserir = text("insert into unidade_papel (unidade_id, papel) values (:u, 'comissao')")
         con.execute(inserir, {"u": u})

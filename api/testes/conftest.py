@@ -166,7 +166,7 @@ def predio(banco_limpo, engine_app, hasher_rapido) -> dict[str, int]:
     from app.servicos.carga_inicial import carregar
 
     with Session(engine_app) as db:
-        carregar(db, ADMIN, hasher=hasher_rapido)
+        carregar(db, hasher=hasher_rapido)
         ids = dict(
             db.execute(
                 select(Unidade.login, Unidade.id).where(
@@ -181,6 +181,10 @@ def predio(banco_limpo, engine_app, hasher_rapido) -> dict[str, int]:
             unidade.ativada_em = func.now()
             unidade.responsavel_nome = f"Responsável {login} (fictício)"
             unidade.celular = f"819000000{posicao:02d}"
+        db.flush()
+        # Papel só em unidade já ativada (banco): depois de ativar. O admin vem de fora da
+        # carga, como em produção (`promover_admin`).
+        db.add(UnidadePapel(unidade_id=ids[ADMIN], papel=Papel.admin))
         db.add(UnidadePapel(unidade_id=ids[COMISSAO], papel=Papel.comissao))
         db.commit()
     return ids

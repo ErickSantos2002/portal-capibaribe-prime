@@ -1,9 +1,9 @@
 """Dados fictícios para desenvolvimento e teste (RNF-16), separados da carga real.
 
 Ativa parte das unidades com nomes inventados, celulares `8190000xxxx` e e-mails em
-`@example.com`, e dá o papel de Comissão a duas delas. Determinístico (mesma semente) e
-idempotente. Só roda com `PORTAL_AMBIENTE` igual a `local`, `teste` ou `previa`; em
-produção, recusa.
+`@example.com`; em local e teste, dá o papel de admin a uma e o de Comissão a duas.
+Determinístico (mesma semente) e idempotente. Só roda com `PORTAL_AMBIENTE` igual a `local`,
+`teste` ou `previa`; em produção, recusa.
 
 Em desenvolvimento as unidades fictícias entram com a senha inicial, já sem a troca obrigatória.
 """
@@ -76,18 +76,24 @@ def preencher_ficticios(sessao: Session, ambiente: str | None) -> int:
         unidade.ativada_em = agora - timedelta(days=dias)
         ativadas += 1
 
-    # Comissão fictícia: as duas primeiras unidades sorteadas.
-    for indice in escolhidas[:2]:
-        unidade = unidades[indice]
-        tem = sessao.scalar(
-            select(UnidadePapel.id).where(
-                UnidadePapel.unidade_id == unidade.id,
-                UnidadePapel.papel == Papel.comissao,
-                UnidadePapel.retirado_em.is_(None),
+    # Papéis fictícios, só em local e teste: a primeira unidade sorteada é admin e as duas
+    # seguintes são da Comissão (todas já ativadas acima). Na prévia, nenhum papel: ela fica na
+    # internet (atrás da proteção da Vercel) e quem revisa faz o primeiro acesso e roda
+    # `promover_admin`, como em produção (spec do M1, seção 6).
+    if ambiente != "previa":
+        sessao.flush()
+        papeis = [Papel.admin, Papel.comissao, Papel.comissao]
+        for indice, papel in zip(escolhidas[:3], papeis, strict=True):
+            unidade = unidades[indice]
+            tem = sessao.scalar(
+                select(UnidadePapel.id).where(
+                    UnidadePapel.unidade_id == unidade.id,
+                    UnidadePapel.papel == papel,
+                    UnidadePapel.retirado_em.is_(None),
+                )
             )
-        )
-        if not tem:
-            sessao.add(UnidadePapel(unidade_id=unidade.id, papel=Papel.comissao))
+            if not tem:
+                sessao.add(UnidadePapel(unidade_id=unidade.id, papel=papel))
 
     if ativadas:
         sessao.add(Historico(acao="dados_ficticios", detalhes={"unidades": ativadas}))

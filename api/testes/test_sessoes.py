@@ -1,15 +1,15 @@
 """Sessão por cookie (ADR-0005; spec do M1, seção 3.1)."""
 
 import hashlib
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import Response
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.modelos import Sessao
-from app.seguranca import sessoes
+from app.modelos import Sessao, Unidade
+from app.seguranca import senhas, sessoes
 from testes.conftest import COMUM
 
 
@@ -83,8 +83,46 @@ def test_renova_no_maximo_uma_vez_por_hora(engine_app, predio):
         assert sessoes.renovar(db, sessao) is True
         db.commit()
         uso = db.scalars(select(Sessao.ultimo_uso_em)).one()
-        agora = db.scalar(select(func.now()))
+        agora = db.scalars(select(func.now())).one()
     assert agora - uso < timedelta(minutes=1)
+
+
+def test_trocar_senha_encerra_todas_e_abre_uma_nova(engine_app, predio):
+    antigos = [_token(engine_app, predio[COMUM]) for _ in range(2)]
+    with Session(engine_app) as db:
+        novo = sessoes.trocar_senha_e_sessao(db, predio[COMUM], "senha-nova-1", "curl/8")
+        db.commit()
+        assert all(sessoes.buscar_sessao(db, t) is None for t in antigos)
+        assert sessoes.buscar_sessao(db, novo) is not None
+        encerradas = db.scalars(select(Sessao).where(Sessao.encerrada_em.is_not(None))).all()
+        senha = db.scalars(select(Unidade.senha_hash).where(Unidade.id == predio[COMUM])).one()
+    assert len(encerradas) == 2
+    assert senhas.senha_confere(senha, "senha-nova-1")
+
+
+def test_app_nao_forja_data_da_sessao_nem_da_troca_de_senha(engine_app, predio):
+    # Sessão com data no futuro sobreviveria à troca de senha: o banco carimba as duas datas.
+    with Session(engine_app) as db:
+        db.add(
+            Sessao(
+                unidade_id=predio[COMUM],
+                token_hash="h",
+                criada_em=datetime(2099, 1, 1, tzinfo=UTC),
+            )
+        )
+        db.execute(
+            update(Unidade)
+            .where(Unidade.id == predio[COMUM])
+            .values(senha_trocada_em=datetime(2001, 1, 1, tzinfo=UTC))
+        )
+        db.commit()
+        criada = db.scalars(select(Sessao.criada_em)).one()
+        trocada = db.scalars(
+            select(Unidade.senha_trocada_em).where(Unidade.id == predio[COMUM])
+        ).one()
+        agora = db.scalars(select(func.now())).one()
+    assert abs(agora - criada) < timedelta(minutes=1)
+    assert trocada.year != 2001
 
 
 def test_cookie_com_os_atributos_da_adr():

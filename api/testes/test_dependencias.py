@@ -156,6 +156,29 @@ def test_unidade_desativada_perde_a_sessao(entrar, engine_app, predio):
     assert c.get("/qualquer").status_code == 401
 
 
+def test_sessao_de_terceiro_nao_vira_completa_no_primeiro_acesso(entrar, engine_app, predio):
+    # Alguém entra com mudar123 antes do morador e guarda o cookie (sessão restrita).
+    terceiro = entrar(NAO_ATIVADA)
+    assert terceiro.get("/qualquer").status_code == 200
+    # O morador conclui o primeiro acesso (senha nova), mesmo sem a rota encerrar nada.
+    with Session(engine_app) as db:
+        db.execute(
+            update(Unidade)
+            .where(Unidade.id == predio[NAO_ATIVADA])
+            .values(
+                senha_hash="hash-da-senha-nova",
+                precisa_trocar_senha=False,
+                ativada_em=func.now(),
+                responsavel_nome="Morador (fictício)",
+                celular="81900000009",
+            )
+        )
+        db.commit()
+    # O cookie antigo não vale mais nada: nem restrito, nem completo.
+    assert terceiro.get("/qualquer").status_code == 401
+    assert terceiro.get("/unidade").status_code == 401
+
+
 def test_sessao_vencida_e_401(entrar, engine_app):
     c = entrar(COMUM)
     with Session(engine_app) as db:
@@ -174,7 +197,7 @@ def test_renovar_regrava_o_cookie(entrar, engine_app):
     assert resposta.headers["set-cookie"].startswith(f"{NOME_COOKIE}=")
     with Session(engine_app) as db:
         uso = db.scalars(select(Sessao.ultimo_uso_em)).one()
-        assert db.scalar(select(func.now())) - uso < timedelta(minutes=1)
+        assert db.scalars(select(func.now())).one() - uso < timedelta(minutes=1)
 
 
 # --- CSRF ------------------------------------------------------------------------------------

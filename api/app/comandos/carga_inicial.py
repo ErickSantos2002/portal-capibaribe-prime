@@ -1,33 +1,29 @@
 """Carga inicial das 320 unidades. Uso, de dentro de `api/`:
 
-    DATABASE_URL=<url do usuário app> PORTAL_ADMIN_UNIDADE=1101 \\
-        uv run python -m app.comandos.carga_inicial
+    DATABASE_URL=<url do usuário app> uv run python -m app.comandos.carga_inicial
 
-A unidade real do administrador vem só da variável (o repositório é público).
+Não dá papel nenhum. Depois que a unidade do administrador fizer o primeiro acesso:
+`python -m app.comandos.promover_admin <login>` (spec do M1, seção 2.5).
 """
 
-import os
 import sys
 
 from argon2 import PasswordHasher
 
 from app.banco import fabrica_de_sessoes
-from app.servicos.carga_inicial import ErroCarga, carregar
+from app.servicos.carga_inicial import carregar
 
 HASHER = PasswordHasher()
 
 
 def main() -> int:
-    try:
-        with fabrica_de_sessoes()() as sessao:
-            resumo = carregar(sessao, os.environ.get("PORTAL_ADMIN_UNIDADE"), hasher=HASHER)
-            sessao.commit()
-    except ErroCarga as erro:
-        print(f"Carga não feita: {erro}", file=sys.stderr)
-        return 1
+    with fabrica_de_sessoes()() as sessao:
+        resumo = carregar(sessao, hasher=HASHER)
+        sessao.commit()
     print(
         f"Carga concluída: {resumo.blocos_criados} blocos e {resumo.unidades_criadas} unidades "
-        f"criados; admin {'concedido' if resumo.admin_concedido else 'já existia'}."
+        "criados. Nenhum papel foi dado: o administrador vem com "
+        "`python -m app.comandos.promover_admin <login>`, depois do primeiro acesso dele."
     )
     return 0
 

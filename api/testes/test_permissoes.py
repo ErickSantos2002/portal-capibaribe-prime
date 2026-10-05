@@ -57,12 +57,20 @@ def test_app_insere_no_historico(engine_app, unidade_1101):
 
 def test_app_altera_unidade_e_papel(engine_app, unidade_1101):
     with engine_app.begin() as con:
-        con.execute(text("update unidade set ativa = false where id = :u"), {"u": unidade_1101})
+        # Papel só em unidade ativada, e unidade com papel não é desativada (migração 0002).
+        con.execute(
+            text(
+                "update unidade set ativada_em = now(), responsavel_nome = 'Fulano (fictício)',"
+                " celular = '81900000000' where id = :u"
+            ),
+            {"u": unidade_1101},
+        )
         con.execute(
             text("insert into unidade_papel (unidade_id, papel) values (:u, 'comissao')"),
             {"u": unidade_1101},
         )
         con.execute(text("update unidade_papel set retirado_em = now()"))
+        con.execute(text("update unidade set ativa = false where id = :u"), {"u": unidade_1101})
 
 
 def test_app_grava_e_apaga_erro_e_sessao(engine_app, unidade_1101):

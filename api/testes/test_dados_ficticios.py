@@ -17,7 +17,7 @@ HASHER_RAPIDO = PasswordHasher(time_cost=1, memory_cost=1024, parallelism=1)
 @pytest.fixture
 def carregado(engine_app):
     with Session(engine_app) as sessao:
-        carregar(sessao, "1101", hasher=HASHER_RAPIDO)
+        carregar(sessao, hasher=HASHER_RAPIDO)
         sessao.commit()
 
 
@@ -58,6 +58,30 @@ def test_da_papel_de_comissao_ficticio(engine_app, carregado):
         sessao.commit()
         papeis = sessao.scalars(select(UnidadePapel.papel)).all()
     assert sorted(p.value for p in papeis).count("comissao") >= 1
+
+
+def test_local_tem_um_admin_ficticio_numa_unidade_ativada(engine_app, carregado):
+    # A carga não dá admin (revisão do M1); para desenvolver, a semente fictícia dá a uma
+    # unidade fictícia já ativada.
+    with Session(engine_app) as sessao:
+        preencher_ficticios(sessao, "local")
+        sessao.commit()
+        admins = sessao.scalars(
+            select(Unidade)
+            .join(UnidadePapel, UnidadePapel.unidade_id == Unidade.id)
+            .where(UnidadePapel.papel == "admin")
+        ).all()
+    assert len(admins) == 1
+    assert admins[0].ativada_em is not None
+
+
+def test_previa_nao_da_papel_nenhum(engine_app, carregado):
+    # A prévia é pública atrás da proteção da Vercel: nenhuma conta de gestão com mudar123.
+    # Quem revisa faz o primeiro acesso e roda promover_admin, como em produção.
+    with Session(engine_app) as sessao:
+        preencher_ficticios(sessao, "previa")
+        sessao.commit()
+        assert sessao.scalars(select(UnidadePapel)).all() == []
 
 
 def test_rodar_de_novo_nao_muda_nada(engine_app, carregado):

@@ -46,14 +46,16 @@ class AvisoVersao(Base):
 
     __tablename__ = "aviso_versao"
     __table_args__ = (
-        CheckConstraint("versao >= 1"),
+        CheckConstraint("versao >= 1", name="aviso_versao_minima"),
         CheckConstraint(
             f"char_length(btrim(titulo)) between 1 and {LIMITE_TITULO}"
-            f" and char_length(titulo) <= {LIMITE_TITULO}"
+            f" and char_length(titulo) <= {LIMITE_TITULO}",
+            name="aviso_versao_titulo_tamanho",
         ),
         CheckConstraint(
             f"char_length(btrim(texto)) between 1 and {LIMITE_TEXTO}"
-            f" and char_length(texto) <= {LIMITE_TEXTO}"
+            f" and char_length(texto) <= {LIMITE_TEXTO}",
+            name="aviso_versao_texto_tamanho",
         ),
     )
 

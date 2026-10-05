@@ -10,7 +10,7 @@ from psycopg.errors import InsufficientPrivilege
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError, IntegrityError, ProgrammingError
 
-from testes.apoio import criar_bloco, criar_unidade
+from testes.apoio import criar_bloco, criar_unidade, restricao
 
 pytestmark = pytest.mark.usefixtures("banco_limpo")
 
@@ -190,14 +190,14 @@ def test_titulo_e_texto_com_limites(engine_app, ids, titulo, texto):
 def test_aviso_sem_versao_recusado_no_commit(engine_app, ids):
     with pytest.raises(DBAPIError) as erro, engine_app.begin() as con:
         _aviso(con, ids["u"])
-    assert erro.value.orig.diag.constraint_name == "aviso_completo"
+    assert restricao(erro.value) == "aviso_completo"
 
 
 def test_aviso_de_blocos_sem_bloco_recusado(engine_app, ids):
     with pytest.raises(DBAPIError) as erro, engine_app.begin() as con:
         a = _aviso(con, ids["u"], para_todos=False)
         _versao(con, a, ids["u"])
-    assert erro.value.orig.diag.constraint_name == "aviso_completo"
+    assert restricao(erro.value) == "aviso_completo"
 
 
 def test_aviso_de_blocos_com_bloco_aceito(engine_app, ids):

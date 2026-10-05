@@ -3,9 +3,11 @@
 from argparse import Namespace
 from pathlib import Path
 
+import psycopg
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import Connection, text
+from sqlalchemy.exc import DBAPIError
 
 RAIZ_API = Path(__file__).resolve().parent.parent
 
@@ -38,3 +40,9 @@ def criar_unidade(con: Connection, bloco_id: int, numero: str, **extra) -> int:
     return con.execute(
         text(f"insert into unidade ({nomes}) values ({valores}) returning id"), colunas
     ).scalar_one()
+
+
+def restricao(erro: BaseException) -> str | None:
+    """Nome da restrição (CHECK, trigger com `constraint =`) que o Postgres recusou."""
+    assert isinstance(erro, DBAPIError) and isinstance(erro.orig, psycopg.Error), erro
+    return erro.orig.diag.constraint_name

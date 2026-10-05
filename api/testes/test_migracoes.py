@@ -70,3 +70,26 @@ def test_downgrade_da_0002_volta_ao_m0(banco_vazio):
     }
     rodar_alembic(banco_vazio, "upgrade", "head")
     assert "aviso" in _tabelas(banco_vazio)
+
+
+def test_0002_retira_o_admin_que_a_carga_do_m0_deu_a_unidade_nao_ativada(banco_vazio):
+    # Produção depois do M0: o admin estava numa unidade ainda com mudar123. A 0002 retira esse
+    # papel (registrando no histórico); o admin volta por `promover_admin`.
+    rodar_alembic(banco_vazio, "upgrade", "0001")
+    with psycopg.connect(banco_vazio, autocommit=True) as con:
+        con.execute("insert into bloco (numero, nome) values (1, 'Bloco 1')")
+        con.execute(
+            "insert into unidade (bloco_id, numero, andar, senha_hash)"
+            " select id, '101', 1, 'h' from bloco"
+        )
+        con.execute("insert into unidade_papel (unidade_id, papel) select id, 'admin' from unidade")
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    with psycopg.connect(banco_vazio) as con:
+        em_vigor = con.execute(
+            "select count(*) from unidade_papel where retirado_em is null"
+        ).fetchone()
+        registro = con.execute(
+            "select acao, detalhes from historico where acao = 'papel_retirado'"
+        ).fetchone()
+    assert em_vigor == (0,)
+    assert registro == ("papel_retirado", {"papel": "admin", "origem": "migracao_0002"})

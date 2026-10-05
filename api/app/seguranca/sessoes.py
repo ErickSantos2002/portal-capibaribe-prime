@@ -3,7 +3,12 @@
 - O aparelho guarda um token aleatório de 32 bytes no cookie; o banco guarda só o SHA-256 dele.
 - Cookie `__Host-sessao`: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sem `Domain`. O
   prefixo `__Host-` faz o navegador recusar o cookie se algum desses atributos faltar.
-- Vale 180 dias desde o último uso. O uso é regravado no máximo uma vez por hora, para não
+- Vale 180 dias desde o último uso, e só se foi aberta depois da última troca de senha da
+  unidade (`unidade.senha_trocada_em`, data do banco): quem entrou com `mudar123` antes do
+  morador perde o acesso quando ele conclui o primeiro acesso.
+- Trocar a senha (primeiro acesso, "trocar a senha") usa `trocar_senha_e_sessao`: encerra todos
+  os aparelhos e abre uma sessão nova só para quem trocou.
+- O último uso é regravado no máximo uma vez por hora, para não
   escrever no banco a cada requisição.
 
 Nada aqui faz commit: quem chama decide.
@@ -19,6 +24,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.modelos import Sessao, Unidade
+from app.seguranca.senhas import gerar_hash
 
 NOME_COOKIE = "__Host-sessao"
 VALIDADE = timedelta(days=180)
@@ -44,8 +50,8 @@ def criar_sessao(db: Session, unidade_id: int, user_agent: str | None) -> str:
 
 
 def buscar_sessao(db: Session, token: str | None) -> Sessao | None:
-    """A sessão do token, se ainda vale: não encerrada, usada nos últimos 180 dias e de uma
-    unidade ativa."""
+    """A sessão do token, se ainda vale: não encerrada, usada nos últimos 180 dias, aberta depois
+    da última troca de senha e de uma unidade ativa."""
     if not token:
         return None
     return db.scalars(
@@ -55,6 +61,7 @@ def buscar_sessao(db: Session, token: str | None) -> Sessao | None:
             Sessao.token_hash == hash_do_token(token),
             Sessao.encerrada_em.is_(None),
             Sessao.ultimo_uso_em > func.now() - VALIDADE,
+            Sessao.criada_em >= Unidade.senha_trocada_em,
             Unidade.ativa.is_(True),
         )
     ).one_or_none()
@@ -86,6 +93,23 @@ def encerrar_todas(db: Session, unidade_id: int, exceto: int | None = None) -> i
         filtros.append(Sessao.id != exceto)
     resultado = db.execute(update(Sessao).where(*filtros).values(encerrada_em=func.now()))
     return resultado.rowcount  # type: ignore[attr-defined]
+
+
+def trocar_senha_e_sessao(
+    db: Session, unidade_id: int, senha_nova: str, user_agent: str | None
+) -> str:
+    """Grava a senha nova, encerra **todas** as sessões da unidade e abre uma nova para quem
+    trocou. Devolve o token: a rota grava o cookie com `gravar_cookie`.
+
+    Usar no primeiro acesso (H-01) e em "trocar a senha" (H-06). Mesmo sem isto, o banco já
+    invalida as sessões antigas (`senha_trocada_em`); aqui elas também ficam marcadas como
+    encerradas, para sumirem da lista de aparelhos.
+    """
+    unidade = db.get_one(Unidade, unidade_id)
+    unidade.senha_hash = gerar_hash(senha_nova)
+    db.flush()
+    encerrar_todas(db, unidade_id)
+    return criar_sessao(db, unidade_id, user_agent)
 
 
 def gravar_cookie(resposta: Response, token: str) -> None:
