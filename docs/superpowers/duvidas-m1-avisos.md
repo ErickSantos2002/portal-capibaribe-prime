@@ -89,7 +89,9 @@ marco. Base: `duvidas-m1.md` (itens 3, 11 a 17, 22, 25 e 27 já valiam e foram s
   sessões direto no banco local e mandou o cookie pela interceptação de rede (o navegador do
   teste recusa cookie `Secure` em `http://localhost` posto à mão). Sem violação de CSP, sem
   rolagem horizontal em 390 e 1366 px, claro e escuro. O único aviso do console é o
-  `bluetooth` do `Permissions-Policy` (dúvida 26 do M1).
+  `bluetooth` do `Permissions-Policy` (dúvida 26 do M1). Depois do `git merge main` (épico A
+  e B já na `main`), um último teste entrou pela tela de entrar de verdade (Comissão fictícia),
+  abriu um aviso, arquivou com confirmação e o achou em "Avisos arquivados".
 
 ## Pedidos de mudança no comum
 
