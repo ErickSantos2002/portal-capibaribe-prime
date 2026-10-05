@@ -56,7 +56,7 @@ describe('guardas', () => {
     api(null)
     const roteador = abrir('/avisos')
     await waitFor(() => expect(roteador.state.location.pathname).toBe('/entrar'))
-    expect(await screen.findByText(/H-02/)).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Portal Capibaribe Prime' })).toBeTruthy()
   })
 
   it('sessão restrita vai para o primeiro acesso', async () => {
@@ -173,7 +173,7 @@ describe('layout', () => {
   it('a entrada não tem topo nem menu, e tem o botão de tema solto', async () => {
     api(null)
     abrir('/entrar')
-    await screen.findByText(/H-02/)
+    await screen.findByRole('heading', { level: 1, name: 'Portal Capibaribe Prime' })
     expect(document.querySelector('.topo')).toBeNull()
     expect(screen.queryByRole('navigation')).toBeNull()
     expect(document.querySelector('.tema-btn.solto')).not.toBeNull()
