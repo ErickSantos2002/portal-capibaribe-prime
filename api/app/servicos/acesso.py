@@ -11,11 +11,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.erros_api import ErroApi
+from app.esquemas.acesso import PrimeiroAcesso
 from app.esquemas.comum import Eu, UnidadeRef
 from app.modelos import Papel, Unidade, UnidadePapel
 from app.seguranca.dependencias import PAPEIS_DE_GESTAO
 from app.seguranca.senhas import conferir_sem_unidade, senha_confere
-from app.seguranca.sessoes import criar_sessao
+from app.seguranca.sessoes import criar_sessao, trocar_senha_e_sessao
 from app.servicos.historico import Acao, registrar
 
 TENTATIVAS_ATE_BLOQUEAR = 5
@@ -106,4 +107,29 @@ def entrar(db: Session, login: str, senha: str, user_agent: str | None) -> tuple
     unidade.tentativas_falhas = 0
     unidade.bloqueada_ate = None
     token = criar_sessao(db, unidade.id, user_agent)
+    return eu_da_unidade(db, unidade), token
+
+
+def concluir_primeiro_acesso(
+    db: Session, unidade_id: int, dados: PrimeiroAcesso, user_agent: str | None
+) -> tuple[Eu, str]:
+    """H-01: senha própria e contatos; a unidade passa a "ativada".
+
+    Encerra todas as sessões (inclusive a de quem entrou com `mudar123` antes do morador) e abre
+    uma nova para quem concluiu. Devolve o `Eu` liberado e o token novo.
+    """
+    unidade = db.get_one(Unidade, unidade_id, with_for_update=True)
+    if not unidade.precisa_trocar_senha:
+        raise ErroApi(
+            409, "primeiro_acesso_ja_feito", "O primeiro acesso deste apartamento já foi feito."
+        )
+    unidade.responsavel_nome = dados.responsavel_nome
+    unidade.celular = dados.celular
+    unidade.email = dados.email
+    unidade.precisa_trocar_senha = False
+    unidade.ativada_em = db.scalars(select(func.now())).one()
+    token = trocar_senha_e_sessao(db, unidade_id, dados.senha_nova, user_agent)
+    registrar(
+        db, Acao.primeiro_acesso, unidade_id=unidade_id, entidade="unidade", entidade_id=unidade_id
+    )
     return eu_da_unidade(db, unidade), token
