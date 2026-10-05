@@ -7,12 +7,16 @@ Rotas a implementar (atenção à ordem: as fixas antes de `/{aviso_id}`):
 - `GET  /api/avisos?busca=&arquivados=`   → `ListaAvisos` (`UnidadeLogada`)
 - `GET  /api/avisos/nao-lidos`            → `ContagemNaoLidos` (`UnidadeLogada`)
 - `GET  /api/avisos/alcance?blocos=`      → `Alcance` (`Gestao`)
-- `GET  /api/avisos/{aviso_id}`           → `AvisoCompleto`, marca como lido (`UnidadeLogada`)
+- `GET  /api/avisos/{aviso_id}`           → `AvisoCompleto`; só lê, não grava nada
+- `POST /api/avisos/{aviso_id}/lido`      → 204, idempotente; a 1ª vez conta (`UnidadeLogada`)
 - `POST /api/avisos`                      → 201 `AvisoCompleto` (`Gestao`)
 - `PUT  /api/avisos/{aviso_id}`           → `AvisoCompleto`, versão nova (`Gestao`)
 - `POST /api/avisos/{aviso_id}/arquivar`  → `AvisoCompleto` (`Gestao`)
 - `PUT  /api/avisos/{aviso_id}/fixado`    → `AvisoCompleto` (`Gestao`)
 - `GET  /api/avisos/{aviso_id}/leitura`   → `Leitura` (`Gestao`)
+
+GET nunca altera nada: com `SameSite=Lax`, uma navegação vinda de outro site leva o cookie e
+escaparia da exigência de `X-Portal`. Por isso a leitura (H-16) é um POST à parte.
 
 Modelos em `app/modelos/avisos.py`. O banco carimba as datas, exige versões em sequência e
 confere no commit que o aviso tem versão 1 e destino (restrição `aviso_completo`).

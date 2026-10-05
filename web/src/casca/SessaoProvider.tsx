@@ -28,12 +28,16 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
 
   const recarregar = useCallback(async () => setEstado(await buscarEu()), [])
   const definir = useCallback((eu: Eu | null) => setEstado({ situacao: 'pronta', eu }), [])
+  // Só esquece a sessão quando a API confirmou (204) ou ela já não existia (401). Qualquer outra
+  // falha (sem internet, erro do servidor) mantém a pessoa logada e repassa o erro para a tela
+  // mostrar: dizer "saiu" com o cookie ainda válido no aparelho seria mentir.
   const sair = useCallback(async () => {
     try {
       await api.post<void>('/api/acesso/sair')
-    } finally {
-      setEstado({ situacao: 'pronta', eu: null })
+    } catch (erro) {
+      if (!(erro instanceof ErroDaApi && erro.status === 401)) throw erro
     }
+    setEstado({ situacao: 'pronta', eu: null })
   }, [])
 
   const valor = useMemo<ValorSessao>(

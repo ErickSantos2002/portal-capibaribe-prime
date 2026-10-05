@@ -20,8 +20,11 @@ export const contarNaoLidos = () => api.get<ContagemNaoLidos>('/api/avisos/nao-l
 export const calcularAlcance = (blocos: number[] = []) =>
   api.get<Alcance>('/api/avisos/alcance', { blocos })
 
-/** Abrir o aviso conta como leitura (H-16). */
+/** Só lê: GET não altera nada. Ao abrir o aviso, a tela chama também `marcarLido`. */
 export const abrirAviso = (id: number) => api.get<AvisoCompleto>(`/api/avisos/${id}`)
+
+/** A unidade abriu o aviso (H-16). Idempotente: só a primeira vez conta. */
+export const marcarLido = (id: number) => api.post<void>(`/api/avisos/${id}/lido`)
 
 export const publicarAviso = (dados: NovoAviso) => api.post<AvisoCompleto>('/api/avisos', dados)
 

@@ -15,7 +15,8 @@ export interface ValorSessao {
   definir: (eu: Eu | null) => void
   /** Pergunta de novo à API (ex.: depois de um 403 `sem_permissao`, o papel pode ter mudado). */
   recarregar: () => Promise<void>
-  /** Encerra a sessão deste aparelho (POST /api/acesso/sair). */
+  /** Encerra a sessão deste aparelho (POST /api/acesso/sair). Se a API falhar, a sessão fica
+   *  como estava e a promessa é rejeitada com `ErroDaApi`: a tela mostra `erro.mensagem`. */
   sair: () => Promise<void>
 }
 
