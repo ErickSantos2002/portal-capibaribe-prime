@@ -1,0 +1,86 @@
+/* Épico B · Administração: o que o estilo comum não tem. Pertence ao épico B.
+   Grade, resumo, legenda e ficha já estão em estilo.css (copiados do protótipo). */
+
+/* Legenda da grade: no protótipo era style= solto; aqui, classes (a CSP proíbe style=). */
+.legenda i.at {
+  border-color: var(--mata);
+  background: var(--mata);
+}
+
+.legenda i.ge {
+  box-shadow: inset 0 -4px 0 var(--ipe-forte);
+}
+
+/* Grade ou lista, e o filtro da lista: chips em cima da lista. */
+.admin-controles {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 0;
+}
+
+.admin-controles .chips {
+  margin: 0;
+}
+
+/* Lista de unidades: placa pequena à esquerda, dados à direita. */
+.item.unidade-linha {
+  grid-template-columns: auto 1fr auto;
+}
+
+.item.unidade-linha .placa {
+  grid-row: 1 / span 2;
+}
+
+.item.unidade-linha h3,
+.item.unidade-linha .linha-meta {
+  grid-column: 2;
+}
+
+.item.unidade-linha .seta {
+  grid-column: 3;
+}
+
+/* Confirmação no lugar (padrão do protótipo): em cima das opções, com o que vai acontecer. */
+.confirmacao {
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 2px solid var(--erro);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+}
+
+.confirmacao h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.confirmacao ul {
+  margin: 0 0 16px;
+  padding-left: 22px;
+}
+
+.confirmacao li {
+  margin-bottom: 4px;
+}
+
+.acoes-admin {
+  display: grid;
+  gap: 12px;
+}
+
+.acoes-admin .botao + .botao {
+  margin-top: 0;
+}
+
+/* Histórico: quem fez em negrito, a frase normal, a data embaixo. */
+.historico .item {
+  min-height: 0;
+}
+
+.historico .item h3 {
+  overflow-wrap: anywhere;
+}
+
+.carregar-mais {
+  margin-top: 16px;
+}
