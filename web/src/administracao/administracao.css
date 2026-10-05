@@ -84,3 +84,9 @@
 .carregar-mais {
   margin-top: 16px;
 }
+
+/* Celular na ficha: toca para ligar. Cor do Portal, não o azul/roxo padrão do navegador. */
+.ficha dd a {
+  color: var(--mata);
+  text-underline-offset: 3px;
+}
