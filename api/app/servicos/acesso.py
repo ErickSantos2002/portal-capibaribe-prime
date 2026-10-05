@@ -7,16 +7,27 @@ peças comuns), para a ação e o registro no histórico irem juntos na mesma tr
 import math
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.erros_api import ErroApi
-from app.esquemas.acesso import PrimeiroAcesso
+from app.esquemas.acesso import (
+    Aparelho,
+    DadosDaUnidade,
+    MinhaUnidade,
+    PrimeiroAcesso,
+    TrocarSenha,
+)
 from app.esquemas.comum import Eu, UnidadeRef
-from app.modelos import Papel, Unidade, UnidadePapel
-from app.seguranca.dependencias import PAPEIS_DE_GESTAO
-from app.seguranca.senhas import conferir_sem_unidade, senha_confere
-from app.seguranca.sessoes import criar_sessao, trocar_senha_e_sessao
+from app.modelos import Papel, Sessao, Unidade, UnidadePapel
+from app.seguranca.dependencias import PAPEIS_DE_GESTAO, Logado
+from app.seguranca.senhas import SENHA_INICIAL, conferir_sem_unidade, gerar_hash, senha_confere
+from app.seguranca.sessoes import (
+    VALIDADE,
+    criar_sessao,
+    encerrar_sessao,
+    trocar_senha_e_sessao,
+)
 from app.servicos.historico import Acao, registrar
 
 TENTATIVAS_ATE_BLOQUEAR = 5
@@ -133,3 +144,107 @@ def concluir_primeiro_acesso(
         db, Acao.primeiro_acesso, unidade_id=unidade_id, entidade="unidade", entidade_id=unidade_id
     )
     return eu_da_unidade(db, unidade), token
+
+
+# --- Minha unidade (H-06) -------------------------------------------------------------------------
+
+
+def _aparelhos(db: Session, logado: Logado) -> list[Aparelho]:
+    """Sessões em vigor da unidade, pelas mesmas regras de `buscar_sessao`: não encerradas,
+    usadas nos últimos 180 dias e abertas depois da última troca de senha."""
+    sessoes = db.scalars(
+        select(Sessao)
+        .join(Unidade, Unidade.id == Sessao.unidade_id)
+        .where(
+            Sessao.unidade_id == logado.unidade_id,
+            Sessao.encerrada_em.is_(None),
+            Sessao.ultimo_uso_em > func.now() - VALIDADE,
+            Sessao.criada_em >= Unidade.senha_trocada_em,
+        )
+        .order_by(Sessao.ultimo_uso_em.desc(), Sessao.id.desc())
+    )
+    return [
+        Aparelho(
+            id=s.id,
+            descricao=s.aparelho or "Aparelho desconhecido",
+            criada_em=s.criada_em,
+            ultimo_uso_em=s.ultimo_uso_em,
+            este_aparelho=s.id == logado.sessao_id,
+        )
+        for s in sessoes
+    ]
+
+
+def ver_minha_unidade(db: Session, logado: Logado) -> MinhaUnidade:
+    unidade = db.get_one(Unidade, logado.unidade_id)
+    return MinhaUnidade(
+        unidade=UnidadeRef.de_login(unidade.login),
+        responsavel_nome=unidade.responsavel_nome,
+        celular=unidade.celular,
+        email=unidade.email,
+        papeis=papeis_em_vigor(db, unidade.id),
+        ativada_em=unidade.ativada_em,
+        aparelhos=_aparelhos(db, logado),
+    )
+
+
+def salvar_dados(db: Session, logado: Logado, dados: DadosDaUnidade) -> None:
+    unidade = db.get_one(Unidade, logado.unidade_id)
+    unidade.responsavel_nome = dados.responsavel_nome
+    unidade.celular = dados.celular
+    unidade.email = dados.email
+    db.flush()
+
+
+def trocar_senha(db: Session, logado: Logado, dados: TrocarSenha, user_agent: str | None) -> str:
+    """Pede a senha atual; grava a nova, desconecta os outros aparelhos e devolve o token novo
+    deste (dúvida 8 do M1: na conta compartilhada, é o jeito de tirar quem não devia estar lá)."""
+    unidade = db.get_one(Unidade, logado.unidade_id, with_for_update=True)
+    if not senha_confere(unidade.senha_hash, dados.senha_atual):
+        raise ErroApi(400, "senha_atual_incorreta", "A senha atual não confere.")
+    token = trocar_senha_e_sessao(db, unidade.id, dados.senha_nova, user_agent)
+    registrar(
+        db, Acao.senha_trocada, unidade_id=unidade.id, entidade="unidade", entidade_id=unidade.id
+    )
+    return token
+
+
+def desconectar_aparelho(db: Session, logado: Logado, sessao_id: int) -> None:
+    """Só sessão em vigor da própria unidade. De outra unidade, a mesma resposta de inexistente
+    (não revela que existe)."""
+    if sessao_id not in {a.id for a in _aparelhos(db, logado)}:
+        raise ErroApi(404, "aparelho_nao_encontrado", "Este aparelho já não está conectado.")
+    encerrar_sessao(db, sessao_id)
+    registrar(
+        db,
+        Acao.aparelho_desconectado,
+        unidade_id=logado.unidade_id,
+        entidade="sessao",
+        entidade_id=sessao_id,
+    )
+
+
+def apagar_dados(db: Session, logado: Logado) -> None:
+    """H-06 / RF-08: apaga os contatos, volta a senha para `mudar123` e a unidade a "não
+    ativada". As linhas de sessão são apagadas (a descrição do aparelho é dado pessoal); votos e
+    leituras ficam, porque são da unidade."""
+    unidade = db.get_one(Unidade, logado.unidade_id, with_for_update=True)
+    if papeis_em_vigor(db, unidade.id):
+        raise ErroApi(
+            409,
+            "unidade_com_papel_de_gestao",
+            "Este apartamento tem papel de gestão. Peça à administração do Portal para retirar "
+            "o papel antes.",
+        )
+    unidade.responsavel_nome = None
+    unidade.celular = None
+    unidade.email = None
+    unidade.ativada_em = None
+    unidade.precisa_trocar_senha = True
+    unidade.senha_hash = gerar_hash(SENHA_INICIAL)
+    unidade.tentativas_falhas = 0
+    db.flush()
+    db.execute(delete(Sessao).where(Sessao.unidade_id == unidade.id))
+    registrar(
+        db, Acao.dados_apagados, unidade_id=unidade.id, entidade="unidade", entidade_id=unidade.id
+    )

@@ -59,7 +59,7 @@ def test_h02_sessao_dura_180_dias(cliente, predio):
 
 def test_h02_guarda_so_a_descricao_do_aparelho(cliente, predio, engine_app):
     agente = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Version/17.0 Safari/604.1"
-    entrar(cliente, COMUM, f"senha-{COMUM}", **{"User-Agent": agente})
+    entrar(cliente, COMUM, f"senha-{COMUM}", **{"user-agent": agente})
     with Session(engine_app) as db:
         assert db.scalars(select(Sessao.aparelho)).one() == "iPhone · Safari"
 
