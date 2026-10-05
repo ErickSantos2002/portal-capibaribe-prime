@@ -4,9 +4,9 @@ import psycopg
 import pytest
 
 from testes.apoio import rodar_alembic
-from testes.conftest import apagar_banco, garantir_papeis, recriar_banco, url_para
+from testes.conftest import BANCO, apagar_banco, garantir_papeis, recriar_banco, url_para
 
-BANCO_VAZIO = "portal_teste_migracoes"
+BANCO_VAZIO = f"{BANCO}_migracoes"
 
 
 @pytest.fixture

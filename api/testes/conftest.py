@@ -4,8 +4,12 @@ Produção (ADR-0003) tem dois usuários de banco: `dono` (dono das tabelas, rod
 `app` (o que a API usa, sem DELETE no que é oficial). Aqui os dois são criados num Postgres
 local ou no service container do CI, e o banco de teste nasce pela migração, como em produção.
 
-Variável: `PORTAL_TESTE_ADMIN_URL` (superusuário do Postgres de teste). Padrão: o container
-local `portal-pg-m0` na porta 55432.
+Variáveis:
+- `PORTAL_TESTE_ADMIN_URL`: superusuário do Postgres de teste. Padrão: o container local
+  `portal-pg-m0` na porta 55432.
+- `PORTAL_TESTE_BANCO`: nome do banco descartável. Padrão: `portal_teste`. Cópias de trabalho
+  rodando em paralelo (um agente por épico) usam nomes diferentes para não apagar o banco umas
+  das outras.
 """
 
 import os
@@ -26,7 +30,7 @@ ADMIN_URL = os.environ.get(
 )
 # Senhas só de teste, num banco descartável que escuta apenas em 127.0.0.1.
 PAPEIS = {"dono": "dono-teste", "app": "app-teste"}
-BANCO = "portal_teste"
+BANCO = os.environ.get("PORTAL_TESTE_BANCO", "portal_teste")
 TABELAS = ["erro", "historico", "sessao", "unidade_papel", "unidade", "bloco"]
 
 
