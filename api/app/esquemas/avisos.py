@@ -9,13 +9,14 @@ from typing import Annotated
 
 from pydantic import AfterValidator, Field, ValidationInfo, field_validator
 
-from app.esquemas.comum import Entrada, Saida, UnidadeRef
+from app.esquemas.comum import Entrada, Saida, UnidadeRef, sem_controle
 from app.modelos.avisos import LIMITE_TEXTO, LIMITE_TITULO
 
 NumeroDeBloco = Annotated[int, Field(ge=1, le=9)]
 
 
 def validar_titulo(titulo: str) -> str:
+    sem_controle(titulo)
     titulo = titulo.strip()
     if not titulo:
         raise ValueError("Escreva o título do aviso.")
@@ -25,7 +26,8 @@ def validar_titulo(titulo: str) -> str:
 
 
 def validar_texto(texto: str) -> str:
-    texto = texto.replace("\r\n", "\n").replace("\r", "\n").strip()
+    texto = texto.replace("\r\n", "\n").replace("\r", "\n")
+    texto = sem_controle(texto, permitidos="\n\t").strip()
     if not texto:
         raise ValueError("Escreva o texto do aviso.")
     if len(texto) > LIMITE_TEXTO:
@@ -35,6 +37,8 @@ def validar_texto(texto: str) -> str:
 
 Titulo = Annotated[str, AfterValidator(validar_titulo)]
 Texto = Annotated[str, AfterValidator(validar_texto)]
+# `?busca=` do mural (texto livre de uma linha, como o título).
+Busca = Annotated[str, AfterValidator(sem_controle)]
 
 
 # --- requisições -------------------------------------------------------------------------------

@@ -9,7 +9,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, Field, ValidationInfo, field_validator
 
-from app.esquemas.comum import Entrada, ErroResposta, Papel, Saida, UnidadeRef
+from app.esquemas.comum import Entrada, ErroResposta, Papel, Saida, UnidadeRef, sem_controle
 from app.seguranca.senhas import SENHA_INICIAL
 
 LIMITE_SENHA = 200
@@ -26,6 +26,7 @@ MSG_CELULAR = "Confira o celular: DDD e número, como (81) 9 1234-5678."
 
 
 def validar_senha_nova(senha: str) -> str:
+    sem_controle(senha)
     if len(senha) < MINIMO_SENHA:
         raise ValueError("A senha nova precisa ter pelo menos 8 letras ou números.")
     if len(senha) > LIMITE_SENHA:
@@ -42,6 +43,7 @@ def validar_repetida(repetida: str, info: ValidationInfo) -> str:
 
 
 def validar_nome(nome: str) -> str:
+    sem_controle(nome)
     nome = nome.strip()
     if not nome:
         raise ValueError("Escreva o nome de quem responde pela unidade.")
@@ -52,6 +54,7 @@ def validar_nome(nome: str) -> str:
 
 def validar_celular(celular: str) -> str:
     """Aceita com ou sem máscara; guarda só os dígitos (DDD + número, 10 ou 11)."""
+    sem_controle(celular)
     digitos = re.sub(r"\D", "", celular)
     if not 10 <= len(digitos) <= 11 or digitos[0] == "0":
         raise ValueError(MSG_CELULAR)
@@ -59,7 +62,7 @@ def validar_celular(celular: str) -> str:
 
 
 def validar_email(email: str | None) -> str | None:
-    email = (email or "").strip().lower()
+    email = sem_controle(email or "").strip().lower()
     if not email:
         return None
     if len(email) > LIMITE_EMAIL or not _EMAIL.match(email):
