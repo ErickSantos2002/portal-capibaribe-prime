@@ -133,6 +133,18 @@ describe('tela de entrar', () => {
     expect(chamadas.some((c) => c.caminho === '/api/acesso/entrar')).toBe(false)
   })
 
+  it('apartamento que não pode existir (andar 9) dá a mesma mensagem, sem chamar a API', async () => {
+    const chamadas = apiFalsa({})
+    abrir('/entrar')
+    await screen.findByLabelText('Apartamento')
+    preencher('3', '999', 'qualquer')
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Bloco, apartamento ou senha incorretos. Confira e tente de novo.',
+    )
+    expect(chamadas.some((c) => c.caminho === '/api/acesso/entrar')).toBe(false)
+  })
+
   it('sem internet, explica', async () => {
     apiFalsa({})
     vi.stubGlobal(

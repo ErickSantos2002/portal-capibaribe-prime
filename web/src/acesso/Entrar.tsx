@@ -12,6 +12,9 @@ import { limparApartamento, montarLogin } from './campos'
 import './acesso.css'
 
 const BLOCOS = ['1', '2', '3', '4', '5']
+// O mesmo formato que a API aceita (RF-03): bloco 1 a 9, andar 0 a 7, dois dígitos.
+const LOGIN_POSSIVEL = /^[1-9][0-7][0-9]{2}$/
+const MSG_CREDENCIAIS = 'Bloco, apartamento ou senha incorretos. Confira e tente de novo.'
 
 interface Erro {
   mensagem: string
@@ -51,6 +54,8 @@ export function Entrar() {
     if (!bloco) return mostrarErro('Escolha o bloco nos botões de 1 a 5.')
     if (!login) return mostrarErro('Escreva o número do apartamento, como 101.')
     if (!senha) return mostrarErro('Escreva a senha.')
+    // Apartamento que não pode existir (andar 8 ou 9): a mesma resposta de qualquer erro.
+    if (!LOGIN_POSSIVEL.test(login)) return mostrarErro(MSG_CREDENCIAIS)
     setEnviando(true)
     try {
       const eu = await entrar({ login, senha })

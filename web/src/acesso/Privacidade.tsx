@@ -7,19 +7,19 @@ import './acesso.css'
 const DADOS = [
   {
     dado: 'Nome de quem responde pela unidade',
-    para: 'Saber com quem falar sobre o apartamento.',
+    para: 'saber com quem falar sobre o apartamento.',
   },
   {
     dado: 'Celular',
-    para: 'A administração falar com a unidade e confirmar quem é o dono se a conta for usada por outra pessoa.',
+    para: 'a administração falar com a unidade e confirmar quem é o dono se a conta for usada por outra pessoa.',
   },
   {
     dado: 'E-mail (opcional)',
-    para: 'Recuperar a senha sozinho e receber os avisos também por e-mail, quando essas funções chegarem ao Portal. Sem e-mail, tudo funciona do mesmo jeito.',
+    para: 'recuperar a senha sozinho e receber os avisos também por e-mail, quando essas funções chegarem ao Portal. Sem e-mail, tudo funciona do mesmo jeito.',
   },
   {
     dado: 'Aparelho conectado (só o tipo, como “Android · Chrome”)',
-    para: 'Você reconhecer os aparelhos que entraram com a conta do apartamento e desconectar algum.',
+    para: 'você reconhecer os aparelhos que entraram com a conta do apartamento e desconectar algum.',
   },
 ]
 
