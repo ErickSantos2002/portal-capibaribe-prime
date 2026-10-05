@@ -85,6 +85,25 @@ def test_papel_retirado_vale_na_hora(logar, engine_app, predio):
     assert resposta.status_code == 403
 
 
+def test_toda_rota_de_avisos_esta_nas_listas_de_permissao():
+    """Rota nova sem teste de permissão falha aqui. Usa `app.openapi()`: no FastAPI atual,
+    `app.routes` não enxerga as rotas dos roteadores incluídos e o teste passaria vazio."""
+    from app.main import app
+
+    no_app = {
+        (metodo.upper(), caminho)
+        for caminho, operacoes in app.openapi()["paths"].items()
+        if caminho.startswith("/api/avisos")
+        for metodo in operacoes
+    }
+    testadas = {
+        (metodo, caminho.replace("{id}", "{aviso_id}"))
+        for metodo, caminho, _ in ROTAS_DE_GESTAO + ROTAS_DE_LEITURA
+    }
+    assert len(no_app) == 11
+    assert no_app == testadas
+
+
 # --- morador do Bloco 2 não vê nem conta aviso do Bloco 1 --------------------------------------
 
 
