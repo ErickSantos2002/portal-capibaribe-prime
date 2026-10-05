@@ -16,6 +16,13 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+    ignore:
+      # Os tipos acompanham o Node do CI e da Vercel (24); sobem junto com ele.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 (a versão em Go) ainda não é aceito pelo typescript-eslint 8.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
