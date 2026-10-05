@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | v0.2 — sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.3 — M0 fechado; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | Marco M0 (fundação do código) |
+| **Próximo passo** | Marco M1 (acesso e mural) |
 
 ---
 
@@ -57,7 +57,7 @@ flowchart LR
 
 | Marco | Resumo |
 |---|---|
-| **M0** | Esqueleto: repositório, CI, Vercel + Neon, banco com as 320 unidades |
+| **M0** ✅ | Esqueleto: repositório, CI, Vercel + Neon, banco com as 320 unidades |
 | **M1** | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real.** |
 | **M2** | Notificação no celular, e-mail e "esqueci a senha" |
 | **M3** | Documentos e anexos nos avisos (Cloudflare R2) |
@@ -91,6 +91,13 @@ Nenhuma tela de morador. O objetivo é o caminho inteiro funcionando de ponta a 
 
 **Pronto quando:** um push na `main` passa no CI e publica sozinho; `/api/saude` responde com o
 número de unidades lido do Neon (320); um erro forçado aparece na tabela `erro`.
+
+**✅ Fechado em 04/10/2026.** No ar em https://portal-capibaribe-prime.vercel.app (`/api/saude`
+responde 320, atendido em `gru1`). Os três critérios foram conferidos em produção. A revisão
+independente (código e segurança) achou 10 problemas, todos corrigidos com teste de regressão;
+entre eles, o CI apontava para uma versão de action que não existe e o usuário `app` conseguia
+forjar o login de uma unidade com uma tabela temporária. Spec, plano e decisões técnicas em
+`docs/superpowers/` (`duvidas-m0.md`).
 
 ### M1 · Acesso e mural · 🚀 primeiro no ar
 

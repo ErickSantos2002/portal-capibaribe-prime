@@ -15,7 +15,7 @@ enquetes e documentos** na fase de obra; reservas, chamados e encomendas depois 
 | Protótipo de alta fidelidade | Feito e publicado (`prototipo/`, `docs/06`) |
 | Teste com moradores | Em andamento |
 | Roadmap | Feito (`docs/07`): 6 marcos na E1, primeiro uso real no M1 |
-| Código do app | Marco M0 (fundação) em revisão: `web/`, `api/`, CI e migração inicial |
+| Código do app | M0 (fundação) no ar em https://portal-capibaribe-prime.vercel.app · próximo: M1 (acesso e mural) |
 
 ## Como foi pensado
 
