@@ -66,10 +66,13 @@ conflito).
 - **Por quê:** uma conta de gestão com a senha que todo mundo conhece seria tomada por quem
   conhece o padrão, e publicaria em nome da Comissão. **[Erick]** confirmar.
 
-## 8. Trocar a senha não desconecta os outros aparelhos
-- **Decisão:** `PUT /api/minha-unidade/senha` mantém as outras sessões.
-- **Por quê:** a conta é da família; trocar a senha no celular de um não deveria tirar o outro.
-  Para tirar alguém, existe "desconectar aparelho". **[Erick]** confirmar.
+## 8. Trocar a senha desconecta os outros aparelhos (revisto)
+- **Decisão original:** manter as outras sessões (a conta é da família).
+- **Revista pelo coordenador, na revisão independente:** trocar a senha **encerra todas as
+  outras sessões** e abre uma nova para quem trocou, igual ao primeiro acesso.
+- **Por quê:** na conta compartilhada, trocar a senha é justamente o jeito de tirar quem não
+  devia estar lá; o incômodo de a família entrar de novo vale menos que isso. O banco garante
+  mesmo que a rota esqueça (item 29).
 
 ## 9. Painel e histórico só para o admin
 - **Dúvida:** a tabela de permissões (requisitos, seção 2) diz que a Comissão vê os contatos das
@@ -81,7 +84,9 @@ conflito).
 
 ## 10. Papel só para unidade já ativada; só `comissao` e `admin` no M1
 - **Decisão:** `PUT …/papeis/{papel}` responde 409 se a unidade não entrou ainda; `papel` aceita
-  `comissao` e `admin` (síndico e conselho entram com a E2).
+  `comissao` e `admin` (síndico e conselho entram com a E2). **Revisão:** a regra também está no
+  banco (restrição `papel_em_unidade_ativada`), e unidade com papel em vigor não pode ser
+  desativada nem voltar a "não ativada" (`unidade_com_papel`).
 - **Por quê:** mesmo motivo do item 7, e não adivinhar a E2.
 
 ## 11. Rotas que não estão nos documentos
@@ -91,10 +96,12 @@ conflito).
   (sem desafixar, o topo do mural só cresceria).
 - **Por quê:** sem elas, as telas do protótipo não fecham.
 
-## 12. Abrir o aviso marca como lido (no próprio `GET`)
-- **Decisão:** `GET /api/avisos/{id}` grava a leitura (`on conflict do nothing`).
-- **Por quê:** H-16 diz "conta como leu quando abre o aviso"; uma rota separada seria uma
-  chamada a mais que a tela poderia esquecer. O `GET` só insere uma linha idempotente.
+## 12. Leitura do aviso por `POST /api/avisos/{id}/lido` (revisto)
+- **Decisão original:** o próprio `GET /api/avisos/{id}` gravava a leitura.
+- **Revista na revisão independente:** `GET` não altera nada; a tela chama
+  `POST /api/avisos/{id}/lido` (204, idempotente, a primeira vez conta) ao abrir o aviso.
+- **Por quê:** com `SameSite=Lax`, uma navegação vinda de outro site leva o cookie e escaparia
+  do `X-Portal`: qualquer site poderia marcar avisos como lidos por quem estivesse logado.
 
 ## 13. "Lido por X de Y": Y são as unidades ativas do destino
 - **Decisão:** `total` = unidades `ativa = true` dos blocos do destino, inclusive as que ainda
@@ -127,11 +134,14 @@ conflito).
 - **Por quê:** fecha a dúvida 20 do M0 (datas como prova) e impede reescrever o que foi
   publicado mesmo com bug na API.
 
-## 18. Último admin: trava no trigger
-- **Decisão:** `pg_advisory_xact_lock` antes de contar os admins; testado com duas conexões
-  retirando um admin cada uma ao mesmo tempo (uma passa, a outra é recusada).
-- **Por quê:** sem a trava, as duas transações veriam "ainda tem outro admin" e o Portal ficaria
-  sem nenhum.
+## 18. Último admin: trava no trigger (revisto)
+- **Decisão original:** `pg_advisory_xact_lock` antes de contar os admins. A revisão mostrou que
+  isso só vale em READ COMMITTED: em REPEATABLE READ, a segunda transação espera a trava mas
+  enxerga o retrato antigo e deixa o Portal sem admin.
+- **Agora:** `select … for update` nas outras linhas de admin em vigor. READ COMMITTED: a
+  segunda espera, relê e é recusada. REPEATABLE READ: erro de serialização. Às vezes as duas se
+  travam mutuamente (cada uma já tem a própria linha) e o Postgres desfaz uma delas como
+  impasse, depois de ~1 s. Em todos os casos sobra um admin; testado nos dois níveis.
 
 ## 19. Formato de erro próprio, mas 404/405 do Starlette intactos
 - **Decisão:** erros previstos e de validação viram `{codigo, mensagem}`; rota inexistente
@@ -162,11 +172,13 @@ conflito).
 ## 23. Prévias da Vercel com um branch `previa` do Neon
 - **Decisão e motivo:** no spec, seção 6. Os dados fictícios agora aceitam
   `PORTAL_AMBIENTE=previa`. **Nada foi executado** na Vercel nem no Neon. **[Erick]** criar o
-  branch e a variável quando quiser prévias com banco.
+  branch e a variável quando quiser prévias com banco, e conferir que a *Deployment
+  Protection* está ligada para as prévias (item 28).
 
 ## 24. Apoio para os testes dos épicos
 - **Decisão:** fixtures `predio` (prédio inteiro, 1101 admin, 2304 Comissão, 1203 comum
-  ativadas com senha `senha-<login>`, 4203 não ativada) e `logar(login)` (cliente já com sessão
+  ativadas com senha `senha-<login>`, 4203 não ativada; o admin é dado pela própria fixture,
+  depois de ativar, como `promover_admin` faz em produção) e `logar(login)` (cliente já com sessão
   e `X-Portal: 1`), `hasher_rapido` automático e banco de teste por `PORTAL_TESTE_BANCO`.
 - **Por quê:** cada épico testa as próprias rotas sem depender da rota de entrar (épico A) e sem
   apagar o banco de teste dos outros agentes.
@@ -184,3 +196,74 @@ conflito).
 ## 27. Limite do texto do aviso
 - **Decisão:** título até 120 caracteres (como o `maxlength` do protótipo) e texto até 10.000.
 - **Por quê:** o modelo não dá limite; 10.000 cabe em qualquer aviso real e impede abuso.
+
+---
+
+## Revisão independente (05/10/2026)
+
+Itens novos ou mudados depois da revisão. Os itens 8, 10, 12, 18, 23 e 24 acima também foram
+atualizados.
+
+## 28. Prévia: proteção da Vercel, e sem papel fictício
+- **Dúvida:** a semente fictícia em `previa` criava unidades da Comissão com `mudar123` sem troca
+  obrigatória, num endereço da internet.
+- **Decisão:** a prévia só existe com a *Deployment Protection* da Vercel ligada (registrado no
+  spec, seção 6), e a semente **não dá papel nenhum** em `previa` (em `local` e `teste` dá um
+  admin e duas Comissões). Quem revisa faz o primeiro acesso numa unidade não ativada e roda
+  `promover_admin`, o mesmo caminho de produção.
+- **Por quê:** exigir a troca de senha das unidades fictícias atrapalharia a revisão sem ganho
+  (os dados são inventados); o que importava era não ter conta de gestão com senha conhecida.
+  **[Erick]** conferir a proteção ao criar as prévias com banco.
+
+## 29. Sessão de antes da troca de senha morre no banco
+- **Problema (crítico):** quem entrava com `mudar123` antes do morador guardava um cookie que
+  virava sessão completa de 180 dias quando o morador concluía o primeiro acesso.
+- **Decisão:** duas camadas.
+  1. **Banco:** `unidade.senha_trocada_em` (data do banco, muda sozinha quando o hash muda) e
+     `sessao.criada_em` carimbada pelo banco; a sessão só vale se foi criada depois da última
+     troca. Vale para primeiro acesso, troca de senha, reset e "apagar meus dados", mesmo que a
+     rota do épico esqueça de encerrar as sessões.
+  2. **Aplicação:** `trocar_senha_e_sessao()` grava o hash, encerra todas as sessões (ficam
+     marcadas como encerradas, somem da lista de aparelhos) e abre uma nova para quem trocou.
+- **Por quê:** o coordenador pediu `encerrar_todas(..., exceto=sessão atual)`. Reaproveitar a
+  sessão atual depois de trocar a senha manteria o token que já existia antes (o de quem estava
+  com `mudar123`); trocar por um token novo fecha também esse caso (fixação de sessão).
+
+## 30. Carga sem admin e comando `promover_admin`
+- **Problema (alto):** a carga do M0 dava `admin` à unidade de `PORTAL_ADMIN_UNIDADE`, que
+  nasce com `mudar123`: em produção, quem conhecesse o padrão e a unidade do Erick virava admin.
+- **Decisão:** a carga não dá papel nenhum; `PORTAL_ADMIN_UNIDADE` foi removida (carga, CI,
+  `.env.example`). O admin nasce com `python -m app.comandos.promover_admin <login>` (recusa
+  unidade não ativada, idempotente, registra `papel_concedido` com `origem: promover_admin`).
+  A 0002 retira o papel que a carga do M0 já deu, com registro no histórico.
+- **[Erick]** em produção, depois do deploy do M1: fazer o primeiro acesso na unidade dele e
+  rodar `promover_admin` (spec, seção 2.5). Até isso, o Portal fica sem administrador, o que é
+  esperado.
+
+## 31. A 0002 foi editada no lugar
+- **Decisão:** as correções de banco da revisão entraram na própria `0002`, não numa `0003`.
+- **Por quê:** a 0002 ainda não rodou em produção nem no banco das prévias (mesma regra da
+  dúvida 19 do M0). A partir do primeiro `upgrade` fora daqui, toda mudança vira migração nova.
+
+## 32. CHECK do modelo comparado pelo próprio Postgres
+- **Problema:** o CHECK de e-mail do modelo era diferente do da migração, e o teste de modelos
+  não via (o autogenerate do Alembic não compara CHECK).
+- **Decisão:** `test_checks_dos_modelos_iguais_aos_da_migracao` cria um banco só com
+  `create_all` dos modelos e compara `pg_get_constraintdef` de todos os CHECK com o banco
+  migrado. Para isso, os CHECK da 0001 e os do `aviso_versao` ganharam nome no modelo (e os do
+  `aviso_versao`, nome explícito na migração).
+
+## 33. Contrato compara tipos, nulo e opcional
+- **Decisão:** `test_contrato.py` compara, para cada campo, o tipo básico, se aceita `null` e
+  se é opcional. Conferido por mutação (`email: string | null` → `string` e
+  `bloco: number` → `string` falham). Achou uma diferença real: `confirmo` era `true` no TS e
+  `bool` no Python; o TS passou a `boolean` (a API continua recusando o que não for `true`).
+- **Por quê de não gerar do OpenAPI:** geraria um arquivo único de tipos, que os três épicos
+  editariam ao mesmo tempo (conflito garantido); a comparação mantém um arquivo por épico.
+
+## 34. "Sair" só esquece a sessão com 204 ou 401
+- **Decisão:** se `POST /api/acesso/sair` falhar de outro jeito (sem internet, 500), a casca
+  mantém a pessoa logada e a promessa de `sair()` é rejeitada com `ErroDaApi`; a tela do épico
+  A mostra `erro.mensagem`.
+- **Por quê:** dizer "saiu" com o cookie ainda válido no aparelho (num celular emprestado, por
+  exemplo) seria mentir para a pessoa.

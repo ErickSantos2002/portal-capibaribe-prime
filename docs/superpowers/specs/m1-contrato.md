@@ -50,10 +50,13 @@ nem aviso sem destino, mesmo que a aplicação erre a ordem dos INSERTs dentro d
 
 | O quê | Por quê |
 |---|---|
-| Trigger `unidade_papel_ultimo_admin`: retirar o último `admin` em vigor falha com `check_violation`, restrição `ultimo_admin` | H-09 ("o Portal não pode ficar sem administrador"); prometido para o M1 na dúvida 4 do M0. Usa trava (`pg_advisory_xact_lock`) para dois admins não se retirarem ao mesmo tempo |
+| Trigger `unidade_papel_regras`: retirar o último `admin` em vigor falha com `check_violation`, restrição `ultimo_admin` | H-09 ("o Portal não pode ficar sem administrador"); prometido para o M1 na dúvida 4 do M0. Trava as outras linhas de admin com `select … for update`: duas retiradas ao mesmo tempo dão recusa, erro de serialização ou impasse desfeito pelo Postgres, nunca zero admins (testado em READ COMMITTED e REPEATABLE READ) |
+| Papel em vigor **só em unidade ativa e já ativada** (restrição `papel_em_unidade_ativada`); unidade com papel em vigor não é desativada nem volta a "não ativada" (restrição `unidade_com_papel`: o reset retira os papéis antes) | Uma conta de gestão com `mudar123` seria tomada por quem conhece o padrão (revisão do M1). Cobre também "desativar a única unidade admin" |
+| Dados: a 0002 **retira os papéis em vigor de unidades não ativadas** (o `admin` que a carga do M0 deu), com registro `papel_retirado` (`origem: migracao_0002`) no histórico | Em produção, o admin volta pela sequência da seção 2.5 |
 | `unidade_papel.concedido_em` e `retirado_em` carimbados com `now()`; retirado não volta a vigorar | O painel (H-07) e o histórico mostram essas datas como prova (dúvida 20 do M0) |
 | `app` só altera `retirado_em` e `retirado_por` em `unidade_papel` (GRANT por coluna) | Um papel não vira outro: retira-se e concede-se de novo, com registro |
 | `unidade`: CHECK "ativada tem responsável e celular"; celular só com 10 ou 11 dígitos; nome de 1 a 100 caracteres; e-mail com `@` e até 254 caracteres | RF-04 ("obrigatório após ativar") garantido no banco; formato único para o painel e a busca |
+| `unidade.senha_trocada_em` (data do banco, muda sozinha quando `senha_hash` muda) e `sessao.criada_em` carimbada pelo banco | Sessão aberta antes da última troca de senha não vale (seção 2.4) |
 
 O celular é guardado **só com dígitos** (`81912345678`); a tela formata. Os dados fictícios
 passam a seguir o formato (dúvida 6).
@@ -67,15 +70,36 @@ passam a seguir o formato (dúvida 6).
 | `aviso_bloco` | sim | sim | **não** | **não** | O destino é parte do que foi publicado |
 | `aviso_leitura` | sim | sim | **não** | **não** | Fato: a unidade abriu o aviso. Reset e "apagar meus dados" não apagam leitura (é da unidade, não da pessoa) |
 
-### 2.4 Sessão (sem mudança de tabela)
+### 2.4 Sessão
 
-A tabela `sessao` da 0001 basta:
-
-- **Sessão restrita** (ADR-0005) não é coluna: é `unidade.precisa_trocar_senha = true`. Lida a
-  cada requisição, então concluir o primeiro acesso libera a mesma sessão na hora.
+- **Sessão restrita** (ADR-0005) não é coluna: é `unidade.precisa_trocar_senha = true`, lida a
+  cada requisição.
+- **Troca de senha derruba as sessões anteriores** (revisão do M1): a sessão só vale se
+  `sessao.criada_em >= unidade.senha_trocada_em`. Quem entrou com `mudar123` antes do morador
+  guarda um cookie que **morre** quando o morador conclui o primeiro acesso; o reset e o "apagar
+  meus dados" (que voltam a senha para `mudar123`) derrubam todos os aparelhos sozinhos. Por
+  isso o primeiro acesso e a troca de senha **abrem uma sessão nova** para quem trocou
+  (`trocar_senha_e_sessao`, seção 3.1).
 - **Validade de 180 dias, renovada a cada uso:** a sessão vale enquanto
   `ultimo_uso_em > now() - 180 dias` e `encerrada_em is null`. `ultimo_uso_em` (e o cookie) são
   renovados no máximo uma vez por hora, para não gravar no banco a cada requisição.
+
+### 2.5 O primeiro administrador (sequência de produção)
+
+A carga inicial **não dá papel nenhum** (revisão do M1: o M0 dava `admin` a uma unidade com
+`mudar123`). Em produção:
+
+1. Deploy (migração 0002 aplicada; ela retira o papel que a carga do M0 tinha dado).
+2. O Erick faz o primeiro acesso na unidade dele, pelo Portal (senha própria, contatos).
+3. Roda-se, de `api/`, com a URL do `app`:
+   `uv run python -m app.comandos.promover_admin <login>`. O comando recusa unidade que ainda
+   não fez o primeiro acesso, é idempotente e registra `papel_concedido`
+   (`origem: promover_admin`) no histórico. A unidade real só aparece na linha de comando,
+   nunca no repositório.
+4. Daí em diante, Comissão e outros admins pela tela de administração (H-09).
+
+`PORTAL_ADMIN_UNIDADE` deixou de existir. Em desenvolvimento e teste, os dados fictícios dão
+`admin` a uma unidade fictícia já ativada e `comissao` a duas; na prévia, nenhum papel.
 
 ## 3. Peças comuns da API (prontas e testadas nesta onda)
 
@@ -91,8 +115,9 @@ A tabela `sessao` da 0001 basta:
 - Funções: `criar_sessao(db, unidade_id, user_agent) -> str` (devolve o token),
   `buscar_sessao(db, token) -> Sessao | None`, `renovar(db, sessao) -> bool`,
   `encerrar_sessao(db, sessao_id)`, `encerrar_todas(db, unidade_id, exceto=None) -> int`,
-  `gravar_cookie(resposta, token)`,
-  `apagar_cookie(resposta)`, `descrever_aparelho(user_agent) -> str` ("Android · Chrome").
+  `trocar_senha_e_sessao(db, unidade_id, senha_nova, user_agent) -> str` (grava o hash novo,
+  encerra **todas** as sessões da unidade e abre uma nova; a rota grava o cookie),
+  `gravar_cookie(resposta, token)`, `apagar_cookie(resposta)`, `descrever_aparelho(user_agent) -> str` ("Android · Chrome").
 - Nada aqui faz `commit`: quem chama decide (mesma regra da carga).
 
 ### 3.2 Dependências FastAPI (`app/seguranca/dependencias.py`)
@@ -195,10 +220,10 @@ precisa_trocar_senha: bool }`. É o que a casca do front usa para decidir rotas 
 | Rota | Quem | Corpo | Resposta | Erros |
 |---|---|---|---|---|
 | `POST /api/acesso/entrar` | qualquer um | `Entrar` | 200 `Eu` + cookie | 401 `credenciais_invalidas`, 423 `unidade_bloqueada`, 422 |
-| `POST /api/acesso/primeiro-acesso` | sessão restrita | `PrimeiroAcesso` | 200 `Eu` (já liberado) | 401, 409 `primeiro_acesso_ja_feito`, 422 |
+| `POST /api/acesso/primeiro-acesso` | sessão restrita | `PrimeiroAcesso` | 200 `Eu` (já liberado) + cookie novo | 401, 409 `primeiro_acesso_ja_feito`, 422 |
 | `GET /api/minha-unidade` | `unidade_logada` | — | 200 `MinhaUnidade` | 401, 403 |
 | `PUT /api/minha-unidade/dados` | `unidade_logada` | `DadosDaUnidade` | 200 `MinhaUnidade` | 401, 403, 422 |
-| `PUT /api/minha-unidade/senha` | `unidade_logada` | `TrocarSenha` | 204 | 400 `senha_atual_incorreta`, 401, 403, 422 |
+| `PUT /api/minha-unidade/senha` | `unidade_logada` | `TrocarSenha` | 204 + cookie novo | 400 `senha_atual_incorreta`, 401, 403, 422 |
 | `DELETE /api/minha-unidade/aparelhos/{sessao_id}` | `unidade_logada` | — | 204 (se for o próprio aparelho, apaga o cookie) | 404 `aparelho_nao_encontrado` |
 | `POST /api/minha-unidade/apagar-dados` | `unidade_logada` | `ApagarDados` | 204, apaga o cookie | 409 `unidade_com_papel_de_gestao`, 422 |
 
@@ -227,14 +252,18 @@ precisa_trocar_senha: bool }`. É o que a casca do front usa para decidir rotas 
   - "Confira o e-mail, ou deixe em branco."
 
   Efeito: hash novo, `precisa_trocar_senha = false`, `ativada_em = now()`, contatos gravados,
-  histórico `primeiro_acesso`.
+  histórico `primeiro_acesso`. **Encerra todas as sessões da unidade e abre uma nova** para
+  quem concluiu (`trocar_senha_e_sessao` + `gravar_cookie`): quem entrou com `mudar123` antes
+  do morador perde o acesso. O banco garante isso mesmo se a rota esquecer (seção 2.4), mas a
+  rota precisa devolver o cookie novo, senão o próprio morador cai para "sem sessão".
 - `MinhaUnidade`: `unidade`, `responsavel_nome`, `celular`, `email`, `papeis`, `ativada_em`,
   `aparelhos: Aparelho[]`. `Aparelho`: `id`, `descricao`, `criada_em`, `ultimo_uso_em`,
   `este_aparelho`.
 - `DadosDaUnidade`: `responsavel_nome`, `celular`, `email` (mesmas regras do primeiro acesso).
 - `TrocarSenha`: `senha_atual`, `senha_nova`, `senha_nova_repetida`. Senha atual errada: 400
-  "A senha atual não confere." Histórico `senha_trocada`. Os outros aparelhos continuam
-  conectados (dúvida 8).
+  "A senha atual não confere." Histórico `senha_trocada`. **Desconecta os outros aparelhos** e
+  abre uma sessão nova para este (`trocar_senha_e_sessao`), como no primeiro acesso: na conta
+  compartilhada, trocar a senha é o jeito de tirar quem não devia estar lá (dúvida 8, revista).
 - `ApagarDados`: `{ "confirmo": true }` (qualquer outro valor: 422). Efeito (H-06): apaga
   responsável, celular e e-mail, senha volta a `mudar123`, `precisa_trocar_senha = true`,
   `ativada_em = null`, encerra **todas** as sessões, histórico `dados_apagados`. Votos e
@@ -266,12 +295,14 @@ Todas com `exige_admin` (dúvida 9).
 - Reset (H-08): senha `mudar123`, `precisa_trocar_senha = true`, `ativada_em = null`, contatos
   nulos, `tentativas_falhas = 0`, `bloqueada_ate = null`, encerra todas as sessões, retira todos
   os papéis em vigor (`retirado_por` = quem resetou). Votos e leituras ficam. Histórico
-  `unidade_resetada` + um `papel_retirado` por papel. Se a unidade for o último admin, o banco
+  `unidade_resetada` + um `papel_retirado` por papel. **Ordem:** retirar os papéis antes de
+  voltar a unidade a "não ativada" (o banco recusa o contrário, restrição `unidade_com_papel`). Se a unidade for o último admin, o banco
   recusa e a rota responde 409 `ultimo_admin`: "Esta é a única unidade administradora. Dê o
   papel de administrador a outra unidade antes."
 - Papel (H-09): conceder só a unidade ativada (409 `unidade_nao_ativada`: "Só dá para dar papel
   a um apartamento que já entrou no Portal."), porque uma conta com `mudar123` e poder de gestão
-  seria tomada por quem conhece o padrão. Histórico `papel_concedido`/`papel_retirado` com
+  seria tomada por quem conhece o padrão. O banco também garante (restrição
+  `papel_em_unidade_ativada`); a rota traduz para o 409. Histórico `papel_concedido`/`papel_retirado` com
   `detalhes = {"papel": ...}`, só quando algo mudou.
 - `PaginaHistorico`: `itens: ItemHistorico[]` (`id`, `ocorrido_em`, `unidade` (`UnidadeRef` ou
   nulo = "Portal"), `acao`, `entidade`, `entidade_id`, `detalhes`), `proximo` (o `id` para
@@ -284,7 +315,8 @@ Todas com `exige_admin` (dúvida 9).
 | `GET /api/avisos` | `unidade_logada` | `?busca=<até 100>&arquivados=false` | 200 `ListaAvisos` | 401, 403, 422 |
 | `GET /api/avisos/nao-lidos` | `unidade_logada` | — | 200 `ContagemNaoLidos` | 401, 403 |
 | `GET /api/avisos/alcance` | `exige_gestao` | `?blocos=1&blocos=3` (sem `blocos` = todos) | 200 `Alcance` | 422 `bloco_inexistente` |
-| `GET /api/avisos/{id}` | `unidade_logada` | — | 200 `AvisoCompleto`; **marca como lido** | 404 `aviso_nao_encontrado` |
+| `GET /api/avisos/{id}` | `unidade_logada` | — | 200 `AvisoCompleto` (só lê) | 404 `aviso_nao_encontrado` |
+| `POST /api/avisos/{id}/lido` | `unidade_logada` | — | 204, idempotente (a primeira vez conta) | 404 `aviso_nao_encontrado` |
 | `POST /api/avisos` | `exige_gestao` | `NovoAviso` | 201 `AvisoCompleto` | 422 (inclui `bloco_inexistente`) |
 | `PUT /api/avisos/{id}` | `exige_gestao` | `CorrigirAviso` | 200 `AvisoCompleto` (versão nova) | 404, 409 `aviso_arquivado`, 409 `sem_mudanca`, 422 |
 | `POST /api/avisos/{id}/arquivar` | `exige_gestao` | — | 200 `AvisoCompleto` | 404, 409 `aviso_arquivado` |
@@ -322,6 +354,10 @@ Todas com `exige_admin` (dúvida 9).
 - Arquivar: `arquivado_em = now()`, sai do mural; histórico `aviso_arquivado`. Não existe rota de
   apagar (RN-05) e o banco nem deixaria.
 - `MudarFixado`: `{ "fixado": bool }`; histórico `aviso_fixado`/`aviso_desafixado` só se mudou.
+- Leitura (H-16): ao abrir o aviso, a tela chama `POST /api/avisos/{id}/lido` (204; repetir não
+  muda nada, `on conflict do nothing`; aviso fora do destino da unidade comum: 404). `GET` nunca
+  grava nada: com `SameSite=Lax`, uma navegação vinda de outro site leva o cookie e escaparia do
+  `X-Portal` (revisão do M1).
 - `ContagemNaoLidos`: `{ "quantidade": N }` (avisos visíveis, não arquivados, não lidos; para o
   número na aba "Avisos").
 - `Leitura` (H-16): `lidos`, `total` (unidades `ativa = true` do destino), `nao_leram:
@@ -415,13 +451,19 @@ Por quê:
 Como fazer (quem tiver acesso ao Neon e à Vercel; **nada disso foi executado nesta onda**):
 1. No Neon, criar o branch `previa` **só com estrutura** (*schema-only*) a partir de `main`, ou
    vazio e rodar `alembic upgrade head` como `dono` do branch.
-2. Rodar a carga (`PORTAL_ADMIN_UNIDADE=1101`) e os dados fictícios com
-   `PORTAL_AMBIENTE=previa` (valor aceito a partir desta onda).
+2. Rodar a carga e os dados fictícios com `PORTAL_AMBIENTE=previa` (valor aceito a partir
+   desta onda). Na prévia, a semente **não dá papel nenhum**: quem revisa faz o primeiro
+   acesso numa unidade não ativada e roda `promover_admin` nela, como em produção.
 3. Na Vercel, `DATABASE_URL` só no ambiente *Preview*, com a URL do pooler do branch `previa`.
    Nunca a de produção. `PORTAL_DIAGNOSTICO_SEGREDO` fica vazio em prévia.
 4. Migração nova no M1: rodar `alembic upgrade head` também no `previa` antes de abrir a prévia.
 
 Risco aceito: prévias compartilham o mesmo banco fictício (um épico pode ver dados de outro).
+
+**Condição para existir prévia com banco: a *Deployment Protection* da Vercel (Vercel
+Authentication) ligada para as prévias.** As unidades fictícias ativadas entram com `mudar123`
+sem troca obrigatória (para quem revisa entrar rápido); sem a proteção, qualquer pessoa com o
+link entraria nelas. Por isso também a prévia não tem papel de gestão fictício (dúvida 28).
 As prévias da Vercel ficam atrás da proteção de implantação padrão (login da Vercel).
 
 ## 7. Posse dos arquivos
