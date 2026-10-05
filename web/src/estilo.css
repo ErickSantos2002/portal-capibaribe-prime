@@ -962,7 +962,7 @@ details[open] > summary::after {
   .app {
     display: grid;
     grid-template-columns: 264px 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas:
       'nav topo'
       'nav main';
@@ -1006,7 +1006,8 @@ details[open] > summary::after {
     background: var(--mata);
   }
 
-  [data-tema='escuro'] .nav {
+  /* Mesmo peso de seletor que `.app.detalhe .nav`, e depois dele: o escuro vale em toda tela. */
+  [data-tema='escuro'] .app .nav {
     border-right: 1px solid var(--linha);
     background: var(--folha);
   }
