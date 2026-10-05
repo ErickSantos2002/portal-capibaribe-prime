@@ -6,6 +6,7 @@ As rotas já carregam o prefixo `/api`: a Vercel repassa o caminho original para
 
 from fastapi import FastAPI
 
+from app.erros_api import instalar_tratadores
 from app.rotas import diagnostico, saude
 from app.servicos.erros import RegistroDeErros
 
@@ -19,5 +20,7 @@ app = FastAPI(
 )
 # Exceção não tratada: grava em `erro`, loga sem dado pessoal e responde 500 sem relançar.
 app.add_middleware(RegistroDeErros)
+# Erros previstos (ErroApi) e de validação viram {"codigo", "mensagem"} (spec do M1, 3.4).
+instalar_tratadores(app)
 app.include_router(saude.rotas)
 app.include_router(diagnostico.rotas)
