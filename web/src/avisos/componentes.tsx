@@ -112,7 +112,8 @@ export function FalhaAoCarregar({ mensagem, tentar }: { mensagem: string; tentar
 
 export function Carregando() {
   return (
-    <p className="vazio" role="status">
+    // `aria-live`, não `role="status"`: a região de status da tela é a do recado (casca).
+    <p className="vazio" aria-live="polite">
       Carregando…
     </p>
   )
