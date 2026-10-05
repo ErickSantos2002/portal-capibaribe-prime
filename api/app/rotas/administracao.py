@@ -5,12 +5,12 @@ Contrato: `docs/superpowers/specs/m1-contrato.md`, seção 4.3, e o spec do épi
 (`Admin` = `exige_admin`, dúvida 9 do M1); a regra de negócio mora em
 `app/servicos/administracao.py`.
 
-Painel, ficha e histórico têm dado pessoal ou de segurança: `Cache-Control: no-store`.
+`Cache-Control: no-store` vem do middleware comum (`app/sem_cache.py`).
 """
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query
 
 from app.esquemas.administracao import (
     ConfirmarReset,
@@ -27,51 +27,34 @@ from app.servicos import administracao as servico
 rotas = APIRouter(prefix="/api/admin", dependencies=[Depends(exige_cabecalho_portal)])
 
 
-def _sem_cache(resposta: Response) -> None:
-    resposta.headers["Cache-Control"] = "no-store"
-
-
 @rotas.get("/unidades")
-def painel(
-    _: Admin, db: Banco, resposta: Response, situacao: Situacao = Situacao.todas
-) -> PainelAtivacao:
-    _sem_cache(resposta)
+def painel(_: Admin, db: Banco, situacao: Situacao = Situacao.todas) -> PainelAtivacao:
     return servico.painel(db, situacao)
 
 
 @rotas.get("/unidades/{login}")
-def unidade(login: str, _: Admin, db: Banco, resposta: Response) -> UnidadeAdmin:
-    _sem_cache(resposta)
+def unidade(login: str, _: Admin, db: Banco) -> UnidadeAdmin:
     return servico.ficha(db, login)
 
 
 @rotas.post("/unidades/{login}/resetar")
-def resetar(
-    login: str, _confirmacao: ConfirmarReset, logado: Admin, db: Banco, resposta: Response
-) -> UnidadeAdmin:
+def resetar(login: str, _confirmacao: ConfirmarReset, logado: Admin, db: Banco) -> UnidadeAdmin:
     servico.resetar(db, login, logado.unidade_id)
     db.commit()
-    _sem_cache(resposta)
     return servico.ficha(db, login)
 
 
 @rotas.put("/unidades/{login}/papeis/{papel}")
-def dar_papel(
-    login: str, papel: PapelGerenciavel, logado: Admin, db: Banco, resposta: Response
-) -> UnidadeAdmin:
+def dar_papel(login: str, papel: PapelGerenciavel, logado: Admin, db: Banco) -> UnidadeAdmin:
     servico.dar_papel(db, login, papel, logado.unidade_id)
     db.commit()
-    _sem_cache(resposta)
     return servico.ficha(db, login)
 
 
 @rotas.delete("/unidades/{login}/papeis/{papel}")
-def retirar_papel(
-    login: str, papel: PapelGerenciavel, logado: Admin, db: Banco, resposta: Response
-) -> UnidadeAdmin:
+def retirar_papel(login: str, papel: PapelGerenciavel, logado: Admin, db: Banco) -> UnidadeAdmin:
     servico.retirar_papel(db, login, papel, logado.unidade_id)
     db.commit()
-    _sem_cache(resposta)
     return servico.ficha(db, login)
 
 
@@ -79,9 +62,7 @@ def retirar_papel(
 def historico(
     _: Admin,
     db: Banco,
-    resposta: Response,
     antes_de: Annotated[int | None, Query(ge=1)] = None,
     limite: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginaHistorico:
-    _sem_cache(resposta)
     return servico.historico(db, antes_de, limite)

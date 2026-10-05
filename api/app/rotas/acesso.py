@@ -31,10 +31,6 @@ from app.servicos import acesso
 rotas = APIRouter(dependencies=[Depends(exige_cabecalho_portal)])
 
 
-def _sem_cache(resposta: Response) -> None:
-    resposta.headers["Cache-Control"] = "no-store"
-
-
 @rotas.post("/api/acesso/entrar")
 def entrar(dados: Entrar, request: Request, resposta: Response, db: Banco) -> Eu:
     try:
@@ -45,7 +41,6 @@ def entrar(dados: Entrar, request: Request, resposta: Response, db: Banco) -> Eu
         raise
     db.commit()
     gravar_cookie(resposta, token)
-    _sem_cache(resposta)
     return eu
 
 
@@ -58,7 +53,6 @@ def primeiro_acesso(
     )
     db.commit()
     gravar_cookie(resposta, token)
-    _sem_cache(resposta)
     return eu
 
 
@@ -67,7 +61,6 @@ def primeiro_acesso(
 
 @rotas.get("/api/minha-unidade")
 def minha_unidade(logado: UnidadeLogada, resposta: Response, db: Banco) -> MinhaUnidade:
-    _sem_cache(resposta)
     return acesso.ver_minha_unidade(db, logado)
 
 
@@ -77,7 +70,6 @@ def salvar_dados(
 ) -> MinhaUnidade:
     acesso.salvar_dados(db, logado, dados)
     db.commit()
-    _sem_cache(resposta)
     return acesso.ver_minha_unidade(db, logado)
 
 

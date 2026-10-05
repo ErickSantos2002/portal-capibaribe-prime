@@ -14,8 +14,7 @@ rotas = APIRouter(dependencies=[Depends(exige_cabecalho_portal)])
 
 
 @rotas.get("/api/acesso/eu")
-def eu(logado: SessaoQualquer, resposta: Response) -> Eu:
-    resposta.headers["Cache-Control"] = "no-store"
+def eu(logado: SessaoQualquer) -> Eu:
     return Eu(
         unidade=UnidadeRef.de_login(logado.login),
         papeis=sorted(logado.papeis),

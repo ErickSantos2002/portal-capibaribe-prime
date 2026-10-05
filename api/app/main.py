@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from app.erros_api import instalar_tratadores
 from app.rotas import acesso, administracao, avisos, diagnostico, saude, sessao
+from app.sem_cache import SemCache
 from app.servicos.erros import RegistroDeErros
 
 # Documentação interativa desligada: o contrato sai de `app.openapi()` quando for preciso
@@ -20,6 +21,8 @@ app = FastAPI(
 )
 # Exceção não tratada: grava em `erro`, loga sem dado pessoal e responde 500 sem relançar.
 app.add_middleware(RegistroDeErros)
+# Por fora de tudo (adicionado depois): vale também para o 500 do registro de erros.
+app.add_middleware(SemCache)
 # Erros previstos (ErroApi) e de validação viram {"codigo", "mensagem"} (spec do M1, 3.4).
 instalar_tratadores(app)
 app.include_router(saude.rotas)
