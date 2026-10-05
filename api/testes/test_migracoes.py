@@ -26,7 +26,18 @@ def _tabelas(url: str) -> set[str]:
 
 
 def test_upgrade_downgrade_upgrade(banco_vazio):
-    esperadas = {"bloco", "unidade", "unidade_papel", "sessao", "historico", "erro"}
+    esperadas = {
+        "bloco",
+        "unidade",
+        "unidade_papel",
+        "sessao",
+        "historico",
+        "erro",
+        "aviso",
+        "aviso_versao",
+        "aviso_bloco",
+        "aviso_leitura",
+    }
 
     rodar_alembic(banco_vazio, "upgrade", "head")
     assert esperadas <= _tabelas(banco_vazio)
@@ -43,3 +54,19 @@ def test_migracao_falha_com_mensagem_clara_sem_papel_app(banco_vazio):
         rodar_alembic(banco_vazio, "upgrade", "head", x=["papel_app=papel_que_nao_existe"])
     # Nada ficou pela metade: a migração roda numa transação só.
     assert _tabelas(banco_vazio) <= {"alembic_version"}
+
+
+def test_downgrade_da_0002_volta_ao_m0(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    rodar_alembic(banco_vazio, "downgrade", "0001")
+    assert _tabelas(banco_vazio) == {
+        "alembic_version",
+        "bloco",
+        "unidade",
+        "unidade_papel",
+        "sessao",
+        "historico",
+        "erro",
+    }
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert "aviso" in _tabelas(banco_vazio)

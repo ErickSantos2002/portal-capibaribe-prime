@@ -31,7 +31,18 @@ ADMIN_URL = os.environ.get(
 # Senhas só de teste, num banco descartável que escuta apenas em 127.0.0.1.
 PAPEIS = {"dono": "dono-teste", "app": "app-teste"}
 BANCO = os.environ.get("PORTAL_TESTE_BANCO", "portal_teste")
-TABELAS = ["erro", "historico", "sessao", "unidade_papel", "unidade", "bloco"]
+TABELAS = [
+    "aviso_leitura",
+    "aviso_bloco",
+    "aviso_versao",
+    "aviso",
+    "erro",
+    "historico",
+    "sessao",
+    "unidade_papel",
+    "unidade",
+    "bloco",
+]
 
 
 def url_para(usuario: str, banco: str) -> str:

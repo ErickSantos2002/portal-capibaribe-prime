@@ -85,7 +85,8 @@ def test_unidade_unica_dentro_do_bloco(engine_app):
 def test_um_papel_em_vigor_por_tipo(engine_app):
     with engine_app.begin() as con:
         u = _unidade(con, _bloco(con, 1), "101")
-        inserir = text("insert into unidade_papel (unidade_id, papel) values (:u, 'admin')")
+        # Comissão, não admin: retirar o último admin é recusado (migração 0002).
+        inserir = text("insert into unidade_papel (unidade_id, papel) values (:u, 'comissao')")
         con.execute(inserir, {"u": u})
         # Retirado o papel, a unidade pode recebê-lo de novo.
         con.execute(text("update unidade_papel set retirado_em = now()"))
