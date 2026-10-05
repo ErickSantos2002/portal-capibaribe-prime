@@ -51,7 +51,8 @@ class NovoAviso(CorrigirAviso):
     """`POST /api/avisos` (H-12). `blocos` só vale quando `para_todos` é falso."""
 
     para_todos: bool
-    blocos: list[NumeroDeBloco] = []
+    # `validate_default`: omitir `blocos` com `para_todos = false` também é recusado.
+    blocos: list[NumeroDeBloco] = Field(default=[], validate_default=True)
     fixado: bool = False
 
     @field_validator("blocos")
@@ -105,7 +106,7 @@ class ContagemLeitura(Saida):
 
 
 class AvisoCompleto(AvisoResumo):
-    """`GET /api/avisos/{id}` (marca como lido) e respostas de publicar, corrigir e arquivar."""
+    """`GET /api/avisos/{id}` (só lê) e respostas de publicar, corrigir, arquivar e fixar."""
 
     texto: str
     # Da mais nova para a mais antiga, sem a em vigor.
@@ -127,6 +128,21 @@ class Alcance(Saida):
     """`GET /api/avisos/alcance`: quantas unidades recebem (prévia do H-12)."""
 
     unidades: int
+
+
+class DestinoBloco(Saida):
+    numero: int
+    nome: str
+
+
+class Destinos(Saida):
+    """`GET /api/avisos/destinos`: blocos ativos, para os botões "Bloco N" do formulário.
+
+    Rota a mais do épico C (dúvida 1 de `duvidas-m1-avisos.md`): os blocos são editáveis
+    (H-10), então a tela não pode ter os números fixos no código.
+    """
+
+    blocos: list[DestinoBloco]
 
 
 class Leitura(Saida):
