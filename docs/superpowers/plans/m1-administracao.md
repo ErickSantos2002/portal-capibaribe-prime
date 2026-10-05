@@ -30,7 +30,8 @@ verde → commit.
    coberto em `test_permissoes.py`, citado).
 7. **Contrato**: `unidade_afetada` e `aviso_titulo` no esquema e no TS; `test_contrato.py` verde.
 8. **Front**: `Painel.tsx`, `FichaUnidade.tsx`, `Historico.tsx`, `frases.ts` (texto de cada
-   ação), `administracao.css`; testes vitest de cada tela; rotas trocam `EmConstrucao`.
+   ação), `administracao.css`; testes vitest das três telas e das frases em
+   `administracao.test.tsx`; rotas trocam `EmConstrucao`.
 9. **Navegador**: Playwright em 390/1366, claro/escuro, console sem CSP; prints em
    `docs/superpowers/prints/m1-administracao/`.
 10. **Fechamento**: pytest inteiro, pyright, ruff, lint, typecheck, test, build; dúvidas.
@@ -41,8 +42,8 @@ verde → commit.
 |---|---|
 | H-07 lista as 320 unidades por bloco, com ativada, data, responsável, celular | `test_painel_lista_as_320_unidades_por_bloco_com_os_dados` |
 | H-07 total e percentual, geral e por bloco | `test_painel_resume_adesao_geral_e_por_bloco` |
-| H-07 filtros ativadas / não ativadas / gestão | `test_painel_filtra` (parametrizado) |
-| H-08 pede confirmação mostrando o que vai acontecer | `test_resetar_sem_confirmar_recusa` + `FichaUnidade.test.tsx` "pede confirmação" |
+| H-07 filtros ativadas / não ativadas / gestão | `test_painel_filtra` (parametrizado) + `test_painel_filtra_nao_ativadas` |
+| H-08 pede confirmação mostrando o que vai acontecer | `test_resetar_sem_confirmar_recusa` + `administracao.test.tsx` "pede confirmação mostrando o que vai acontecer" |
 | H-08 senha `mudar123`, contatos, aparelhos, papel, "não ativada" | `test_resetar_volta_a_unidade_ao_estado_inicial`, `test_resetar_desconecta_todos_os_aparelhos`, `test_resetar_retira_os_papeis` |
 | H-08 votos continuam valendo (no M1: leituras) | `test_resetar_mantem_as_leituras` |
 | H-08 registrado no histórico | `test_resetar_registra_no_historico` |
