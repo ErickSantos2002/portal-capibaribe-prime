@@ -96,6 +96,10 @@ class ItemHistorico(Saida):
     acao: str
     entidade: str | None
     entidade_id: int | None
+    # O item afetado, para a tela escrever "resetou o Bloco 1, 106" (H-11). Mudança do épico B
+    # no contrato: `duvidas-m1-administracao.md`, item 1.
+    unidade_afetada: UnidadeRef | None
+    aviso_titulo: str | None
     detalhes: dict[str, Any]
 
 
