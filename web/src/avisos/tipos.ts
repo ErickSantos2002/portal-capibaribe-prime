@@ -64,6 +64,16 @@ export interface Alcance {
   unidades: number
 }
 
+export interface DestinoBloco {
+  numero: number
+  nome: string
+}
+
+/** Rota a mais do épico C: os blocos para os botões do formulário (são editáveis, H-10). */
+export interface Destinos {
+  blocos: DestinoBloco[]
+}
+
 export interface Leitura {
   lidos: number
   total: number

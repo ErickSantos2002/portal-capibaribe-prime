@@ -5,6 +5,7 @@ import type {
   AvisoCompleto,
   ContagemNaoLidos,
   CorrigirAviso,
+  Destinos,
   Leitura,
   ListaAvisos,
   NovoAviso,
@@ -19,6 +20,9 @@ export const contarNaoLidos = () => api.get<ContagemNaoLidos>('/api/avisos/nao-l
 /** Sem blocos = todos. */
 export const calcularAlcance = (blocos: number[] = []) =>
   api.get<Alcance>('/api/avisos/alcance', { blocos })
+
+/** Blocos que podem ser destino de um aviso (botões do formulário). */
+export const listarDestinos = () => api.get<Destinos>('/api/avisos/destinos')
 
 /** Só lê: GET não altera nada. Ao abrir o aviso, a tela chama também `marcarLido`. */
 export const abrirAviso = (id: number) => api.get<AvisoCompleto>(`/api/avisos/${id}`)
