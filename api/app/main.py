@@ -7,7 +7,7 @@ As rotas já carregam o prefixo `/api`: a Vercel repassa o caminho original para
 from fastapi import FastAPI
 
 from app.erros_api import instalar_tratadores
-from app.rotas import diagnostico, saude
+from app.rotas import diagnostico, saude, sessao
 from app.servicos.erros import RegistroDeErros
 
 # Documentação interativa desligada: o contrato sai de `app.openapi()` quando for preciso
@@ -24,3 +24,4 @@ app.add_middleware(RegistroDeErros)
 instalar_tratadores(app)
 app.include_router(saude.rotas)
 app.include_router(diagnostico.rotas)
+app.include_router(sessao.rotas)
