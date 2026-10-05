@@ -146,6 +146,8 @@ a.avisos-cartao:hover {
 }
 
 .avisos-grade {
+  /* minmax(0, 1fr): as 8 colunas cabem em 390 px sem empurrar a borda. */
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   margin: 0;
   padding: 0;
   list-style: none;

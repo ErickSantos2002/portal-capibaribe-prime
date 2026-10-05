@@ -2,7 +2,7 @@
 import { Link } from 'react-router'
 import { formatarData } from '../casca/formatar'
 import { Icone } from '../casca/Icone'
-import { assinatura, blocosEmTexto, paragrafos, partesDaLinha } from './formatos'
+import { assinatura, blocosEmTexto, destinoEmTexto, paragrafos, partesDaLinha } from './formatos'
 import type { AvisoResumo } from './tipos'
 
 /**
@@ -80,6 +80,7 @@ export function AvisoFixado({ aviso, previa }: { aviso: AvisoResumo; previa?: bo
     <>
       <span className="rotulo">
         <Icone nome="pino" tamanho={20} /> Fixado {assinatura(aviso.publicado_por)}
+        {!aviso.para_todos && `, para ${destinoEmTexto(aviso)}`}
         {!aviso.lido && <span className="selo novo">Novo</span>}
       </span>
       <h3>{aviso.titulo}</h3>
