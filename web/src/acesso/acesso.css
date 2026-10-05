@@ -1,0 +1,112 @@
+/* Épico A · Acesso: o pouco que as telas de acesso precisam além do estilo comum (protótipo).
+   Só tokens da casca (var(--…)); nenhum style= no JSX (CSP). */
+
+.acesso-enviar {
+  margin-top: 24px;
+}
+
+.acesso-esqueci {
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+.acesso-esqueci summary {
+  justify-content: center;
+  cursor: pointer;
+  list-style: none;
+}
+
+.acesso-esqueci summary::-webkit-details-marker {
+  display: none;
+}
+
+.acesso-esqueci p {
+  margin: 4px 0 0;
+  color: var(--tinta-suave);
+  text-align: left;
+}
+
+/* Campo com erro: borda vermelha e a mensagem logo abaixo, ligada por aria-describedby. */
+.acesso-campo-erro {
+  margin: 6px 0 0;
+  color: var(--erro);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.acesso-espaco {
+  height: 20px;
+}
+
+/* Política de privacidade: texto corrido, tabelinha de dados em lista. */
+.politica h2 {
+  margin: 28px 0 8px;
+  font-size: 20px;
+}
+
+.politica h2:first-child {
+  margin-top: 8px;
+}
+
+.politica dl {
+  margin: 0;
+}
+
+.politica .dado {
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+}
+
+.politica .dado dt {
+  font-weight: 700;
+}
+
+.politica .dado dd {
+  margin: 4px 0 0;
+}
+
+.politica ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.politica li + li {
+  margin-top: 6px;
+}
+
+.acesso-politica-dobrada {
+  margin-top: 16px;
+}
+
+.acesso-politica-dobrada summary {
+  cursor: pointer;
+}
+
+/* Minha unidade: formulários que abrem na própria tela. */
+.acesso-painel {
+  margin: 12px 0 16px;
+  padding: 4px 16px 16px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+}
+
+.acesso-painel h2 {
+  margin: 14px 0 0;
+  font-size: 19px;
+}
+
+.acesso-aparelho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.acesso-aparelho h3 {
+  margin: 0;
+}

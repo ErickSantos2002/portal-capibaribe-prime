@@ -61,6 +61,10 @@ export interface ItemHistorico {
   acao: string
   entidade: string | null
   entidade_id: number | null
+  /** Quando `entidade` é "unidade": a unidade afetada. */
+  unidade_afetada: UnidadeRef | null
+  /** Quando `entidade` é "aviso": o título da versão em vigor. */
+  aviso_titulo: string | null
   detalhes: Record<string, unknown>
 }
 
