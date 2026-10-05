@@ -72,6 +72,13 @@ cd ../web && npm ci && npm run dev
 Os papéis `dono` e `app` só existem no Postgres local depois que os testes rodaram uma vez
 (passo 2). As variáveis estão explicadas em `api/.env.example`.
 
+Várias cópias de trabalho ao mesmo tempo (um agente por épico): cada uma usa o próprio banco de
+teste, com `PORTAL_TESTE_BANCO=portal_teste_<nome> uv run pytest`. Um `portal_dev` criado antes
+da migração 0002 (celulares com máscara) precisa ser recriado.
+
+Testes do front: `npm test` em `web/` roda os testes de componente (Vitest) e, depois do
+`npm run build`, os de configuração (cabeçalhos e `vercel.json`).
+
 Antes do primeiro commit: `pre-commit install` e `npm ci --prefix web` (o pre-commit roda ruff,
 eslint e tsc).
 

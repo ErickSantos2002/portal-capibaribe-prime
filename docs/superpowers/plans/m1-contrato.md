@@ -42,7 +42,7 @@ React 19, TypeScript, Vite 8, react-router 8, Vitest + Testing Library · Postgr
 `api/testes/test_migracoes.py`, `api/testes/test_avisos_banco.py`, `api/testes/test_papeis_banco.py`,
 `api/app/servicos/dados_ficticios.py` (celular só dígitos, ambiente `previa`).
 
-- [ ] Testes falhando: tabelas novas existem após upgrade e somem no downgrade da 0002; `app` não
+- [x] Testes falhando: tabelas novas existem após upgrade e somem no downgrade da 0002; `app` não
   apaga `aviso`, `aviso_versao`, `aviso_bloco`, `aviso_leitura`; não altera `aviso_versao`,
   `aviso_bloco`, `aviso_leitura`, nem `aviso.para_todos`/`publicado_por`; altera `fixado` e
   `arquivado_em`; datas carimbadas (`publicado_em`, `criada_em`, `lido_em`, `arquivado_em`,
@@ -51,10 +51,10 @@ React 19, TypeScript, Vite 8, react-router 8, Vitest + Testing Library · Postgr
   recusado com restrição `ultimo_admin`, retirar um de dois admins aceito; papel retirado não
   volta; `app` não muda a coluna `papel`; unidade ativada sem celular recusada; celular com
   máscara recusado; `test_modelos_iguais_ao_banco_migrado` continua verde.
-- [ ] Implementar a migração (SQL à mão) e os modelos `Aviso`, `AvisoVersao`, `AvisoBloco`,
+- [x] Implementar a migração (SQL à mão) e os modelos `Aviso`, `AvisoVersao`, `AvisoBloco`,
   `AvisoLeitura` (+ CHECKs novos em `Unidade`).
-- [ ] Dados fictícios: celular `8190000xxxx`; `previa` aceito em `PORTAL_AMBIENTE`.
-- [ ] Commit.
+- [x] Dados fictícios: celular `8190000xxxx`; `previa` aceito em `PORTAL_AMBIENTE`.
+- [x] Commit.
 
 ### Tarefa 2: Formato de erro, senhas e histórico
 
@@ -65,11 +65,11 @@ React 19, TypeScript, Vite 8, react-router 8, Vitest + Testing Library · Postgr
 **Produz:** `ErroApi(status, codigo, mensagem, **extras)`, `instalar_tratadores(app)`,
 `gerar_hash`, `senha_confere`, `SENHA_INICIAL`, `Acao`, `registrar(...)`.
 
-- [ ] Testes falhando: `ErroApi` vira `{"codigo","mensagem",...extras}`; 422 vira
+- [x] Testes falhando: `ErroApi` vira `{"codigo","mensagem",...extras}`; 422 vira
   `dados_invalidos` com `campos`, mensagem do validador em português, sem `input`; 404 de rota
   inexistente continua `{"detail": "Not Found"}`; `registrar` grava linha, recusa chave de dado
   pessoal e valor aninhado; `senha_confere` com hash inválido devolve `False`.
-- [ ] Implementar; commit.
+- [x] Implementar; commit.
 
 ### Tarefa 3: Sessões, dependências e CSRF
 
@@ -84,14 +84,14 @@ React 19, TypeScript, Vite 8, react-router 8, Vitest + Testing Library · Postgr
 `exige_cabecalho_portal`; rotas `GET /api/acesso/eu` e `POST /api/acesso/sair`; fixtures
 `predio` (5 blocos, 320 unidades, admin 1101, comissão 2304 ativada) e `logar(login) -> TestClient`.
 
-- [ ] Testes falhando: token guardado só como hash; cookie com `HttpOnly`, `Secure`,
+- [x] Testes falhando: token guardado só como hash; cookie com `HttpOnly`, `Secure`,
   `SameSite=lax`, `Path=/`, `Max-Age` 180 dias; `eu` sem cookie 401 `sem_sessao`; com sessão
   restrita 200 e `precisa_trocar_senha`; sessão encerrada/vencida/unidade desativada 401;
   renovação de `ultimo_uso_em` só depois de 1 h; `unidade_logada` recusa restrita com 403
   `primeiro_acesso_pendente`; `exige_gestao`/`exige_admin` recusam unidade comum com 403
   `sem_permissao`; papel retirado no meio da sessão recusa na hora; POST sem `X-Portal` 403
   `requisicao_recusada`; `sair` encerra no banco e apaga o cookie; `descrever_aparelho`.
-- [ ] Implementar; commit.
+- [x] Implementar; commit.
 
 ### Tarefa 4: Esquemas do contrato e roteadores vazios
 
@@ -99,11 +99,11 @@ React 19, TypeScript, Vite 8, react-router 8, Vitest + Testing Library · Postgr
 `api/app/rotas/{acesso,administracao,avisos}.py`, `api/app/main.py`,
 `api/testes/test_esquemas.py`.
 
-- [ ] Testes falhando: validações do contrato (senha < 8, `mudar123`, senhas diferentes,
+- [x] Testes falhando: validações do contrato (senha < 8, `mudar123`, senhas diferentes,
   celular com máscara vira dígitos, e-mail vazio vira nulo, título > 120, blocos vazios sem
   `para_todos`, `confirmo` diferente de `true`), mensagens exatas do spec; roteadores incluídos e
   com a dependência de CSRF.
-- [ ] Implementar; commit.
+- [x] Implementar; commit.
 
 ### Tarefa 5: Casca do front
 
@@ -113,19 +113,19 @@ React 19, TypeScript, Vite 8, react-router 8, Vitest + Testing Library · Postgr
 `web/src/casca/*`, `web/src/{acesso,administracao,avisos}/{tipos.ts,api.ts,rotas.tsx,*.tsx}`,
 testes `*.test.ts(x)` ao lado; remove `web/src/App.tsx`.
 
-- [ ] Testes falhando (Vitest): cliente manda `X-Portal: 1` e `credentials`, transforma erro em
+- [x] Testes falhando (Vitest): cliente manda `X-Portal: 1` e `credentials`, transforma erro em
   `ErroDaApi`, 204 vira `undefined`, falha de rede vira `sem_conexao`; tema começa claro, alterna,
   grava e lê `portal-tema`; guardas: sem sessão vai a `/entrar`, restrita vai a
   `/primeiro-acesso`, unidade comum em rota de admin vê "Sem permissão"; navegação mostra
   "Unidades" só para admin.
-- [ ] Implementar; `npm run lint`, `typecheck`, `build`, `test`; commit.
+- [x] Implementar; `npm run lint`, `typecheck`, `build`, `test`; commit.
 
 ### Tarefa 6: Contrato TS × Python, dúvidas e verificação final
 
 **Arquivos:** `api/testes/test_contrato.py`, `docs/superpowers/duvidas-m1.md`, `README.md`
 (como rodar com `PORTAL_TESTE_BANCO`), `.github/workflows/ci.yml` (Vitest roda no `npm test`).
 
-- [ ] `test_contrato.py`: cada `BaseModel` de `app.esquemas` tem `export interface <Nome>` com os
+- [x] `test_contrato.py`: cada `BaseModel` de `app.esquemas` tem `export interface <Nome>` com os
   mesmos campos num dos `tipos.ts`.
-- [ ] Dúvidas registradas; suíte completa da API, migração do zero, lint/typecheck/test/build do
+- [x] Dúvidas registradas; suíte completa da API, migração do zero, lint/typecheck/test/build do
   front; commit.

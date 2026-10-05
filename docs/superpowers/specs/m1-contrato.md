@@ -89,8 +89,9 @@ A tabela `sessao` da 0001 basta:
   `https://testserver`.
 - `SameSite=Lax` (ADR-0005), e não `Strict`: dúvida 1.
 - Funções: `criar_sessao(db, unidade_id, user_agent) -> str` (devolve o token),
-  `buscar_sessao(db, token) -> SessaoAtiva | None`, `encerrar_sessao(db, sessao_id)`,
-  `encerrar_todas(db, unidade_id)`, `gravar_cookie(resposta, token)`,
+  `buscar_sessao(db, token) -> Sessao | None`, `renovar(db, sessao) -> bool`,
+  `encerrar_sessao(db, sessao_id)`, `encerrar_todas(db, unidade_id, exceto=None) -> int`,
+  `gravar_cookie(resposta, token)`,
   `apagar_cookie(resposta)`, `descrever_aparelho(user_agent) -> str` ("Android · Chrome").
 - Nada aqui faz `commit`: quem chama decide (mesma regra da carga).
 
@@ -449,6 +450,11 @@ dúvidas do épico): `api/migracoes/**` (**nenhuma migração nova no M1 sem o c
 `web/index.html`, `web/public/**`, `web/package*.json`, `web/vite.config.ts`, `vercel.json`,
 `.github/**`, `docs/0*.md`, `docs/adr/**`, este spec. Um épico **pode** criar um CSS próprio
 (`web/src/<épico>/<épico>.css`) e importá-lo nas próprias páginas.
+
+A casca usa `contarNaoLidos` de `web/src/avisos/api.ts` (número na aba "Avisos"): o épico C
+não renomeia nem muda a assinatura dessa função. Recado depois de navegar:
+`navigate(caminho, { state: { recado: 'Aviso publicado.' } })`; na mesma tela, `useRecado()`.
+Testes da API: fixtures `predio` e `logar(login)` do `conftest.py` (ver dúvida 24).
 
 Mudança no contrato (campo novo, rota nova) dentro do próprio épico é permitida nos arquivos do
 épico, desde que o teste `test_contrato.py` continue verde (schema Python e tipo TS juntos) e a
