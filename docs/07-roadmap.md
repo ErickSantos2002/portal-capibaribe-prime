@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | v0.3 — M0 fechado; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.4 — M0 fechado; M1 com a parte técnica pronta e no ar, esperando o ensaio e a Comissão; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | Marco M1 (acesso e mural) |
+| **Próximo passo** | Portão do M1: ensaio com vizinhos (#20) e a Comissão topar publicar (#21) |
 
 ---
 
@@ -58,7 +58,7 @@ flowchart LR
 | Marco | Resumo |
 |---|---|
 | **M0** ✅ | Esqueleto: repositório, CI, Vercel + Neon, banco com as 320 unidades |
-| **M1** | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real.** |
+| **M1** 🟡 | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real.** No ar; falta o ensaio e a Comissão |
 | **M2** | Notificação no celular, e-mail e "esqueci a senha" |
 | **M3** | Documentos e anexos nos avisos (Cloudflare R2) |
 | **M4** | Enquetes com um voto por unidade |
@@ -127,20 +127,30 @@ E também: layout de celular e de computador, tema claro/escuro (como no protót
 
 **Portão antes de abrir para o grupo** (nada de dado real antes disso):
 
-1. Backup diário rodando **e uma restauração testada** (ADR-0007, ADR-0009, RNF-21). O backup
+1. ✅ Backup diário rodando **e uma restauração testada** (ADR-0007, ADR-0009, RNF-21). O backup
    vai para o R2, num bucket só de backups, então a conta da Cloudflare nasce aqui, antes dos
-   documentos. Workflow `.github/workflows/backup.yml` e scripts em `scripts/backup/` prontos e
-   testados localmente (ciclo inteiro contra Postgres e S3 falso); falta o primeiro backup e a
-   primeira restauração de verdade no Actions (README, seção "Backup").
-2. Regra de firewall da Vercel: 20 logins por IP a cada 10 minutos (ADR-0005).
-3. Testes de permissão: toda rota de gestão recusa a conta comum (RNF-13).
-4. Revisão independente (UX + código), como foi feita no protótipo.
-5. Ensaio com 2 ou 3 vizinhos e 1 membro da Comissão, em produção, antes do anúncio no grupo.
-6. A Comissão concorda em publicar avisos pelo Portal. Sem isso, o mural fica vazio e o resto
+   documentos. Primeiro backup real e primeira restauração no Actions em 06/10/2026 (5 blocos,
+   320 unidades e a migração conferidos); daí em diante, todo dia às 03:00 e restauração no dia 2.
+2. ✅ Regra de firewall da Vercel: 20 logins por IP a cada 10 minutos (ADR-0005), publicada em
+   05/10/2026.
+3. ✅ Testes de permissão: toda rota de gestão recusa a conta comum (RNF-13), conferido pela lista
+   de rotas do próprio OpenAPI.
+4. ✅ Revisão independente (UX + código), como foi feita no protótipo: 7 achados de código e 11
+   de UX, todos corrigidos com teste de regressão (migração 0003), no ar em 06/10/2026.
+5. ⏳ Ensaio com 2 ou 3 vizinhos e 1 membro da Comissão, em produção, antes do anúncio no grupo.
+6. ⏳ A Comissão concorda em publicar avisos pelo Portal. Sem isso, o mural fica vazio e o resto
    não importa.
 
 **Pronto quando:** todos os critérios de aceite das histórias acima passam como teste, o portão
 está cumprido e o link foi anunciado no grupo.
+
+**Onde está (06/10/2026):** os três épicos, a revisão e as decisões de fim de marco estão em
+produção (649 testes na API, 174 no front). O admin já fez o primeiro acesso e o primeiro aviso
+real (boas-vindas, fixado, para todos) está no mural. Decisões de fim de marco (dono do projeto):
+a Comissão **vê os contatos** das unidades, só para leitura (resetar, papéis e histórico seguem
+só do admin); dar ou tirar o papel de Comissão pede confirmação; a política de privacidade nomeia
+o responsável pelos dados. Registro em `docs/superpowers/duvidas-m1.md`, seção "Fim do marco".
+Falta só o que é de gente: os itens 5 e 6 do portão e o anúncio.
 
 ### M2 · Notificações
 
