@@ -31,3 +31,27 @@ export interface ErroResposta {
   mensagem: string
   campos?: CampoInvalido[] | null
 }
+
+// --- M2: como foi a notificação de um aviso (docs/superpowers/specs/m2-contrato.md, 4.4) ---
+
+export type Canal = 'push' | 'email'
+
+export type SituacaoEnvio = 'pendente' | 'enviando' | 'concluido' | 'desligado' | 'interrompido'
+
+/** Só contagens: `destinos` são aparelhos (push) ou apartamentos (e-mail). */
+export interface EnvioDoAviso {
+  canal: Canal
+  situacao: SituacaoEnvio
+  destinos: number
+  entregues: number
+  falhas: number
+  removidas: number
+  pulados: number
+  criado_em: DataHora
+  concluido_em: DataHora | null
+}
+
+/** `GET /api/avisos/{id}/envios` (gestão). */
+export interface EnviosDoAviso {
+  itens: EnvioDoAviso[]
+}

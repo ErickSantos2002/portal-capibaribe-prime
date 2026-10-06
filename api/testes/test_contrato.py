@@ -20,7 +20,7 @@ import pytest
 from pydantic import BaseModel
 
 from app.esquemas import acesso, administracao, avisos, comum
-from app.modelos import Papel
+from app.modelos import Canal, Papel, SituacaoEnvio
 
 WEB = Path(__file__).resolve().parents[2] / "web" / "src"
 ARQUIVOS_TS = {
@@ -131,7 +131,7 @@ def _definidos(modulo, tipo) -> list:
 
 
 ESQUEMAS = [(m, e) for m in ARQUIVOS_TS for e in _definidos(m, BaseModel)]
-ENUMS = [Papel] + [e for m in ARQUIVOS_TS for e in _definidos(m, enum.Enum)]
+ENUMS = [Papel, Canal, SituacaoEnvio] + [e for m in ARQUIVOS_TS for e in _definidos(m, enum.Enum)]
 
 
 @pytest.mark.parametrize(("modulo", "esquema"), ESQUEMAS, ids=lambda x: getattr(x, "__name__", ""))

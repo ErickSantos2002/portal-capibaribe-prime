@@ -24,6 +24,8 @@ ROTAS_DE_GESTAO = [
     ("POST", "/api/avisos/{id}/arquivar", None),
     ("PUT", "/api/avisos/{id}/fixado", {"fixado": True}),
     ("GET", "/api/avisos/{id}/leitura", None),
+    # M2: como foi a notificação (app/rotas/envios.py).
+    ("GET", "/api/avisos/{id}/envios", None),
 ]
 ROTAS_DE_LEITURA = [
     ("GET", "/api/avisos", None),
@@ -100,7 +102,7 @@ def test_toda_rota_de_avisos_esta_nas_listas_de_permissao():
         (metodo, caminho.replace("{id}", "{aviso_id}"))
         for metodo, caminho, _ in ROTAS_DE_GESTAO + ROTAS_DE_LEITURA
     }
-    assert len(no_app) == 11
+    assert len(no_app) == 12
     assert no_app == testadas
 
 

@@ -25,7 +25,7 @@ confere no commit que o aviso tem versão 1 e destino (restrição `aviso_comple
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
 from app.esquemas.avisos import (
     Alcance,
@@ -41,6 +41,7 @@ from app.esquemas.avisos import (
 )
 from app.seguranca.dependencias import Banco, Gestao, UnidadeLogada, exige_cabecalho_portal
 from app.servicos import avisos as servico
+from app.servicos import notificacoes
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(prefix="/api/avisos", dependencies=[Depends(exige_cabecalho_portal)])
@@ -72,8 +73,12 @@ def destinos(_: Gestao, db: Banco) -> Destinos:
 
 
 @rotas.post("", status_code=201)
-def publicar(dados: NovoAviso, logado: Gestao, db: Banco) -> AvisoCompleto:
+def publicar(
+    dados: NovoAviso, logado: Gestao, db: Banco, tarefas: BackgroundTasks
+) -> AvisoCompleto:
     aviso_id = servico.publicar(db, logado, dados)
+    # H-13 (M2): push e e-mail saem depois da resposta (spec do M2, seção 5).
+    notificacoes.agendar(tarefas, aviso_id)
     return servico.abrir(db, logado, aviso_id)
 
 
