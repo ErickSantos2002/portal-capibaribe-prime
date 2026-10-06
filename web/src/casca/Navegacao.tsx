@@ -6,6 +6,7 @@ import { contarNaoLidos } from '../avisos/api'
 import { nomeDoPapel } from './formatar'
 import { Icone } from './Icone'
 import { itensDoMenu } from './menu'
+import { BotaoVersao } from '../sobre/BotaoVersao'
 import { Placa } from './Placa'
 
 /** Número de avisos não lidos na aba. Falhou (ou a rota ainda não existe): sem número. */
@@ -53,6 +54,8 @@ export function Navegacao({ eu }: { eu: Eu }) {
         <Placa unidade={eu.unidade} gestao={eu.gestao} />
         {papel && <span>{nomeDoPapel(papel)}</span>}
       </span>
+      {/* Só no computador (no celular, a versão fica no fim de Minha unidade). */}
+      <BotaoVersao />
     </nav>
   )
 }

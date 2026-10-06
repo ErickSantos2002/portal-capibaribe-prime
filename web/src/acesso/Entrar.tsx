@@ -5,8 +5,9 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { ErroDaApi, MENSAGEM_SEM_CONEXAO } from '../api/cliente'
 import { useSessao } from '../casca/contextoSessao'
 import { formatarHora } from '../casca/formatar'
-import { Marca } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
+import { Logo } from '../marca/Logo'
+import { BotaoVersao } from '../sobre/BotaoVersao'
 import { entrar } from './api'
 import { CaixaDeErro } from './CaixaDeErro'
 import { Campo } from './Campo'
@@ -94,7 +95,7 @@ export function Entrar() {
   return (
     <Tela titulo="Portal Capibaribe Prime" entrada>
       <div className="entrada">
-        <Marca />
+        <Logo />
         <h1 className="titulo">Portal Capibaribe Prime</h1>
         <p className="suave">Os avisos oficiais do condomínio, num lugar só.</p>
       </div>
@@ -162,6 +163,9 @@ export function Entrar() {
           Como o Portal usa seus dados (política de privacidade)
         </Link>
       </p>
+      <footer className="versao-rodape">
+        <BotaoVersao />
+      </footer>
     </Tela>
   )
 }

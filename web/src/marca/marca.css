@@ -1,0 +1,37 @@
+/* O logo do residencial. O azul-marinho de "CAPIBARIBE" some sobre o fundo escuro: no tema
+   escuro o logo vai num cartão claro, como uma placa. */
+:root {
+  --logo-fundo: transparent;
+  --logo-respiro: 0;
+}
+
+:root[data-tema='escuro'] {
+  --logo-fundo: #ffffff;
+  --logo-respiro: 14px 18px;
+}
+
+.logo {
+  display: inline-block;
+  max-width: 100%;
+  padding: var(--logo-respiro);
+  border-radius: var(--r-medio);
+  background: var(--logo-fundo);
+  line-height: 0;
+}
+
+.logo img {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+}
+
+.logo.pequeno img {
+  width: 148px;
+}
+
+@media (min-width: 900px) {
+  .logo:not(.pequeno) img {
+    width: 260px;
+  }
+}
