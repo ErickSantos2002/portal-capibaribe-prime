@@ -19,8 +19,10 @@ end;
 $$;
 
 -- INHERIT é necessário para usar os privilégios de pg_read_all_data sem SET ROLE.
-alter role backup inherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls
-    connection limit 2;
+-- SUPERUSER, REPLICATION e BYPASSRLS não aparecem aqui: no Neon o `dono` não é superusuário e
+-- não pode nem escrever "NOSUPERUSER" (erro "Only roles with the SUPERUSER attribute..."); um
+-- papel criado por ele já nasce sem esses atributos, e a conferência no fim mostra isso.
+alter role backup inherit nocreatedb nocreaterole connection limit 2;
 
 -- Lê todas as tabelas, visões e sequências de todos os esquemas. Não escreve nada.
 grant pg_read_all_data to backup;
@@ -31,6 +33,8 @@ alter role backup set default_transaction_read_only = on;
 -- Conferência: deve mostrar só pg_read_all_data e nenhum papel de escrita.
 select r.rolname as papel,
        r.rolsuper as superusuario,
+       r.rolreplication as replicacao,
+       r.rolbypassrls as ignora_rls,
        r.rolcreaterole as cria_papel,
        array(select m.rolname
                from pg_auth_members a
