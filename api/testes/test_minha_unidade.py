@@ -45,7 +45,15 @@ def test_h06_mostra_bloco_apartamento_contatos_e_aparelhos(logar, predio):
     [aparelho] = corpo["aparelhos"]
     assert aparelho["descricao"] == "Android · Chrome"
     assert aparelho["este_aparelho"] is True
-    assert set(aparelho) == {"id", "descricao", "criada_em", "ultimo_uso_em", "este_aparelho"}
+    assert set(aparelho) == {
+        "id",
+        "descricao",
+        "criada_em",
+        "ultimo_uso_em",
+        "este_aparelho",
+        "notificacoes",  # M2 (H-05)
+    }
+    assert aparelho["notificacoes"] is False
 
 
 def test_h06_lista_so_aparelhos_em_vigor_da_propria_unidade(logar, predio, engine_dono):

@@ -37,6 +37,7 @@ from app.esquemas.comum import UnidadeRef
 from app.modelos import Bloco, Papel, Unidade
 from app.modelos.avisos import Aviso, AvisoBloco, AvisoLeitura, AvisoVersao
 from app.seguranca.dependencias import Logado
+from app.servicos import notificacoes
 from app.servicos.historico import Acao, registrar
 
 # Com que papel o aviso é assinado, quando a unidade tem mais de um (contrato, seção 4.4).
@@ -407,6 +408,8 @@ def publicar(db: Session, logado: Logado, dados: NovoAviso) -> int:
             "fixado": dados.fixado,
         },
     )
+    # H-13 (M2): o pedido de notificar entra na mesma transação; a rota agenda o envio.
+    notificacoes.registrar_publicacao(db, aviso.id)
     db.commit()
     return aviso.id
 

@@ -61,6 +61,14 @@ def validar_celular(celular: str) -> str:
     return digitos
 
 
+def validar_login(login: str) -> str:
+    """Login de 4 dígitos no padrão (bloco, andar, posição). Também usado no "esqueci a senha"
+    (M2)."""
+    if not _LOGIN.match(login):
+        raise ValueError("Escolha o bloco e escreva o número do apartamento.")
+    return login
+
+
 def validar_email(email: str | None) -> str | None:
     email = sem_controle(email or "").strip().lower()
     if not email:
@@ -90,9 +98,7 @@ class Entrar(Entrada):
     @field_validator("login")
     @classmethod
     def _login(cls, login: str) -> str:
-        if not _LOGIN.match(login):
-            raise ValueError("Escolha o bloco e escreva o número do apartamento.")
-        return login
+        return validar_login(login)
 
     @field_validator("senha")
     @classmethod
@@ -171,6 +177,8 @@ class Aparelho(Saida):
     criada_em: datetime
     ultimo_uso_em: datetime
     este_aparelho: bool
+    # M2 (H-05): o aparelho tem notificação ativada (inscrição de push guardada).
+    notificacoes: bool
 
 
 class MinhaUnidade(Saida):

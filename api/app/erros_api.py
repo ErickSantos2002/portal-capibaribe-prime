@@ -45,6 +45,11 @@ class ErroApi(Exception):
         return {"codigo": self.codigo, "mensagem": self.mensagem, **self.extras}
 
 
+def em_construcao() -> ErroApi:
+    """Rota já declarada no contrato, ainda sem implementação (ondas de contrato)."""
+    return ErroApi(501, "em_construcao", "Esta parte do Portal ainda está sendo feita.")
+
+
 def _campo(loc: tuple) -> str | None:
     # loc = ("body", "senha") ou ("query", "situacao"); o primeiro item é a origem.
     partes = [str(p) for p in loc[1:]]

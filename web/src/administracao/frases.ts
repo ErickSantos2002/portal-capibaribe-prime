@@ -48,6 +48,19 @@ function origem(item: ItemHistorico): string {
   }
 }
 
+function motivoSemLink(item: ItemHistorico): string {
+  switch (item.detalhes.motivo) {
+    case 'sem_email':
+      return 'sem e-mail cadastrado'
+    case 'limite':
+      return 'muitos pedidos seguidos'
+    case 'cota':
+      return 'limite de e-mails do dia'
+    default:
+      return 'e-mail desligado'
+  }
+}
+
 /** O que foi feito, sem o sujeito: "voltou o Bloco 1, 106 para a senha inicial". */
 export function oQueFez(item: ItemHistorico): string {
   switch (item.acao) {
@@ -79,6 +92,13 @@ export function oQueFez(item: ItemHistorico): string {
       return `fixou no topo ${aviso(item)}`
     case 'aviso_desafixado':
       return `tirou do topo ${aviso(item)}`
+    // M2 (H-04, spec do M2, seção 4.3): o pedido é ação do Portal (quem pede não entrou).
+    case 'recuperacao_pedida':
+      return item.detalhes.enviado
+        ? `mandou ${alvo(item, 'a')} um link para criar senha nova`
+        : `não mandou link de senha nova ${alvo(item, 'a')}: ${motivoSemLink(item)}`
+    case 'senha_redefinida':
+      return 'criou senha nova pelo link do e-mail'
     case 'carga_inicial':
       return 'criou os blocos e as unidades'
     case 'dados_ficticios':

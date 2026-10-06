@@ -39,6 +39,8 @@ export interface Aparelho {
   criada_em: DataHora
   ultimo_uso_em: DataHora
   este_aparelho: boolean
+  /** M2 (H-05): o aparelho tem notificação ativada. */
+  notificacoes: boolean
 }
 
 export interface MinhaUnidade {

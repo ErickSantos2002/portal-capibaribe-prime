@@ -5,6 +5,7 @@ import { useSessao } from '../casca/contextoSessao'
 import { Icone } from '../casca/Icone'
 import { Placa } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
+import { destinoDepoisDoPrimeiroAcesso } from '../notificacoes/ganchos'
 import { concluirPrimeiroAcesso } from './api'
 import { CaixaDeErro } from './CaixaDeErro'
 import { Campo } from './Campo'
@@ -63,7 +64,7 @@ export function PrimeiroAcesso() {
       // recado se perde.
       startTransition(() => {
         definir(novo)
-        navegar('/avisos', {
+        navegar(destinoDepoisDoPrimeiroAcesso(), {
           replace: true,
           state: { recado: 'Pronto! O apartamento está ativado.' },
         })

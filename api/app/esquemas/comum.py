@@ -5,18 +5,23 @@ Cada esquema tem um espelho em TypeScript (`web/src/api/tipos.ts` para estes); o
 """
 
 import unicodedata
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.modelos import Papel
+from app.modelos import Canal, Papel, SituacaoEnvio
 
 __all__ = [
     "MSG_CONTROLE",
     "CampoInvalido",
+    "Canal",
+    "EnvioDoAviso",
+    "EnviosDoAviso",
     "Entrada",
     "ErroResposta",
     "Eu",
     "Papel",
+    "SituacaoEnvio",
     "Saida",
     "UnidadeRef",
     "sem_controle",
@@ -81,3 +86,25 @@ class ErroResposta(Saida):
     codigo: str
     mensagem: str
     campos: list[CampoInvalido] | None = None
+
+
+class EnvioDoAviso(Saida):
+    """Como foi a notificação de um aviso num canal (spec do M2, seção 4.4). Só contagens:
+    `destinos` são aparelhos (push) ou unidades (e-mail); `pulados`, e-mails que não couberam na
+    cota do dia; `removidas`, aparelhos que o serviço de push disse não existir mais."""
+
+    canal: Canal
+    situacao: SituacaoEnvio
+    destinos: int
+    entregues: int
+    falhas: int
+    removidas: int
+    pulados: int
+    criado_em: datetime
+    concluido_em: datetime | None
+
+
+class EnviosDoAviso(Saida):
+    """`GET /api/avisos/{id}/envios` (gestão). Vazio para aviso publicado antes do M2."""
+
+    itens: list[EnvioDoAviso]
