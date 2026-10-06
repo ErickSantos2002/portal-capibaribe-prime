@@ -45,11 +45,15 @@ modelos em `api/app/modelos/notificacoes.py`.
 
 - **Some com a sessão:** trigger em `sessao` apaga a inscrição quando `encerrada_em` é
   preenchido (sair, desconectar, trocar a senha, reset, apagar dados). Inscrever numa sessão
-  encerrada falha (`inscricao_push_sessao_encerrada`).
-- **No máximo 10 por unidade** (`inscricao_push_limite`), contando só sessões não encerradas.
-  O trigger trava a unidade (`for no key update`): duas inscrições ao mesmo tempo contam uma
-  com a outra. Dez cobre a família toda; mais que isso é sinal de abuso (cada inscrição é um
-  POST que a função faz a cada aviso).
+  encerrada falha (`inscricao_push_sessao_encerrada`). O trigger lê a sessão com `for share`:
+  encerrar e inscrever ao mesmo tempo nunca deixam inscrição viva numa sessão encerrada
+  (revisão do contrato, achado 4; testado nas duas ordens).
+- **No máximo 10 por unidade** (`inscricao_push_limite`), contando só as sessões **que ainda
+  valem** pela regra de `buscar_sessao` (não encerradas, usadas nos últimos 180 dias, abertas
+  depois da última troca de senha): são as que o morador vê em Minha unidade e consegue
+  desconectar para liberar a vaga (achado 5). O trigger trava a unidade (`for no key update`):
+  duas inscrições ao mesmo tempo contam uma com a outra. Dez cobre a família toda; mais que
+  isso é sinal de abuso (cada inscrição é um POST que a função faz a cada aviso).
 - Sessão que venceu por 180 dias sem uso, ou aberta antes da última troca de senha, não é
   apagada, mas **não recebe** (`destinos_push` aplica as mesmas regras de `buscar_sessao`).
 
@@ -85,11 +89,13 @@ apagado).
 | `aviso_id`, `canal` | únicos juntos (`notificacao_envio_unico`); `canal` em `push`, `email` |
 | `situacao` | nasce `pendente`; `pendente → enviando / desligado / interrompido`; `enviando → concluido / interrompido`; o resto é final (`notificacao_envio_situacao`) |
 | `criado_em`, `iniciado_em`, `concluido_em` | carimbadas pelo banco nas mudanças de situação |
-| `destinos`, `entregues`, `falhas`, `removidas`, `pulados` | `>= 0`; `entregues + falhas + pulados <= destinos`; `removidas <= falhas` |
+| `destinos`, `entregues`, `falhas`, `removidas`, `pulados`, `reservados` | `>= 0`; `entregues + falhas + pulados <= destinos`; `removidas <= falhas`; no e-mail, `entregues + falhas <= reservados` (`notificacao_envio_reserva`) |
 
 `destinos`: aparelhos (push) ou unidades (e-mail). `entregues`: aceitos pelo serviço de push
 (201) ou pelo Gmail; não quer dizer "lido". `removidas`: inscrições que o serviço de push disse
-não existir mais (404/410), apagadas. `pulados`: e-mails que não couberam na cota do dia.
+não existir mais (404/410), apagadas. `pulados`: o que não coube na cota do dia ou no prazo da
+função. `reservados`: e-mails separados da cota do Gmail **antes** de mandar (seção 5); o banco
+não aceita e-mail tentado além da reserva.
 
 ### 2.4 Permissões do `app`
 
@@ -97,7 +103,7 @@ não existir mais (404/410), apagadas. `pulados`: e-mails que não couberam na c
 |---|---|---|---|---|
 | `inscricao_push` | sim | sim | só `sessao_id`, `chave_p256dh`, `chave_auth` | sim |
 | `token_recuperacao` | sim | sim | só `usado_em` | sim (faxina de tokens velhos) |
-| `notificacao_envio` | sim | sim | só `situacao` e as contagens | **não** |
+| `notificacao_envio` | sim | sim | só `situacao` e as contagens (inclusive `reservados`) | **não** |
 
 ## 3. Peças comuns da API (prontas e testadas nesta onda)
 
@@ -106,9 +112,10 @@ não existir mais (404/410), apagadas. `pulados`: e-mails que não couberam na c
 | Configuração | `app/configuracao.py` | `config_push() -> ConfigPush \| None`, `config_email() -> ConfigEmail \| None`, `url_base()`. Seção 6 |
 | Gerar chaves | `app/comandos/gerar_chaves_vapid.py` | `uv run python -m app.comandos.gerar_chaves_vapid` imprime um par novo (nada fica no repositório) |
 | Segundo plano | `app/servicos/segundo_plano.py` | `agendar(tarefas, funcao, *args)`: `wait_until` na Vercel, `BackgroundTasks` fora. Seção 5 |
-| Notificar | `app/servicos/notificacoes.py` | interface `Enviador`, `registrar_publicacao`, `agendar`, `processar`, `destinos_push`, `destinos_email`, cota do Gmail. Seção 5 |
+| Notificar | `app/servicos/notificacoes.py` | interface `Enviador`, `Resultado` (com `reservar`, `salvar`, `tempo_esgotado`), `registrar_publicacao`, `agendar`, `processar`, `destinos_push`, `destinos_email`, cota do Gmail (`reservar_cota_email`, `reservar_email_recuperacao`). Seção 5 |
 | Envios | `app/rotas/envios.py` | `GET /api/avisos/{id}/envios` (seção 4.4) |
-| Histórico | `app/servicos/historico.py` | ações `recuperacao_pedida` e `senha_redefinida` (seção 4.3) e as frases delas em `web/src/administracao/frases.ts` |
+| Histórico | `app/servicos/historico.py` | ações `recuperacao_pedida` e `senha_redefinida` (seção 4.3), `registrado_recentemente(db, acao, entidade=, entidade_id=, janela=)`, e as frases em `web/src/administracao/frases.ts` |
+| Pedido de recuperação | `app/rotas/recuperacao.py` (`pedir`) | já pronto: valida o formato, agenda `processar_pedido` e responde 202. Seção 4.3 |
 | 501 | `app/erros_api.py` | `em_construcao()`: 501 `em_construcao`, "Esta parte do Portal ainda está sendo feita." |
 
 A publicação já está ligada: `app/servicos/avisos.publicar` chama `registrar_publicacao` antes
@@ -127,9 +134,12 @@ TypeScript conferidos pelo `api/testes/test_contrato.py`:
 | `app/esquemas/recuperacao.py` | `web/src/recuperacao/tipos.ts` | épico B |
 | `app/esquemas/comum.py` (`EnvioDoAviso`, `EnviosDoAviso`, `Canal`, `SituacaoEnvio`) | `web/src/api/tipos.ts` | comum |
 
-Nesta onda as rotas dos épicos respondem **501 `em_construcao`**, mas sessão, permissão, CSRF e
-validação do corpo já são os de verdade (`api/testes/test_m2_rotas.py`). O épico troca só o
-corpo da função e apaga os testes de 501 do próprio épico.
+Nesta onda as rotas dos épicos respondem **501 `em_construcao`** (menos o pedido de
+recuperação, já pronto), mas sessão, permissão, CSRF e validação do corpo já são os de verdade.
+O que vale antes e depois dos épicos está em `api/testes/test_m2_rotas.py` (a lista de serviços
+de push testada direto no validador; a rota pública testada como "não recusa por falta de
+sessão"). Os testes de 501 ficam à parte, em `api/testes/test_m2_em_construcao.py`: o épico
+troca o corpo da função e apaga a própria seção de lá.
 
 ### 4.1 Funções de API no front
 
@@ -170,7 +180,9 @@ corpo da função e apaga os testes de 501 do próprio épico.
   10 s), TTL de 3 dias, `Urgency: high` na categoria `urgente` (`normal` nas outras), `Topic:
   aviso-<id>`. 404 ou 410: apaga a inscrição (`removidas`, que também conta em `falhas`). Outro
   erro: `falhas`, e segue. **A sessão do banco não é segura entre threads:** as threads só
-  mandam; apagar as inscrições mortas é no fim, na thread principal.
+  mandam; apagar as inscrições mortas e contar é na thread principal, com
+  `resultado.salvar()` a cada `SALVAR_A_CADA` e parada em `resultado.tempo_esgotado()` (o resto
+  é `pulados`). O push não usa `reservar`.
 - Service worker (`web/public/sw.js`): `push` mostra a notificação com `titulo` (ícone
   `/icon-192.png`, `tag` `aviso-<id>`, `data.url`); `notificationclick` foca uma janela do
   Portal já aberta e navega para `url`, ou abre uma nova, **só para caminhos do próprio Portal
@@ -201,15 +213,28 @@ mandar um formulário de troca de senha.
 - **A resposta é sempre a mesma** para qualquer login válido (H-04): 202 com `mensagem` "Se
   houver e-mail cadastrado, enviamos um link. Se não chegou, fale com a administração."
   (`MSG_PEDIDO`). Login que não existe, unidade sem e-mail, limite estourado, cota do dia
-  esgotada ou e-mail desligado: mesma resposta. O envio sai **depois da resposta**
-  (`segundo_plano.agendar`), para o tempo de resposta também não revelar quem tem e-mail.
-- Pedido (regras, em `app/servicos/recuperacao.py`, novo): unidade ativa, ativada e com e-mail;
-  `config_email()` ligada; `cota_email_recuperacao(db) > 0`; o INSERT do token (o banco recusa
-  acima de 3/hora e 6/dia: tratar a restrição como "não manda"). Token =
-  `secrets.token_urlsafe(32)`; o banco guarda `sha256`. Histórico `recuperacao_pedida`, ação do
-  sistema (`unidade_id` nulo, entidade `unidade`), com `{"enviado": bool, "motivo": null |
-  "sem_email" | "limite" | "cota" | "desligado"}` (só para unidade que existe). O token em texto
-  só existe na memória até o e-mail sair; **nunca** em log, histórico ou banco.
+  esgotada ou e-mail desligado: mesma resposta.
+- **O pedido inteiro roda depois da resposta** (revisão do contrato, achado 3; já pronto nesta
+  onda): a rota `pedir` **não abre o banco**, só valida o formato do login, agenda
+  `app.servicos.recuperacao.processar_pedido(login)` (`segundo_plano.agendar`) e responde. Se a
+  consulta da unidade, a cota, o token e o histórico ficassem na requisição, o tempo de resposta
+  revelaria quem tem e-mail. O teste `test_pedido_responde_igual_e_deixa_tudo_para_depois`
+  quebra o banco na requisição: o épico B não pode pôr `Banco` em `pedir`.
+- `processar_pedido` (épico B, em `app/servicos/recuperacao.py`, abre a própria sessão):
+  1. unidade ativa, ativada e com e-mail pelo login (senão `motivo = "sem_email"`);
+  2. `config_email()` ligada (senão `"desligado"`);
+  3. `reservar_email_recuperacao(db)`: pega a trava da cota na transação e diz se cabe
+     (senão `"cota"`);
+  4. INSERT do token (`secrets.token_urlsafe(32)`, o banco guarda `sha256`); as restrições de
+     3/hora e 6/dia viram `"limite"`;
+  5. histórico `recuperacao_pedida`, ação do sistema (`unidade_id` nulo, entidade `unidade`),
+     `{"enviado": bool, "motivo": null | "sem_email" | "limite" | "cota" | "desligado"}`, **só
+     para unidade que existe e no máximo uma vez por unidade por hora**
+     (`historico.registrado_recentemente(..., janela=1 hora)`): um script contra os 320 logins
+     não enche o banco (Neon Free);
+  6. commit (solta a trava da cota) e só então o e-mail.
+  O token em texto só existe na memória até o e-mail sair; **nunca** em log, histórico ou banco.
+  Nada levanta para fora; erro vira log sem dado pessoal.
 - Link do e-mail: `config_email().url_base + "/redefinir-senha#token=<token>"`. O token vai
   **depois do `#`**: o navegador não o manda para o servidor, então ele não fica em log de
   acesso nem em `Referer`. A tela lê o `#`, apaga-o da barra (`history.replaceState`) e chama
@@ -227,9 +252,12 @@ mandar um formulário de troca de senha.
   `senha_redefinida`, commit e `gravar_cookie`. Responde `Eu`: a pessoa já entra. Senha: mesmas
   regras e mensagens do primeiro acesso (`SenhaNova`, `SenhaRepetida`).
 - Cópia do aviso (`app/servicos/email.py`, `ENVIADOR`): para `destinos_email(db, aviso)`,
-  **uma mensagem por unidade** (nunca vários endereços no mesmo e-mail), até
-  `cota_email_avisos(db)`; o resto é `pulados`. Uma conexão SMTP por envio, com tempo limite;
-  recusa de um destinatário conta como falha e segue; queda da conexão interrompe o canal.
+  **uma mensagem por unidade** (nunca vários endereços no mesmo e-mail). **Antes de mandar**,
+  `n = resultado.reservar(len(destinos))` (a reserva da cota, seção 5); só os `n` primeiros
+  são tentados, o resto é `pulados`. Uma conexão SMTP por envio, com tempo limite;
+  `resultado.salvar()` a cada `SALVAR_A_CADA`; em `resultado.tempo_esgotado()`, para e conta o
+  resto como `pulados`; recusa de um destinatário conta como falha e segue; queda da conexão
+  interrompe o canal.
   Assunto "Aviso do Portal: <título>"; texto puro com o texto do aviso, o link
   `url_base + aviso.caminho` e o rodapé "Você recebe porque cadastrou este e-mail no Portal
   Capibaribe Prime. Para não receber mais, apague o e-mail em Minha unidade.". Remetente
@@ -262,14 +290,18 @@ Decisão completa e alternativas: [ADR-0010](../../adr/0010-envio-em-segundo-pla
    `segundo_plano.agendar`: na Vercel, `vercel.functions.wait_until(asyncio.to_thread(...))`
    (SDK oficial; o runtime Python drena isso **depois de enviar a resposta**, dentro da duração
    máxima da função, 300 s no Hobby com Fluid compute); fora da Vercel, `BackgroundTasks`. O
-   `BackgroundTasks` sozinho não serve na Vercel: no modo sem Fluid ele segura a resposta, e
-   no Fluid funcionaria só por detalhe interno do runtime.
+   `BackgroundTasks` sozinho não é contrato documentado da Vercel (ADR-0010).
 3. **`processar(aviso_id)`:** faxina (`enviando` há mais de 10 min e `pendente` há mais de
    24 h viram `interrompido`); depois, para este aviso e para os `pendente` que sobraram de
    outros, reivindica cada canal com `UPDATE … where situacao = 'pendente'` (**só um processo
-   ganha: no máximo uma vez**). Aviso arquivado antes do envio: `interrompido`. Canal
-   desligado: `desligado`. Exceção no enviador: `interrompido`, com as contagens até ali, e só
-   o tipo do erro no log (a mensagem de um erro de SMTP pode trazer o e-mail de alguém).
+   ganha: no máximo uma vez**). **Os canais de um aviso rodam em paralelo** (uma thread e uma
+   sessão de banco por canal): o e-mail, lento, não atrasa o push, e o push não come o tempo do
+   e-mail. **Prazo comum** `TEMPO_MAXIMO = 240 s` (a função tem 300 s; sobra para gravar o fim):
+   o enviador para em `resultado.tempo_esgotado()` e conta o resto como `pulados` (que aparecem
+   em `/envios`). Aviso arquivado antes do envio: `interrompido`. Canal desligado: `desligado`.
+   Exceção no enviador: `interrompido`, com as contagens até ali, e no log só o tipo do erro
+   (`RuntimeError`, `SMTPServerDisconnected`…), nunca a mensagem (a de um erro de SMTP pode
+   trazer o e-mail de alguém).
 4. **Quem recebe** (regra comum, `destinos_push` e `destinos_email`): unidades **ativas** do
    destino (todos, ou os blocos de `aviso_bloco`), **menos a unidade que publicou** (ela já
    conta como quem leu; dúvida 4). Push: só sessões que valem (não encerradas, usadas nos
@@ -277,10 +309,22 @@ Decisão completa e alternativas: [ADR-0010](../../adr/0010-envio-em-segundo-pla
    feito; os dois celulares do casal são duas sessões e os dois recebem (H-05). E-mail: unidades
    já ativadas com e-mail, uma vez cada.
 5. **Cota do Gmail** (~500 destinatários por dia na conta grátis): `LIMITE_EMAILS_24H = 450`
-   numa janela móvel de 24 h, contando cópias tentadas (`entregues + falhas`) e links de
-   recuperação criados; `RESERVA_RECUPERACAO = 50` fica só para o "esqueci a senha"
+   numa janela móvel de 24 h; `RESERVA_RECUPERACAO = 50` fica só para o "esqueci a senha"
    (`cota_email_avisos` e `cota_email_recuperacao`). Hoje são ~320 unidades no máximo: um aviso
-   para todos cabe; o segundo no mesmo dia pode ter `pulados` (dúvida 5).
+   para todos cabe; o segundo no mesmo dia pode ter `pulados` (dúvida 5). **A cota é
+   reservada antes de mandar** (revisão do contrato, achado 2):
+   - `resultado.reservar(n)` → `reservar_cota_email`: numa transação própria, com a trava
+     `pg_advisory_xact_lock(TRAVA_COTA_EMAIL)`, separa `min(n, cota livre)` e grava em
+     `notificacao_envio.reservados` **na hora**. A cota mede as reservas (não o que já saiu):
+     uma função que morre no meio de 320 e-mails continua contando os 320, e dois avisos
+     próximos não leem a mesma sobra.
+   - O banco recusa e-mail tentado além da reserva (`notificacao_envio_reserva`).
+   - Envio que termina devolve a sobra (`reservados` cai para `entregues + falhas`);
+     envio interrompido fica com a reserva inteira (não se sabe quantos saíram).
+   - O "esqueci a senha" pega a mesma trava (`reservar_email_recuperacao(db)`) na transação em
+     que cria o token; o token conta na cota.
+   - `resultado.salvar()` grava as contagens aos poucos (transação própria), para `/envios`
+     mostrar o progresso e nada sumir se a função morrer.
 
 Interface que cada épico implementa no próprio arquivo (`app/servicos/push.py` e
 `app/servicos/email.py`, um `ENVIADOR` em cada):
@@ -294,8 +338,12 @@ class Enviador(Protocol):
 
 `AvisoParaNotificar`: `aviso_id`, `titulo`, `texto`, `categoria` (da versão em vigor),
 `publicado_por`, `para_todos`, `blocos` (números) e a propriedade `caminho` (`/avisos/<id>`).
-`Resultado`: as cinco contagens, atualizadas pelo enviador enquanto trabalha. `enviar` não faz
-commit; quem chama faz. Testar com SMTP falso (`smtplib.SMTP_SSL` trocado por um objeto que
+`Resultado`: as contagens (`destinos`, `entregues`, `falhas`, `removidas`, `pulados`,
+`reservados`), atualizadas pelo enviador enquanto trabalha, e os métodos `reservar(n) -> int`
+(só o e-mail; chamar **antes** de mandar), `salvar()` (a cada `SALVAR_A_CADA = 25` destinos) e
+`tempo_esgotado()`. `enviar` **não faz commit em `db`** (a reserva e o progresso vão por
+`resultado`, cada um na própria transação; o resto, como apagar inscrição morta, é commitado
+por quem chama no fim). Roda numa thread própria. Testar com SMTP falso (`smtplib.SMTP_SSL` trocado por um objeto que
 guarda as mensagens) e push falso (`pywebpush.webpush` trocado): **nenhum teste fala com o Gmail
 ou com um serviço de push de verdade**.
 
@@ -366,12 +414,15 @@ não o `index.html`.
 `api/app/servicos/push.py`, `api/testes/test_push*.py` (novos), `web/src/notificacoes/**`,
 `web/public/sw.js` e `web/public/manifest.webmanifest` (novos), a linha do manifest em
 `web/index.html` (e as metas de PWA do iPhone, se precisar), o teste dela em
-`web/testes/pwa.test.ts` (novo), `docs/superpowers/duvidas-m2-push.md` (novo).
+`web/testes/pwa.test.ts` (novo), `docs/superpowers/duvidas-m2-push.md` (novo). Nos testes
+comuns, só: apagar a seção "épico A" de `api/testes/test_m2_em_construcao.py` e tirar
+`/api/notificacoes` de `EM_CONSTRUCAO` em `api/testes/test_cache.py`.
 
-**Épico B · E-mail** edita só: `api/app/rotas/recuperacao.py`, `api/app/esquemas/recuperacao.py`,
-`api/app/servicos/recuperacao.py` (novo), `api/app/servicos/email.py`,
-`api/testes/test_recuperacao*.py` e `api/testes/test_email*.py` (novos), `web/src/recuperacao/**`,
-`docs/superpowers/duvidas-m2-email.md` (novo).
+**Épico B · E-mail** edita só: `api/app/rotas/recuperacao.py` (sem pôr `Banco` em `pedir`),
+`api/app/esquemas/recuperacao.py`, `api/app/servicos/recuperacao.py`,
+`api/app/servicos/email.py`, `api/testes/test_recuperacao*.py` e `api/testes/test_email*.py`
+(novos), `web/src/recuperacao/**`, `docs/superpowers/duvidas-m2-email.md` (novo). Nos testes
+comuns, só: apagar a seção "épico B" de `api/testes/test_m2_em_construcao.py`.
 
 **Comuns — nenhum épico edita** (se precisar, avisa o coordenador e explica no arquivo de
 dúvidas do épico): `api/migracoes/**` (**nenhuma migração nova no M2 sem o coordenador**),
@@ -379,9 +430,9 @@ dúvidas do épico): `api/migracoes/**` (**nenhuma migração nova no M2 sem o c
 `api/app/servicos/{notificacoes,segundo_plano,historico,avisos,acesso,tentativas}.py`,
 `api/app/seguranca/**`, `api/app/esquemas/{comum,acesso,avisos}.py`,
 `api/app/rotas/{avisos,envios,acesso,sessao}.py`, `api/app/main.py`, `api/app/erros_api.py`,
-`api/testes/{conftest,apoio}.py` e os testes já existentes (inclusive `test_m2_*.py`), com duas
-exceções combinadas: cada épico apaga os testes de 501 das próprias rotas em `test_m2_rotas.py`,
-e o épico A tira `/api/notificacoes` de `EM_CONSTRUCAO` em `test_cache.py`), `api/pyproject.toml`,
+`api/testes/{conftest,apoio}.py` e os testes já existentes (inclusive `test_m2_rotas.py`,
+`test_m2_banco.py`, `test_m2_notificacoes.py`, `test_m2_configuracao.py`, `test_m2_backup.py`;
+as únicas exceções são as dos parágrafos acima), `scripts/backup/**`, `api/pyproject.toml`,
 `api/uv.lock` (as dependências do M2, `pywebpush` e `vercel`, já estão), `api/.env.example`,
 `web/src/{main.tsx,rotas.tsx,estilo.css}`, `web/src/{api,casca,acesso,avisos,administracao}/**`,
 `web/package*.json`, `web/vite.config.ts`, `vercel.json`, `.github/**`, `docs/0*.md`,
@@ -390,8 +441,9 @@ mudam só no fechamento do marco (coordenador). Um épico **pode** criar um CSS 
 (`web/src/<pasta do épico>/<nome>.css`).
 
 Usar sem editar: `trocar_senha_e_sessao`, `gravar_cookie` (`app/seguranca/sessoes.py`),
-`esquecer_login` (`app/servicos/tentativas.py`), `registrar` (histórico), `destinos_*`,
-`cota_*`, `AvisoParaNotificar`, `Resultado` (`app/servicos/notificacoes.py`), `config_*`
+`esquecer_login` (`app/servicos/tentativas.py`), `registrar` e `registrado_recentemente`
+(histórico), `destinos_*`, `cota_*`, `reservar_email_recuperacao`, `SALVAR_A_CADA`,
+`AvisoParaNotificar`, `Resultado` (`app/servicos/notificacoes.py`), `config_*`
 (`app/configuracao.py`), `agendar` (`app/servicos/segundo_plano.py`), `Placa`, `Tela`,
 `useSessao`, `useRecado` (casca), `Campo`, `CaixaDeErro`, `campos.ts` (`web/src/acesso/`).
 

@@ -144,3 +144,25 @@ PrimeiroAcesso.tsx,MinhaUnidade.tsx}` e os testes com `Aparelho`, `web/src/{main
 - [x] ADR-0010 (envio depois da resposta) e dúvidas registradas.
 - [x] Suíte completa da API (com a migração do zero), ruff, lint/typecheck/test/build do front;
   migração 0005 `upgrade → downgrade → upgrade`; commit.
+
+### Tarefa 6: Correções da revisão independente
+
+**Arquivos:** `api/migracoes/versions/0005_notificacoes_e_recuperacao.py` (ainda não rodou fora
+dos testes: editada, sem 0006), `api/app/modelos/notificacoes.py`,
+`api/app/servicos/{notificacoes,historico,recuperacao,email,push}.py`,
+`api/app/rotas/recuperacao.py`, `scripts/backup/verificacoes.sql`,
+`api/testes/test_m2_{banco,notificacoes,rotas,em_construcao,backup}.py`, spec, ADR-0010,
+dúvidas (itens 19 e 20).
+
+- [x] Achados 4 e 5: encerrar e inscrever ao mesmo tempo (nas duas ordens) não deixam inscrição
+  viva; sessão vencida ou de antes da troca de senha não conta no limite de 10. Testes falharam
+  antes da correção.
+- [x] Achado 6: teste compara a lista do `verificacoes.sql` com o banco migrado.
+- [x] Achados 2 e 8: reserva da cota vale na hora mesmo se a função morrer; não passa da cota;
+  reservas ao mesmo tempo não passam juntas (falha sem a trava); progresso gravado aos poucos;
+  sobra da reserva volta; prazo de 240 s; push e e-mail em paralelo; o banco recusa e-mail além
+  da reserva; log com o tipo do erro.
+- [x] Achados 3 e 7: o pedido de recuperação responde igual com o banco quebrado na requisição
+  (falha se a rota abrir o banco); histórico no máximo uma vez por hora; testes de 501 em
+  arquivo à parte; validador de serviços de push testado direto.
+- [x] Suíte completa, ruff, lint/typecheck/test/build; commit.

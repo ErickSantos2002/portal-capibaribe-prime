@@ -54,7 +54,8 @@ Os agentes dos épicos registram as próprias dúvidas em `duvidas-m2-push.md` (
   só para links de recuperação. O que não cabe na cota vira `pulados` no envio, sem erro; o push
   vai sempre.
 - **Por quê:** estourar o limite do Gmail bloqueia a conta por até um dia, e aí nem o "esqueci
-  a senha" funciona. Hoje há 23 unidades ativadas e poucas com e-mail; a conta só aperta com
+  a senha" funciona. Por isso a cota é **reservada antes de mandar**, com trava e gravada na hora
+  (item 19): conta mesmo se a função morrer, e dois avisos ao mesmo tempo não passam juntos. Hoje há 23 unidades ativadas e poucas com e-mail; a conta só aperta com
   muitas unidades com e-mail **e** dois avisos para todos no mesmo dia. Se apertar, as saídas
   são as da ADR-0006 (domínio + serviço de e-mail transacional).
 
@@ -126,7 +127,9 @@ Os agentes dos épicos registram as próprias dúvidas em `duvidas-m2-push.md` (
   cadastrado").
 - **Por quê:** a resposta ao morador não pode revelar se há e-mail, mas a administração precisa
   saber que alguém do 203 tentou e não conseguiu, para procurar a família no grupo. O motivo
-  não é dado pessoal (não diz qual é o e-mail).
+  não é dado pessoal (não diz qual é o e-mail). **No máximo um registro por unidade por hora**
+  (`registrado_recentemente`): um script pedindo links para os 320 logins não enche o banco
+  do Neon Free (revisão, achado 3).
 
 ## 15. O título do aviso aparece na tela bloqueada
 - **Decisão:** a notificação mostra o título do aviso (H-13: "notificação com o título").
@@ -157,3 +160,31 @@ Os agentes dos épicos registram as próprias dúvidas em `duvidas-m2-push.md` (
   `PORTAL_URL_BASE=https://portal-capibaribe-prime.vercel.app` como variáveis sensíveis de
   Production; na prévia, só o VAPID da prévia (sem SMTP); (4) migração 0005 no Neon (produção e
   `previa`). Tudo isso é com o coordenador, depois dos épicos.
+
+## 19. Revisão independente do contrato: o que mudou
+Um revisor sem contexto conferiu a branch; corrigido com teste que falhava antes:
+- **Cota do Gmail reservada antes de mandar** (achado 2): a medida era o que já tinha saído,
+  gravada só no fim. Uma função morta no meio de 320 e-mails não contava nada, e dois avisos
+  próximos liam a mesma sobra. Agora a cota é reservada com trava e gravada na hora
+  (`notificacao_envio.reservados`, item 5 e ADR-0010); o banco recusa e-mail além da reserva;
+  o progresso é gravado aos poucos.
+- **Pedido de recuperação inteiro depois da resposta** (achado 3): a rota não abre mais o banco;
+  `recuperacao_pedida` vai ao histórico no máximo uma vez por unidade por hora (item 14).
+- **Inscrição de push trava a sessão** (achado 4) e **o limite de 10 conta só sessão que vale**
+  (achado 5): sessão vencida o morador não vê e não teria como liberar a vaga.
+- **Verificações do backup** conhecem as tabelas do M2 (e a `entrada_tentativa` da 0003, que
+  também faltava), com teste que compara com o banco migrado (achado 6).
+- **Testes que sobrevivem aos épicos** (achado 7): os de 501 saíram para
+  `test_m2_em_construcao.py`.
+- **Log do canal interrompido** traz o tipo do erro (achado 8).
+
+## 20. E-mail que não cabe no tempo da função vira `pulados`, sem continuação
+- **Dúvida:** ~320 e-mails a 0,3-1 s cada podem passar dos 300 s da função.
+- **Decisão:** push e e-mail em paralelo, prazo comum de 240 s; ao chegar nele, o enviador para
+  e conta o resto como `pulados` (aparece em `/envios`). **Não** há continuação no próximo
+  processamento.
+- **Por quê:** continuar exigiria guardar, por unidade, quem já recebeu cada aviso (uma tabela de
+  entregas por destinatário), o que a garantia "no máximo uma vez" e o volume de hoje (23
+  unidades ativadas, poucas com e-mail) não pedem. O épico B mede no portão quanto tempo leva
+  cada e-mail; se `pulados` aparecer por tempo, a saída é mandar em 2 ou 3 conexões SMTP em
+  paralelo (dentro do mesmo prazo) ou a tabela de entregas.
