@@ -76,6 +76,8 @@ def test_item_do_mural(logar):
         "arquivado_em": None,
         "lido": False,
         "corrigido_desde_a_leitura": False,
+        "categoria": "geral",
+        "evento_quando": None,
     }
 
 

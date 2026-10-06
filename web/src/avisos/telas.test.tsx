@@ -31,12 +31,21 @@ function resumo(id: number, extra: Partial<AvisoResumo> = {}): AvisoResumo {
     arquivado_em: null,
     lido: true,
     corrigido_desde_a_leitura: false,
+    categoria: 'geral',
+    evento_quando: null,
     ...extra,
   }
 }
 
 function completo(id: number, extra: Partial<AvisoCompleto> = {}): AvisoCompleto {
-  return { ...resumo(id), texto: `Texto ${id}`, versoes_anteriores: [], leitura: null, ...extra }
+  return {
+    ...resumo(id),
+    texto: `Texto ${id}`,
+    evento: null,
+    versoes_anteriores: [],
+    leitura: null,
+    ...extra,
+  }
 }
 
 function json(status: number, corpo: unknown) {
@@ -231,6 +240,8 @@ describe('aviso aberto', () => {
                   titulo: 'Reunião às 19h',
                   texto: 'Antes.',
                   criada_em: '2026-11-03T12:00:00Z',
+                  categoria: 'geral',
+                  evento: null,
                 },
               ],
             }),

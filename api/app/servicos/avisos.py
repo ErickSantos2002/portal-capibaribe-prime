@@ -24,9 +24,11 @@ from app.erros_api import ErroApi
 from app.esquemas.avisos import (
     AvisoCompleto,
     AvisoResumo,
+    Categoria,
     ContagemLeitura,
     CorrigirAviso,
     DestinoBloco,
+    Evento,
     Leitura,
     NovoAviso,
     VersaoAviso,
@@ -48,6 +50,11 @@ ASSINATURAS = {
 LIMITE_RESUMO = 200
 # Parágrafo = linha em branco (pode ter espaços), como na tela.
 _PARAGRAFO = re.compile(r"\n[ \t]*\n")
+# Marcas do Markdown restrito no começo da linha (spec dos avisos com formatação, seção 3.1),
+# iguais às do renderizador da tela (`web/src/avisos/formatacao.ts`).
+_MARCA_DA_LINHA = re.compile(r"^(?:## |- |\d{1,3}\. |> )(?=\S)", re.M)
+# Negrito: `**trecho**`, sem espaço colado por dentro das marcas.
+_NEGRITO = re.compile(r"\*\*(\S(?:.*?\S)?)\*\*")
 
 
 # --- erros ------------------------------------------------------------------------------------
@@ -77,9 +84,14 @@ def sem_acento(texto: str) -> str:
     return "".join(c for c in decomposto if unicodedata.category(c) != "Mn").casefold()
 
 
+def sem_marcas(texto: str) -> str:
+    """O texto sem as marcas de formatação: o resumo do mural nunca mostra asterisco."""
+    return _NEGRITO.sub(r"\1", _MARCA_DA_LINHA.sub("", texto))
+
+
 def resumir(texto: str) -> str:
-    """Primeiro parágrafo numa linha só, até 200 caracteres (cortado com "…")."""
-    primeiro = _PARAGRAFO.split(texto, maxsplit=1)[0]
+    """Primeiro parágrafo, sem marcas, numa linha só, até 200 caracteres (cortado com "…")."""
+    primeiro = sem_marcas(_PARAGRAFO.split(texto, maxsplit=1)[0])
     linha = " ".join(primeiro.split())
     if len(linha) <= LIMITE_RESUMO:
         return linha
@@ -195,7 +207,15 @@ def _resumo(m: _Montado) -> dict:
         "arquivado_em": a.arquivado_em,
         "lido": m.lido,
         "corrigido_desde_a_leitura": m.corrigido_desde_a_leitura,
+        "categoria": m.atual.categoria,
+        "evento_quando": m.atual.evento_quando,
     }
+
+
+def _evento(versao: AvisoVersao) -> Evento | None:
+    if versao.evento_quando is None:
+        return None
+    return Evento(quando=versao.evento_quando, onde=versao.evento_onde)
 
 
 def _buscar(db: Session, logado: Logado, aviso_id: int, *, travar: bool = False) -> Aviso:
@@ -261,8 +281,16 @@ def abrir(db: Session, logado: Logado, aviso_id: int) -> AvisoCompleto:
     return AvisoCompleto(
         **_resumo(m),
         texto=m.atual.texto,
+        evento=_evento(m.atual),
         versoes_anteriores=[
-            VersaoAviso(versao=v.versao, titulo=v.titulo, texto=v.texto, criada_em=v.criada_em)
+            VersaoAviso(
+                versao=v.versao,
+                titulo=v.titulo,
+                texto=v.texto,
+                criada_em=v.criada_em,
+                categoria=Categoria(v.categoria),
+                evento=_evento(v),
+            )
             for v in m.versoes[1:]
         ],
         leitura=_contagem(db, aviso) if logado.gestao else None,
@@ -328,6 +356,15 @@ def destinos(db: Session) -> list[DestinoBloco]:
 # --- gestão -----------------------------------------------------------------------------------
 
 
+def _categoria_e_evento(dados: CorrigirAviso) -> dict:
+    """As colunas da 0004 a partir do corpo da requisição."""
+    return {
+        "categoria": dados.categoria.value,
+        "evento_quando": dados.evento.quando if dados.evento else None,
+        "evento_onde": dados.evento.onde if dados.evento else None,
+    }
+
+
 def publicar(db: Session, logado: Logado, dados: NovoAviso) -> int:
     """Publica (H-12) e devolve o id. Quem publica já conta como quem leu."""
     blocos = [] if dados.para_todos else _ids_dos_blocos(db, dados.blocos)
@@ -347,6 +384,7 @@ def publicar(db: Session, logado: Logado, dados: NovoAviso) -> int:
             titulo=dados.titulo,
             texto=dados.texto,
             criada_por=logado.unidade_id,
+            **_categoria_e_evento(dados),
         )
     )
     db.add_all(AvisoBloco(aviso_id=aviso.id, bloco_id=b) for b in blocos)
@@ -393,7 +431,15 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
         .order_by(AvisoVersao.versao.desc())
         .limit(1)
     ).one()
-    if (atual.titulo, atual.texto) == (dados.titulo, dados.texto):
+    novas = _categoria_e_evento(dados)
+    # Datas comparadas como instante (o mesmo horário em outro fuso não é mudança).
+    if (atual.titulo, atual.texto, atual.categoria, atual.evento_quando, atual.evento_onde) == (
+        dados.titulo,
+        dados.texto,
+        novas["categoria"],
+        novas["evento_quando"],
+        novas["evento_onde"],
+    ):
         raise ErroApi(409, "sem_mudanca", "Nada mudou no aviso.")
     versao = atual.versao + 1
     db.add(
@@ -403,6 +449,7 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
             titulo=dados.titulo,
             texto=dados.texto,
             criada_por=logado.unidade_id,
+            **novas,
         )
     )
     try:

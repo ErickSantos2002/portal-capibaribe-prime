@@ -191,6 +191,8 @@ export function NovoAviso() {
     arquivado_em: null,
     lido: false,
     corrigido_desde_a_leitura: false,
+    categoria: 'geral',
+    evento_quando: null,
   }
   const unidades = alcance.situacao === 'pronta' ? alcance.dados.unidades : null
 

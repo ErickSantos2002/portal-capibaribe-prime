@@ -365,6 +365,18 @@ vê os contatos, só para ler: dúvida 9, revista em 06/10/2026); as outras com 
   `X-Portal` (revisão do M1).
 - `ContagemNaoLidos`: `{ "quantidade": N }` (avisos visíveis, não arquivados, não lidos; para o
   número na aba "Avisos").
+- **Categoria e evento** (spec `2026-10-06-avisos-visual-design.md`, migração 0004): `NovoAviso`
+  e `CorrigirAviso` ganham `categoria` (`Categoria`: `geral` (padrão), `obra`, `reuniao`,
+  `financeiro`, `urgente`; outra: 422 no campo `categoria`) e `evento: Evento | null` (padrão
+  nulo). `Evento`: `quando` (data e hora **com fuso**; no passado vale; sem fuso: 422 "Informe a
+  hora com o fuso (ex.: -03:00).") e `onde` (opcional, uma linha de até 120 letras, sem caractere
+  de controle; vazio vira nulo). Sem `quando`: 422 no campo `evento`, "Escolha o dia e a hora do
+  evento.". Os dois ficam na **versão**: a correção pode mudá-los, `sem_mudanca` compara título,
+  texto, categoria e evento (o mesmo instante em outro fuso é igual), e omitir os dois na
+  correção deixa a versão nova `geral` e sem evento. `AvisoResumo` ganha `categoria` e
+  `evento_quando` (data ou nulo); `AvisoCompleto` e `VersaoAviso` ganham `categoria` e
+  `evento`. O `texto` aceita as marcas do Markdown restrito (`## `, `**…**`, `- `, `1. `, `> `),
+  interpretadas só pela tela; o `resumo` vem sem as marcas.
 - `Leitura` (H-16): `lidos`, `total` (unidades `ativa = true` do destino), e quem não leu em
   dois grupos (revisão do M1, U5): `nao_entraram: UnidadeRef[]` (ainda não fizeram o primeiro
   acesso) e `entraram_sem_ler: UnidadeRef[]` (já entraram, não abriram este aviso), cada um

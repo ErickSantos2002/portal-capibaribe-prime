@@ -1,16 +1,18 @@
 """Épico C · Avisos, só texto (spec do M1, seção 4.4). Pertence ao épico C.
 
-Espelho TypeScript: `web/src/avisos/tipos.ts`. Texto do aviso é texto puro com quebras de
-linha: a tela nunca interpreta HTML (arquitetura, seção 4).
+Espelho TypeScript: `web/src/avisos/tipos.ts`. O texto do aviso é texto com as marcas do
+Markdown restrito (`## `, `**`, `- `, `1. `, `> `; spec dos avisos com formatação, seção 3.1):
+quem interpreta é o renderizador da tela, que nunca transforma texto em HTML.
 """
 
 from datetime import datetime
-from typing import Annotated
+from enum import StrEnum
+from typing import Annotated, Any
 
-from pydantic import AfterValidator, Field, ValidationInfo, field_validator
+from pydantic import AfterValidator, Field, ValidationInfo, field_validator, model_validator
 
 from app.esquemas.comum import Entrada, Saida, UnidadeRef, sem_controle
-from app.modelos.avisos import LIMITE_TEXTO, LIMITE_TITULO
+from app.modelos.avisos import LIMITE_ONDE, LIMITE_TEXTO, LIMITE_TITULO
 
 NumeroDeBloco = Annotated[int, Field(ge=1, le=9)]
 
@@ -35,20 +37,70 @@ def validar_texto(texto: str) -> str:
     return texto
 
 
+def validar_onde(onde: str | None) -> str | None:
+    """O local do evento: uma linha, como o título. Vazio vira "sem local" (é opcional)."""
+    if onde is None:
+        return None
+    sem_controle(onde)
+    onde = onde.strip()
+    if not onde:
+        return None
+    if len(onde) > LIMITE_ONDE:
+        raise ValueError("O local pode ter até 120 letras.")
+    return onde
+
+
+def validar_quando(quando: datetime) -> datetime:
+    if quando.tzinfo is None or quando.utcoffset() is None:
+        raise ValueError("Informe a hora com o fuso (ex.: -03:00).")
+    return quando
+
+
 Titulo = Annotated[str, AfterValidator(validar_titulo)]
 Texto = Annotated[str, AfterValidator(validar_texto)]
+Onde = Annotated[str | None, AfterValidator(validar_onde)]
+Quando = Annotated[datetime, AfterValidator(validar_quando)]
 # `?busca=` do mural (texto livre de uma linha, como o título).
 Busca = Annotated[str, AfterValidator(sem_controle)]
+
+
+class Categoria(StrEnum):
+    """Do que o aviso trata (spec dos avisos com formatação, seção 2). `geral` é o padrão."""
+
+    geral = "geral"
+    obra = "obra"
+    reuniao = "reuniao"
+    financeiro = "financeiro"
+    urgente = "urgente"
+
+
+class Evento(Entrada):
+    """ "Quando / Onde" do aviso que é um evento. `quando` no passado vale (aviso sobre algo que
+    já aconteceu é legítimo); `onde` é opcional."""
+
+    quando: Quando
+    onde: Onde = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _tem_quando(cls, dados: Any) -> Any:
+        # Local sem data não é evento: a mensagem diz o que falta (o banco também recusa).
+        if isinstance(dados, dict) and dados.get("quando") is None:
+            raise ValueError("Escolha o dia e a hora do evento.")
+        return dados
 
 
 # --- requisições -------------------------------------------------------------------------------
 
 
 class CorrigirAviso(Entrada):
-    """`PUT /api/avisos/{id}`: cria a versão seguinte (H-15)."""
+    """`PUT /api/avisos/{id}`: cria a versão seguinte (H-15). Categoria e evento também são da
+    versão: omitidos, a versão nova fica `geral` e sem evento (o formulário sempre manda)."""
 
     titulo: Titulo
     texto: Texto
+    categoria: Categoria = Categoria.geral
+    evento: Evento | None = None
 
 
 class NovoAviso(CorrigirAviso):
@@ -95,6 +147,10 @@ class AvisoResumo(Saida):
     lido: bool
     # A unidade leu uma versão anterior à atual e ainda não abriu a correção (U1, revisão do M1).
     corrigido_desde_a_leitura: bool
+    # Da versão em vigor (migração 0004).
+    categoria: Categoria
+    # Para a linha do evento no mural ("Sáb, 11/10 · 9h"); nulo se não é evento.
+    evento_quando: datetime | None
 
 
 class VersaoAviso(Saida):
@@ -102,6 +158,9 @@ class VersaoAviso(Saida):
     titulo: str
     texto: str
     criada_em: datetime
+    # Cada versão guarda os dela: o "ver como era antes" mostra a categoria e o evento antigos.
+    categoria: Categoria
+    evento: Evento | None
 
 
 class ContagemLeitura(Saida):
@@ -115,6 +174,7 @@ class AvisoCompleto(AvisoResumo):
     """`GET /api/avisos/{id}` (só lê) e respostas de publicar, corrigir, arquivar e fixar."""
 
     texto: str
+    evento: Evento | None
     # Da mais nova para a mais antiga, sem a em vigor.
     versoes_anteriores: list[VersaoAviso]
     leitura: ContagemLeitura | None
