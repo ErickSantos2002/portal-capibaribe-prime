@@ -4,10 +4,12 @@ import { startTransition, useState, type ClipboardEvent, type FormEvent } from '
 import { Link, useLocation, useNavigate } from 'react-router'
 import { ErroDaApi, MENSAGEM_SEM_CONEXAO } from '../api/cliente'
 import { useSessao } from '../casca/contextoSessao'
+import { formatarHora } from '../casca/formatar'
 import { Marca } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
 import { entrar } from './api'
 import { CaixaDeErro } from './CaixaDeErro'
+import { Campo } from './Campo'
 import { limparApartamento, montarLogin } from './campos'
 import './acesso.css'
 
@@ -15,6 +17,16 @@ const BLOCOS = ['1', '2', '3', '4', '5']
 // O mesmo formato que a API aceita (RF-03): bloco 1 a 9, andar 0 a 7, dois dígitos.
 const LOGIN_POSSIVEL = /^[1-9][0-7][0-9]{2}$/
 const MSG_CREDENCIAIS = 'Bloco, apartamento ou senha incorretos. Confira e tente de novo.'
+
+/** H-03 (revisão do M1, U3): o horário em que dá para tentar de novo, no fuso de Recife. */
+function mensagemDeBloqueio(falha: ErroDaApi): string {
+  const ate = falha.extras.bloqueada_ate
+  if (typeof ate !== 'string') return falha.mensagem
+  return (
+    `Entrada bloqueada depois de várias senhas erradas. Tente de novo às ${formatarHora(ate)}. ` +
+    'Se não foi você, avise a administração do Portal no grupo do WhatsApp.'
+  )
+}
 
 interface Erro {
   mensagem: string
@@ -72,8 +84,10 @@ export function Entrar() {
       })
     } catch (falha) {
       setEnviando(false)
-      const mensagem = falha instanceof ErroDaApi ? falha.mensagem : MENSAGEM_SEM_CONEXAO
-      mostrarErro(mensagem, falha instanceof ErroDaApi && falha.codigo === 'unidade_bloqueada')
+      if (falha instanceof ErroDaApi && falha.codigo === 'unidade_bloqueada') {
+        return mostrarErro(mensagemDeBloqueio(falha), true)
+      }
+      mostrarErro(falha instanceof ErroDaApi ? falha.mensagem : MENSAGEM_SEM_CONEXAO)
     }
   }
 
@@ -123,18 +137,15 @@ export function Entrar() {
         <p className="ajuda" id="ajuda-apartamento">
           O número da porta, como 101. No térreo, 007 ou só 7.
         </p>
-        <label htmlFor="senha">Senha</label>
-        <input
+        <Campo
           id="senha"
+          rotulo="Senha"
           type="password"
           autoComplete="current-password"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          aria-describedby="ajuda-senha"
+          valor={senha}
+          aoMudar={setSenha}
+          ajuda="Primeira vez aqui? Use a senha que a Comissão mandou no grupo."
         />
-        <p className="ajuda" id="ajuda-senha">
-          Primeira vez aqui? Use a senha que a Comissão mandou no grupo.
-        </p>
         <button className="botao acesso-enviar" type="submit" disabled={enviando}>
           {enviando ? 'Entrando…' : 'Entrar'}
         </button>

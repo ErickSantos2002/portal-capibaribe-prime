@@ -35,6 +35,20 @@ export function formatarDataEHora(iso: string): string {
   return dataEHora.format(new Date(iso))
 }
 
+const hora = new Intl.DateTimeFormat('pt-BR', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: FUSO,
+})
+
+/** "18h17" (no horário de Recife), como se diz a hora no Brasil. */
+export function formatarHora(iso: string): string {
+  const partes = hora.formatToParts(new Date(iso))
+  const valor = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? '00'
+  return `${valor('hour')}h${valor('minute')}`
+}
+
 const NOMES_DOS_PAPEIS: Record<Papel, string> = {
   admin: 'Administrador',
   comissao: 'Comissão',
