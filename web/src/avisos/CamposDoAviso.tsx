@@ -6,7 +6,15 @@ import { Icone, type NomeDoIcone } from '../casca/Icone'
 import { CATEGORIAS } from './categorias'
 import { TextoDoAviso } from './componentes'
 import { aplicarMarca, continuarLista, type Marca } from './marcas'
-import { LIMITE_ONDE, LIMITE_TEXTO, LIMITE_TITULO, type Erros, type Rascunho } from './rascunho'
+import {
+  DIA_MAXIMO,
+  DIA_MINIMO,
+  LIMITE_ONDE,
+  LIMITE_TEXTO,
+  LIMITE_TITULO,
+  type Erros,
+  type Rascunho,
+} from './rascunho'
 
 const BARRA: { marca: Marca; nome: string; icone: NomeDoIcone }[] = [
   // "Subtítulo", não "Título": o campo do título do aviso já se chama assim (revisão UX 5).
@@ -45,6 +53,10 @@ export function CamposDoAviso({ rascunho, erros, mudar }: Props) {
     campo.setSelectionRange(selecao.current.inicio, selecao.current.fim)
     selecao.current = null
   }, [rascunho.texto])
+
+  const diaInvalido =
+    !!erros.evento &&
+    (!rascunho.dia || rascunho.dia < DIA_MINIMO || rascunho.dia > DIA_MAXIMO)
 
   // Erro no texto (ao enviar): volta a escrever para a pessoa ver o campo marcado.
   const mostrandoPrevia = vendo && !erros.texto
@@ -126,10 +138,12 @@ export function CamposDoAviso({ rascunho, erros, mudar }: Props) {
               <input
                 id="aviso-dia"
                 type="date"
+                min={DIA_MINIMO}
+                max={DIA_MAXIMO}
                 value={rascunho.dia}
                 onChange={(e) => mudar({ dia: e.target.value })}
-                aria-invalid={!!erros.evento && !rascunho.dia}
-                className={erros.evento && !rascunho.dia ? 'campo-erro' : undefined}
+                aria-invalid={diaInvalido}
+                className={diaInvalido ? 'campo-erro' : undefined}
               />
             </div>
             <div>

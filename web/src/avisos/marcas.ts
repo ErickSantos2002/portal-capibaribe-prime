@@ -14,10 +14,23 @@ const PREFIXOS: Record<Exclude<Marca, 'negrito'>, string> = {
   destaque: '> ',
 }
 // Qualquer marca de linha que já esteja lá: trocar de uma para outra não empilha.
-const MARCA_DE_LINHA = /^(?:## |- |\d{1,3}\. |> )/
+const MARCA_DE_LINHA = /^(?:## |- |[0-9]{1,3}\. |> )/
 const EXEMPLO_DO_NEGRITO = 'negrito'
 
 function negrito(texto: string, inicio: number, fim: number): ComSelecao {
+  // Várias linhas: negrito em cada uma (o `**` não atravessa a quebra; revisão de código, 4).
+  if (texto.slice(inicio, fim).trim().includes('\n')) {
+    const trecho = texto
+      .slice(inicio, fim)
+      .split('\n')
+      .map((linha) => (linha.trim() ? linha.replace(/^(\s*)(.*?)(\s*)$/, '$1**$2**$3') : linha))
+      .join('\n')
+    return {
+      texto: texto.slice(0, inicio) + trecho + texto.slice(fim),
+      inicio,
+      fim: inicio + trecho.length,
+    }
+  }
   // Espaço nas pontas fica fora: "** palavra **" não seria negrito.
   while (inicio < fim && /\s/.test(texto[inicio])) inicio++
   while (fim > inicio && /\s/.test(texto[fim - 1])) fim--
@@ -56,7 +69,7 @@ function deLinha(texto: string, inicio: number, fim: number, prefixo: string): C
   return { texto: novo, inicio: comeco, fim: comeco + trecho.length }
 }
 
-const ITEM_DA_LINHA = /^(?:(- )|(> )|(\d{1,3})\. )/
+const ITEM_DA_LINHA = /^(?:(- )|(> )|([0-9]{1,3})\. )/
 
 /**
  * Enter no fim de uma linha de lista, lista numerada ou destaque (revisão UX 3): a linha nova
@@ -74,6 +87,8 @@ export function continuarLista(texto: string, cursor: number): ComSelecao | null
     const novo = texto.slice(0, comeco) + texto.slice(cursor)
     return { texto: novo, inicio: comeco, fim: comeco }
   }
+  // A numerada vai até 999 (a marca tem até 3 dígitos; revisão de código, achado 7).
+  if (achado[3] && Number(achado[3]) >= 999) return null
   const prefixo = achado[3] ? `${Number(achado[3]) + 1}. ` : achado[0]
   const novo = texto.slice(0, cursor) + '\n' + prefixo + texto.slice(cursor)
   const depois = cursor + 1 + prefixo.length

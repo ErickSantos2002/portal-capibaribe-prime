@@ -11,14 +11,28 @@ from typing import Annotated, Any
 
 from pydantic import AfterValidator, Field, ValidationInfo, field_validator, model_validator
 
-from app.esquemas.comum import Entrada, Saida, UnidadeRef, sem_controle
-from app.modelos.avisos import LIMITE_ONDE, LIMITE_TEXTO, LIMITE_TITULO
+from app.esquemas.comum import MSG_CONTROLE, Entrada, Saida, UnidadeRef, sem_controle
+from app.modelos.avisos import EVENTO_ATE, EVENTO_DESDE, LIMITE_ONDE, LIMITE_TEXTO, LIMITE_TITULO
 
 NumeroDeBloco = Annotated[int, Field(ge=1, le=9)]
 
 
+# Revisão de código, achado 6: caracteres de direção (que invertem o que se lê, ex.: um link
+# "gpj.exe") e de largura zero (campo que parece vazio). O ZWJ (U+200D) fica: os emojis de
+# família e de profissão usam.
+DIRECAO = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
+INVISIVEIS = DIRECAO | frozenset("\u200b\u200c\u200e\u200f\u2060\ufeff")
+
+
+def sem_invisiveis(texto: str, proibidos: frozenset[str] = INVISIVEIS) -> str:
+    if any(c in proibidos for c in texto):
+        raise ValueError(MSG_CONTROLE)
+    return texto
+
+
 def validar_titulo(titulo: str) -> str:
     sem_controle(titulo)
+    sem_invisiveis(titulo)
     titulo = titulo.strip()
     if not titulo:
         raise ValueError("Escreva o título do aviso.")
@@ -28,7 +42,11 @@ def validar_titulo(titulo: str) -> str:
 
 
 def validar_texto(texto: str) -> str:
+    # U+2028/U+2029 também são quebra de linha (revisão de código, achado 5): a tela e o resumo
+    # passam a ver a mesma coisa.
     texto = texto.replace("\r\n", "\n").replace("\r", "\n")
+    texto = texto.replace("\u2028", "\n").replace("\u2029", "\n")
+    sem_invisiveis(texto, DIRECAO)
     texto = sem_controle(texto, permitidos="\n\t").strip()
     if not texto:
         raise ValueError("Escreva o texto do aviso.")
@@ -42,6 +60,7 @@ def validar_onde(onde: str | None) -> str | None:
     if onde is None:
         return None
     sem_controle(onde)
+    sem_invisiveis(onde)
     onde = onde.strip()
     if not onde:
         return None
@@ -53,6 +72,13 @@ def validar_onde(onde: str | None) -> str | None:
 def validar_quando(quando: datetime) -> datetime:
     if quando.tzinfo is None or quando.utcoffset() is None:
         raise ValueError("Informe a hora com o fuso (ex.: -03:00).")
+    # Revisão de código, achado 1: ano 9999 (ou 0001) com fuso virava data que o Postgres grava
+    # mas o driver não lê de volta, e o mural de todos dava 500. O ano vem antes da comparação:
+    # comparar 9999-12-31 com fuso pode estourar o datetime.
+    if not EVENTO_DESDE.year - 1 <= quando.year <= EVENTO_ATE.year or not (
+        EVENTO_DESDE <= quando < EVENTO_ATE
+    ):
+        raise ValueError("Escolha uma data entre 2000 e 2100.")
     return quando
 
 
@@ -95,7 +121,8 @@ class Evento(Entrada):
 
 class CorrigirAviso(Entrada):
     """`PUT /api/avisos/{id}`: cria a versão seguinte (H-15). Categoria e evento também são da
-    versão: omitidos, a versão nova fica `geral` e sem evento (o formulário sempre manda)."""
+    versão. Omitidos na correção, ficam os da versão em vigor (um front antigo, que só manda título
+    e texto, não apaga nada; revisão de código, achado 2); `evento: null` tira o evento."""
 
     titulo: Titulo
     texto: Texto

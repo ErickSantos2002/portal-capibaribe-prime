@@ -52,7 +52,10 @@ LIMITE_RESUMO = 200
 _PARAGRAFO = re.compile(r"\n[ \t]*\n")
 # Marcas do Markdown restrito no começo da linha (spec dos avisos com formatação, seção 3.1),
 # iguais às do renderizador da tela (`web/src/avisos/formatacao.ts`).
-_MARCA_DA_LINHA = re.compile(r"^(?:## |- |\d{1,3}\. |> )(?=\S)", re.M)
+_MARCA_DA_LINHA = re.compile(r"^(?:## |- |[0-9]{1,3}\. |> )(?=\S)", re.M)
+# O resumo tem 200 caracteres: tirar as marcas de mais que isto só gasta CPU (a regex do negrito
+# é quadrática com muitos `**` abertos; revisão de código, achado 3).
+_LIMITE_ANTES_DO_RESUMO = 2_000
 # Negrito: `**trecho**`, sem espaço colado por dentro das marcas.
 _NEGRITO = re.compile(r"\*\*(\S(?:.*?\S)??)\*\*")
 
@@ -91,7 +94,8 @@ def sem_marcas(texto: str) -> str:
 
 def resumir(texto: str) -> str:
     """Primeiro parágrafo, sem marcas, numa linha só, até 200 caracteres (cortado com "…")."""
-    primeiro = sem_marcas(_PARAGRAFO.split(texto, maxsplit=1)[0])
+    primeiro = _PARAGRAFO.split(texto, maxsplit=1)[0][:_LIMITE_ANTES_DO_RESUMO]
+    primeiro = sem_marcas(primeiro)
     linha = " ".join(primeiro.split())
     if len(linha) <= LIMITE_RESUMO:
         return linha
@@ -432,6 +436,12 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
         .limit(1)
     ).one()
     novas = _categoria_e_evento(dados)
+    # Omitidos, categoria e evento ficam os da versão em vigor (revisão de código, achado 2).
+    if "categoria" not in dados.model_fields_set:
+        novas["categoria"] = atual.categoria
+    if "evento" not in dados.model_fields_set:
+        novas["evento_quando"] = atual.evento_quando
+        novas["evento_onde"] = atual.evento_onde
     # Datas comparadas como instante (o mesmo horário em outro fuso não é mudança).
     if (atual.titulo, atual.texto, atual.categoria, atual.evento_quando, atual.evento_onde) == (
         dados.titulo,

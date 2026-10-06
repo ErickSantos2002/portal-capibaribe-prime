@@ -38,7 +38,9 @@ export interface Parte {
   link?: string
 }
 
-const ENDERECO = /https?:\/\/[^\s<>"]+/g
+// Sem caractere de direção nem de largura zero (revisão de código, achado 6): eles faziam o
+// endereço parecer outro ("…/\u202egpj.exe" lido ao contrário).
+const ENDERECO = /https?:\/\/[^\s<>"\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]+/g
 // Pontuação colada no fim do endereço é da frase, não do link.
 const FIM_DE_FRASE = /[.,;:!?)\]}'"…]+$/
 

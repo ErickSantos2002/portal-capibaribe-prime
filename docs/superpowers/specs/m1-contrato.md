@@ -372,8 +372,12 @@ vê os contatos, só para ler: dúvida 9, revista em 06/10/2026); as outras com 
   hora com o fuso (ex.: -03:00).") e `onde` (opcional, uma linha de até 120 letras, sem caractere
   de controle; vazio vira nulo). Sem `quando`: 422 no campo `evento`, "Escolha o dia e a hora do
   evento.". Os dois ficam na **versão**: a correção pode mudá-los, `sem_mudanca` compara título,
-  texto, categoria e evento (o mesmo instante em outro fuso é igual), e omitir os dois na
-  correção deixa a versão nova `geral` e sem evento. `AvisoResumo` ganha `categoria` e
+  texto, categoria e evento (o mesmo instante em outro fuso é igual), e **omitir** categoria ou
+  evento na correção mantém os da versão em vigor (um front antigo não apaga nada); `evento: null`
+  tira o evento. `quando` fica entre 2000 e 2100 (fora: 422 "Escolha uma data entre 2000 e
+  2100."; o banco também recusa). Título e `onde` recusam caracteres de direção e de largura zero
+  (U+200B, U+200C, U+200E, U+200F, U+2060, U+FEFF, U+202A a U+202E, U+2066 a U+2069; o ZWJ dos
+  emojis vale); o texto recusa os de direção e trata U+2028/U+2029 como quebra de linha. `AvisoResumo` ganha `categoria` e
   `evento_quando` (data ou nulo); `AvisoCompleto` e `VersaoAviso` ganham `categoria` e
   `evento`. O `texto` aceita as marcas do Markdown restrito (`## `, `**…**`, `- `, `1. `, `> `),
   interpretadas só pela tela; o `resumo` vem sem as marcas.

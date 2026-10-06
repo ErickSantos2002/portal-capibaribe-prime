@@ -86,6 +86,17 @@ def test_evento_com_local_aceito(engine_app, ids):
         _versao(con, ids, evento_quando="2026-10-11 09:00-03", evento_onde="Stand de vendas")
 
 
+@pytest.mark.parametrize(
+    "quando",
+    ["9999-12-31 22:00-03", "0001-01-01 01:00+14", "1999-12-31 23:59+00", "2101-01-01 00:00+00"],
+)
+def test_revisao_data_do_evento_fora_da_faixa_recusada(engine_app, ids, quando):
+    # Revisão de código, achado 1: o banco também recusa (o driver não lê ano 10000 de volta).
+    with pytest.raises(IntegrityError) as erro, engine_app.begin() as con:
+        _versao(con, ids, evento_quando=quando)
+    assert restricao(erro.value) == "aviso_versao_evento_quando_faixa"
+
+
 @pytest.mark.parametrize("onde", ["", "   ", "x" * 121])
 def test_onde_com_limites(engine_app, ids, onde):
     with pytest.raises(IntegrityError) as erro, engine_app.begin() as con:

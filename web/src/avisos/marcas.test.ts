@@ -36,6 +36,10 @@ describe('Enter dentro de lista (revisão UX 3)', () => {
     expect(enter('- Luvas\n- |')).toBe('- Luvas\n|')
   })
 
+  it('revisão de código 7: depois do 999 não continua (1000. já não é marca)', () => {
+    expect(enter('999. x|')).toBeNull()
+  })
+
   it('fora de lista, ou no meio do item, o Enter é o normal', () => {
     expect(enter('Texto|')).toBeNull()
     expect(enter('## Título|')).toBeNull()
@@ -54,6 +58,11 @@ describe('negrito', () => {
 
   it('espaço nas pontas da seleção fica fora das marcas', () => {
     expect(aplicar('a[ palavra ]b', 'negrito')).toBe('a **[palavra]** b')
+  })
+
+  it('revisão de código 4: seleção de várias linhas ganha negrito em cada linha', () => {
+    expect(aplicar('[a\nb]', 'negrito')).toBe('[**a**\n**b**]')
+    expect(aplicar('[a\n\nb]', 'negrito')).toBe('[**a**\n\n**b**]')
   })
 
   it('de novo na mesma seleção, tira o negrito', () => {

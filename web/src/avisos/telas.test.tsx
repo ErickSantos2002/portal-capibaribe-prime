@@ -895,6 +895,21 @@ describe('formulário: categoria, barra de marcas, "Ver como fica" e evento', ()
     })
   })
 
+  it('revisão de código 1: dia fora de 2000 a 2100 é recusado antes de mandar', async () => {
+    const fetch = apiDoFormulario()
+    abrir('/avisos/novo')
+    await preencher()
+    fireEvent.click(screen.getByLabelText('É um evento? (reunião, vistoria, mutirão)'))
+    const dia = screen.getByLabelText('Dia')
+    expect(dia.getAttribute('min')).toBe('2000-01-01')
+    expect(dia.getAttribute('max')).toBe('2100-12-31')
+    fireEvent.change(dia, { target: { value: '9999-12-31' } })
+    fireEvent.change(screen.getByLabelText('Hora'), { target: { value: '09:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ver prévia' }))
+    expect(screen.getAllByText('Escolha uma data entre 2000 e 2100.').length).toBeGreaterThan(0)
+    expect(chamadas(fetch, 'POST', '/api/avisos')).toHaveLength(0)
+  })
+
   it('evento sem dia ou hora: avisa antes de mandar', async () => {
     const fetch = apiDoFormulario()
     abrir('/avisos/novo')

@@ -40,6 +40,27 @@ def test_resumir_tira_as_marcas(texto, esperado):
     assert resumir(texto) == esperado
 
 
+def test_revisao_resumir_so_digito_ascii_e_separador_de_linha():
+    # Revisão de código, achado 5: o mesmo que a tela (analisar/semMarcas).
+    assert resumir("١. item") == "١. item"
+
+
+def test_revisao_texto_normaliza_separador_de_linha_unicode():
+    aviso = NovoAviso(titulo="T", texto="x - item y", para_todos=True)
+    assert aviso.texto == "x\n- item\ny"
+
+
+def test_revisao_resumir_rapido_com_muitos_negritos_abertos():
+    # Revisão de código, achado 3: a regex do negrito é quadrática; o resumo só precisa do
+    # começo do texto.
+    import time
+
+    inicio = time.perf_counter()
+    for _ in range(10):
+        resumir("**a " * 2500)
+    assert time.perf_counter() - inicio < 0.5
+
+
 def test_resumir_corta_depois_de_tirar_as_marcas():
     assert resumir("**" + "a" * 199 + "**") == "a" * 199
     assert resumir("**" + "a" * 250 + "**").endswith("…")
@@ -171,7 +192,7 @@ class TestApi:
         aviso = _publicar(comissao, categoria="reuniao", evento=EVENTO)
         resposta = comissao.put(
             f"/api/avisos/{aviso['id']}",
-            json={"titulo": "Vistoria", "texto": "Sábado.", "categoria": "urgente"},
+            json={"titulo": "Vistoria", "texto": "Sábado.", "categoria": "urgente", "evento": None},
         )
         assert resposta.status_code == 200, resposta.text
         corrigido = resposta.json()
@@ -180,6 +201,68 @@ class TestApi:
         [antiga] = corrigido["versoes_anteriores"]
         assert antiga["categoria"] == "reuniao"
         assert antiga["evento"] == {"quando": "2026-10-11T12:00:00Z", "onde": "Stand de vendas"}
+
+    def test_revisao_correcao_sem_categoria_nem_evento_mantem_os_atuais(self, logar):
+        # Revisão de código, achado 2: um front antigo (em cache durante o deploy) manda só
+        # título e texto; omitir não pode apagar a categoria e o evento da versão em vigor.
+        comissao = logar(COMISSAO)
+        aviso = _publicar(comissao, categoria="obra", evento=EVENTO)
+        resposta = comissao.put(
+            f"/api/avisos/{aviso['id']}", json={"titulo": "Vistoria", "texto": "Domingo."}
+        )
+        assert resposta.status_code == 200, resposta.text
+        assert resposta.json()["categoria"] == "obra"
+        assert resposta.json()["evento"] == aviso["evento"]
+        # Só título e texto iguais, sem os outros campos: nada mudou.
+        repetida = comissao.put(
+            f"/api/avisos/{aviso['id']}", json={"titulo": "Vistoria", "texto": "Domingo."}
+        )
+        assert repetida.status_code == 409
+
+    @pytest.mark.parametrize(
+        "quando",
+        [
+            "9999-12-31T22:00:00-03:00",
+            "9999-12-31T23:00:00-03:00",
+            "0001-01-01T01:00:00+14:00",
+            "1999-12-31T20:00:00-03:00",
+            "2101-01-01T00:00:00Z",
+        ],
+    )
+    def test_revisao_ano_fora_da_faixa_422_e_o_mural_continua(self, logar, quando):
+        # Revisão de código, achado 1: ano no limite gravava e o mural de todos dava 500.
+        resposta = logar(COMISSAO).post(
+            "/api/avisos",
+            json={"titulo": "T", "texto": "X", "para_todos": True, "evento": {"quando": quando}},
+        )
+        assert resposta.status_code == 422
+        assert resposta.json()["mensagem"] == "Escolha uma data entre 2000 e 2100."
+        assert logar(COMUM).get("/api/avisos").status_code == 200
+
+    @pytest.mark.parametrize(
+        ("campo", "valor"),
+        [
+            ("titulo", "‮abc"),
+            ("titulo", "a​b"),
+            ("onde", "​"),
+            ("onde", "Stand⁦x"),
+            ("texto", "Veja https://a.com/‮gpj.exe"),
+        ],
+    )
+    def test_revisao_invisiveis_e_direcao_recusados(self, logar, campo, valor):
+        # Revisão de código, achado 6: caractere de direção engana a leitura (link "invertido")
+        # e o de largura zero deixa campo que parece vazio.
+        corpo: dict[str, Any] = {"titulo": "T", "texto": "X", "para_todos": True}
+        if campo == "onde":
+            corpo["evento"] = {**EVENTO, "onde": valor}
+        else:
+            corpo[campo] = valor
+        resposta = logar(COMISSAO).post("/api/avisos", json=corpo)
+        assert resposta.status_code == 422, resposta.text
+
+    def test_revisao_emoji_com_zwj_continua_valendo(self, logar):
+        aviso = _publicar(logar(COMISSAO), titulo="Família 👨‍👩‍👧 na obra")
+        assert "‍" in aviso["titulo"]
 
     def test_correcao_so_do_evento_cria_versao(self, logar):
         comissao = logar(COMISSAO)

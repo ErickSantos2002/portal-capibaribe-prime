@@ -28,17 +28,19 @@ export interface Trecho {
 // ficam como estão.
 const TITULO = /^## (?=\S)(.*)$/
 const ITEM = /^- (?=\S)(.*)$/
-const NUMERADO = /^(\d{1,3})\. (?=\S)(.*)$/
+const NUMERADO = /^([0-9]{1,3})\. (?=\S)(.*)$/
 const DESTAQUE = /^> (?=\S)(.*)$/
 const EM_BRANCO = /^[ \t]*$/
 // `**trecho**` sem espaço colado por dentro das marcas ("2 ** 3" não é negrito).
 const NEGRITO = /\*\*(\S(?:.*?\S)??)\*\*/g
 
-const MARCA_DA_LINHA = /^(?:## |- |\d{1,3}\. |> )(?=\S)/gm
+const MARCA_DA_LINHA = /^(?:## |- |[0-9]{1,3}\. |> )(?=\S)/gm
+// Quebras de linha que a API também normaliza (\r\n, \r, U+2028, U+2029).
+const QUEBRA = /\r\n?|[\u2028\u2029]/g
 
 /** O texto sem as marcas (resumo da prévia do mural; igual a `sem_marcas` da API). */
 export function semMarcas(texto: string): string {
-  return texto.replace(MARCA_DA_LINHA, '').replace(NEGRITO, '$1')
+  return texto.replace(QUEBRA, '\n').replace(MARCA_DA_LINHA, '').replace(NEGRITO, '$1')
 }
 
 /** Separa o texto em blocos, linha a linha. */
@@ -47,7 +49,7 @@ export function analisar(texto: string): Bloco[] {
   const ultimo = () => blocos[blocos.length - 1]
   let separado = true // a próxima linha começa bloco novo (início ou depois de linha em branco)
 
-  for (const linha of texto.replace(/\r\n?/g, '\n').split('\n')) {
+  for (const linha of texto.replace(QUEBRA, '\n').split('\n')) {
     if (EM_BRANCO.test(linha)) {
       separado = true
       continue

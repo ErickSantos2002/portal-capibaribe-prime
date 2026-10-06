@@ -5,7 +5,7 @@ pelo banco, versões em sequência, aviso completo no commit (versão 1 e destin
 DELETE em nada daqui e só podendo alterar `aviso.fixado` e `aviso.arquivado_em`.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     BigInteger,
@@ -25,6 +25,9 @@ from app.modelos.base import Base, chave_primaria
 LIMITE_TITULO = 120
 LIMITE_TEXTO = 10_000
 LIMITE_ONDE = 120
+# Faixa da data do evento (revisão de código, achado 1): fora dela, o driver não lê de volta.
+EVENTO_DESDE = datetime(2000, 1, 1, tzinfo=UTC)
+EVENTO_ATE = datetime(2101, 1, 1, tzinfo=UTC)
 # A ordem é a dos botões do formulário; `geral` é o padrão.
 CATEGORIAS = ("geral", "obra", "reuniao", "financeiro", "urgente")
 
@@ -73,6 +76,11 @@ class AvisoVersao(Base):
         CheckConstraint(
             "evento_onde is null or evento_quando is not null",
             name="aviso_versao_evento_completo",
+        ),
+        CheckConstraint(
+            "evento_quando >= '2000-01-01 00:00:00+00'"
+            " and evento_quando < '2101-01-01 00:00:00+00'",
+            name="aviso_versao_evento_quando_faixa",
         ),
     )
 

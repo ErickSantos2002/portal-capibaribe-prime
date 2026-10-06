@@ -94,6 +94,27 @@ describe('analisar: marcas malformadas ficam como texto', () => {
   })
 })
 
+describe('revisão de código 5 e 6: Unicode', () => {
+  it('lista numerada só com dígitos 0-9, como a API', () => {
+    expect(analisar('١. item')).toEqual([{ tipo: 'paragrafo', linhas: ['١. item'] }])
+    expect(semMarcas('١. item')).toBe('١. item')
+  })
+
+  it('U+2028 e U+2029 são quebra de linha, como a API', () => {
+    expect(analisar('x\u2028- item')).toEqual([
+      { tipo: 'paragrafo', linhas: ['x'] },
+      { tipo: 'lista', itens: ['item'] },
+    ])
+    expect(semMarcas('x\u2028- item')).toBe('x\nitem')
+  })
+
+  it('caractere de direção não entra no link (não dá para "inverter" o endereço)', () => {
+    const partes = trechos('https://a.com/\u202egpj.exe')
+    expect(partes[0]).toEqual({ texto: 'https://a.com/', link: 'https://a.com/' })
+    expect(partes.map((p) => p.texto).join('')).toBe('https://a.com/\u202egpj.exe')
+  })
+})
+
 describe('trechos: negrito e links', () => {
   it('**trecho** vira negrito, o resto é texto', () => {
     expect(trechos('Não se **perde mais** no grupo.')).toEqual([

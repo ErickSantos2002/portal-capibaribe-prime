@@ -12,7 +12,8 @@ Escrita à mão, no mesmo padrão da 0002/0003. Spec:
   antiga. As linhas que já existem ficam `geral`.
 - `aviso_versao.evento_quando` e `evento_onde`: o "Quando / Onde" do aviso que é um evento.
   Local é opcional; local sem data não existe (evento sem data não é evento). O local tem o mesmo
-  limite do título (1 a 120 letras, sem espaço só).
+  limite do título (1 a 120 letras, sem espaço só). A data fica entre 2000 e 2100: ano 9999 com
+  fuso vira uma data que o Postgres grava mas o driver não lê de volta (revisão de código).
 - O texto continua em `aviso_versao.texto`, agora com as marcas do Markdown restrito; o banco não
   muda nada nele (o renderizador é da tela).
 - O `app` continua sem UPDATE em `aviso_versao` (correção é versão nova); o grant de `select,
@@ -52,7 +53,10 @@ alter table aviso_versao
     add column categoria text not null default 'geral'
         constraint aviso_versao_categoria check (
             categoria in ('geral', 'obra', 'reuniao', 'financeiro', 'urgente')),
-    add column evento_quando timestamptz,
+    add column evento_quando timestamptz
+        constraint aviso_versao_evento_quando_faixa check (
+            evento_quando >= '2000-01-01 00:00:00+00'
+            and evento_quando < '2101-01-01 00:00:00+00'),
     add column evento_onde text
         constraint aviso_versao_evento_onde_tamanho check (
             char_length(btrim(evento_onde)) between 1 and 120

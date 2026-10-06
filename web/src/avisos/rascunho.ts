@@ -6,6 +6,9 @@ import type { AvisoCompleto, Categoria, Evento } from './tipos'
 export const LIMITE_TITULO = 120
 export const LIMITE_TEXTO = 10_000
 export const LIMITE_ONDE = 120
+// A faixa da data do evento que a API e o banco aceitam (revisão de código, achado 1).
+export const DIA_MINIMO = '2000-01-01'
+export const DIA_MAXIMO = '2100-12-31'
 
 export type Campo = 'titulo' | 'texto' | 'blocos' | 'evento' | 'categoria'
 export type Erros = Partial<Record<Campo, string>>
@@ -63,6 +66,9 @@ export function conferir(r: Rascunho): Erros {
     erros.texto = 'O texto pode ter até 10.000 letras.'
   }
   if (r.eEvento && (!r.dia || !r.hora)) erros.evento = 'Escolha o dia e a hora do evento.'
+  else if (r.eEvento && (r.dia < DIA_MINIMO || r.dia > DIA_MAXIMO)) {
+    erros.evento = 'Escolha uma data entre 2000 e 2100.'
+  }
   return erros
 }
 
