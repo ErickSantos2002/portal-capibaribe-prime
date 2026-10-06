@@ -40,7 +40,7 @@ api/               FastAPI: app/ (rotas, serviços, modelos, comandos), migracoe
 docs/              visão, requisitos, histórias, modelo de dados, arquitetura, protótipo, roadmap
 docs/adr/          registros de decisão de arquitetura
 prototipo/         protótipo em HTML único, publicado na Vercel
-scripts/dev/       teste automatizado do protótipo e gerador da imagem de prévia
+scripts/dev/       teste do protótipo, imagem de prévia, logo e ícones do Portal
 scripts/backup/    backup diário do banco (dump, cifra, R2, retenção) e restauração
 vercel.json        front + API no mesmo projeto: /api/* vai para a FastAPI, o resto para o front
 ```
@@ -72,6 +72,19 @@ cd ../web && npm ci && npm run dev
 
 Os papéis `dono` e `app` só existem no Postgres local depois que os testes rodaram uma vez
 (passo 2). As variáveis estão explicadas em `api/.env.example`.
+
+## Versões
+
+A versão do Portal mora num lugar só, o `version` de `web/package.json`; o Vite a injeta no app
+(`__VERSAO__`) e ela aparece no botão "Versão X.Y.Z", que abre a janela "O que mudou".
+
+- **Correção** sobe o último número: 1.1.0 → 1.1.1.
+- **Novidade** sobe o do meio: 1.1.0 → 1.2.0. **Marco novo** (M2, M3…) também sobe o do meio.
+- Toda mudança que o morador vê ganha item em `web/src/sobre/novidades.ts` **no mesmo commit**,
+  escrito na voz do morador (sem termo técnico). O teste confere que a primeira entrada é a
+  versão do `package.json`, que as versões estão em ordem e que nenhuma data está no futuro.
+- Logo e ícones: `scripts/dev/gerar-icones.py` refaz tudo a partir do logo original (que fica
+  fora do repositório).
 
 ## Backup
 
