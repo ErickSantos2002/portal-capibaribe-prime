@@ -55,6 +55,11 @@ do marco. **[Erick]** marca o que só o Erick pode confirmar.
 - **Não testado contra o Neon:** os testes locais usam um banco criado pela migração, sem nada do
   Neon. O primeiro run de verdade (`restaurar=true`) é quem confirma. Se faltar algum outro papel
   do Neon, o erro do `pg_restore` diz qual, e é uma linha a mais nesse passo.
+- **06/10/2026, primeiro run real:** o backup subiu; a restauração parou em
+  `ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin ...` (papel interno do Neon). Conferi em produção
+  todos os papéis citados como dono ou em permissão do esquema `public` (tabelas, funções, esquema,
+  privilégios padrão): `app`, `dono`, `neon_superuser`, `cloud_admin`, `pg_database_owner`
+  (embutido) e PUBLIC. Só `cloud_admin` faltava; entrou no passo.
 
 ## 9. Cliente do Postgres 17 pelo repositório oficial PGDG
 - **Decisão:** `scripts/backup/instalar-ferramentas.sh` instala `postgresql-client-17` pelo
