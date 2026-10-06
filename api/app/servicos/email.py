@@ -6,20 +6,37 @@ Contrato: `docs/superpowers/specs/m2-contrato.md`, seções 4.3 e 5; spec do ép
 - **Texto do aviso em HTML** (`analisar`, `trechos`, `html_do_texto`): porte do Markdown
   restrito do front (`web/src/avisos/formatacao.ts`). Todo texto passa por `html.escape`; só as
   marcas do Portal viram tags, sempre fixas. Mudou o front, mude aqui.
+- **Mensagens** (`mensagem_do_aviso`, `mensagem_de_recuperacao`): texto puro + HTML simples, um
+  destinatário por mensagem (um morador nunca vê o e-mail do outro), assunto numa linha só.
+- **Conexão** (`conexao_smtp`, `enviar_uma`): `SMTP_SSL` na 465 (Gmail) ou STARTTLS nas outras
+  portas, certificado conferido, tempo limite, senha de app da `config_email()`.
+- **`ENVIADOR`** (cópia do aviso, H-13): reserva a cota **antes** de conectar, manda tudo por
+  **uma** conexão, salva o progresso a cada `SALVAR_A_CADA`, para no prazo (`pulados`). Recusa
+  de um destinatário é falha daquele destino; o resto interrompe o canal (a peça comum loga só
+  o tipo do erro: a mensagem de um erro SMTP pode trazer o e-mail de alguém).
 """
 
 import html
 import re
+import smtplib
+import ssl
+from collections.abc import Iterator
+from contextlib import contextmanager
 from email.message import EmailMessage
 from email.utils import formataddr, formatdate, make_msgid
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.configuracao import ConfigEmail
+from app.configuracao import ConfigEmail, config_email
 from app.esquemas.comum import UnidadeRef
 from app.modelos import Canal
-from app.servicos.notificacoes import AvisoParaNotificar, Resultado
+from app.servicos.notificacoes import (
+    SALVAR_A_CADA,
+    AvisoParaNotificar,
+    Resultado,
+    destinos_email,
+)
 
 # --- Markdown restrito → HTML (spec do épico B, seção 2.4) -------------------------------------
 
@@ -327,17 +344,94 @@ def mensagem_de_recuperacao(
     return _mensagem(config, para, "Portal Capibaribe Prime: criar senha nova", texto, html_)
 
 
-# --- cópia do aviso (H-13) ------------------------------------------------------------------
+# --- conexão (spec do épico B, seção 2.1) ---------------------------------------------------
+
+# Segundos de espera por resposta do servidor SMTP (conectar, login, cada mensagem).
+TEMPO_LIMITE_SMTP = 20
+
+
+def _conectar(config: ConfigEmail) -> smtplib.SMTP:
+    """Abre e autentica a conexão: TLS direto na 465 (Gmail), STARTTLS nas outras portas.
+    Certificado conferido (`ssl.create_default_context`)."""
+    contexto = ssl.create_default_context()
+    if config.porta == 465:
+        conexao: smtplib.SMTP = smtplib.SMTP_SSL(
+            config.host, config.porta, timeout=TEMPO_LIMITE_SMTP, context=contexto
+        )
+    else:
+        conexao = smtplib.SMTP(config.host, config.porta, timeout=TEMPO_LIMITE_SMTP)
+    try:
+        if config.porta != 465:
+            conexao.starttls(context=contexto)
+        conexao.login(config.usuario, config.senha_app)
+    except BaseException:
+        _fechar(conexao)
+        raise
+    return conexao
+
+
+def _fechar(conexao: smtplib.SMTP) -> None:
+    try:
+        conexao.quit()
+    except Exception:  # noqa: BLE001 - a conexão já caiu: não há o que fechar
+        conexao.close()
+
+
+@contextmanager
+def conexao_smtp(config: ConfigEmail) -> Iterator[smtplib.SMTP]:
+    """Uma conexão para um lote inteiro de mensagens, fechada no fim (mesmo com erro)."""
+    conexao = _conectar(config)
+    try:
+        yield conexao
+    finally:
+        _fechar(conexao)
+
+
+def enviar_uma(config: ConfigEmail, mensagem: EmailMessage) -> None:
+    """Manda uma mensagem só (o link de recuperação), na própria conexão."""
+    with conexao_smtp(config) as conexao:
+        conexao.send_message(mensagem)
+
+
+# --- cópia do aviso (H-13; spec do épico B, seção 2.2) ----------------------------------------
+
+# Recusa que é só daquele destino: conta como falha e segue para o próximo. Qualquer outro erro
+# (conexão caiu, remetente recusado, que é como o Gmail avisa a cota estourada) interrompe.
+_FALHA_DE_UM_DESTINO = (smtplib.SMTPRecipientsRefused, smtplib.SMTPDataError)
 
 
 class EnviadorEmail:
     canal = Canal.email
 
     def ligado(self) -> bool:
-        return False
+        return config_email() is not None
 
     def enviar(self, db: Session, aviso: AvisoParaNotificar, resultado: Resultado) -> None:
-        raise NotImplementedError("Cópia do aviso por e-mail: épico B do M2")
+        """Uma mensagem por unidade do destino, todas pela mesma conexão. A cota é reservada
+        antes de conectar; o que não cabe nela ou no prazo vira `pulados`. Não faz commit."""
+        config = config_email()
+        if config is None:
+            raise RuntimeError("e-mail desligado")
+        destinos = destinos_email(db, aviso)
+        resultado.destinos = len(destinos)
+        if not destinos:
+            return
+        cabem = resultado.reservar(len(destinos))
+        resultado.pulados += len(destinos) - cabem
+        if cabem == 0:
+            return
+        with conexao_smtp(config) as conexao:
+            for feitos, destino in enumerate(destinos[:cabem]):
+                if resultado.tempo_esgotado():
+                    resultado.pulados += cabem - feitos
+                    break
+                try:
+                    conexao.send_message(mensagem_do_aviso(aviso, destino.email, config))
+                    resultado.entregues += 1
+                except _FALHA_DE_UM_DESTINO:
+                    resultado.falhas += 1
+                if (feitos + 1) % SALVAR_A_CADA == 0:
+                    resultado.salvar()
 
 
 ENVIADOR = EnviadorEmail()
