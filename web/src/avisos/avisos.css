@@ -66,6 +66,11 @@
   font-size: 22px;
 }
 
+.data-bloco .ano {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
 .data-bloco .mes {
   margin-top: 4px;
   font-size: 13px;

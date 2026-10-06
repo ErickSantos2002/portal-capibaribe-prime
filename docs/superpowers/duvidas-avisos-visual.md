@@ -22,8 +22,8 @@ Branch `avisos/visual`. Spec: `specs/2026-10-06-avisos-visual-design.md`; plano:
    esperado pela spec; o aviso de boas-vindas atual (com MAIÚSCULAS) não tem essas marcas.
 8. **"Ver como fica" mostra só o texto renderizado** (o mesmo `TextoDoAviso` do aviso aberto); a
    prévia completa (cartão do mural + aviso aberto com cabeçalho e quadro) continua no "Ver prévia".
-9. **Data em bloco do cartão é a da publicação** (spec 3.4); o fixado mantém a data na linha de
-   detalhes. Ver dúvida A.
+9. **Data em bloco:** a da publicação, ou o dia do evento quando o aviso é evento (dúvida A,
+   decidida pelo Erick). O fixado não tem bloco e mantém a data na linha de detalhes.
 10. **Evento em outro ano mostra o ano** ("Sáb, 09/10/27 · 9h", "Sábado, 9 de outubro de 2027,
     9h"), achado da revisão de UX.
 11. **Barra: "Subtítulo, Negrito, Lista, Destaque"** (a spec dizia "Título"). Com dois "Título"
@@ -53,8 +53,8 @@ numerada), 10 (ícone de Geral), 11 (✓ na categoria escolhida), 12 (verificaç
 abaixo).
 
 Descartados ou para o Erick:
-- **2. O bloco de data é da publicação, e parece a data do evento.** A spec (decisão do Erick,
-  modelo A) diz publicação. Ver dúvida A.
+- **2. O bloco de data é da publicação, e parece a data do evento.** Levado ao Erick (dúvida A),
+  que decidiu: com evento, o bloco é o dia do evento. Implementado com teste.
 - **4. "Ver como fica" e "Ver prévia" no mesmo formulário.** Nomes da spec e do M1; os dois
   fazem coisas diferentes (texto × aviso inteiro). Fica como está até o ensaio com vizinhos.
 - **9. Negrito sem seleção insere "negrito" selecionado.** É de propósito: a palavra fica
@@ -78,10 +78,12 @@ Descartados:
 
 ## Dúvidas para o Erick
 
-- **A. Data em bloco no aviso que é evento.** Hoje o bloco grande ("06 OUT") é a publicação, e a
-  data do evento é a linha com calendário. A revisão de UX acha que a Dona Socorro vai ler o bloco
-  como o dia do evento. Opção: quando há evento, o bloco mostra o dia do evento e a publicação vai
-  para a linha de detalhes.
+- **A. Data em bloco no aviso que é evento. DECIDIDA PELO ERICK (06/10):** quando o aviso é um
+  evento, o bloco (no mural e no aviso aberto) mostra o dia do evento, com o ano se não for o
+  corrente; a linha do cartão vira "Sáb, 9h · publicado 6/10" (ou "Já aconteceu · publicado
+  6/10"); o leitor de tela ouve "Evento em …" ou "Publicado em …". A frase "Publicado pela … em …"
+  do aviso aberto e o quadro Quando/Onde não mudam; a ordem do mural continua pela publicação.
+  Spec §3.4 atualizada.
 - **B. Dia e hora no Chrome headless saíram no formato dos EUA** (mm/dd/aaaa, AM) mesmo com
   `--lang=pt-BR` e `locale: 'pt-BR'`: o headless ignora o idioma nos campos `date`/`time`. Num
   celular em português aparecem dd/mm/aaaa e 24 h. Vale olhar num Android de verdade no ensaio.

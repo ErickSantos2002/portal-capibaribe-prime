@@ -1,6 +1,14 @@
 // Datas do mural e do evento, sempre no horário de Recife.
 import { describe, expect, it } from 'vitest'
-import { dataEmBloco, deRecife, eventoCurto, eventoPorExtenso, paraOFormulario } from './datas'
+import {
+  dataEmBloco,
+  dataPorExtenso,
+  deRecife,
+  eventoCurto,
+  eventoNaLinha,
+  eventoPorExtenso,
+  paraOFormulario,
+} from './datas'
 
 describe('datas do aviso (America/Recife)', () => {
   it('data em bloco: dia com dois dígitos e mês abreviado', () => {
@@ -34,6 +42,33 @@ describe('datas do aviso (America/Recife)', () => {
     expect(eventoCurto('2025-10-11T12:00:00Z', em2026)).toBe('Sáb, 11/10/25 · Já aconteceu')
     // No mesmo ano, sem o ano.
     expect(eventoPorExtenso('2026-10-10T12:00:00Z', em2026)).toBe('Sábado, 10 de outubro, 9h')
+  })
+
+  it('dúvida A: bloco com o ano quando é de outro ano', () => {
+    const em2026 = new Date('2026-10-06T12:00:00Z')
+    expect(dataEmBloco('2026-10-10T12:00:00Z', em2026)).toEqual({ dia: '10', mes: 'out' })
+    expect(dataEmBloco('2027-10-09T12:00:00Z', em2026)).toEqual({
+      dia: '09',
+      mes: 'out',
+      ano: '2027',
+    })
+  })
+
+  it('dúvida A: linha do evento no cartão sem repetir a data do bloco', () => {
+    const em2026 = new Date('2026-10-06T12:00:00Z')
+    const publicado = '2026-10-06T12:00:00Z'
+    expect(eventoNaLinha('2026-10-10T12:00:00Z', publicado, em2026)).toBe(
+      'Sáb, 9h · publicado 6/10',
+    )
+    expect(eventoNaLinha('2026-10-03T22:30:00Z', publicado, em2026)).toBe(
+      'Já aconteceu · publicado 6/10',
+    )
+  })
+
+  it('dúvida A: data por extenso para o leitor de tela', () => {
+    const em2026 = new Date('2026-10-06T12:00:00Z')
+    expect(dataPorExtenso('2026-10-10T12:00:00Z', em2026)).toBe('10 de outubro')
+    expect(dataPorExtenso('2027-10-09T12:00:00Z', em2026)).toBe('9 de outubro de 2027')
   })
 
   it('formulário: dia e hora de Recife, ida e volta', () => {

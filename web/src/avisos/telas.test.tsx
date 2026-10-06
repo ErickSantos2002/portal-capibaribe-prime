@@ -642,12 +642,22 @@ describe('mural modelo A: categoria, data em bloco e evento', () => {
     expect(within(fixado).getByText('Geral')).toBeTruthy()
   })
 
-  it('data da publicação em bloco (dia e mês), lida por extenso pelo leitor de tela', async () => {
+  it('sem evento, o bloco é a publicação, e o leitor de tela ouve "Publicado em …"', async () => {
+    await abrirMural()
+    const reajuste = screen.getByText('Reajuste').closest('a')!
+    const bloco = reajuste.querySelector('.data-bloco')!
+    expect(bloco.getAttribute('aria-hidden')).toBe('true')
+    expect(bloco.textContent).toBe('03nov')
+    expect(within(reajuste).getByText('Publicado em 3 de novembro')).toBeTruthy()
+  })
+
+  it('decisão do Erick (dúvida A): com evento, o bloco é o dia do EVENTO', async () => {
     const vistoria = await abrirMural()
     const bloco = vistoria.querySelector('.data-bloco')!
-    expect(bloco.getAttribute('aria-hidden')).toBe('true')
-    expect(bloco.textContent).toBe('04out')
-    expect(within(vistoria).getByText('4 de outubro')).toBeTruthy()
+    // Evento em outro ano: o ano vai no bloco.
+    expect(bloco.textContent).toBe('10out2099')
+    expect(within(vistoria).getByText('Evento em 10 de outubro de 2099')).toBeTruthy()
+    expect(within(vistoria).queryByText(/Publicado em/)).toBeNull()
   })
 
   it('resumo embaixo do título', async () => {
@@ -657,9 +667,11 @@ describe('mural modelo A: categoria, data em bloco e evento', () => {
 
   it('evento futuro mostra dia e hora; o que já passou mostra "Já aconteceu"', async () => {
     const vistoria = await abrirMural()
-    expect(within(vistoria).getByText('Sáb, 10/10/99 · 9h')).toBeTruthy()
+    // A data já está no bloco: a linha diz o dia da semana, a hora e quando foi publicado.
+    expect(within(vistoria).getByText('Sáb, 9h · publicado 4/10')).toBeTruthy()
     const assembleia = screen.getByText('Assembleia').closest('a')!
-    expect(within(assembleia).getByText('Sáb, 10/10/20 · Já aconteceu')).toBeTruthy()
+    expect(within(assembleia).getByText('Já aconteceu · publicado 3/11')).toBeTruthy()
+    expect(assembleia.querySelector('.data-bloco')?.textContent).toBe('10out2020')
     const reajuste = screen.getByText('Reajuste').closest('a')!
     expect(reajuste.querySelector('.linha-evento')).toBeNull()
   })
@@ -695,6 +707,16 @@ describe('aviso aberto: cabeçalho, quadro do evento e texto formatado', () => {
     expect(artigo.classList.contains('cat-obra')).toBe(true)
     expect(within(artigo).getByText('Obra')).toBeTruthy()
     expect(artigo.querySelector('.data-bloco')?.textContent).toBe('03nov')
+    expect(within(artigo).getByText('Publicado em 3 de novembro')).toBeTruthy()
+  })
+
+  it('decisão do Erick (dúvida A): aviso de evento tem no bloco o dia do evento', async () => {
+    await abrirAviso({ evento: { quando: FUTURO, onde: null } })
+    const artigo = document.querySelector('article')!
+    expect(artigo.querySelector('.data-bloco')?.textContent).toBe('10out2099')
+    expect(within(artigo).getByText('Evento em 10 de outubro de 2099')).toBeTruthy()
+    // A frase continua dizendo a publicação.
+    expect(within(artigo).getByText(/Publicado pela Comissão em 3 de novembro/)).toBeTruthy()
   })
 
   it('evento: quadro "Quando / Onde" logo depois do cabeçalho', async () => {
@@ -934,7 +956,7 @@ describe('formulário: categoria, barra de marcas, "Ver como fica" e evento', ()
       '.previa',
     ) as HTMLElement
     expect(within(previa).getAllByText('Reunião').length).toBe(2)
-    expect(within(previa).getByText('Sáb, 10/10/99 · 19h30')).toBeTruthy()
+    expect(within(previa).getByText(/^Sáb, 19h30 · publicado \d+\/\d+$/)).toBeTruthy()
     expect(within(previa).getByText('Sábado, 10 de outubro de 2099, 19h30')).toBeTruthy()
   })
 

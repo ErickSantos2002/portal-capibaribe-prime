@@ -70,10 +70,30 @@ function horario({ hora, minuto }: Partes): string {
   return minuto ? `${hora}h${doisDigitos(minuto)}` : `${hora}h`
 }
 
-/** O bloco de data do mural: `{ dia: '04', mes: 'out' }`. */
-export function dataEmBloco(iso: string): { dia: string; mes: string } {
+/** O bloco de data: `{ dia: '04', mes: 'out' }`, com `ano` se não for o ano de hoje. */
+export function dataEmBloco(
+  iso: string,
+  agora: Date = new Date(),
+): { dia: string; mes: string; ano?: string } {
   const p = emRecife(iso)
-  return { dia: doisDigitos(p.dia), mes: MESES[p.mes - 1] }
+  const bloco = { dia: doisDigitos(p.dia), mes: MESES[p.mes - 1] }
+  return outroAno(p, agora) ? { ...bloco, ano: String(p.ano) } : bloco
+}
+
+/** "10 de outubro" ou, em outro ano, "9 de outubro de 2027" (o rótulo do bloco de data). */
+export function dataPorExtenso(iso: string, agora: Date = new Date()): string {
+  const p = emRecife(iso)
+  const ano = outroAno(p, agora) ? ` de ${p.ano}` : ''
+  return `${p.dia} de ${MESES_POR_EXTENSO[p.mes - 1]}${ano}`
+}
+
+/** Linha do evento no cartão do mural, quando o bloco já mostra o dia do evento (dúvida A):
+ *  "Sáb, 9h · publicado 6/10" ou "Já aconteceu · publicado 6/10". */
+export function eventoNaLinha(quando: string, publicado: string, agora: Date = new Date()): string {
+  const p = emRecife(quando)
+  const pub = emRecife(publicado)
+  const inicio = new Date(quando) < agora ? 'Já aconteceu' : `${DIAS[p.semana]}, ${horario(p)}`
+  return `${inicio} · publicado ${pub.dia}/${pub.mes}`
 }
 
 /** O evento é de outro ano que o de hoje (em Recife)? Aí a data leva o ano (revisão UX 1). */

@@ -4,7 +4,14 @@ import { Link } from 'react-router'
 import { formatarData } from '../casca/formatar'
 import { Icone } from '../casca/Icone'
 import { infoDaCategoria } from './categorias'
-import { dataEmBloco, eventoCurto, eventoPorExtenso, jaAconteceu } from './datas'
+import {
+  dataEmBloco,
+  dataPorExtenso,
+  eventoCurto,
+  eventoNaLinha,
+  eventoPorExtenso,
+  jaAconteceu,
+} from './datas'
 import { analisar, trechos, type Bloco } from './formatacao'
 import { assinatura, blocosEmTexto, destinoEmTexto } from './formatos'
 import type { AvisoResumo, Categoria, Evento } from './tipos'
@@ -119,17 +126,24 @@ export function RotuloCategoria({ categoria }: { categoria: Categoria }) {
   )
 }
 
-/** Data da publicação em bloco (dia grande, mês embaixo). O leitor de tela lê por extenso. */
-export function DataEmBloco({ iso, lida = true }: { iso: string; lida?: boolean }) {
-  const { dia, mes } = dataEmBloco(iso)
+/**
+ * Data em bloco (dia grande, mês embaixo, o ano se não for o de hoje). Decisão do Erick (dúvida
+ * A): no aviso que é evento, o bloco é o dia do EVENTO; nos outros, o da publicação. O leitor de
+ * tela ouve o que a data é: "Evento em 10 de outubro" ou "Publicado em 6 de outubro".
+ */
+export function DataEmBloco({ publicado, evento }: { publicado: string; evento: string | null }) {
+  const iso = evento ?? publicado
+  const { dia, mes, ano } = dataEmBloco(iso)
   return (
     <>
       <span className="data-bloco" aria-hidden="true">
         <span className="dia">{dia}</span>
         <span className="mes">{mes}</span>
+        {ano && <span className="ano">{ano}</span>}
       </span>
-      {/* `lida = false`: a data já está escrita ao lado (aviso aberto). */}
-      {lida && <span className="oculto">{formatarData(iso)}</span>}
+      <span className="oculto">
+        {evento ? 'Evento' : 'Publicado'} em {dataPorExtenso(iso)}
+      </span>
     </>
   )
 }
@@ -187,12 +201,13 @@ function Meta({ aviso, arquivados, comData }: PropsMeta) {
   )
 }
 
-/** "Sáb, 11/10 · 9h" (ou "Já aconteceu") no cartão do mural. */
-function LinhaEvento({ quando }: { quando: string }) {
+/** No cartão (o bloco já tem o dia do evento): "Sáb, 9h · publicado 6/10". No fixado, que não
+ *  tem bloco: "Sáb, 11/10 · 9h". Evento passado: "Já aconteceu". */
+function LinhaEvento({ quando, publicado }: { quando: string; publicado?: string }) {
   return (
     <span className="linha-evento">
       <Icone nome="calendario" tamanho={18} />
-      {eventoCurto(quando)}
+      {publicado ? eventoNaLinha(quando, publicado) : eventoCurto(quando)}
     </span>
   )
 }
@@ -209,13 +224,15 @@ export function ItemAviso({ aviso, arquivados, previa }: PropsItem) {
   const classe = `cartao-aviso cat-${aviso.categoria}${chamaAtencao(aviso, arquivados) ? ' novo' : ''}`
   const conteudo = (
     <>
-      <DataEmBloco iso={aviso.publicado_em} />
+      <DataEmBloco publicado={aviso.publicado_em} evento={aviso.evento_quando} />
       <span className="cartao-corpo">
         <RotuloCategoria categoria={aviso.categoria} />
         {/* h2: no mural, o h1 é o título da tela (U9, heading-order). */}
         <h2>{aviso.titulo}</h2>
         {aviso.resumo && <span className="cartao-resumo">{aviso.resumo}</span>}
-        {aviso.evento_quando && <LinhaEvento quando={aviso.evento_quando} />}
+        {aviso.evento_quando && (
+          <LinhaEvento quando={aviso.evento_quando} publicado={aviso.publicado_em} />
+        )}
         <Meta aviso={aviso} arquivados={arquivados} />
       </span>
       {!previa && (
@@ -277,7 +294,7 @@ export function CorpoDoAviso({ aviso, evento, texto, avisos, nivel = 2 }: PropsC
   return (
     <>
       <header className="aviso-cabecalho">
-        <DataEmBloco iso={aviso.publicado_em} lida={false} />
+        <DataEmBloco publicado={aviso.publicado_em} evento={evento?.quando ?? null} />
         <div>
           <RotuloCategoria categoria={aviso.categoria} />
           <p className="suave">
