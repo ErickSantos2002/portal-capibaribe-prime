@@ -190,6 +190,7 @@ export function NovoAviso() {
     blocos,
     arquivado_em: null,
     lido: false,
+    corrigido_desde_a_leitura: false,
   }
   const unidades = alcance.situacao === 'pronta' ? alcance.dados.unidades : null
 

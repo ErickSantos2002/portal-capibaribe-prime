@@ -75,6 +75,7 @@ def test_item_do_mural(logar):
         "blocos": [1, 2],
         "arquivado_em": None,
         "lido": False,
+        "corrigido_desde_a_leitura": False,
     }
 
 

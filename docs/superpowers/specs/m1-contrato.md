@@ -282,9 +282,9 @@ Todas com `exige_admin` (dúvida 9).
 |---|---|---|---|
 | `GET /api/admin/unidades` | `?situacao=todas\|ativadas\|nao_ativadas\|gestao` (padrão `todas`) | 200 `PainelAtivacao` | 401, 403, 422 |
 | `GET /api/admin/unidades/{login}` | — | 200 `UnidadeAdmin` | 404 `unidade_nao_encontrada` |
-| `POST /api/admin/unidades/{login}/resetar` | `ConfirmarReset` (`{ "confirmo": true }`) | 200 `UnidadeAdmin` | 404, 409 `ultimo_admin`, 422 |
-| `PUT /api/admin/unidades/{login}/papeis/{papel}` | — (`papel`: `comissao` ou `admin`) | 200 `UnidadeAdmin` (idempotente) | 404, 409 `unidade_nao_ativada`, 422 |
-| `DELETE /api/admin/unidades/{login}/papeis/{papel}` | — | 200 `UnidadeAdmin` (idempotente) | 404, 409 `ultimo_admin`, 422 |
+| `POST /api/admin/unidades/{login}/resetar` | `ConfirmarReset` (`{ "confirmo": true }`) | 200 `UnidadeAdmin` | 404, 409 `ultimo_admin`, 409 `tente_de_novo`, 422 |
+| `PUT /api/admin/unidades/{login}/papeis/{papel}` | — (`papel`: `comissao` ou `admin`) | 200 `UnidadeAdmin` (idempotente) | 404, 409 `unidade_nao_ativada`, 409 `tente_de_novo`, 422 |
+| `DELETE /api/admin/unidades/{login}/papeis/{papel}` | — | 200 `UnidadeAdmin` (idempotente) | 404, 409 `ultimo_admin`, 409 `tente_de_novo`, 422 |
 | `GET /api/admin/historico` | `?antes_de=<id>&limite=<1..100, padrão 50>` | 200 `PaginaHistorico` | 401, 403, 422 |
 
 - `PainelAtivacao`: `resumo: ResumoAtivacao` (`total`, `ativadas`, `percentual`, inteiro
@@ -337,7 +337,8 @@ Todas com `exige_admin` (dúvida 9).
   `publicado_em`, `publicado_por` (`"Comissão"`, `"Administração do Portal"`, `"Síndico"` ou
   `"Conselho"`, de `publicado_como`), `editado_em` (data da versão em vigor se houver mais de
   uma, senão nulo), `fixado`, `para_todos`, `blocos` (números, vazio se `para_todos`),
-  `arquivado_em`, `lido` (pela unidade logada).
+  `arquivado_em`, `lido` (pela unidade logada), `corrigido_desde_a_leitura` (a unidade leu uma
+  versão anterior à atual e ainda não abriu a correção; revisão do M1, U1).
 - `AvisoCompleto`: tudo do resumo + `texto`, `versoes_anteriores: VersaoAviso[]` (`versao`,
   `titulo`, `texto`, `criada_em`; da mais nova para a mais antiga) e `leitura: ContagemLeitura | null`
   (`lidos`, `total`; só para a gestão, "Lido por X de Y unidades").
@@ -352,18 +353,21 @@ Todas com `exige_admin` (dúvida 9).
 - `Alcance`: `{ "unidades": N }` (unidades `ativa = true` dos blocos).
 - `CorrigirAviso`: `titulo`, `texto` (mesmas regras). Cria a versão seguinte; igual à atual: 409
   `sem_mudanca` "Nada mudou no aviso.". Arquivado: 409 `aviso_arquivado` "Aviso arquivado não
-  pode ser corrigido.". Histórico `aviso_corrigido` com `{"versao": n}`.
+  pode ser corrigido." (também quando o arquivamento chega entre a conferência e a gravação: o
+  trigger da 0003 trava o aviso e recusa, revisão do M1, C4). Histórico `aviso_corrigido` com `{"versao": n}`.
 - Arquivar: `arquivado_em = now()`, sai do mural; histórico `aviso_arquivado`. Não existe rota de
   apagar (RN-05) e o banco nem deixaria.
 - `MudarFixado`: `{ "fixado": bool }`; histórico `aviso_fixado`/`aviso_desafixado` só se mudou.
 - Leitura (H-16): ao abrir o aviso, a tela chama `POST /api/avisos/{id}/lido` (204; repetir não
-  muda nada, `on conflict do nothing`; aviso fora do destino da unidade comum: 404). `GET` nunca
+  muda quem leu nem `lido_em`, só sobe `aviso_leitura.versao_lida` para a versão atual, U1; aviso fora do destino da unidade comum: 404). `GET` nunca
   grava nada: com `SameSite=Lax`, uma navegação vinda de outro site leva o cookie e escaparia do
   `X-Portal` (revisão do M1).
 - `ContagemNaoLidos`: `{ "quantidade": N }` (avisos visíveis, não arquivados, não lidos; para o
   número na aba "Avisos").
-- `Leitura` (H-16): `lidos`, `total` (unidades `ativa = true` do destino), `nao_leram:
-  UnidadeRef[]` (ordenado por login).
+- `Leitura` (H-16): `lidos`, `total` (unidades `ativa = true` do destino), e quem não leu em
+  dois grupos (revisão do M1, U5): `nao_entraram: UnidadeRef[]` (ainda não fizeram o primeiro
+  acesso) e `entraram_sem_ler: UnidadeRef[]` (já entraram, não abriram este aviso), cada um
+  ordenado por login.
 
 ## 5. Casca do front
 

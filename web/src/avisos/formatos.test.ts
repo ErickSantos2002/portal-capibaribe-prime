@@ -68,11 +68,18 @@ describe('texto puro', () => {
 
 describe('lista de quem não leu, para colar no grupo', () => {
   it('agrupa por bloco', () => {
-    const texto = listaParaCopiar('Vistoria', [
-      { login: '1101', bloco: 1, apartamento: '101' },
-      { login: '1102', bloco: 1, apartamento: '102' },
-      { login: '3001', bloco: 3, apartamento: '001' },
-    ])
-    expect(texto).toBe('Ainda não leram o aviso “Vistoria”:\nBloco 1: 101, 102\nBloco 3: 001')
+    const texto = listaParaCopiar(
+      'Vistoria',
+      [{ login: '3001', bloco: 3, apartamento: '001' }],
+      [
+        { login: '1101', bloco: 1, apartamento: '101' },
+        { login: '1102', bloco: 1, apartamento: '102' },
+      ],
+    )
+    expect(texto).toBe(
+      'Ainda não leram o aviso “Vistoria”:\n\n' +
+        'Entraram no Portal, mas não leram:\nBloco 1: 101, 102\n\n' +
+        'Ainda não entraram no Portal:\nBloco 3: 001',
+    )
   })
 })

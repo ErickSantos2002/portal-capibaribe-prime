@@ -31,6 +31,8 @@ export interface AvisoResumo {
   blocos: number[]
   arquivado_em: DataHora | null
   lido: boolean
+  /** Leu uma versão anterior e ainda não abriu a correção (revisão do M1, U1). */
+  corrigido_desde_a_leitura: boolean
 }
 
 export interface VersaoAviso {
@@ -77,5 +79,8 @@ export interface Destinos {
 export interface Leitura {
   lidos: number
   total: number
-  nao_leram: UnidadeRef[]
+  /** Ainda não fizeram o primeiro acesso (revisão do M1, U5). */
+  nao_entraram: UnidadeRef[]
+  /** Já entraram no Portal, mas não abriram este aviso. */
+  entraram_sem_ler: UnidadeRef[]
 }

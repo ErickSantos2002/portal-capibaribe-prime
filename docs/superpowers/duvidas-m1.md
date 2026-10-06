@@ -332,3 +332,30 @@ o que foi decidido na implementação.
 ## 39. A regra da senha, dita como ela é (U8)
 - **Decisão:** as mensagens dizem "caracteres" (não "letras ou números"): a senha aceita espaço
   e símbolo. A dica do primeiro acesso diz a regra inteira.
+
+## 40. Impasse entre dois admins vira 409 "tente de novo" (C5)
+- **Problema:** dois admins tirando o papel um do outro ao mesmo tempo se travam (o trigger do
+  último admin trava as linhas de admin) e o Postgres derruba um com 40P01: virava 500.
+  Reproduzido de verdade em `test_dois_admins_tirando_o_papel_um_do_outro_nunca_da_500`.
+- **Decisão:** nas rotas de papéis e de voltar para a senha inicial, `deadlock_detected` (40P01)
+  e `serialization_failure` (40001) fazem rollback e respondem 409 `tente_de_novo`, "Outra
+  pessoa mexeu nesta unidade ao mesmo tempo. Tente de novo." Sem repetir sozinho: o admin vê a
+  ficha de novo e decide (o outro pedido pode ter mudado tudo).
+
+## 41. Aviso corrigido depois da leitura: "Corrigido", sem mexer em quem leu (U1)
+- **Decisão:** `aviso_leitura.versao_lida` (0003) guarda a maior versão aberta; `lido_em` e a
+  contagem "quem leu" continuam da primeira leitura. `AvisoResumo.corrigido_desde_a_leitura`
+  liga o selo "Corrigido" até a unidade abrir de novo.
+- **O número na aba "Avisos" não conta correção:** continua sendo de avisos nunca abertos. A
+  correção aparece no selo do próprio aviso; somar ao número faria um aviso já lido parecer
+  "novo", que é o que o coordenador pediu para não acontecer.
+
+## 42. Registrado para depois (C7, sem implementar)
+- **Mural sem paginação e busca em Python:** `GET /api/avisos` devolve o mural inteiro e a busca
+  sem acento filtra em Python. Com ~320 unidades e poucos avisos por semana, cabe por anos;
+  vai para o **M5**, com medição antes (tempo de resposta e tamanho do mural real), e aí
+  paginação por cursor e busca no banco (`unaccent` + índice).
+- **Sessões ilimitadas em unidade não ativada:** cada entrada com `mudar123` cria uma sessão
+  restrita, sem limite por unidade. Coberto pelo firewall do portão (20 entradas por IP a cada
+  10 minutos, ADR-0005) e pelo fato de essas sessões morrerem no primeiro acesso (dúvida 29).
+  Se o painel do Neon mostrar crescimento estranho de `sessao`, limitar por unidade.

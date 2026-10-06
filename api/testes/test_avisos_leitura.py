@@ -23,11 +23,11 @@ def test_abrir_conta_como_lido(logar):
     assert comum.post(f"/api/avisos/{aviso['id']}/lido").status_code == 204
     leitura = _leitura(logar(ADMIN), aviso["id"])
     assert (leitura["lidos"], leitura["total"]) == (2, 320)
-    logins = [u["login"] for u in leitura["nao_leram"]]
+    nao_leram = leitura["nao_entraram"] + leitura["entraram_sem_ler"]
+    logins = [u["login"] for u in nao_leram]
     assert len(logins) == 318
     assert COMUM not in logins and COMISSAO not in logins
-    assert logins == sorted(logins)
-    assert leitura["nao_leram"][0] == {"login": "1001", "bloco": 1, "apartamento": "001"}
+    assert leitura["nao_entraram"][0] == {"login": "1001", "bloco": 1, "apartamento": "001"}
 
 
 def test_abrir_de_novo_nao_conta_duas_vezes(logar, engine_app):
@@ -55,8 +55,9 @@ def test_total_e_do_destino(logar):
     # A gestão abriu aviso de outro bloco: não entra na conta (2304 é do Bloco 2).
     logar(COMISSAO).post(f"/api/avisos/{aviso['id']}/lido")
     leitura = _leitura(logar(ADMIN), aviso["id"])
-    assert (leitura["lidos"], leitura["total"], len(leitura["nao_leram"])) == (1, 64, 63)
-    assert {u["bloco"] for u in leitura["nao_leram"]} == {1}
+    nao_leram = leitura["nao_entraram"] + leitura["entraram_sem_ler"]
+    assert (leitura["lidos"], leitura["total"], len(nao_leram)) == (1, 64, 63)
+    assert {u["bloco"] for u in nao_leram} == {1}
 
 
 def test_total_conta_so_unidades_ativas(logar, engine_app):
@@ -65,7 +66,7 @@ def test_total_conta_so_unidades_ativas(logar, engine_app):
     aviso = publicar(logar(COMISSAO))
     leitura = _leitura(logar(ADMIN), aviso["id"])
     assert leitura["total"] == 319
-    assert "1102" not in [u["login"] for u in leitura["nao_leram"]]
+    assert "1102" not in [u["login"] for u in leitura["nao_entraram"]]
 
 
 def test_contagem_no_aviso_so_para_a_gestao(logar):

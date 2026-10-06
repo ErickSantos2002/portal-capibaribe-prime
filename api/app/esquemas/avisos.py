@@ -93,6 +93,8 @@ class AvisoResumo(Saida):
     blocos: list[int]
     arquivado_em: datetime | None
     lido: bool
+    # A unidade leu uma versão anterior à atual e ainda não abriu a correção (U1, revisão do M1).
+    corrigido_desde_a_leitura: bool
 
 
 class VersaoAviso(Saida):
@@ -154,4 +156,6 @@ class Leitura(Saida):
 
     lidos: int
     total: int
-    nao_leram: list[UnidadeRef]
+    # Quem não leu, em dois grupos (U5, revisão do M1): a Comissão cobra de jeitos diferentes.
+    nao_entraram: list[UnidadeRef]
+    entraram_sem_ler: list[UnidadeRef]

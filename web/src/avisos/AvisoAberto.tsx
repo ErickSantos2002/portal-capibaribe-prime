@@ -6,6 +6,7 @@ import { useSessao } from '../casca/contextoSessao'
 import { formatarData } from '../casca/formatar'
 import { NaoEncontrado } from '../casca/guardas'
 import { Icone } from '../casca/Icone'
+import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
 import { abrirAviso, arquivarAviso, marcarLido, mudarFixado } from './api'
 import { comoErroDaApi, useCarga, useIdDoAviso } from './carregar'
@@ -27,12 +28,14 @@ function AvisoAberto({ id }: { id: number }) {
   useEffect(() => {
     if (carga.situacao !== 'pronta' || marcado.current) return
     marcado.current = true
-    if (!carga.dados.lido) marcarLido(id).catch(() => {})
+    // Também quando foi corrigido depois da leitura: tira o selo "Corrigido" (revisão do M1, U1).
+    if (!carga.dados.lido || carga.dados.corrigido_desde_a_leitura) marcarLido(id).catch(() => {})
   }, [carga, id])
 
   if (carga.situacao === 'erro' && carga.erro.status === 404) return <NaoEncontrado />
   return (
-    <Tela titulo="Aviso" voltar="/avisos">
+    // U9: o assunto do aviso é o h1 e o título da aba.
+    <Tela titulo={carga.situacao === 'pronta' ? carga.dados.titulo : 'Aviso'} voltar="/avisos">
       {carga.situacao === 'erro' ? (
         <FalhaAoCarregar mensagem={carga.erro.mensagem} tentar={recarregar} />
       ) : carga.situacao === 'carregando' ? (
@@ -52,7 +55,6 @@ function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCo
         {aviso.fixado && 'Fixado. '}Publicado {assinatura(aviso.publicado_por)} em{' '}
         {formatarData(aviso.publicado_em)}, para {destinoEmTexto(aviso)}.
       </p>
-      <h2>{aviso.titulo}</h2>
       {aviso.arquivado_em && (
         <div className="aviso-caixa atencao">
           <Icone nome="arquivar" />
@@ -78,7 +80,7 @@ function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCo
                   <p className="suave">
                     {v.versao === 1 ? 'Publicado' : 'Corrigido'} em {formatarData(v.criada_em)}:
                   </p>
-                  <h3>{v.titulo}</h3>
+                  <h2 className="avisos-versao-titulo">{v.titulo}</h2>
                   <TextoDoAviso texto={v.texto} />
                 </section>
               ))}
@@ -101,6 +103,11 @@ function ParaAGestao({
 }) {
   const recado = useRecado()
   const [confirmando, setConfirmando] = useState(false)
+  const blocoDaConfirmacao = useRef<HTMLDivElement>(null)
+  // U2 (revisão do M1): a confirmação inteira no meio da tela, longe do recado e das abas.
+  useEffect(() => {
+    if (confirmando) centralizar(blocoDaConfirmacao.current)
+  }, [confirmando])
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -160,7 +167,13 @@ function ParaAGestao({
             {aviso.fixado ? 'Tirar do topo do mural' : 'Fixar no topo do mural'}
           </button>
           {confirmando ? (
-            <div className="aviso-caixa atencao" role="group" aria-labelledby="confirmar-arquivar">
+            <div
+              className="aviso-caixa atencao"
+              role="group"
+              aria-labelledby="confirmar-arquivar"
+              ref={blocoDaConfirmacao}
+              tabIndex={-1}
+            >
               <Icone nome="alerta" />
               <div>
                 <p id="confirmar-arquivar">

@@ -135,7 +135,16 @@ class _Montado:
     # Da mais nova (em vigor) para a mais antiga.
     versoes: list[AvisoVersao]
     blocos: list[int]
-    lido: bool
+    # Maior versão que a unidade abriu (None: nunca abriu).
+    versao_lida: int | None
+
+    @property
+    def lido(self) -> bool:
+        return self.versao_lida is not None
+
+    @property
+    def corrigido_desde_a_leitura(self) -> bool:
+        return self.versao_lida is not None and self.versao_lida < self.atual.versao
 
     @property
     def atual(self) -> AvisoVersao:
@@ -160,14 +169,15 @@ def _montar(db: Session, logado: Logado, avisos: Sequence[Aviso]) -> list[_Monta
         .order_by(Bloco.numero)
     ):
         blocos[aviso_id].append(numero)
-    lidos = set(
-        db.scalars(
-            select(AvisoLeitura.aviso_id).where(
+    lidas: dict[int, int] = {
+        aviso_id: versao
+        for aviso_id, versao in db.execute(
+            select(AvisoLeitura.aviso_id, AvisoLeitura.versao_lida).where(
                 AvisoLeitura.aviso_id.in_(ids), AvisoLeitura.unidade_id == logado.unidade_id
             )
         )
-    )
-    return [_Montado(a, versoes[a.id], blocos[a.id], a.id in lidos) for a in avisos]
+    }
+    return [_Montado(a, versoes[a.id], blocos[a.id], lidas.get(a.id)) for a in avisos]
 
 
 def _resumo(m: _Montado) -> dict:
@@ -184,6 +194,7 @@ def _resumo(m: _Montado) -> dict:
         "blocos": m.blocos,
         "arquivado_em": a.arquivado_em,
         "lido": m.lido,
+        "corrigido_desde_a_leitura": m.corrigido_desde_a_leitura,
     }
 
 
@@ -259,10 +270,21 @@ def abrir(db: Session, logado: Logado, aviso_id: int) -> AvisoCompleto:
 
 
 def _gravar_leitura(db: Session, aviso_id: int, unidade_id: int) -> None:
+    """Primeira leitura: grava (o banco carimba `lido_em` e a versão atual). Leituras seguintes
+    só sobem `versao_lida` para a atual (U1); `lido_em` continua o da primeira (trigger)."""
+    atual = (
+        select(func.max(AvisoVersao.versao))
+        .where(AvisoVersao.aviso_id == aviso_id)
+        .scalar_subquery()
+    )
+    comando = insert(AvisoLeitura).values(
+        aviso_id=aviso_id, unidade_id=unidade_id, versao_lida=atual
+    )
     db.execute(
-        insert(AvisoLeitura)
-        .values(aviso_id=aviso_id, unidade_id=unidade_id)
-        .on_conflict_do_nothing(index_elements=["aviso_id", "unidade_id"])
+        comando.on_conflict_do_update(
+            index_elements=["aviso_id", "unidade_id"],
+            set_={"versao_lida": comando.excluded.versao_lida},
+        )
     )
 
 
@@ -277,15 +299,16 @@ def leitura(db: Session, logado: Logado, aviso_id: int) -> Leitura:
     aviso = _buscar(db, logado, aviso_id)
     contagem = _contagem(db, aviso)
     leram = select(AvisoLeitura.unidade_id).where(AvisoLeitura.aviso_id == aviso.id)
-    logins = db.scalars(
-        select(Unidade.login)
+    linhas = db.execute(
+        select(Unidade.login, Unidade.ativada_em.is_not(None))
         .where(Unidade.id.in_(_unidades_do_destino(aviso)), Unidade.id.not_in(leram))
         .order_by(Unidade.login)
-    )
+    ).all()
     return Leitura(
         lidos=contagem.lidos,
         total=contagem.total,
-        nao_leram=[UnidadeRef.de_login(login) for login in logins],
+        nao_entraram=[UnidadeRef.de_login(login) for login, entrou in linhas if not entrou],
+        entraram_sem_ler=[UnidadeRef.de_login(login) for login, entrou in linhas if entrou],
     )
 
 
@@ -386,7 +409,14 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
         db.flush()
     except IntegrityError as erro:
         db.rollback()
-        if _restricao(erro) in ("aviso_versao_pkey", "aviso_versao_sequencia"):
+        restricao = _restricao(erro)
+        if restricao == "aviso_versao_arquivado":
+            # C4 (revisão do M1): arquivaram entre a conferência acima e a gravação; o banco
+            # recusou (trigger da 0003).
+            raise ErroApi(
+                409, "aviso_arquivado", "Aviso arquivado não pode ser corrigido."
+            ) from erro
+        if restricao in ("aviso_versao_pkey", "aviso_versao_sequencia"):
             raise ErroApi(
                 409,
                 "aviso_corrigido_agora",

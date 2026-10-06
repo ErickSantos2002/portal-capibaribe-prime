@@ -59,9 +59,35 @@ export function partesDaLinha(linha: string): Parte[] {
 }
 
 /** Texto para colar no grupo do WhatsApp (H-16). */
-export function listaParaCopiar(titulo: string, naoLeram: UnidadeRef[]): string {
+function linhasPorBloco(unidades: UnidadeRef[]): string[] {
   const porBloco = new Map<number, string[]>()
-  for (const u of naoLeram) porBloco.set(u.bloco, [...(porBloco.get(u.bloco) ?? []), u.apartamento])
-  const linhas = [...porBloco].map(([bloco, aptos]) => `Bloco ${bloco}: ${aptos.join(', ')}`)
-  return [`Ainda não leram o aviso “${titulo}”:`, ...linhas].join('\n')
+  for (const u of unidades) porBloco.set(u.bloco, [...(porBloco.get(u.bloco) ?? []), u.apartamento])
+  return [...porBloco].map(([bloco, aptos]) => `Bloco ${bloco}: ${aptos.join(', ')}`)
+}
+
+/** Texto para colar no grupo (H-16), em dois grupos (revisão do M1, U5): quem entrou e não leu
+ *  primeiro, que é a quem a cobrança "abra o aviso" serve; depois quem nem entrou ainda. */
+export function listaParaCopiar(
+  titulo: string,
+  naoEntraram: UnidadeRef[],
+  entraramSemLer: UnidadeRef[],
+): string {
+  const partes = [`Ainda não leram o aviso “${titulo}”:`]
+  if (entraramSemLer.length) {
+    partes.push(
+      ['Entraram no Portal, mas não leram:', ...linhasPorBloco(entraramSemLer)].join('\n'),
+    )
+  }
+  if (naoEntraram.length) {
+    partes.push(['Ainda não entraram no Portal:', ...linhasPorBloco(naoEntraram)].join('\n'))
+  }
+  return partes.join('\n\n')
+}
+
+/** A ordem da grade do admin: do 7º andar ao térreo, como o prédio visto de frente. */
+export function ordemDaGrade(unidades: UnidadeRef[]): UnidadeRef[] {
+  const andar = (u: UnidadeRef) => Math.floor(Number(u.apartamento) / 100)
+  return [...unidades].sort(
+    (a, b) => a.bloco - b.bloco || andar(b) - andar(a) || a.login.localeCompare(b.login),
+  )
 }
