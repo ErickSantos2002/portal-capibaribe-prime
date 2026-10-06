@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { cabecalhosDoVercel } from './cabecalhos.ts'
@@ -7,8 +8,16 @@ import { cabecalhosDoVercel } from './cabecalhos.ts'
 // usam portas diferentes: `PORTAL_API_URL=http://127.0.0.1:8120 npm run preview`.
 const API = process.env.PORTAL_API_URL ?? 'http://127.0.0.1:8000'
 
+// Fonte única da versão do Portal: o package.json (README, seção Versões).
+const { version: VERSAO } = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+) as { version: string }
+
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __VERSAO__: JSON.stringify(VERSAO),
+  },
   server: {
     // Em desenvolvimento, /api vai para o uvicorn local (como a Vercel faz em produção).
     // Sem a CSP aqui: o modo dev do React injeta script embutido para o recarregamento.
