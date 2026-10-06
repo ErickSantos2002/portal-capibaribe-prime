@@ -11,6 +11,7 @@
 #
 # Envia `diarios/AAAA-MM-DD.dump.age`; no dia 1 envia também `mensais/AAAA-MM.dump.age`.
 # A chave diária é impressa na saída padrão (o workflow a passa para a restauração).
+# shellcheck source=scripts/backup/comum.sh
 source "$(dirname "${BASH_SOURCE[0]}")/comum.sh"
 
 exigir_variaveis BACKUP_DATABASE_URL R2_ENDPOINT R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET

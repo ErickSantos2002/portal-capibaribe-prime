@@ -18,6 +18,7 @@
 #   PG_BIN                pasta das ferramentas do Postgres 17
 #
 # Sai com erro se a decifragem, o pg_restore ou qualquer verificação falhar.
+# shellcheck source=scripts/backup/comum.sh
 source "$(dirname "${BASH_SOURCE[0]}")/comum.sh"
 
 destino="" objeto="" arquivo="" head=""

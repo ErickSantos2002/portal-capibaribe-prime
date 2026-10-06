@@ -16,6 +16,7 @@ set +x
 
 raiz="$(cd "$(dirname "$0")/../../.." && pwd)"
 pasta="$raiz/scripts/backup"
+# shellcheck source=scripts/backup/comum.sh
 source "$pasta/comum.sh"
 
 ADMIN_URL="${PORTAL_TESTE_ADMIN_URL:-postgresql://postgres:teste@127.0.0.1:55432/postgres}"
@@ -175,8 +176,9 @@ ok "fazer-backup.sh enviou $objeto"
   reprovar "o mensal mais velho que sobra deveria ser 2025-11"
 s3 listar mensais | grep -qx "mensais/2026-10.dump.age" || reprovar "o dia 1 não virou mensal"
 ok "retenção: 35 diários e 14 mensais viraram 30 e 12, os mais novos"
-s3 baixar "diarios/leia-me.txt" "$temp/x" && s3 baixar "outra-pasta/2020-01-01.dump.age" "$temp/x" ||
-  reprovar "a retenção apagou chave fora do padrão"
+for chave in "diarios/leia-me.txt" "outra-pasta/2020-01-01.dump.age"; do
+  s3 baixar "$chave" "$temp/x" || reprovar "a retenção apagou $chave, fora do padrão"
+done
 ok "retenção não toca em chave fora do padrão"
 
 s3 baixar "$objeto" "$temp/baixado"

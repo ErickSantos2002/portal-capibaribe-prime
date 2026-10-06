@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Funções comuns dos scripts de backup. Carregado com `source`, nunca executado sozinho.
 # Regra: nenhum script de backup liga `set -x` (as URLs de banco têm senha).
 set -euo pipefail
