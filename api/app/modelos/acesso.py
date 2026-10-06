@@ -4,8 +4,10 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import (
+    ARRAY,
     BigInteger,
     CheckConstraint,
+    DateTime,
     Enum,
     FetchedValue,
     ForeignKey,
@@ -84,8 +86,6 @@ class Unidade(Base):
     responsavel_nome: Mapped[str | None]
     celular: Mapped[str | None]
     email: Mapped[str | None]
-    tentativas_falhas: Mapped[int] = mapped_column(SmallInteger, server_default="0")
-    bloqueada_ate: Mapped[datetime | None]
     # Data do banco da última troca de senha (migração 0002). Sessão criada antes não vale.
     senha_trocada_em: Mapped[datetime] = mapped_column(
         server_default=func.now(), server_onupdate=FetchedValue()
@@ -119,6 +119,31 @@ class UnidadePapel(Base):
     concedido_por: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("unidade.id"))
     retirado_em: Mapped[datetime | None] = mapped_column(server_onupdate=FetchedValue())
     retirado_por: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("unidade.id"))
+
+
+class EntradaTentativa(Base):
+    """Senhas erradas por login e IP (H-03; migração 0003, revisão do M1).
+
+    O bloqueio é do par (login, IP), não da unidade: quem erra de outro lugar não tranca o dono.
+    A chave é o login, não a unidade, para login inexistente contar igual (a resposta não pode
+    revelar se a unidade existe). O IP só entra como HMAC; a linha expira em `expira_em`.
+    """
+
+    __tablename__ = "entrada_tentativa"
+    __table_args__ = (
+        CheckConstraint("login ~ '^[1-9][0-7][0-9]{2}$'", name="entrada_tentativa_login"),
+        CheckConstraint("ip_hash ~ '^[0-9a-f]{64}$'", name="entrada_tentativa_ip_hash"),
+        Index("entrada_tentativa_expira", "expira_em"),
+    )
+
+    login: Mapped[str] = mapped_column(primary_key=True)
+    ip_hash: Mapped[str] = mapped_column(primary_key=True)
+    # Datas das falhas que ainda contam (últimos 15 minutos).
+    falhas_em: Mapped[list[datetime]] = mapped_column(
+        ARRAY(DateTime(timezone=True)), server_default="{}"
+    )
+    bloqueada_ate: Mapped[datetime | None]
+    expira_em: Mapped[datetime]
 
 
 class Sessao(Base):

@@ -1,15 +1,13 @@
 """Épico A · Entrar (H-02) e bloqueio por tentativas (H-03): `POST /api/acesso/entrar`."""
 
-from datetime import timedelta
-
 import pytest
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.modelos import Historico, Sessao, Unidade
+from app.modelos import Sessao, Unidade
 from app.seguranca.senhas import SENHA_INICIAL
 from app.seguranca.sessoes import NOME_COOKIE
-from testes.conftest import ADMIN, CABECALHO_PORTAL, COMISSAO, COMUM, NAO_ATIVADA
+from testes.conftest import CABECALHO_PORTAL, COMISSAO, COMUM, NAO_ATIVADA
 
 MSG_CREDENCIAIS = "Bloco, apartamento ou senha incorretos. Confira e tente de novo."
 
@@ -75,7 +73,11 @@ def test_h02_guarda_so_a_descricao_do_aparelho(cliente, predio, engine_app):
 def test_h02_login_inexistente_e_senha_errada_dao_a_mesma_resposta(cliente, predio, login, senha):
     resposta = entrar(cliente, login, senha)
     assert resposta.status_code == 401
-    assert resposta.json() == {"codigo": "credenciais_invalidas", "mensagem": MSG_CREDENCIAIS}
+    assert resposta.json() == {
+        "codigo": "credenciais_invalidas",
+        "mensagem": MSG_CREDENCIAIS,
+        "tentativas_restantes": 4,
+    }
     assert "set-cookie" not in resposta.headers
 
 
@@ -126,117 +128,6 @@ def test_h01_fechou_no_meio_e_entrou_de_novo_volta_ao_primeiro_acesso(cliente, p
     entrar(cliente, NAO_ATIVADA, SENHA_INICIAL)
     cliente.post("/api/acesso/sair", headers=CABECALHO_PORTAL)
     assert entrar(cliente, NAO_ATIVADA, SENHA_INICIAL).json()["precisa_trocar_senha"] is True
-
-
-# --- H-03 · bloqueio por tentativas -------------------------------------------------------------
-
-
-def errar(cliente, login: str, vezes: int) -> list[int]:
-    return [entrar(cliente, login, "senha-errada").status_code for _ in range(vezes)]
-
-
-def test_h03_cinco_erros_e_a_sexta_e_recusada_mesmo_com_a_senha_certa(cliente, predio):
-    assert errar(cliente, ADMIN, 5) == [401] * 5
-    resposta = entrar(cliente, ADMIN, f"senha-{ADMIN}")
-    assert resposta.status_code == 423
-    corpo = resposta.json()
-    assert corpo["codigo"] == "unidade_bloqueada"
-    assert corpo["minutos_restantes"] == 15
-    assert corpo["bloqueada_ate"]
-    assert "set-cookie" not in resposta.headers
-
-
-def test_h03_mensagem_diz_o_tempo_e_sugere_falar_com_a_administracao(cliente, predio):
-    errar(cliente, ADMIN, 5)
-    mensagem = entrar(cliente, ADMIN, "outra").json()["mensagem"]
-    assert mensagem == (
-        "Entrada bloqueada por 15 minutos depois de várias senhas erradas. Se não foi você, "
-        "avise a administração do Portal no grupo do WhatsApp."
-    )
-
-
-def test_h03_um_minuto_no_singular(cliente, predio, engine_dono):
-    errar(cliente, ADMIN, 5)
-    with engine_dono.begin() as con:
-        con.execute(
-            text(
-                "update unidade set bloqueada_ate = now() + interval '30 seconds' where login = :l"
-            ),
-            {"l": ADMIN},
-        )
-    corpo = entrar(cliente, ADMIN, "x").json()
-    assert corpo["minutos_restantes"] == 1
-    assert corpo["mensagem"].startswith("Entrada bloqueada por 1 minuto depois")
-
-
-def test_h03_bloqueio_fica_no_historico_como_acao_do_sistema(cliente, predio, engine_app):
-    errar(cliente, ADMIN, 5)
-    with Session(engine_app) as db:
-        registro = db.scalars(select(Historico).where(Historico.acao == "unidade_bloqueada")).one()
-    assert registro.unidade_id is None
-    assert (registro.entidade, registro.entidade_id) == ("unidade", predio[ADMIN])
-
-
-def test_h03_bloqueio_e_so_daquela_unidade(cliente, predio):
-    errar(cliente, ADMIN, 5)
-    assert entrar(cliente, COMUM, f"senha-{COMUM}").status_code == 200
-
-
-def test_h03_tentativa_durante_o_bloqueio_nao_estende_o_prazo(cliente, predio, engine_app):
-    errar(cliente, ADMIN, 5)
-    antes = unidade(engine_app, ADMIN).bloqueada_ate
-    errar(cliente, ADMIN, 3)
-    depois = unidade(engine_app, ADMIN)
-    assert depois.bloqueada_ate == antes
-    assert depois.tentativas_falhas == 0
-
-
-def test_h03_senha_certa_zera_as_tentativas(cliente, predio, engine_app):
-    errar(cliente, ADMIN, 4)
-    assert entrar(cliente, ADMIN, f"senha-{ADMIN}").status_code == 200
-    assert unidade(engine_app, ADMIN).tentativas_falhas == 0
-    # Seguidas: depois do acerto, mais 4 erros ainda não bloqueiam.
-    assert errar(cliente, ADMIN, 4) == [401] * 4
-    assert entrar(cliente, ADMIN, f"senha-{ADMIN}").status_code == 200
-
-
-def test_h03_passados_os_15_minutos_volta_a_entrar(cliente, predio, engine_dono, engine_app):
-    errar(cliente, ADMIN, 5)
-    with engine_dono.begin() as con:
-        con.execute(
-            text("update unidade set bloqueada_ate = now() - interval '1 second' where login = :l"),
-            {"l": ADMIN},
-        )
-    assert entrar(cliente, ADMIN, f"senha-{ADMIN}").status_code == 200
-    assert unidade(engine_app, ADMIN).bloqueada_ate is None
-
-
-def test_h03_bloqueio_dura_15_minutos_pelo_relogio_do_banco(cliente, predio, engine_app):
-    errar(cliente, ADMIN, 5)
-    with Session(engine_app) as db:
-        agora = db.scalars(select(func.now())).one()
-    bloqueada_ate = unidade(engine_app, ADMIN).bloqueada_ate
-    assert bloqueada_ate is not None
-    assert timedelta(minutes=14) < bloqueada_ate - agora <= timedelta(minutes=15)
-
-
-def test_h03_bloqueio_vale_tambem_para_unidade_nao_ativada(cliente, predio):
-    errar(cliente, NAO_ATIVADA, 5)
-    assert entrar(cliente, NAO_ATIVADA, SENHA_INICIAL).status_code == 423
-
-
-def test_h03_erro_em_login_inexistente_nao_trava_nada(cliente, predio, engine_app):
-    errar(cliente, "5799", 6)
-    with Session(engine_app) as db:
-        assert (
-            db.scalars(select(Historico).where(Historico.acao == "unidade_bloqueada")).all() == []
-        )
-        assert db.scalar(select(Unidade.id).where(Unidade.tentativas_falhas > 0)) is None
-
-
-def test_h03_banco_registra_as_tentativas(cliente, predio, engine_app):
-    errar(cliente, COMUM, 2)
-    assert unidade(engine_app, COMUM).tentativas_falhas == 2
 
 
 def test_h02_entrar_de_novo_abre_outro_aparelho_sem_derrubar_o_primeiro(

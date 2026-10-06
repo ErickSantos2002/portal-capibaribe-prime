@@ -33,6 +33,7 @@ from app.esquemas.comum import UnidadeRef
 from app.modelos import AvisoVersao, Bloco, Historico, Papel, Sessao, Unidade, UnidadePapel
 from app.seguranca.senhas import SENHA_INICIAL, gerar_hash
 from app.seguranca.sessoes import VALIDADE, encerrar_todas
+from app.servicos import tentativas
 from app.servicos.historico import Acao, registrar
 
 _LOGIN = re.compile(r"^[1-9][0-7][0-9]{2}$")
@@ -122,7 +123,7 @@ def ficha(db: Session, login: str) -> UnidadeAdmin:
         celular=unidade.celular,
         email=unidade.email,
         papeis=_papeis_em_vigor(db, unidade.id),
-        bloqueada_ate=unidade.bloqueada_ate,
+        bloqueada_ate=tentativas.bloqueada_ate(db, unidade.login),
         aparelhos_conectados=aparelhos or 0,
     )
 
@@ -214,8 +215,7 @@ def resetar(db: Session, login: str, admin_id: int) -> None:
         unidade.responsavel_nome = None
         unidade.celular = None
         unidade.email = None
-        unidade.tentativas_falhas = 0
-        unidade.bloqueada_ate = None
+        tentativas.esquecer_login(db, unidade.login)
         db.flush()
     except IntegrityError as erro:
         db.rollback()

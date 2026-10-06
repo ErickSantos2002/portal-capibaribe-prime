@@ -24,18 +24,29 @@ cookie); regras em `app/servicos/acesso.py`. Erros conforme o contrato.
 
 ### 2.1 Entrar (H-02, H-03)
 
-Ordem de decisão, com a linha da unidade travada (`select … for update`) para duas tentativas ao
-mesmo tempo não contarem uma só:
+**Mudou na revisão do M1 (C2, dúvida 35 de `duvidas-m1.md`):** o bloqueio é por **(login, IP)**,
+não da unidade inteira, em `entrada_tentativa` (migração 0003; serviço `app/servicos/tentativas.py`).
+O IP vem de `x-real-ip` na Vercel e de `request.client.host` fora dela, e vai ao banco só como
+HMAC.
 
-1. Login inexistente ou unidade desativada → `conferir_sem_unidade` (gasta o tempo de um hash) e
-   401 `credenciais_invalidas`.
-2. `bloqueada_ate > now()` (relógio do banco) → 423 `unidade_bloqueada`, com `bloqueada_ate` e
-   `minutos_restantes` (arredondado para cima, mínimo 1). Não confere a senha nem conta tentativa.
-3. Senha errada → `tentativas_falhas + 1`. Na **5ª** seguida: `bloqueada_ate = now() + 15 min`,
-   `tentativas_falhas = 0`, histórico `unidade_bloqueada` (sistema: `unidade_id` nulo, entidade
-   `unidade`). A 5ª ainda responde 401; a **6ª** recebe 423 (H-03: "quando vier a 6ª").
-4. Senha certa → `tentativas_falhas = 0`, `bloqueada_ate = null`, sessão nova, cookie e `Eu`
+Ordem de decisão, com a linha do par (login, IP) travada (`select … for update`) para duas
+tentativas ao mesmo tempo não contarem uma só:
+
+1. Linhas vencidas (`expira_em < now()`) são apagadas.
+2. Par bloqueado (`bloqueada_ate > now()`, relógio do banco) → 423 `unidade_bloqueada`, com
+   `bloqueada_ate` e `minutos_restantes` (arredondado para cima, mínimo 1). Não confere a senha
+   nem conta tentativa nem estende o prazo.
+3. Login inexistente ou unidade desativada → `conferir_sem_unidade` (gasta o tempo de um hash) e
+   conta como senha errada (a resposta não pode revelar se o apartamento existe).
+4. Senha errada → a data entra em `falhas_em`; só contam as dos últimos 15 minutos. A partir do
+   **3º** erro a mensagem do 401 diz quantas tentativas faltam (`tentativas_restantes`, U3). No
+   **5º** dentro de 15 minutos: `bloqueada_ate = now() + 15 min`, histórico `unidade_bloqueada`
+   (sistema: `unidade_id` nulo, entidade `unidade`; nunca o IP) e o próprio 5º já responde 423
+   com o horário (antes respondia 401 e só o 6º via o bloqueio).
+5. Senha certa → apaga a linha do par (zera aquele login naquele IP), sessão nova, cookie e `Eu`
    (com `precisa_trocar_senha` se for o caso: a tela vai para o primeiro acesso).
+
+O "Apagar meus dados" (2.3) também pede a senha e conta no mesmo contador.
 
 ### 2.2 Primeiro acesso (H-01)
 
@@ -55,7 +66,9 @@ sessões encerradas, uma nova para quem concluiu), histórico `primeiro_acesso`,
 - `DELETE …/aparelhos/{id}`: só sessão em vigor da própria unidade; senão 404
   `aparelho_nao_encontrado`. Histórico `aparelho_desconectado` (entidade `sessao`). Se for o
   próprio aparelho, apaga o cookie.
-- `POST …/apagar-dados`: papel de gestão em vigor → 409 `unidade_com_papel_de_gestao`. Senão:
+- `POST …/apagar-dados`: pede `senha` (a atual; revisão do M1, C1). Errada → 400
+  `senha_atual_incorreta` (campo `senha`), contando para o bloqueio do (login, IP) como na
+  entrada. Papel de gestão em vigor → 409 `unidade_com_papel_de_gestao`. Senão:
   contatos nulos, senha `mudar123`, `precisa_trocar_senha = true`, `ativada_em = null`, as linhas
   de sessão da unidade **apagadas** (a descrição do aparelho é dado pessoal; dúvida A3), histórico
   `dados_apagados`, cookie apagado. Votos e leituras ficam.

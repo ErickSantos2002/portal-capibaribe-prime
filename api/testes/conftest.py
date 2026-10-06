@@ -35,6 +35,7 @@ PAPEIS = {"dono": "dono-teste", "app": "app-teste"}
 BANCO = os.environ.get("PORTAL_TESTE_BANCO", "portal_teste")
 TABELAS = [
     "aviso_leitura",
+    "entrada_tentativa",
     "aviso_bloco",
     "aviso_versao",
     "aviso",

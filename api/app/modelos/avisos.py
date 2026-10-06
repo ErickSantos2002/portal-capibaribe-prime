@@ -86,3 +86,5 @@ class AvisoLeitura(Base):
     aviso_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("aviso.id"), primary_key=True)
     unidade_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("unidade.id"), primary_key=True)
     lido_em: Mapped[datetime] = mapped_column(server_default=func.now())
+    # Maior versão que a unidade abriu (migração 0003). Só sobe; `lido_em` não muda com ela.
+    versao_lida: Mapped[int] = mapped_column(SmallInteger)

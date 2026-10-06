@@ -48,7 +48,7 @@ def unidade(engine_app, login: str = NAO_ATIVADA) -> Unidade:
         (
             {"senha_nova": "curta", "senha_nova_repetida": "curta"},
             "senha_nova",
-            "A senha nova precisa ter pelo menos 8 letras ou números.",
+            "A senha nova precisa ter pelo menos 8 caracteres.",
         ),
         (
             {"senha_nova": SENHA_INICIAL, "senha_nova_repetida": SENHA_INICIAL},

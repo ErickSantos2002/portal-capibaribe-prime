@@ -28,9 +28,9 @@ MSG_CELULAR = "Confira o celular: DDD e número, como (81) 9 1234-5678."
 def validar_senha_nova(senha: str) -> str:
     sem_controle(senha)
     if len(senha) < MINIMO_SENHA:
-        raise ValueError("A senha nova precisa ter pelo menos 8 letras ou números.")
+        raise ValueError("A senha nova precisa ter pelo menos 8 caracteres.")
     if len(senha) > LIMITE_SENHA:
-        raise ValueError("A senha pode ter até 200 letras ou números.")
+        raise ValueError("A senha pode ter até 200 caracteres.")
     if senha == SENHA_INICIAL:
         raise ValueError("Escolha uma senha diferente da inicial, que todo mundo conhece.")
     return senha
@@ -128,11 +128,31 @@ class TrocarSenha(Entrada):
     senha_nova: SenhaNova
     senha_nova_repetida: SenhaRepetida
 
+    @field_validator("senha_nova")
+    @classmethod
+    def _diferente_da_atual(cls, senha_nova: str, info: ValidationInfo) -> str:
+        # U7 (revisão do M1): a mesma senha não troca nada e derrubaria os outros aparelhos.
+        if senha_nova == info.data.get("senha_atual"):
+            raise ValueError("A senha nova é igual à atual. Escolha uma diferente.")
+        return senha_nova
+
 
 class ApagarDados(Entrada):
-    """`POST /api/minha-unidade/apagar-dados`: `{"confirmo": true}` (H-06)."""
+    """`POST /api/minha-unidade/apagar-dados`: `{"confirmo": true, "senha": "..."}` (H-06).
+
+    A senha atual é obrigatória (revisão do M1, C1): sem ela, uma sessão esquecida num aparelho
+    bastava para tomar a conta.
+    """
 
     confirmo: bool
+    senha: str = Field(max_length=LIMITE_SENHA)
+
+    @field_validator("senha")
+    @classmethod
+    def _senha(cls, senha: str) -> str:
+        if not senha:
+            raise ValueError("Escreva a senha atual.")
+        return senha
 
     @field_validator("confirmo")
     @classmethod

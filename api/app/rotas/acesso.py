@@ -24,6 +24,7 @@ from app.seguranca.dependencias import (
     UnidadeLogada,
     exige_cabecalho_portal,
 )
+from app.seguranca.ip import hash_do_ip, ip_do_cliente
 from app.seguranca.sessoes import apagar_cookie, gravar_cookie
 from app.servicos import acesso
 
@@ -34,7 +35,13 @@ rotas = APIRouter(dependencies=[Depends(exige_cabecalho_portal)])
 @rotas.post("/api/acesso/entrar")
 def entrar(dados: Entrar, request: Request, resposta: Response, db: Banco) -> Eu:
     try:
-        eu, token = acesso.entrar(db, dados.login, dados.senha, request.headers.get("user-agent"))
+        eu, token = acesso.entrar(
+            db,
+            dados.login,
+            dados.senha,
+            hash_do_ip(ip_do_cliente(request)),
+            request.headers.get("user-agent"),
+        )
     except acesso.ErroEntrar:
         # A tentativa errada e o bloqueio valem mesmo com a resposta de erro (H-03).
         db.commit()
@@ -93,7 +100,14 @@ def desconectar_aparelho(
 
 
 @rotas.post("/api/minha-unidade/apagar-dados", status_code=204)
-def apagar_dados(_: ApagarDados, logado: UnidadeLogada, resposta: Response, db: Banco) -> None:
-    acesso.apagar_dados(db, logado)
+def apagar_dados(
+    dados: ApagarDados, logado: UnidadeLogada, request: Request, resposta: Response, db: Banco
+) -> None:
+    try:
+        acesso.apagar_dados(db, logado, dados.senha, hash_do_ip(ip_do_cliente(request)))
+    except acesso.ErroEntrar:
+        # Senha errada conta para o bloqueio daquele IP (revisão do M1, C1).
+        db.commit()
+        raise
     db.commit()
     apagar_cookie(resposta)

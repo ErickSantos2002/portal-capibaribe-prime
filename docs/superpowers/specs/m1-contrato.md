@@ -164,7 +164,7 @@ Erro de validação (422) vira:
 
 ```json
 { "codigo": "dados_invalidos", "mensagem": "Confira os campos marcados.",
-  "campos": [{ "campo": "senha_nova", "mensagem": "A senha nova precisa ter pelo menos 8 letras ou números." }] }
+  "campos": [{ "campo": "senha_nova", "mensagem": "A senha nova precisa ter pelo menos 8 caracteres." }] }
 ```
 
 A mensagem de cada campo vem do validador (`ValueError("texto")` no Pydantic) ou de uma tradução
@@ -225,7 +225,7 @@ precisa_trocar_senha: bool }`. É o que a casca do front usa para decidir rotas 
 | `PUT /api/minha-unidade/dados` | `unidade_logada` | `DadosDaUnidade` | 200 `MinhaUnidade` | 401, 403, 422 |
 | `PUT /api/minha-unidade/senha` | `unidade_logada` | `TrocarSenha` | 204 + cookie novo | 400 `senha_atual_incorreta`, 401, 403, 422 |
 | `DELETE /api/minha-unidade/aparelhos/{sessao_id}` | `unidade_logada` | — | 204 (se for o próprio aparelho, apaga o cookie) | 404 `aparelho_nao_encontrado` |
-| `POST /api/minha-unidade/apagar-dados` | `unidade_logada` | `ApagarDados` | 204, apaga o cookie | 409 `unidade_com_papel_de_gestao`, 422 |
+| `POST /api/minha-unidade/apagar-dados` | `unidade_logada` | `ApagarDados` | 204, apaga o cookie | 400 `senha_atual_incorreta`, 423 `unidade_bloqueada`, 409 `unidade_com_papel_de_gestao`, 422 |
 
 - `Entrar`: `login` (4 dígitos, `^[1-9][0-7][0-9]{2}$`; a tela monta a partir de bloco +
   apartamento), `senha` (1 a 200 caracteres).
@@ -233,18 +233,19 @@ precisa_trocar_senha: bool }`. É o que a casca do front usa para decidir rotas 
     `credenciais_invalidas`, "Bloco, apartamento ou senha incorretos. Confira e tente de novo."
     (H-02). Login inexistente também passa por uma verificação de hash, para o tempo de resposta
     não diferenciar.
-  - 5 erros seguidos: `bloqueada_ate = now() + 15 min`, `tentativas_falhas` volta a 0, histórico
-    `unidade_bloqueada` (ação do sistema, `unidade_id` nulo, entidade `unidade`). Enquanto
-    bloqueada, até a senha certa recebe 423 `unidade_bloqueada` com `bloqueada_ate` e
-    `minutos_restantes`: "Entrada bloqueada por N minutos depois de várias senhas erradas. Se não
-    foi você, avise a administração do Portal no grupo do WhatsApp." (H-03). Senha certa zera
-    `tentativas_falhas`.
+  - Bloqueio por **(login, IP)** (revisão do M1, C2; `entrada_tentativa`): 5 erros do mesmo IP
+    naquele login dentro de 15 minutos bloqueiam aquele IP naquele login por 15 minutos; erros
+    com mais de 15 minutos não contam; outro IP entra normalmente. Histórico `unidade_bloqueada`
+    (ação do sistema, `unidade_id` nulo, entidade `unidade`). O 5º erro e as tentativas durante o
+    bloqueio recebem 423 `unidade_bloqueada` com `bloqueada_ate` e `minutos_restantes`. A partir
+    do 3º erro, o 401 diz quantas faltam e traz `tentativas_restantes`. Senha certa zera o
+    contador daquele (login, IP).
   - Unidade com `precisa_trocar_senha`: cria a sessão (restrita) e devolve `Eu` com
     `precisa_trocar_senha: true`; a tela vai para "Primeiro acesso" (H-01).
 - `PrimeiroAcesso`: `senha_nova`, `senha_nova_repetida`, `responsavel_nome` (1 a 100, sem
   espaços nas pontas), `celular` (aceita máscara; guarda 10 ou 11 dígitos), `email` (opcional;
   vazio vira nulo; guardado em minúsculas). Mensagens:
-  - "A senha nova precisa ter pelo menos 8 letras ou números." (menos de 8)
+  - "A senha nova precisa ter pelo menos 8 caracteres." (menos de 8)
   - "Escolha uma senha diferente da inicial, que todo mundo conhece." (`mudar123`)
   - "As duas senhas estão diferentes. Escreva a mesma nas duas."
   - "Escreva o nome de quem responde pela unidade."
@@ -261,10 +262,11 @@ precisa_trocar_senha: bool }`. É o que a casca do front usa para decidir rotas 
   `este_aparelho`.
 - `DadosDaUnidade`: `responsavel_nome`, `celular`, `email` (mesmas regras do primeiro acesso).
 - `TrocarSenha`: `senha_atual`, `senha_nova`, `senha_nova_repetida`. Senha atual errada: 400
-  "A senha atual não confere." Histórico `senha_trocada`. **Desconecta os outros aparelhos** e
+  "A senha atual não confere." Nova igual à atual: 422 "A senha nova é igual à atual. Escolha
+  uma diferente." (revisão do M1, U7). Histórico `senha_trocada`. **Desconecta os outros aparelhos** e
   abre uma sessão nova para este (`trocar_senha_e_sessao`), como no primeiro acesso: na conta
   compartilhada, trocar a senha é o jeito de tirar quem não devia estar lá (dúvida 8, revista).
-- `ApagarDados`: `{ "confirmo": true }` (qualquer outro valor: 422). Efeito (H-06): apaga
+- `ApagarDados`: `{ "confirmo": true, "senha": "..." }` (`confirmo` diferente de `true` ou senha vazia: 422; senha errada: 400 e conta tentativa, revisão do M1, C1). Efeito (H-06): apaga
   responsável, celular e e-mail, senha volta a `mudar123`, `precisa_trocar_senha = true`,
   `ativada_em = null`, encerra **todas** as sessões, histórico `dados_apagados`. Votos e
   leituras ficam. Unidade com papel de gestão em vigor recebe 409: "Este apartamento tem papel
