@@ -11,6 +11,10 @@ from testes.test_avisos_apoio import publicar
 
 pytestmark = pytest.mark.usefixtures("predio")
 
+# Rotas do contrato do M2 que ainda respondem 501 (spec do M2, seção 4). O épico A tira daqui
+# o `/api/notificacoes` quando implementar.
+EM_CONSTRUCAO = {"/api/notificacoes"}
+
 
 def _caminhos_get() -> list[str]:
     from app.main import app
@@ -32,7 +36,8 @@ def test_todo_get_da_api_sai_sem_cache(logar):
         for marcador, valor in substituir.items():
             caminho = caminho.replace(marcador, valor)
         resposta = admin.get(caminho)
-        assert resposta.status_code == 200, (caminho, resposta.text)
+        esperado = 501 if caminho in EM_CONSTRUCAO else 200
+        assert resposta.status_code == esperado, (caminho, resposta.text)
         assert resposta.headers.get("cache-control") == "no-store", caminho
 
 

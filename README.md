@@ -73,6 +73,11 @@ cd ../web && npm ci && npm run dev
 Os papéis `dono` e `app` só existem no Postgres local depois que os testes rodaram uma vez
 (passo 2). As variáveis estão explicadas em `api/.env.example`.
 
+Notificações e e-mail (M2) ficam **desligados** sem as variáveis `PORTAL_VAPID_*`,
+`PORTAL_SMTP_*` e `PORTAL_URL_BASE`, e o resto do Portal funciona igual. Um par de chaves VAPID
+novo: `uv run python -m app.comandos.gerar_chaves_vapid` (nunca grave a saída no repositório).
+Como o envio roda depois da resposta: [ADR-0010](docs/adr/0010-envio-em-segundo-plano.md).
+
 ## Versões
 
 A versão do Portal mora num lugar só, o `version` de `web/package.json`; o Vite a injeta no app
