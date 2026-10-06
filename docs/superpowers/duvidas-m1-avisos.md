@@ -78,6 +78,7 @@ marco. Base: `duvidas-m1.md` (itens 3, 11 a 17, 22, 25 e 27 já valiam e foram s
 ## 13. "Para a Comissão" também para o admin
 - **Decisão:** a seção de gestão do aviso aberto tem o título do protótipo, "Para a Comissão",
   mesmo para o administrador. **[Erick]** trocar por "Para a gestão" se achar melhor.
+- **Decidido pelo coordenador (06/10/2026):** "Para a gestão" (`duvidas-m1.md`, item 47).
 
 ## 14. Histórico com o título
 - **Decisão:** `aviso_publicado` guarda `titulo`, `para_todos`, `blocos` e `fixado`;

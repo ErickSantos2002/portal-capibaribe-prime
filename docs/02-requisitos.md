@@ -63,7 +63,7 @@ Comissão entra com a conta do apartamento dele, que ganha os poderes de gestão
 | Votar em enquete | — | — (vota pela conta da unidade) | ✅ | — |
 | Publicar documento | ✅ | ✅ | — | — |
 | Ver documento (RF-31) | todos | todos | público + compradores | público |
-| Ver dados de contato das unidades | ✅ | ✅ | — | — |
+| Ver dados de contato das unidades | ✅ | ✅ (só leitura, desde 06/10/2026) | — | — |
 
 ## 3. Requisitos funcionais
 

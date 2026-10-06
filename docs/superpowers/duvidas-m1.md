@@ -80,7 +80,7 @@ conflito).
 - **Decisão:** todas as rotas `/api/admin/*` com `exige_admin`.
 - **Por quê:** é o mais restritivo (LGPD) e bate com o protótipo e o histórico ("só o
   administrador vê"). Abrir o painel para a Comissão depois é trocar uma dependência.
-  **[Erick]** confirmar.
+- **Revista pelo Erick (06/10/2026):** a Comissão vê os contatos. Ver "Fim do marco", item 43.
 
 ## 10. Papel só para unidade já ativada; só `comissao` e `admin` no M1
 - **Decisão:** `PUT …/papeis/{papel}` responde 409 se a unidade não entrou ainda; `papel` aceita
@@ -359,3 +359,59 @@ o que foi decidido na implementação.
   restrita, sem limite por unidade. Coberto pelo firewall do portão (20 entradas por IP a cada
   10 minutos, ADR-0005) e pelo fato de essas sessões morrerem no primeiro acesso (dúvida 29).
   Se o painel do Neon mostrar crescimento estranho de `sessao`, limitar por unidade.
+
+---
+
+## Fim do marco (06/10/2026)
+
+Decisões que fecham as dúvidas marcadas **[Erick]** do M1. Branch `m1/decisoes`, plano em
+`docs/superpowers/plans/m1-decisoes.md`.
+
+### Decididas pelo Erick
+
+## 43. Contatos para a Comissão (dúvida 9 e A6)
+A Comissão (toda a gestão) lê o painel e a ficha com celular e e-mail; voltar para a senha
+inicial, papéis e histórico seguem só do admin, e a API recusa com 403. A ajuda do celular e a
+política dizem "pela Comissão e pela administração do Portal".
+
+## 44. Mural da gestão com todos os blocos (avisos 5)
+Fica como está: a gestão vê no mural os avisos de todos os blocos.
+
+## 45. Controlador da política (A7)
+"Erick Santos, morador que mantém o Portal, em nome da Comissão dos compradores", sem unidade,
+bloco, endereço nem CPF (repositório público). Pedidos pelo grupo de WhatsApp ou pela Comissão;
+o e-mail do Portal entra no M2 (ADR-0006). Dados na Neon (`aws-sa-east-1`) e na Vercel (`gru1`),
+ambos em São Paulo.
+
+## 46. Confirmação ao dar e tirar Comissão (admin 5)
+Mesmo padrão do administrador e do reset, listando o que acontece (ao dar: "passa a ver o
+celular e o e-mail de todas as unidades").
+
+### Decididas pelo coordenador
+
+## 47. "Para a gestão" no aviso aberto (avisos 13)
+O admin também vê a seção, e não é Comissão.
+
+## 48. Confirmadas como estão
+Admin 4 (o admin pode resetar a própria unidade ou tirar o próprio papel, se houver outro),
+admin 6 (botão "Dar papel de administrador" na tela) e dúvida 7 (apagar dados com papel de
+gestão é recusado).
+
+## 49. A4: sem histórico de mudança de dados
+Fica como está: trocar o próprio celular não vai para o histórico.
+
+## 50. Prévias com banco (dúvida 23) adiadas
+O coordenador cria o branch `previa` do Neon e a variável quando precisar.
+
+### Decididas na implementação
+
+## 51. A Comissão vê a ficha inteira, não um recorte
+A ficha da Comissão usa a mesma resposta da do admin (`UnidadeAdmin`), inclusive aparelhos
+conectados (só a contagem) e o bloqueio de senhas erradas. Nenhum dos dois é dado pessoal, e
+servem para a Comissão orientar um vizinho ("sua entrada está bloqueada até…"). Um esquema só
+para ela seria mais um contrato para manter.
+
+## 52. A política conta o código do IP
+A revisão do M1 (item 35) passou a guardar um HMAC do IP por 15 minutos contra adivinhação de
+senha, mas a política ainda dizia só "não guardamos IP". O texto passou a contar a exceção, e o
+inventário (`04-modelo-de-dados.md`, seção 5) ganhou a linha.

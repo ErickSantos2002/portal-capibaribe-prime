@@ -53,6 +53,8 @@ que só o Erick pode confirmar; o resto é decisão técnica, revisável na revi
 - **Decisão:** o texto diz o que é verdade hoje: "Só a administração do Portal vê". A política
   de privacidade diz o mesmo ("o próprio apartamento e a administração do Portal").
 - **[Erick]** se a Comissão passar a ver os contatos (dúvida 9), mudar os dois textos juntos.
+- **Decidido (06/10/2026):** a Comissão vê; os dois textos dizem "pela Comissão e pela
+  administração do Portal" (`duvidas-m1.md`, item 43).
 
 ### A7. Texto da política de privacidade
 - **Decisão:** escrito a partir do inventário (`04-modelo-de-dados.md`, seção 5), na voz do
@@ -63,6 +65,7 @@ que só o Erick pode confirmar; o resto é decisão técnica, revisável na revi
   diz só "a administração do Portal", sem nome nem CNPJ do condomínio); (2) se quer citar onde
   ficam os dados (Neon/Vercel, região); (3) o e-mail é descrito como "quando essas funções
   chegarem" (M2).
+- **Decidido (06/10/2026):** ver `duvidas-m1.md`, item 45.
 
 ### A8. Apartamento que não pode existir: a mesma mensagem, sem chamar a API
 - **Decisão:** Bloco 3 + "999" (andar 9) mostra "Bloco, apartamento ou senha incorretos." na
