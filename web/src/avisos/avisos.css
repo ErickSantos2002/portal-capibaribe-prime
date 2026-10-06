@@ -419,6 +419,147 @@ a.avisos-cartao:hover {
   margin-top: 18px;
 }
 
+/* Categoria: 5 rádios de verdade (setas do teclado), com roupa de botão, ícone e nome. */
+.avisos-categorias {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.avisos-categorias legend {
+  margin: 18px 0 6px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.categorias-op {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.categorias-op label {
+  position: relative;
+  margin: 0;
+  font-weight: 400;
+}
+
+.categorias-op input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.categorias-op span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  cursor: pointer;
+}
+
+.categorias-op svg {
+  flex: none;
+  color: var(--cat);
+}
+
+.categorias-op input:checked + span {
+  border-color: var(--cat);
+  background: var(--cat-fundo);
+  color: var(--cat);
+  font-weight: 700;
+  box-shadow: inset 0 -4px 0 var(--cat);
+}
+
+.categorias-op input:focus-visible + span {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
+/* Texto do aviso: rótulo e "Ver como fica" na mesma linha, a barra embaixo. */
+.avisos-texto-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0 12px;
+  margin-top: 18px;
+}
+
+.avisos-texto-topo :is(label, .avisos-rotulo) {
+  margin: 0 0 6px;
+}
+
+.avisos-ver {
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.avisos-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.avisos-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.avisos-marca:hover {
+  border-color: var(--mata);
+  background: var(--mata-suave);
+}
+
+.avisos-como-fica {
+  min-height: 140px;
+  padding: 12px 14px;
+  border: 2px dashed var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+}
+
+.avisos-como-fica .texto-aviso > :last-child {
+  margin-bottom: 0;
+}
+
+.avisos-evento-chave {
+  margin-top: 18px;
+}
+
+.avisos-evento-campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.avisos-quando {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 0 12px;
+}
+
+.avisos-quando label {
+  margin-top: 4px;
+}
+
 .avisos-previa-titulo {
   margin-top: 0;
 }

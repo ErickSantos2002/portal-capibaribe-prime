@@ -385,6 +385,8 @@ describe('novo aviso (H-12)', () => {
       para_todos: false,
       blocos: [2, 3],
       fixado: true,
+      categoria: 'geral',
+      evento: null,
     })
   })
 })
@@ -408,6 +410,8 @@ describe('corrigir aviso (H-15)', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       titulo: 'Aviso 5, corrigido',
       texto: 'Texto 5',
+      categoria: 'geral',
+      evento: null,
     })
   })
 
@@ -757,5 +761,162 @@ describe('aviso aberto: cabeçalho, quadro do evento e texto formatado', () => {
     // Dentro da versão antiga (cujo título é h2), a seção desce um nível.
     expect(within(antiga).getByRole('heading', { level: 3, name: 'Seção antiga' })).toBeTruthy()
     expect(within(antiga).getByText('item antigo').tagName).toBe('LI')
+  })
+})
+
+describe('formulário: categoria, barra de marcas, "Ver como fica" e evento', () => {
+  function apiDoFormulario(aviso?: AvisoCompleto) {
+    return api(eu(['comissao']), (url, init) => {
+      if (url.pathname === '/api/avisos/destinos') {
+        return json(200, { blocos: [1, 2].map((n) => ({ numero: n, nome: `Bloco ${n}` })) })
+      }
+      if (url.pathname === '/api/avisos/alcance') return json(200, { unidades: 320 })
+      if (url.pathname === '/api/avisos' && init.method === 'POST') return json(201, completo(7))
+      if (url.pathname === '/api/avisos') return json(200, { itens: [] })
+      if (aviso && url.pathname === `/api/avisos/${aviso.id}`) return json(200, aviso)
+    })
+  }
+
+  async function preencher() {
+    fireEvent.change(await screen.findByLabelText('Título'), { target: { value: 'Vistoria' } })
+    fireEvent.change(screen.getByLabelText('Texto do aviso'), { target: { value: 'Sábado.' } })
+  }
+
+  async function publicarECorpo(fetch: ReturnType<typeof api>) {
+    fireEvent.click(screen.getByRole('button', { name: 'Ver prévia' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Publicar aviso' }))
+    await waitFor(() => expect(chamadas(fetch, 'POST', '/api/avisos')).toHaveLength(1))
+    const [, init] = chamadas(fetch, 'POST', '/api/avisos')[0]
+    return JSON.parse(String(init?.body))
+  }
+
+  it('categoria: 5 rádios de verdade (setas do teclado), Geral marcada', async () => {
+    const fetch = apiDoFormulario()
+    abrir('/avisos/novo')
+    const grupo = await screen.findByRole('group', { name: 'Categoria' })
+    const radios = within(grupo).getAllByRole('radio') as HTMLInputElement[]
+    expect(radios.map((r) => r.labels?.[0]?.textContent)).toEqual([
+      'Geral',
+      'Obra',
+      'Reunião',
+      'Financeiro',
+      'Urgente',
+    ])
+    // Mesmo `name`: o navegador move a escolha com as setas.
+    expect(new Set(radios.map((r) => r.name)).size).toBe(1)
+    expect(radios[0].checked).toBe(true)
+    fireEvent.click(within(grupo).getByLabelText('Obra'))
+    expect(radios[1].checked).toBe(true)
+    await preencher()
+    expect((await publicarECorpo(fetch)).categoria).toBe('obra')
+  })
+
+  it('a barra insere a marca na seleção e devolve o foco ao texto', async () => {
+    apiDoFormulario()
+    abrir('/avisos/novo')
+    const texto = (await screen.findByLabelText('Texto do aviso')) as HTMLTextAreaElement
+    fireEvent.change(texto, { target: { value: 'Leve documento' } })
+    texto.setSelectionRange(5, 14)
+    fireEvent.click(screen.getByRole('button', { name: 'Negrito' }))
+    expect(texto.value).toBe('Leve **documento**')
+    await waitFor(() => expect(document.activeElement).toBe(texto))
+    expect(texto.value.slice(texto.selectionStart, texto.selectionEnd)).toBe('documento')
+
+    texto.setSelectionRange(0, 0)
+    fireEvent.click(screen.getByRole('button', { name: 'Lista' }))
+    expect(texto.value).toBe('- Leve **documento**')
+    fireEvent.click(screen.getByRole('button', { name: 'Destaque' }))
+    expect(texto.value).toBe('> Leve **documento**')
+    fireEvent.click(screen.getByRole('button', { name: 'Título' }))
+    expect(texto.value).toBe('## Leve **documento**')
+  })
+
+  it('"Ver como fica" troca o campo pela prévia formatada, e volta', async () => {
+    apiDoFormulario()
+    abrir('/avisos/novo')
+    fireEvent.change(await screen.findByLabelText('Texto do aviso'), {
+      target: { value: '## Como entrar\n- Bloco\n- Apartamento' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Ver como fica' }))
+    expect(screen.queryByLabelText('Texto do aviso')).toBeNull()
+    const previa = document.querySelector('.avisos-como-fica') as HTMLElement
+    expect(within(previa).getByRole('heading', { name: 'Como entrar' })).toBeTruthy()
+    expect(within(previa).getAllByRole('listitem')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar a escrever' }))
+    expect((screen.getByLabelText('Texto do aviso') as HTMLTextAreaElement).value).toBe(
+      '## Como entrar\n- Bloco\n- Apartamento',
+    )
+  })
+
+  it('"É um evento?" mostra dia, hora e local, e manda o evento no horário de Recife', async () => {
+    const fetch = apiDoFormulario()
+    abrir('/avisos/novo')
+    await preencher()
+    expect(screen.queryByLabelText('Dia')).toBeNull()
+    fireEvent.click(screen.getByLabelText('É um evento? (reunião, vistoria, mutirão)'))
+    fireEvent.change(screen.getByLabelText('Dia'), { target: { value: '2026-10-10' } })
+    fireEvent.change(screen.getByLabelText('Hora'), { target: { value: '09:00' } })
+    fireEvent.change(screen.getByLabelText('Onde (se quiser)'), {
+      target: { value: ' Stand de vendas ' },
+    })
+    expect((await publicarECorpo(fetch)).evento).toEqual({
+      quando: '2026-10-10T09:00:00-03:00',
+      onde: 'Stand de vendas',
+    })
+  })
+
+  it('evento sem dia ou hora: avisa antes de mandar', async () => {
+    const fetch = apiDoFormulario()
+    abrir('/avisos/novo')
+    await preencher()
+    fireEvent.click(screen.getByLabelText('É um evento? (reunião, vistoria, mutirão)'))
+    fireEvent.click(screen.getByRole('button', { name: 'Ver prévia' }))
+    expect(screen.getAllByText('Escolha o dia e a hora do evento.').length).toBeGreaterThan(0)
+    expect(screen.getByLabelText('Dia').getAttribute('aria-invalid')).toBe('true')
+    expect(chamadas(fetch, 'POST', '/api/avisos')).toHaveLength(0)
+  })
+
+  it('a prévia de publicar mostra o aviso aberto com categoria e quadro do evento', async () => {
+    apiDoFormulario()
+    abrir('/avisos/novo')
+    await preencher()
+    fireEvent.click(screen.getByLabelText('Reunião'))
+    fireEvent.click(screen.getByLabelText('É um evento? (reunião, vistoria, mutirão)'))
+    fireEvent.change(screen.getByLabelText('Dia'), { target: { value: '2099-10-10' } })
+    fireEvent.change(screen.getByLabelText('Hora'), { target: { value: '19:30' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ver prévia' }))
+    const previa = (await screen.findByText('Prévia: assim vai aparecer no mural')).closest(
+      '.previa',
+    ) as HTMLElement
+    expect(within(previa).getAllByText('Reunião').length).toBe(2)
+    expect(within(previa).getByText('Sáb, 10/10 · 19h30')).toBeTruthy()
+    expect(within(previa).getByText('Sábado, 10 de outubro, 19h30')).toBeTruthy()
+  })
+
+  it('corrigir vem com a categoria e o evento da versão em vigor e manda os novos', async () => {
+    const aviso = completo(5, {
+      categoria: 'reuniao',
+      evento: { quando: '2026-10-10T22:30:00Z', onde: 'Salão' },
+    })
+    const fetch = api(eu(['comissao']), (url, init) => {
+      if (url.pathname === '/api/avisos/5' && init.method === 'PUT') return json(200, aviso)
+      if (url.pathname === '/api/avisos/5') return json(200, aviso)
+    })
+    abrir('/avisos/5/corrigir')
+    expect(((await screen.findByLabelText('Reunião')) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByLabelText('Dia') as HTMLInputElement).value).toBe('2026-10-10')
+    expect((screen.getByLabelText('Hora') as HTMLInputElement).value).toBe('19:30')
+    expect((screen.getByLabelText('Onde (se quiser)') as HTMLInputElement).value).toBe('Salão')
+    fireEvent.click(screen.getByLabelText('Urgente'))
+    fireEvent.click(screen.getByLabelText('É um evento? (reunião, vistoria, mutirão)'))
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }))
+    await waitFor(() => expect(chamadas(fetch, 'PUT', '/api/avisos/5')).toHaveLength(1))
+    const [, init] = chamadas(fetch, 'PUT', '/api/avisos/5')[0]
+    expect(JSON.parse(String(init?.body))).toEqual({
+      titulo: 'Aviso 5',
+      texto: 'Texto 5',
+      categoria: 'urgente',
+      evento: null,
+    })
   })
 })

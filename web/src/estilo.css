@@ -519,6 +519,8 @@ input[type='tel'],
 input[type='email'],
 input[type='search'],
 input[type='datetime-local'],
+input[type='date'],
+input[type='time'],
 textarea,
 select {
   width: 100%;
@@ -538,6 +540,8 @@ select {
     input[type='email'],
     input[type='search'],
     input[type='datetime-local'],
+    input[type='date'],
+    input[type='time'],
     select
   ) {
   height: 56px;

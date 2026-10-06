@@ -34,6 +34,13 @@ const EM_BRANCO = /^[ \t]*$/
 // `**trecho**` sem espaço colado por dentro das marcas ("2 ** 3" não é negrito).
 const NEGRITO = /\*\*(\S(?:.*?\S)??)\*\*/g
 
+const MARCA_DA_LINHA = /^(?:## |- |\d{1,3}\. |> )(?=\S)/gm
+
+/** O texto sem as marcas (resumo da prévia do mural; igual a `sem_marcas` da API). */
+export function semMarcas(texto: string): string {
+  return texto.replace(MARCA_DA_LINHA, '').replace(NEGRITO, '$1')
+}
+
 /** Separa o texto em blocos, linha a linha. */
 export function analisar(texto: string): Bloco[] {
   const blocos: Bloco[] = []

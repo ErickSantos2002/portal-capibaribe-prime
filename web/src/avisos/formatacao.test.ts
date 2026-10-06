@@ -1,6 +1,21 @@
 // O renderizador do Markdown restrito (spec dos avisos com formatação, seções 3.1 e 5).
 import { describe, expect, it } from 'vitest'
-import { analisar, trechos } from './formatacao'
+import { analisar, semMarcas, trechos } from './formatacao'
+
+describe('semMarcas: os mesmos casos de `resumir` na API', () => {
+  it.each([
+    ['Olá, **vizinhos**!', 'Olá, vizinhos!'],
+    ['**a** e **b**', 'a e b'],
+    ['## Como entrar\nCada apartamento.', 'Como entrar\nCada apartamento.'],
+    ['- um\n- dois', 'um\ndois'],
+    ['1. um\n10. dez', 'um\ndez'],
+    ['> Atenção: **prazo** sexta.', 'Atenção: prazo sexta.'],
+    ['Nota 5 ** de 10', 'Nota 5 ** de 10'],
+    ['#hashtag e -traço', '#hashtag e -traço'],
+  ])('%j', (texto, esperado) => {
+    expect(semMarcas(texto)).toBe(esperado)
+  })
+})
 
 describe('analisar: cada marca', () => {
   it('texto sem marca: parágrafos por linha em branco, linhas dentro do parágrafo', () => {
