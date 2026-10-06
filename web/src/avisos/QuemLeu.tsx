@@ -115,10 +115,9 @@ function Grupo(props: { id: string; titulo: string; ajuda: string; unidades: Uni
         <>
           <p className="ajuda">{ajuda}</p>
           {porBloco(unidades).map(([bloco, doBloco]) => (
-            <section key={bloco} aria-labelledby={`${id}-${bloco}`}>
-              <h3 className="avisos-bloco" id={`${id}-${bloco}`}>
-                Bloco {bloco}
-              </h3>
+            // div, não section: duas regiões "Bloco 1" (uma por grupo) repetiriam o nome (axe).
+            <div key={bloco}>
+              <h3 className="avisos-bloco">Bloco {bloco}</h3>
               <ul className="grade avisos-grade">
                 {doBloco.map((u) => (
                   <li key={u.login}>
@@ -137,7 +136,7 @@ function Grupo(props: { id: string; titulo: string; ajuda: string; unidades: Uni
                   </li>
                 ))}
               </ul>
-            </section>
+            </div>
           ))}
         </>
       )}

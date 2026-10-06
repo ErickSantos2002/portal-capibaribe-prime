@@ -872,6 +872,8 @@ input.apto {
 }
 
 .ficha dt {
+  /* O rótulo não encolhe: quem quebra é o valor (U4). */
+  flex: none;
   color: var(--tinta-suave);
 }
 
