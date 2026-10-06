@@ -152,6 +152,13 @@ só do admin); dar ou tirar o papel de Comissão pede confirmação; a política
 o responsável pelos dados. Registro em `docs/superpowers/duvidas-m1.md`, seção "Fim do marco".
 Falta só o que é de gente: os itens 5 e 6 do portão e o anúncio.
 
+**Fora do roteiro, no mesmo dia (06/10/2026):** avisos com formatação (subtítulo, negrito, listas,
+destaque), categoria (Geral, Obra, Reunião, Financeiro, Urgente) e evento (Quando/Onde), migração
+0004 — pedido do Erick depois de ver o primeiro aviso real como texto corrido. Spec em
+`docs/superpowers/specs/2026-10-06-avisos-visual-design.md`. O Erick também decidiu não esperar
+o ensaio para abrir: libera para o grupo e corrige conforme as pessoas entram (registrar a data
+do anúncio aqui).
+
 ### M2 · Notificações
 
 **Entra:** H-05 instalar e ativar notificações · H-13 ser avisado (push e e-mail) · H-04
