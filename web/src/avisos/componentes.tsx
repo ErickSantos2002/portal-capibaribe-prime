@@ -53,7 +53,9 @@ function DesenharBloco({ bloco, nivel }: { bloco: Bloco; nivel: 2 | 3 }) {
     }
     case 'lista':
       return (
-        <ul className="aviso-lista">
+        // `role="list"`: com `list-style: none` (marcador ipê no CSS), o Safari/VoiceOver deixa
+        // de anunciar a lista sem ele.
+        <ul className="aviso-lista" role="list">
           {bloco.itens.map((item, i) => (
             <li key={i}>
               <Linha linha={item} />
