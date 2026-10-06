@@ -114,7 +114,7 @@ export function CamposDoAviso({ rascunho, erros, mudar }: Props) {
       {mostrandoPrevia ? (
         <div className="avisos-como-fica" aria-labelledby="aviso-texto-rotulo" role="region">
           {rascunho.texto.trim() ? (
-            <TextoDoAviso texto={rascunho.texto} nivel={3} />
+            <TextoDoAviso texto={rascunho.texto} />
           ) : (
             <p className="suave">Ainda não tem texto.</p>
           )}

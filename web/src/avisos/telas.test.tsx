@@ -840,7 +840,8 @@ describe('formulário: categoria, barra de marcas, "Ver como fica" e evento', ()
     fireEvent.click(screen.getByRole('button', { name: 'Ver como fica' }))
     expect(screen.queryByLabelText('Texto do aviso')).toBeNull()
     const previa = document.querySelector('.avisos-como-fica') as HTMLElement
-    expect(within(previa).getByRole('heading', { name: 'Como entrar' })).toBeTruthy()
+    // Logo depois do h1 da tela: a seção é h2 (axe heading-order).
+    expect(within(previa).getByRole('heading', { level: 2, name: 'Como entrar' })).toBeTruthy()
     expect(within(previa).getAllByRole('listitem')).toHaveLength(2)
     fireEvent.click(screen.getByRole('button', { name: 'Voltar a escrever' }))
     expect((screen.getByLabelText('Texto do aviso') as HTMLTextAreaElement).value).toBe(
