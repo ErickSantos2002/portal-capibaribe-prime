@@ -168,6 +168,12 @@ inicial e o pedido de retorno; um membro da Comissão ativou a conta e recebeu o
 lançamento: 2 unidades ativadas, 0 erros em produção. A meta de adesão (seção 6) conta a partir
 desta data: 40% em 3 meses, e menos de 20% em 3 meses é o sinal para parar e perguntar.
 
+**Primeiro dia (06/10/2026, noite):** 23 unidades ativadas (7,2% das 320) nos 5 blocos
+(Bloco 1: 7 · Bloco 2: 7 · Bloco 3: 5 · Bloco 4: 2 · Bloco 5: 2), 8 leituras do aviso de
+boas-vindas, 0 erros em produção. Um morador relatou "senha incorreta" e conseguiu entrar na
+tentativa seguinte. No mesmo dia saíram as versões 1.1.0 (logo, ícone, janela "O que mudou") e
+1.1.1 (logo no menu lateral); o histórico para o morador fica em `web/src/sobre/novidades.ts`.
+
 ### M2 · Notificações
 
 **Entra:** H-05 instalar e ativar notificações · H-13 ser avisado (push e e-mail) · H-04
