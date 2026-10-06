@@ -34,7 +34,7 @@ export function CamposDeContato({ prefixo, contato, aoMudar, erro }: Props) {
         autoComplete="tel"
         valor={contato.celular}
         aoMudar={(valor) => aoMudar({ ...contato, celular: valor })}
-        ajuda="Com DDD, como (81) 9 1234-5678. Só a administração do Portal vê, para falar com o apartamento quando precisar."
+        ajuda="Com DDD, como (81) 9 1234-5678. É visto só pela Comissão e pela administração do Portal, para falarem com o apartamento quando precisar."
         erro={erroDe('celular')}
       />
       <Campo

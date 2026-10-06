@@ -92,6 +92,16 @@ describe('minha unidade · editar dados', () => {
     expect(screen.getByRole('status').textContent).toBe('Dados salvos.')
   })
 
+  it('a ajuda do celular diz quem vê: a Comissão e a administração do Portal', async () => {
+    await abrirMinhaUnidade()
+    fireEvent.click(screen.getByRole('button', { name: 'Mudar meus dados' }))
+    const celular = screen.getByLabelText('Celular')
+    const ajuda = document.getElementById(
+      (celular.getAttribute('aria-describedby') ?? '').split(' ')[0],
+    )
+    expect(ajuda?.textContent).toContain('pela Comissão e pela administração do Portal')
+  })
+
   it('recusa nome em branco na própria tela', async () => {
     await abrirMinhaUnidade()
     fireEvent.click(screen.getByRole('button', { name: 'Mudar meus dados' }))
