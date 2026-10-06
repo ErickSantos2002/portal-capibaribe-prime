@@ -415,3 +415,8 @@ para ela seria mais um contrato para manter.
 A revisão do M1 (item 35) passou a guardar um HMAC do IP por 15 minutos contra adivinhação de
 senha, mas a política ainda dizia só "não guardamos IP". O texto passou a contar a exceção, e o
 inventário (`04-modelo-de-dados.md`, seção 5) ganhou a linha.
+
+## 53. Título do bloco no painel vira `h2`
+O axe acusou `heading-order` na lista com contatos (o h3 de cada linha vinha logo depois do h1).
+Já valia para o admin; apareceu agora porque a verificação passou a olhar a lista. O título de
+cada bloco virou `h2.secao`, com a mesma aparência.
