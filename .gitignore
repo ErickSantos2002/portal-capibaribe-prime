@@ -30,3 +30,4 @@ dist/
 
 # Cópias de trabalho dos agentes (Claude Code)
 .claude/
+.superpowers/
