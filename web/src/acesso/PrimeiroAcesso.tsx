@@ -9,6 +9,7 @@ import { concluirPrimeiroAcesso } from './api'
 import { CaixaDeErro } from './CaixaDeErro'
 import { Campo } from './Campo'
 import {
+  AJUDA_DA_SENHA,
   contatoParaApi,
   erroDaFalha,
   validarContato,
@@ -119,7 +120,7 @@ export function PrimeiroAcesso() {
               autoComplete="new-password"
               valor={senha}
               aoMudar={setSenha}
-              ajuda="Pelo menos 8 letras ou números, diferente de mudar123. A família toda vai usar."
+              ajuda={`${AJUDA_DA_SENHA} A família toda vai usar.`}
               erro={erroDe('senha_nova')}
             />
           </div>
@@ -136,18 +137,19 @@ export function PrimeiroAcesso() {
           </div>
         </div>
         <CamposDeContato prefixo={PREFIXO} contato={contato} aoMudar={setContato} erro={erro} />
+        {/* U8: a política vem antes do botão, para ler antes de aceitar. */}
+        <p className="ajuda">
+          Guardamos só nome, celular e e-mail, para os fins da política de privacidade. Dá para
+          corrigir ou apagar depois, em Minha unidade.
+        </p>
+        <details className="acesso-politica-dobrada">
+          <summary className="texto-link">Ler a política de privacidade</summary>
+          <TextoDaPolitica />
+        </details>
         <button className="botao acesso-enviar" type="submit" disabled={enviando}>
           {enviando ? 'Salvando…' : 'Salvar e entrar'}
         </button>
       </form>
-      <details className="acesso-politica-dobrada">
-        <summary className="texto-link">Ler a política de privacidade</summary>
-        <TextoDaPolitica />
-      </details>
-      <p className="ajuda">
-        Guardamos só nome, celular e e-mail, para os fins da política de privacidade. Dá para
-        corrigir ou apagar depois, em Minha unidade.
-      </p>
     </Tela>
   )
 }

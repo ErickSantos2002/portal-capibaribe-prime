@@ -29,6 +29,8 @@ export interface TrocarSenha {
 export interface ApagarDados {
   // A API recusa qualquer valor diferente de true (422).
   confirmo: boolean
+  /** Senha atual: sem ela, uma sessão esquecida bastava para tomar a conta (revisão do M1). */
+  senha: string
 }
 
 export interface Aparelho {

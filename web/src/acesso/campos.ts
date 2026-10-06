@@ -31,11 +31,25 @@ export function limparApartamento(
   return { apartamento: digitos.slice(0, 3), bloco: null }
 }
 
-export function validarSenhaNova(senha: string, repetida: string): ErroDeCampo | null {
+/** A regra real da senha (a mesma da API): 8 caracteres ou mais, qualquer um. */
+export const AJUDA_DA_SENHA =
+  'Pelo menos 8 caracteres. Pode ter letras, números, espaços e símbolos. Não pode ser mudar123.'
+
+export function validarSenhaNova(
+  senha: string,
+  repetida: string,
+  atual?: string,
+): ErroDeCampo | null {
+  if (atual !== undefined && senha === atual && senha !== '') {
+    return {
+      campo: 'senha_nova',
+      mensagem: 'A senha nova é igual à atual. Escolha uma diferente.',
+    }
+  }
   if (senha.length < 8) {
     return {
       campo: 'senha_nova',
-      mensagem: 'A senha nova precisa ter pelo menos 8 letras ou números.',
+      mensagem: 'A senha nova precisa ter pelo menos 8 caracteres.',
     }
   }
   if (senha === SENHA_INICIAL) {
@@ -92,8 +106,10 @@ export function contatoParaApi(contato: ContatoDigitado) {
 /** Erro de formulário a mostrar: o campo (se a API apontou um) e a mensagem. */
 export function erroDaFalha(falha: unknown): { campo: string | null; mensagem: string } {
   if (!(falha instanceof ErroDaApi)) return { campo: null, mensagem: MENSAGEM_SEM_CONEXAO }
+  const apontado = falha.campos.find((c) => c.campo)?.campo
+  if (apontado) return { campo: apontado, mensagem: falha.mensagem }
   if (falha.codigo === 'senha_atual_incorreta') {
     return { campo: 'senha_atual', mensagem: falha.mensagem }
   }
-  return { campo: falha.campos.find((c) => c.campo)?.campo ?? null, mensagem: falha.mensagem }
+  return { campo: null, mensagem: falha.mensagem }
 }
