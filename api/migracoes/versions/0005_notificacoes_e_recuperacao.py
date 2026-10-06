@@ -11,7 +11,8 @@ seção 2.
 - `inscricao_push` (H-05): para onde mandar o push de cada aparelho. A chave é a sessão (modelo
   de dados, seção 3.1): uma por aparelho, e some quando a sessão é encerrada (trigger em
   `sessao`). Só aceita o formato do padrão Web Push (endpoint `https`, chave P-256 de 65 bytes e
-  segredo de 16 bytes em base64url). No máximo 10 aparelhos inscritos por unidade.
+  segredo de 16 bytes em base64url). No máximo 10 aparelhos inscritos por unidade, contando só
+  as sessões que ainda valem.
 - `token_recuperacao` (H-04): o link de "esqueci a senha". O banco guarda só o SHA-256 do token,
   carimba a criação e a validade (1 hora, ignorando o que a aplicação mandar), aceita o uso uma
   vez só e nunca depois de vencido, nem depois de a senha ter mudado. Só nasce para unidade
@@ -78,8 +79,11 @@ begin
     else
         new.criada_em := old.criada_em;
     end if;
+    -- Trava a sessão (`for share`) antes de ler `encerrada_em`: encerrar ao mesmo tempo espera
+    -- esta inscrição (e o trigger de `sessao` a apaga depois) ou termina antes (e aqui se lê o
+    -- valor novo). Sem a trava, a inscrição sobrevivia à sessão encerrada (revisão, achado 4).
     select s.unidade_id, s.encerrada_em into da_unidade, encerrada
-      from public.sessao s where s.id = new.sessao_id;
+      from public.sessao s where s.id = new.sessao_id for share;
     if encerrada is not null then
         raise exception 'Aparelho desconectado não recebe notificação.'
             using errcode = 'check_violation', constraint = 'inscricao_push_sessao_encerrada';
@@ -87,9 +91,16 @@ begin
     -- Duas inscrições da mesma unidade ao mesmo tempo: uma espera a outra e conta com ela.
     -- (`no key update` não segura quem só cria sessão para a unidade.)
     perform 1 from public.unidade u where u.id = da_unidade for no key update;
+    -- Só contam as sessões que ainda valem, pela regra de `buscar_sessao` (aberta, usada nos
+    -- últimos 180 dias, aberta depois da última troca de senha): as outras o morador não vê
+    -- em Minha unidade e não teria como liberar a vaga (revisão, achado 5).
     select count(*) into outras
-      from public.inscricao_push i join public.sessao s on s.id = i.sessao_id
+      from public.inscricao_push i
+      join public.sessao s on s.id = i.sessao_id
+      join public.unidade u on u.id = s.unidade_id
      where s.unidade_id = da_unidade and s.encerrada_em is null
+       and s.ultimo_uso_em > now() - interval '180 days'
+       and s.criada_em >= u.senha_trocada_em
        and i.sessao_id <> new.sessao_id
        and (tg_op = 'INSERT' or i.sessao_id <> old.sessao_id);
     if outras >= 10 then

@@ -9,6 +9,7 @@
 """
 
 import hashlib
+import threading
 
 import pytest
 from psycopg.errors import InsufficientPrivilege
@@ -165,6 +166,99 @@ def test_no_maximo_dez_aparelhos_inscritos_por_unidade(engine_app, ids):
     # Outra unidade não é afetada.
     with engine_app.begin() as con:
         _inscrever(con, ids["sessao_s"], "https://fcm.googleapis.com/fcm/send/s")
+
+
+def _dez_inscritas(engine_app, ids) -> list[int]:
+    with engine_app.begin() as con:
+        _inscrever(con, ids["sessao_u"], "https://fcm.googleapis.com/fcm/send/0")
+        sessoes = [ids["sessao_u"]]
+        for n in range(1, 10):
+            sessao = _nova_sessao(con, ids["u"], n)
+            _inscrever(con, sessao, f"https://fcm.googleapis.com/fcm/send/{n}")
+            sessoes.append(sessao)
+    return sessoes
+
+
+def test_sessao_vencida_nao_conta_no_limite(engine_app, ids):
+    # Revisão do contrato do M2, achado 5: o morador não vê nem desconecta sessão com mais de
+    # 180 dias sem uso; se ela contasse, o 409 não teria saída.
+    sessoes = _dez_inscritas(engine_app, ids)
+    with engine_app.begin() as con:
+        con.execute(
+            text("update sessao set ultimo_uso_em = now() - interval '181 days' where id = :s"),
+            {"s": sessoes[3]},
+        )
+        nova = _nova_sessao(con, ids["u"], 98)
+        _inscrever(con, nova, "https://fcm.googleapis.com/fcm/send/98")
+
+
+def test_sessao_de_antes_da_troca_de_senha_nao_conta_no_limite(
+    engine_app, engine_superusuario, ids
+):
+    sessoes = _dez_inscritas(engine_app, ids)
+    # Uma sessão aberta antes da última troca de senha (só o superusuário volta a data).
+    with engine_superusuario.begin() as con:
+        con.execute(text("set local session_replication_role = replica"))
+        con.execute(
+            text("update sessao set criada_em = now() - interval '1 day' where id = :s"),
+            {"s": sessoes[5]},
+        )
+    with engine_app.begin() as con:
+        nova = _nova_sessao(con, ids["u"], 98)
+        _inscrever(con, nova, "https://fcm.googleapis.com/fcm/send/98")
+
+
+def _em_paralelo(engine_app, primeiro, segundo) -> BaseException | None:
+    """`primeiro` roda e segura a transação aberta; `segundo` roda noutra conexão (numa thread)
+    e, se ficar esperando trava, espera o commit do primeiro. Devolve o erro do segundo."""
+    resultado: dict[str, BaseException | None] = {"erro": None}
+    with engine_app.connect() as con:
+        con.begin()
+        primeiro(con)
+
+        def rodar() -> None:
+            try:
+                with engine_app.begin() as outra:
+                    segundo(outra)
+            except BaseException as e:  # noqa: BLE001 - levado para a thread principal
+                resultado["erro"] = e
+
+        fio = threading.Thread(target=rodar)
+        fio.start()
+        fio.join(0.5)
+        con.commit()
+        fio.join(10)
+    return resultado["erro"]
+
+
+def _inscricoes_da_sessao(engine_app, sessao: int) -> int:
+    with engine_app.connect() as con:
+        return con.execute(
+            text("select count(*) from inscricao_push where sessao_id = :s"), {"s": sessao}
+        ).scalar_one()
+
+
+def test_encerrar_e_inscrever_ao_mesmo_tempo_encerrar_primeiro(engine_app, ids):
+    # Achado 4: sem trava, a inscrição lia a sessão ainda aberta e sobrevivia ao encerramento.
+    def encerrar(con):
+        con.execute(
+            text("update sessao set encerrada_em = now() where id = :s"), {"s": ids["sessao_u"]}
+        )
+
+    erro = _em_paralelo(engine_app, encerrar, lambda con: _inscrever(con, ids["sessao_u"]))
+    assert _inscricoes_da_sessao(engine_app, ids["sessao_u"]) == 0
+    assert erro is not None and restricao(erro) == "inscricao_push_sessao_encerrada"
+
+
+def test_encerrar_e_inscrever_ao_mesmo_tempo_inscrever_primeiro(engine_app, ids):
+    def encerrar(con):
+        con.execute(
+            text("update sessao set encerrada_em = now() where id = :s"), {"s": ids["sessao_u"]}
+        )
+
+    erro = _em_paralelo(engine_app, lambda con: _inscrever(con, ids["sessao_u"]), encerrar)
+    assert erro is None
+    assert _inscricoes_da_sessao(engine_app, ids["sessao_u"]) == 0
 
 
 def test_app_troca_e_apaga_inscricao(engine_app, ids):
