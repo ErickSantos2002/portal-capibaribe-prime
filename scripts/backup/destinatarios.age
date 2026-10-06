@@ -1,0 +1,4 @@
+# Chave PÚBLICA do age que cifra os backups do banco (ADR-0007, ADR-0009).
+# Pode ficar no repositório: com ela só se cifra, não se decifra. A chave privada fica com o
+# dono (cópia offline) e no segredo BACKUP_AGE_KEY do GitHub, que só o job de restauração usa.
+age1kvq4pjxg3yh9jeaty5r5exlexwtps9zx3kssx678j5nqvudsmqdquqt39w
