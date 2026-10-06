@@ -8,7 +8,9 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "fastapi>=0.142.2",
     "psycopg[binary]>=3.3.6",
+    "pywebpush>=2.5.0",
     "sqlalchemy>=2",
+    "vercel>=0.11.5",
 ]
 
 # A Vercel procura o app ASGI aqui (runtime Python).
