@@ -39,6 +39,35 @@ test('o vercel.json traz a CSP e a Permissions-Policy combinadas', () => {
   }
 })
 
+/** Fontes que valem para uma diretiva, seguindo o recuo da CSP 3 até a `default-src`. */
+function fontesEfetivas(csp: string, cadeia: string[]): string[] {
+  const diretivas = new Map(
+    csp.split(';').map((d) => {
+      const [nome, ...fontes] = d.trim().split(/\s+/)
+      return [nome, fontes] as const
+    }),
+  )
+  for (const nome of cadeia) {
+    const fontes = diretivas.get(nome)
+    if (fontes) return fontes
+  }
+  return ['*']
+}
+
+test('a CSP deixa o service worker e o manifest do PWA (M2) virem do próprio Portal', () => {
+  // Spec do M2, seção 8: worker-src recua para child-src, script-src e default-src;
+  // manifest-src recua para default-src. Com default-src 'self' os dois já valem, sem mudar a
+  // CSP. Se alguém endurecer uma diretiva da cadeia, este teste lembra do /sw.js.
+  const csp = cabecalhosDoVercel()['Content-Security-Policy']
+  const worker = fontesEfetivas(csp, ['worker-src', 'child-src', 'script-src', 'default-src'])
+  const manifest = fontesEfetivas(csp, ['manifest-src', 'default-src'])
+  assert.ok(worker.includes("'self'"), `worker-src efetivo: ${worker.join(' ')}`)
+  assert.ok(manifest.includes("'self'"), `manifest-src efetivo: ${manifest.join(' ')}`)
+  // O push não passa pela CSP (quem fala com o serviço de push é o navegador), e o toque na
+  // notificação abre uma página do próprio Portal: nada de terceiros é liberado.
+  assert.doesNotMatch(csp, /https?:\/\//, 'CSP com endereço de terceiros')
+})
+
 test('o vite preview responde com os mesmos cabeçalhos do vercel.json', async () => {
   const resposta = await fetch(base)
   assert.equal(resposta.status, 200)
