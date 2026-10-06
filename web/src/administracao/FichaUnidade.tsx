@@ -1,9 +1,12 @@
 // H-08 · Voltar para a senha inicial ("reset" no código) e H-09 · Papel de Comissão: a ficha
 // de uma unidade (como `telaUnidade` do protótipo). Pertence ao épico B.
 //
-// O que é perigoso (voltar para a senha inicial, mexer no papel de administrador) pede
-// confirmação no lugar, em cima das opções, dizendo o que vai acontecer. Dar ou tirar o papel de
-// Comissão é direto, como no protótipo, e o recado confirma.
+// Toda ação (voltar para a senha inicial, dar ou tirar papel) pede confirmação no lugar, em cima
+// das opções, dizendo o que vai acontecer. Comissão também confirma (decisão do Erick em
+// 06/10/2026): o papel dá acesso aos contatos de todas as unidades.
+//
+// A gestão (Comissão) lê a ficha, com os contatos; as ações são só do administrador, e a API
+// recusa o resto com 403 (RNF-13).
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useParams } from 'react-router'
 import { ErroDaApi } from '../api/cliente'
@@ -93,6 +96,7 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
   const [erro, setErro] = useState('')
   const confirmacao = useRef<HTMLHeadingElement>(null)
   const blocoDaConfirmacao = useRef<HTMLElement>(null)
+  const admin = eu?.admin ?? false
   const propria = eu?.unidade.login === u.unidade.login
   const nome = nomeDaUnidade(u.unidade)
   const temComissao = u.papeis.includes('comissao')
@@ -141,9 +145,7 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
 
   function pedir(acao: Pendente) {
     setErro('')
-    // Comissão é direto; reset e administrador pedem confirmação.
-    if (acao.tipo !== 'resetar' && acao.papel === 'comissao') void executar(acao)
-    else setPendente(acao)
+    setPendente(acao)
   }
 
   return (
@@ -203,11 +205,23 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
         </div>
       )}
 
-      {pendente && (
+      {!admin && (
+        <div className="aviso-caixa info">
+          <Icone nome="info" />
+          <p>
+            Só a administração do Portal volta um apartamento para a senha inicial ou muda papéis.
+            Se precisar, fale com ela no grupo do WhatsApp.
+          </p>
+        </div>
+      )}
+
+      {admin && pendente && (
         <Confirmacao
           acao={pendente}
           nome={nome}
           propria={propria}
+          temComissao={temComissao}
+          temAdmin={temAdmin}
           ocupado={ocupado}
           titulo={confirmacao}
           bloco={blocoDaConfirmacao}
@@ -216,7 +230,7 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
         />
       )}
 
-      {!pendente && (
+      {admin && !pendente && (
         <div className="acoes-admin">
           {/* U6 (revisão do M1): sem "resetar", e as seções com título de verdade. */}
           <h2 className="secao">Voltar para a senha inicial</h2>
@@ -272,6 +286,8 @@ interface PropsConfirmacao {
   acao: Pendente
   nome: string
   propria: boolean
+  temComissao: boolean
+  temAdmin: boolean
   ocupado: boolean
   titulo: RefObject<HTMLHeadingElement | null>
   bloco: RefObject<HTMLElement | null>
@@ -283,6 +299,8 @@ function Confirmacao({
   acao,
   nome,
   propria,
+  temComissao,
+  temAdmin,
   ocupado,
   titulo,
   bloco,
@@ -304,6 +322,25 @@ function Confirmacao({
     ]
     if (propria) efeitos.push('É o seu apartamento: você sai do Portal neste aparelho.')
     botao = 'Sim, voltar para a senha inicial'
+  } else if (acao.tipo === 'dar' && acao.papel === 'comissao') {
+    pergunta = `Dar papel de Comissão ao ${nome}?`
+    efeitos = [
+      'Ele passa a publicar avisos no mural, assinados pela Comissão.',
+      'Ele passa a ver o celular e o e-mail de todas as unidades.',
+      'Fica registrado no histórico.',
+    ]
+    botao = 'Sim, dar o papel'
+  } else if (acao.tipo === 'tirar' && acao.papel === 'comissao') {
+    pergunta = `Tirar o papel de Comissão do ${nome}?`
+    efeitos = [
+      'As opções de publicar avisos somem na hora, mesmo com ele conectado.',
+      temAdmin
+        ? 'Ele continua vendo o painel e os contatos, porque também administra o Portal.'
+        : 'Ele deixa de ver o painel de unidades e os contatos na hora.',
+      'Os avisos que ele já publicou continuam no mural, assinados pela Comissão.',
+      'Fica registrado no histórico.',
+    ]
+    botao = 'Sim, tirar o papel'
   } else if (acao.tipo === 'dar') {
     pergunta = `Dar papel de administrador ao ${nome}?`
     efeitos = [
@@ -315,7 +352,9 @@ function Confirmacao({
   } else {
     pergunta = `Tirar o papel de administrador do ${nome}?`
     efeitos = [
-      'Ele deixa de ver o painel de unidades e o histórico na hora.',
+      temComissao
+        ? 'Ele deixa de ver o histórico e de mexer em senhas e papéis na hora. O painel e os contatos continuam, porque ele é da Comissão.'
+        : 'Ele deixa de ver o painel de unidades, os contatos e o histórico na hora.',
       'Fica registrado no histórico.',
     ]
     if (propria) efeitos.push('É o seu apartamento: você perde o acesso a esta tela.')

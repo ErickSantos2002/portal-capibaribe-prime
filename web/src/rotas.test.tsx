@@ -90,12 +90,16 @@ describe('guardas', () => {
     expect(await screen.findByRole('heading', { name: 'Sem permissão' })).toBeTruthy()
   })
 
-  it('Comissão abre a tela de novo aviso, mas não a de unidades', async () => {
+  it('Comissão abre o novo aviso e o painel de unidades, mas não o histórico', async () => {
+    // Decisão do Erick (06/10/2026): a Comissão vê os contatos das unidades, só para ler.
     api(eu(['comissao']))
     abrir('/avisos/novo')
     expect(await screen.findByRole('heading', { name: 'Novo aviso' })).toBeTruthy()
     cleanup()
     abrir('/unidades')
+    expect(await screen.findByRole('heading', { name: 'Unidades' })).toBeTruthy()
+    cleanup()
+    abrir('/historico')
     expect(await screen.findByRole('heading', { name: 'Sem permissão' })).toBeTruthy()
   })
 
@@ -137,6 +141,13 @@ describe('layout', () => {
     expect(menu.textContent).toContain('Avisos')
     expect(menu.textContent).toContain('Minha unidade')
     expect(menu.textContent).not.toContain('Unidades')
+  })
+
+  it('menu da Comissão tem Unidades', async () => {
+    api(eu(['comissao']))
+    abrir('/avisos')
+    const menu = await screen.findByRole('navigation', { name: 'Seções do Portal' })
+    expect(menu.textContent).toContain('Unidades')
   })
 
   it('menu do admin tem Unidades', async () => {

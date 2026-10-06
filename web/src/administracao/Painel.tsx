@@ -7,6 +7,7 @@ import { ErroDaApi } from '../api/cliente'
 import { Icone } from '../casca/Icone'
 import { Placa } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
+import { useSessao } from '../casca/contextoSessao'
 import { formatarCelular, formatarData, nomeDoPapel } from '../casca/formatar'
 import './administracao.css'
 import { buscarPainel } from './api'
@@ -31,6 +32,8 @@ export function Painel() {
   const [filtro, setFiltro] = useState<Situacao>('todas')
   const [estado, setEstado] = useState<Estado>({ situacao: 'carregando' })
   const [tentativa, setTentativa] = useState(0)
+  // A Comissão lê o painel; o histórico é só do administrador.
+  const admin = useSessao().eu?.admin ?? false
   // A grade mostra sempre o prédio inteiro; o filtro vale para a lista.
   const situacao: Situacao = modo === 'grade' ? 'todas' : filtro
 
@@ -77,11 +80,13 @@ export function Painel() {
           aoMudarFiltro={setFiltro}
         />
       )}
-      <div className="carregar-mais">
-        <Link className="botao leve" to="/historico">
-          <Icone nome="relogio" /> Histórico de ações
-        </Link>
-      </div>
+      {admin && (
+        <div className="carregar-mais">
+          <Link className="botao leve" to="/historico">
+            <Icone nome="relogio" /> Histórico de ações
+          </Link>
+        </div>
+      )}
     </Tela>
   )
 }
