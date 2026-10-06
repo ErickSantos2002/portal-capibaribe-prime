@@ -511,6 +511,26 @@ def test_contagens_coerentes(engine_app, ids, valores):
         _mudar(con, e, **valores)
 
 
+def test_email_so_tenta_o_que_reservou_da_cota(engine_app, ids):
+    # Revisão do contrato, achado 2: a cota do Gmail é reservada antes de mandar; o banco não
+    # aceita e-mail tentado (entregue ou falho) além da reserva.
+    with engine_app.begin() as con:
+        e = _envio(con, ids["a"], "email")
+        _mudar(con, e, situacao="enviando", destinos=10, reservados=3)
+        _mudar(con, e, entregues=2, falhas=1)
+    with pytest.raises(IntegrityError) as erro, engine_app.begin() as con:
+        _mudar(con, e, entregues=3)
+    assert restricao(erro.value) == "notificacao_envio_reserva"
+    with pytest.raises(IntegrityError), engine_app.begin() as con:
+        _mudar(con, e, reservados=-1)
+
+
+def test_push_nao_usa_reserva(engine_app, ids):
+    with engine_app.begin() as con:
+        e = _envio(con, ids["a"], "push")
+        _mudar(con, e, situacao="enviando", destinos=3, entregues=3)
+
+
 def test_app_nao_apaga_envio(engine_app, ids):
     with engine_app.begin() as con:
         _envio(con, ids["a"], "push")

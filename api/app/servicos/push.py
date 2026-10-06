@@ -9,7 +9,10 @@ O que o épico A escreve aqui:
   paralelo (pywebpush, VAPID de `config_push()`), com o corpo `PushAviso` (spec, seção 4.2),
   TTL de 3 dias, `Urgency: high` para a categoria `urgente` (`normal` nas outras) e `Topic`
   `aviso-<id>`. Resposta 404 ou 410: apaga a inscrição (`removidas`, que também conta como
-  falha). Outro erro: `falhas`, segue para o próximo.
+  falha). Outro erro: `falhas`, segue para o próximo. As threads só mandam; apagar as
+  inscrições mortas e contar é na thread principal (a sessão do banco não é segura entre
+  threads), com `resultado.salvar()` a cada `SALVAR_A_CADA` e parada em
+  `resultado.tempo_esgotado()` (o resto é `pulados`). O push não usa `reservar`.
 - As funções de inscrição que `app/rotas/push.py` usa (inscrever e remover este aparelho,
   estado das notificações).
 """

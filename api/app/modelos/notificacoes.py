@@ -96,9 +96,13 @@ class NotificacaoEnvio(Base):
         ),
         CheckConstraint(
             "destinos >= 0 and entregues >= 0 and falhas >= 0 and removidas >= 0"
-            " and pulados >= 0 and entregues + falhas + pulados <= destinos"
-            " and removidas <= falhas",
+            " and pulados >= 0 and reservados >= 0"
+            " and entregues + falhas + pulados <= destinos and removidas <= falhas",
             name="notificacao_envio_contagens",
+        ),
+        CheckConstraint(
+            "canal = 'push' or entregues + falhas <= reservados",
+            name="notificacao_envio_reserva",
         ),
         Index(
             "notificacao_envio_em_aberto",
@@ -119,3 +123,5 @@ class NotificacaoEnvio(Base):
     falhas: Mapped[int] = mapped_column(server_default="0")
     removidas: Mapped[int] = mapped_column(server_default="0")
     pulados: Mapped[int] = mapped_column(server_default="0")
+    # E-mails separados da cota do Gmail antes de mandar (o e-mail não tenta além disto).
+    reservados: Mapped[int] = mapped_column(server_default="0")

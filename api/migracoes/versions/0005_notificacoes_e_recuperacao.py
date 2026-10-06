@@ -20,7 +20,8 @@ seção 2.
   caixa de alguém e gastar a cota do Gmail).
 - `notificacao_envio` (H-13): um registro por aviso e canal (`push`, `email`). A chave única é o
   que impede mandar duas vezes; a situação só anda para a frente. Guarda só contagens, nunca
-  endereço, e-mail ou unidade: é a medida de entrega, não dado pessoal.
+  endereço, e-mail ou unidade: é a medida de entrega, não dado pessoal. O e-mail reserva a
+  cota do Gmail antes de mandar (`reservados`), e o banco não aceita tentativa além dela.
 """
 
 from collections.abc import Sequence
@@ -222,16 +223,23 @@ create table notificacao_envio (
     iniciado_em   timestamptz,
     concluido_em  timestamptz,
     -- destinos: aparelhos (push) ou unidades (e-mail) a alcançar; pulados: e-mails que não
-    -- couberam na cota do dia; removidas: inscrições que o serviço de push disse não existir.
+    -- couberam na cota do dia (ou no tempo da função); removidas: inscrições que o serviço de
+    -- push disse não existir; reservados: e-mails separados da cota do Gmail **antes** de
+    -- mandar, gravados na hora (função que morre no meio continua contando na cota).
     destinos      integer not null default 0,
     entregues     integer not null default 0,
     falhas        integer not null default 0,
     removidas     integer not null default 0,
     pulados       integer not null default 0,
+    reservados    integer not null default 0,
     constraint notificacao_envio_unico unique (aviso_id, canal),
     constraint notificacao_envio_contagens check (
         destinos >= 0 and entregues >= 0 and falhas >= 0 and removidas >= 0 and pulados >= 0
-        and entregues + falhas + pulados <= destinos and removidas <= falhas)
+        and reservados >= 0
+        and entregues + falhas + pulados <= destinos and removidas <= falhas),
+    -- E-mail só é tentado depois de reservado na cota (o push não usa cota).
+    constraint notificacao_envio_reserva check (
+        canal = 'push' or entregues + falhas <= reservados)
 );
 create index notificacao_envio_em_aberto on notificacao_envio (criado_em)
     where situacao in ('pendente', 'enviando');
@@ -283,7 +291,7 @@ grant update (sessao_id, chave_p256dh, chave_auth) on inscricao_push to {app};
 grant select, insert, delete on token_recuperacao to {app};
 grant update (usado_em) on token_recuperacao to {app};
 grant select, insert on notificacao_envio to {app};
-grant update (situacao, destinos, entregues, falhas, removidas, pulados)
+grant update (situacao, destinos, entregues, falhas, removidas, pulados, reservados)
     on notificacao_envio to {app};
 """
 

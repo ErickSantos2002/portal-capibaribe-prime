@@ -7,6 +7,7 @@ do Gmail.
 """
 
 import asyncio
+import threading
 from dataclasses import dataclass, field
 
 import pytest
@@ -38,6 +39,9 @@ class CanalFalso:
     def enviar(self, db: Session, aviso: AvisoParaNotificar, resultado: Resultado) -> None:
         self.chamadas.append(aviso)
         resultado.destinos = 3
+        if self.canal is Canal.email:
+            # Como o épico B tem de fazer: reservar a cota antes de mandar (o banco exige).
+            assert resultado.reservar(3) == 3
         resultado.entregues = 2
         if self.falhar:
             raise RuntimeError("SMTP caiu ao mandar para alguem@example.com")
@@ -334,9 +338,10 @@ def test_cota_do_gmail_guarda_reserva_para_a_recuperacao(engine_app, fabrica):
             ),
             {"a": aviso_id},
         )
+        # A cota conta o que foi **reservado** (antes de mandar), não o que já saiu.
         con.execute(
             text(
-                "update notificacao_envio set destinos = 400, entregues = 390, falhas = 10"
+                "update notificacao_envio set destinos = 400, reservados = 400, entregues = 10"
                 " where aviso_id = :a and canal = 'email'"
             ),
             {"a": aviso_id},
@@ -436,3 +441,150 @@ def test_sessao_criada_agora_vale_para_push(engine_app):
         ).one()
         assert criada >= trocada
         assert db.scalar(select(func.count()).select_from(Sessao)) >= 1
+
+
+# --- revisão do contrato: cota reservada, progresso gravado, tempo e paralelo ----------------
+
+
+def _envio_email_enviando(engine_app, fabrica) -> tuple[int, int]:
+    aviso_id = _aviso_no_banco(engine_app, fabrica)
+    with engine_app.begin() as con:
+        envio_id = con.execute(
+            text(
+                "update notificacao_envio set situacao = 'enviando' where aviso_id = :a"
+                " and canal = 'email' returning id"
+            ),
+            {"a": aviso_id},
+        ).scalar_one()
+    return aviso_id, envio_id
+
+
+def test_reserva_da_cota_vale_na_hora_mesmo_se_a_funcao_morrer(engine_app, fabrica, canais):
+    # Achado 2: as contagens só iam para o banco no fim; uma função morta não gastava cota, e o
+    # aviso seguinte estourava o Gmail.
+    visto: dict[str, int] = {}
+
+    def enviar(db, aviso, resultado):
+        resultado.destinos = 300
+        assert resultado.reservar(300) == 300
+        with fabrica() as outra:  # outra conexão, outra transação
+            visto["usados"] = notificacoes.emails_nas_ultimas_24h(outra)
+        raise SystemExit  # a função "morre": nada depois disto roda
+
+    canais[Canal.email].enviar = enviar
+    aviso_id = _aviso_no_banco(engine_app, fabrica)
+    with pytest.raises(SystemExit):
+        notificacoes.processar(aviso_id, fabrica)
+    assert visto["usados"] == 300
+    with fabrica() as db:
+        assert notificacoes.emails_nas_ultimas_24h(db) == 300
+        assert notificacoes.cota_email_avisos(db) == 100
+
+
+def test_reserva_nao_passa_da_cota(engine_app, fabrica):
+    _, envio_id = _envio_email_enviando(engine_app, fabrica)
+    assert notificacoes.reservar_cota_email(fabrica, envio_id, 500) == 400
+    assert notificacoes.reservar_cota_email(fabrica, envio_id, 10) == 0
+
+
+def test_reservas_ao_mesmo_tempo_nao_passam_da_cota(engine_app, fabrica):
+    envios_ids = [_envio_email_enviando(engine_app, fabrica)[1] for _ in range(6)]
+    barreira = threading.Barrier(len(envios_ids))
+    concedidos: list[int] = []
+
+    def reservar(envio_id: int) -> None:
+        barreira.wait()
+        concedidos.append(notificacoes.reservar_cota_email(fabrica, envio_id, 100))
+
+    fios = [threading.Thread(target=reservar, args=(e,)) for e in envios_ids]
+    for fio in fios:
+        fio.start()
+    for fio in fios:
+        fio.join(10)
+    assert sum(concedidos) == 400
+    with fabrica() as db:
+        assert notificacoes.emails_nas_ultimas_24h(db) == 400
+
+
+def test_progresso_gravado_aos_poucos(engine_app, fabrica, canais):
+    visto: dict[str, object] = {}
+
+    def enviar(db, aviso, resultado):
+        resultado.destinos = 10
+        resultado.reservar(10)
+        resultado.entregues = 4
+        resultado.salvar()
+        visto["meio"] = envios(engine_app, aviso.aviso_id)["email"]
+        resultado.entregues = 10
+
+    canais[Canal.email].enviar = enviar
+    aviso_id = _aviso_no_banco(engine_app, fabrica)
+    notificacoes.processar(aviso_id, fabrica)
+    assert (visto["meio"]["situacao"], visto["meio"]["entregues"]) == ("enviando", 4)
+    assert envios(engine_app, aviso_id)["email"]["entregues"] == 10
+
+
+def test_sobra_da_reserva_volta_para_a_cota(engine_app, fabrica, canais):
+    def enviar(db, aviso, resultado):
+        resultado.destinos = 50
+        resultado.reservar(50)
+        resultado.entregues = 3
+        resultado.pulados = 47  # o tempo acabou, por exemplo
+
+    canais[Canal.email].enviar = enviar
+    aviso_id = _aviso_no_banco(engine_app, fabrica)
+    notificacoes.processar(aviso_id, fabrica)
+    with fabrica() as db:
+        assert notificacoes.emails_nas_ultimas_24h(db) == 3
+
+
+def test_tempo_do_envio(monkeypatch):
+    agora = [1000.0]
+    monkeypatch.setattr(notificacoes.time, "monotonic", lambda: agora[0])
+    resultado = Resultado(prazo=agora[0] + notificacoes.TEMPO_MAXIMO.total_seconds())
+    assert not resultado.tempo_esgotado()
+    agora[0] += notificacoes.TEMPO_MAXIMO.total_seconds() + 1
+    assert resultado.tempo_esgotado()
+    # O prazo cabe na função da Vercel (300 s), com folga para gravar o fim.
+    assert notificacoes.TEMPO_MAXIMO.total_seconds() <= 240
+
+
+def test_push_e_email_em_paralelo(engine_app, fabrica, canais):
+    # O e-mail (lento) não atrasa o push, e o push não come o tempo do e-mail.
+    email_comecou = threading.Event()
+    push_viu: list[bool] = []
+    enviar_email = canais[Canal.email].enviar
+
+    def enviar_push(db, aviso, resultado):
+        push_viu.append(email_comecou.wait(5))
+
+    def enviar_email_marcando(db, aviso, resultado):
+        email_comecou.set()
+        enviar_email(db, aviso, resultado)
+
+    canais[Canal.push].enviar = enviar_push
+    canais[Canal.email].enviar = enviar_email_marcando
+    notificacoes.processar(_aviso_no_banco(engine_app, fabrica), fabrica)
+    assert push_viu == [True]
+
+
+def test_log_do_canal_interrompido_traz_o_tipo_do_erro(logar, canais, caplog):
+    # Achado 8: só o tipo, nunca a mensagem (pode ter o e-mail de alguém).
+    canais[Canal.push].falhar = True
+    publicar(logar(COMISSAO))
+    assert "RuntimeError" in caplog.text
+    assert "alguem@example.com" not in caplog.text
+
+
+def test_reservar_email_de_recuperacao(engine_app, fabrica):
+    with fabrica() as db:
+        assert notificacoes.reservar_email_recuperacao(db) is True
+        db.rollback()
+    _, envio_id = _envio_email_enviando(engine_app, fabrica)
+    notificacoes.reservar_cota_email(fabrica, envio_id, 400)
+    with engine_app.begin() as con:
+        con.execute(
+            text("update notificacao_envio set reservados = 450 where id = :e"), {"e": envio_id}
+        )
+    with fabrica() as db:
+        assert notificacoes.reservar_email_recuperacao(db) is False
