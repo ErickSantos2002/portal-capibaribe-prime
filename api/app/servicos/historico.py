@@ -6,8 +6,10 @@ Não faz commit: a ação e o registro dela vão juntos na transação de quem c
 """
 
 import enum
+from datetime import timedelta
 from typing import Any
 
+from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
 
 from app.modelos import Historico
@@ -54,6 +56,25 @@ def _conferir_detalhes(detalhes: dict[str, Any]) -> None:
             raise ErroDoPortal(
                 f"Detalhe '{chave}' precisa ser um valor simples (texto, número ou lista deles)."
             )
+
+
+def registrado_recentemente(
+    db: Session, acao: Acao, *, entidade: str, entidade_id: int, janela: timedelta
+) -> bool:
+    """Já há registro desta ação para esta entidade dentro da `janela`? Para ações que alguém de
+    fora pode disparar à vontade (o pedido de recuperação, M2) não encherem o histórico."""
+    return bool(
+        db.scalar(
+            select(
+                exists().where(
+                    Historico.acao == acao.value,
+                    Historico.entidade == entidade,
+                    Historico.entidade_id == entidade_id,
+                    Historico.ocorrido_em > func.now() - janela,
+                )
+            )
+        )
+    )
 
 
 def registrar(

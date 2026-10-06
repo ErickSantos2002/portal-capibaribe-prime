@@ -1,13 +1,16 @@
-"""Contrato das rotas do M2 (spec do M2, seção 4), antes dos épicos.
+"""Contrato das rotas do M2 (spec do M2, seção 4): o que vale antes **e depois** dos épicos.
 
-As rotas já existem com os esquemas, as permissões e o CSRF de verdade, e respondem 501
-`em_construcao` até o épico implementar: o épico A (push) e o épico B (recuperação) trocam só o
-corpo. Os testes de 501 são os únicos que os épicos apagam.
+Sessão, permissão, CSRF, validação do corpo, a lista de serviços de push e o pedido de
+recuperação (que já responde de verdade) ficam aqui e **não** são apagados pelos épicos. Os
+testes de 501 `em_construcao`, que os épicos apagam, estão em `test_m2_em_construcao.py`.
 """
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
+from app.esquemas.push import InscricaoPush, servico_de_push_conhecido
+from app.esquemas.recuperacao import MSG_PEDIDO
 from testes.conftest import CABECALHO_PORTAL, COMUM, NAO_ATIVADA
 
 pytestmark = pytest.mark.usefixtures("predio")
@@ -63,11 +66,6 @@ def test_push_exige_sessao_completa(cliente, logar, metodo, caminho, corpo):
     assert _codigo(restrita) == (403, "primeiro_acesso_pendente")
 
 
-@pytest.mark.parametrize(("metodo", "caminho", "corpo"), ROTAS_PUSH)
-def test_push_em_construcao(logar, metodo, caminho, corpo):
-    assert _codigo(logar(COMUM).request(metodo, caminho, json=corpo)) == (501, "em_construcao")
-
-
 @pytest.mark.parametrize(("metodo", "caminho", "corpo"), ROTAS_PUSH[1:])
 def test_push_exige_cabecalho_portal(logar, metodo, caminho, corpo):
     cliente = logar(COMUM)
@@ -76,23 +74,24 @@ def test_push_exige_cabecalho_portal(logar, metodo, caminho, corpo):
 
 
 @pytest.mark.parametrize(
-    ("mudar", "campo"),
+    "endpoint",
     [
-        ({"endpoint": "http://fcm.googleapis.com/fcm/send/abc"}, "endpoint"),
-        ({"endpoint": "https://intranet.local/fcm/send/abc"}, "endpoint"),
-        ({"endpoint": "https://fcm.googleapis.com.exemplo.com/x"}, "endpoint"),
-        ({"endpoint": "https://evil.com/?fcm.googleapis.com"}, "endpoint"),
-        ({"endpoint": "https://user@fcm.googleapis.com/x"}, "endpoint"),
-        ({"endpoint": "https://fcm.googleapis.com:8443/x"}, "endpoint"),
-        ({"endpoint": "https://fcm.googleapis.com/" + "a" * 2048}, "endpoint"),
-        ({"p256dh": "curta"}, "p256dh"),
-        ({"auth": "C/" * 11}, "auth"),
+        "http://fcm.googleapis.com/fcm/send/abc",
+        "https://intranet.local/fcm/send/abc",
+        "https://fcm.googleapis.com.exemplo.com/x",
+        "https://evil.com/?fcm.googleapis.com",
+        "https://evil.com/#fcm.googleapis.com",
+        "https://user@fcm.googleapis.com/x",
+        "https://fcm.googleapis.com:8443/x",
+        "https://fcm.googleapis.com:443/x",
+        "https://xfcm.googleapis.com/x",
+        "https://[::1]/x",
+        "nao é url",
     ],
 )
-def test_inscricao_so_aceita_servicos_de_push_conhecidos(logar, mudar, campo):
-    resposta = logar(COMUM).put("/api/notificacoes/este-aparelho", json=INSCRICAO | mudar)
-    assert _codigo(resposta) == (422, "dados_invalidos")
-    assert resposta.json()["campos"][0]["campo"] == campo
+def test_servico_de_push_desconhecido_recusado(endpoint):
+    # SSRF: a função faz um POST para o endpoint a cada aviso (spec do M2, seção 4.2).
+    assert servico_de_push_conhecido(endpoint) is False
 
 
 @pytest.mark.parametrize(
@@ -102,13 +101,28 @@ def test_inscricao_so_aceita_servicos_de_push_conhecidos(logar, mudar, campo):
         "https://updates.push.services.mozilla.com/wpush/v2/gAAAA",
         "https://web.push.apple.com/QGv0d9",
         "https://wns2-bn3p.notify.windows.com/w/?token=BQYAAAB",
+        "https://FCM.googleapis.com/fcm/send/x",
+    ],
+    ids=["chrome", "firefox", "safari", "edge", "maiusculas"],
+)
+def test_servicos_de_push_dos_navegadores_aceitos(endpoint):
+    assert servico_de_push_conhecido(endpoint) is True
+    assert InscricaoPush(endpoint=endpoint, p256dh=P256DH, auth=AUTH).endpoint == endpoint
+
+
+@pytest.mark.parametrize(
+    ("mudar", "campo"),
+    [
+        ({"endpoint": "https://intranet.local/fcm/send/abc"}, "endpoint"),
+        ({"endpoint": "https://fcm.googleapis.com/" + "a" * 2048}, "endpoint"),
+        ({"p256dh": "curta"}, "p256dh"),
+        ({"auth": "C/" * 11}, "auth"),
     ],
 )
-def test_inscricao_aceita_chrome_firefox_safari_e_edge(logar, endpoint):
-    resposta = logar(COMUM).put(
-        "/api/notificacoes/este-aparelho", json=INSCRICAO | {"endpoint": endpoint}
-    )
-    assert _codigo(resposta) == (501, "em_construcao")
+def test_rota_de_inscricao_valida_o_corpo(logar, mudar, campo):
+    resposta = logar(COMUM).put("/api/notificacoes/este-aparelho", json=INSCRICAO | mudar)
+    assert _codigo(resposta) == (422, "dados_invalidos")
+    assert resposta.json()["campos"][0]["campo"] == campo
 
 
 def test_aparelho_diz_se_recebe_notificacao(logar, engine_app, predio):
@@ -137,10 +151,11 @@ def test_aparelho_diz_se_recebe_notificacao(logar, engine_app, predio):
 
 
 @pytest.mark.parametrize(("metodo", "caminho", "corpo"), ROTAS_RECUPERACAO)
-def test_recuperacao_sem_sessao_chega_na_rota(cliente, metodo, caminho, corpo):
-    # Quem esqueceu a senha não tem sessão: a rota não pede.
+def test_recuperacao_nao_pede_sessao(cliente, metodo, caminho, corpo):
+    # Quem esqueceu a senha não tem sessão: a rota não pode recusar por isso, antes ou depois
+    # do épico (hoje 202 ou 501; depois, 202, 200 ou 410).
     resposta = cliente.request(metodo, caminho, json=corpo, headers=CABECALHO_PORTAL)
-    assert _codigo(resposta) == (501, "em_construcao")
+    assert resposta.status_code not in (401, 403), resposta.text
 
 
 @pytest.mark.parametrize(("metodo", "caminho", "corpo"), ROTAS_RECUPERACAO)
@@ -191,9 +206,46 @@ def test_recuperacao_valida_o_corpo(cliente, caminho, corpo, campo, mensagem):
     assert "senha-nova-boa" not in resposta.text
 
 
-def test_acoes_do_m2_no_historico(engine_app, predio):
-    from sqlalchemy.orm import Session
+@pytest.fixture
+def pedidos(monkeypatch) -> list[str]:
+    """Troca o trabalho de segundo plano do pedido por um que só anota o login."""
+    from app.servicos import recuperacao
 
+    anotados: list[str] = []
+    monkeypatch.setattr(recuperacao, "processar_pedido", anotados.append)
+    return anotados
+
+
+@pytest.fixture
+def sem_banco():
+    """A requisição do pedido não pode tocar no banco (revisão do contrato, achado 3)."""
+    from app.banco import obter_sessao
+    from app.main import app
+
+    def quebrado():
+        raise AssertionError("o pedido de recuperação abriu o banco dentro da requisição")
+
+    app.dependency_overrides[obter_sessao] = quebrado
+    yield
+    app.dependency_overrides.pop(obter_sessao)
+
+
+def test_pedido_responde_igual_e_deixa_tudo_para_depois(cliente, engine_app, pedidos, sem_banco):
+    # 1203 sem e-mail, 1101 com e-mail, 6101 não existe (o prédio tem 5 blocos): a resposta e o
+    # caminho dentro da requisição são os mesmos; quem tem e-mail só se descobre depois dela.
+    with engine_app.begin() as con:
+        con.execute(text("update unidade set email = 'a@example.com' where login = '1101'"))
+    respostas = [
+        cliente.post("/api/acesso/recuperacao", json={"login": login}, headers=CABECALHO_PORTAL)
+        for login in ("1203", "1101", "6101")
+    ]
+    assert {(r.status_code, r.text) for r in respostas} == {
+        (202, '{"mensagem":"' + MSG_PEDIDO + '"}')
+    }
+    assert pedidos == ["1203", "1101", "6101"]
+
+
+def test_acoes_do_m2_no_historico(engine_app, predio):
     from app.servicos.historico import Acao, registrar
 
     # Os detalhes que o épico B vai gravar passam pelo filtro de dado pessoal.
@@ -214,3 +266,38 @@ def test_acoes_do_m2_no_historico(engine_app, predio):
             entidade_id=predio[COMUM],
         )
         db.commit()
+
+
+def test_historico_sabe_se_ja_registrou_na_ultima_hora(engine_app, engine_superusuario, predio):
+    # Achado 3: um script contra os 320 logins não pode encher o histórico (Neon Free).
+    from datetime import timedelta
+
+    from app.servicos.historico import Acao, registrado_recentemente, registrar
+
+    def recente(entidade_id: int) -> bool:
+        with Session(engine_app) as db:
+            return registrado_recentemente(
+                db,
+                Acao.recuperacao_pedida,
+                entidade="unidade",
+                entidade_id=entidade_id,
+                janela=timedelta(hours=1),
+            )
+
+    assert recente(predio[COMUM]) is False
+    with Session(engine_app) as db:
+        registrar(
+            db,
+            Acao.recuperacao_pedida,
+            unidade_id=None,
+            entidade="unidade",
+            entidade_id=predio[COMUM],
+            detalhes={"enviado": True, "motivo": None},
+        )
+        db.commit()
+    assert recente(predio[COMUM]) is True
+    assert recente(predio[NAO_ATIVADA]) is False
+    with engine_superusuario.begin() as con:
+        con.execute(text("set local session_replication_role = replica"))
+        con.execute(text("update historico set ocorrido_em = now() - interval '61 minutes'"))
+    assert recente(predio[COMUM]) is False
