@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | v0.4 — M0 fechado; M1 com a parte técnica pronta e no ar, esperando o ensaio e a Comissão; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.5 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | Portão do M1: ensaio com vizinhos (#20) e a Comissão topar publicar (#21) |
+| **Próximo passo** | Acompanhar a adesão e corrigir o que o grupo apontar; depois M2 (notificações) |
 
 ---
 
@@ -58,7 +58,7 @@ flowchart LR
 | Marco | Resumo |
 |---|---|
 | **M0** ✅ | Esqueleto: repositório, CI, Vercel + Neon, banco com as 320 unidades |
-| **M1** 🟡 | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real.** No ar; falta o ensaio e a Comissão |
+| **M1** ✅ | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real**, anunciado em 06/10/2026 |
 | **M2** | Notificação no celular, e-mail e "esqueci a senha" |
 | **M3** | Documentos e anexos nos avisos (Cloudflare R2) |
 | **M4** | Enquetes com um voto por unidade |
@@ -137,9 +137,13 @@ E também: layout de celular e de computador, tema claro/escuro (como no protót
    de rotas do próprio OpenAPI.
 4. ✅ Revisão independente (UX + código), como foi feita no protótipo: 7 achados de código e 11
    de UX, todos corrigidos com teste de regressão (migração 0003), no ar em 06/10/2026.
-5. ⏳ Ensaio com 2 ou 3 vizinhos e 1 membro da Comissão, em produção, antes do anúncio no grupo.
-6. ⏳ A Comissão concorda em publicar avisos pelo Portal. Sem isso, o mural fica vazio e o resto
-   não importa.
+5. ⏭️ Ensaio com 2 ou 3 vizinhos e 1 membro da Comissão, em produção, antes do anúncio no grupo.
+   **Pulado por decisão do Erick (06/10/2026):** ninguém se dispôs a tempo; o grupo já tinha
+   testado o protótipo e a parte técnica do portão estava cumprida. Abriu direto e corrige
+   conforme as pessoas entram.
+6. 🟡 A Comissão concorda em publicar avisos pelo Portal. A Comissão estava parada; um membro
+   entrou e recebeu o papel no dia do lançamento. O uso real passa a ser medido pelo critério de
+   sucesso "a Comissão usa o Portal" (seção 6), não mais como portão.
 
 **Pronto quando:** todos os critérios de aceite das histórias acima passam como teste, o portão
 está cumprido e o link foi anunciado no grupo.
@@ -158,6 +162,11 @@ destaque), categoria (Geral, Obra, Reunião, Financeiro, Urgente) e evento (Quan
 `docs/superpowers/specs/2026-10-06-avisos-visual-design.md`. O Erick também decidiu não esperar
 o ensaio para abrir: libera para o grupo e corrige conforme as pessoas entram (registrar a data
 do anúncio aqui).
+
+**✅ Fechado em 06/10/2026:** link anunciado no grupo de WhatsApp dos compradores com a senha
+inicial e o pedido de retorno; um membro da Comissão ativou a conta e recebeu o papel. No
+lançamento: 2 unidades ativadas, 0 erros em produção. A meta de adesão (seção 6) conta a partir
+desta data: 40% em 3 meses, e menos de 20% em 3 meses é o sinal para parar e perguntar.
 
 ### M2 · Notificações
 

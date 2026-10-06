@@ -15,7 +15,7 @@ enquetes e documentos** na fase de obra; reservas, chamados e encomendas depois 
 | Protótipo de alta fidelidade | Feito e publicado (`prototipo/`, `docs/06`) |
 | Teste com moradores | Em andamento |
 | Roadmap | Feito (`docs/07`): 6 marcos na E1, primeiro uso real no M1 |
-| Código do app | M1 (acesso e mural) no ar em https://portal-capibaribe-prime.vercel.app, com backup diário · falta o ensaio com vizinhos e a Comissão antes do anúncio no grupo |
+| Código do app | M1 (acesso e mural) no ar e anunciado no grupo em 06/10/2026: https://portal-capibaribe-prime.vercel.app, com backup diário · próximo: M2 (notificações) |
 
 ## Como foi pensado
 
