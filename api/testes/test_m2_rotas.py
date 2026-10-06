@@ -189,3 +189,28 @@ def test_recuperacao_valida_o_corpo(cliente, caminho, corpo, campo, mensagem):
         assert erro["mensagem"] == mensagem
     # A senha digitada nunca volta na resposta.
     assert "senha-nova-boa" not in resposta.text
+
+
+def test_acoes_do_m2_no_historico(engine_app, predio):
+    from sqlalchemy.orm import Session
+
+    from app.servicos.historico import Acao, registrar
+
+    # Os detalhes que o épico B vai gravar passam pelo filtro de dado pessoal.
+    with Session(engine_app) as db:
+        registrar(
+            db,
+            Acao.recuperacao_pedida,
+            unidade_id=None,
+            entidade="unidade",
+            entidade_id=predio[COMUM],
+            detalhes={"enviado": False, "motivo": "sem_email"},
+        )
+        registrar(
+            db,
+            Acao.senha_redefinida,
+            unidade_id=predio[COMUM],
+            entidade="unidade",
+            entidade_id=predio[COMUM],
+        )
+        db.commit()

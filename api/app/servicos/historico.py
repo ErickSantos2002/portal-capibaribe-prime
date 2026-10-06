@@ -34,6 +34,10 @@ class Acao(enum.StrEnum):
     aviso_arquivado = "aviso_arquivado"
     aviso_fixado = "aviso_fixado"
     aviso_desafixado = "aviso_desafixado"
+    # Esqueci a senha (M2, épico B; spec do M2, seção 4.3). O pedido é ação do sistema
+    # (`unidade_id` nulo, entidade `unidade`), com `{"enviado": bool, "motivo": ...}`.
+    recuperacao_pedida = "recuperacao_pedida"
+    senha_redefinida = "senha_redefinida"
 
 
 # Chaves que denunciam dado pessoal ou segredo. Comparação por "contém", em minúsculas.

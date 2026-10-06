@@ -2,6 +2,8 @@
 // função de API chama a rota certa, com o método certo e o `X-Portal: 1` (as de recuperação são
 // sem sessão, mas o cabeçalho vai igual), e os pontos de encaixe ainda não mudam nada.
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { oQueFez } from './administracao/frases'
+import type { ItemHistorico } from './administracao/tipos'
 import * as notificacoes from './notificacoes/api'
 import { destinoDepoisDoPrimeiroAcesso } from './notificacoes/ganchos'
 import { rotasNotificacoes } from './notificacoes/rotas'
@@ -90,6 +92,38 @@ describe('recuperacao/api (épico B)', () => {
       metodo: 'POST',
       corpo: dados,
     })
+  })
+})
+
+describe('histórico do M2 em frases (H-11)', () => {
+  const base: ItemHistorico = {
+    id: 1,
+    ocorrido_em: '2026-11-02T21:03:00Z',
+    unidade: null,
+    acao: 'recuperacao_pedida',
+    entidade: 'unidade',
+    entidade_id: 7,
+    unidade_afetada: { login: '1203', bloco: 1, apartamento: '203' },
+    aviso_titulo: null,
+    detalhes: { enviado: true, motivo: null },
+  }
+
+  it('pedido de senha nova: mandou o link ou diz por que não', () => {
+    expect(oQueFez(base)).toBe('mandou ao Bloco 1, 203 um link para criar senha nova')
+    expect(oQueFez({ ...base, detalhes: { enviado: false, motivo: 'sem_email' } })).toBe(
+      'não mandou link de senha nova ao Bloco 1, 203: sem e-mail cadastrado',
+    )
+    expect(oQueFez({ ...base, detalhes: { enviado: false, motivo: 'limite' } })).toBe(
+      'não mandou link de senha nova ao Bloco 1, 203: muitos pedidos seguidos',
+    )
+    expect(oQueFez({ ...base, detalhes: { enviado: false, motivo: 'cota' } })).toBe(
+      'não mandou link de senha nova ao Bloco 1, 203: limite de e-mails do dia',
+    )
+  })
+
+  it('senha nova pelo link', () => {
+    const item = { ...base, acao: 'senha_redefinida', unidade: base.unidade_afetada, detalhes: {} }
+    expect(oQueFez(item)).toBe('criou senha nova pelo link do e-mail')
   })
 })
 
