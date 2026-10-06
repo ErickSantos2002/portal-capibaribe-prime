@@ -10,10 +10,14 @@ Contrato: `docs/superpowers/specs/m2-contrato.md`, seções 4.3 e 5; spec do ép
 
 import html
 import re
+from email.message import EmailMessage
+from email.utils import formataddr, formatdate, make_msgid
 from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.configuracao import ConfigEmail
+from app.esquemas.comum import UnidadeRef
 from app.modelos import Canal
 from app.servicos.notificacoes import AvisoParaNotificar, Resultado
 
@@ -163,6 +167,164 @@ def html_do_texto(texto: str) -> str:
         else:
             partes.append(f'<p style="{_E["p"]}">{_html_das_linhas(bloco["linhas"])}</p>')
     return "".join(partes)
+
+
+# --- as mensagens (spec do épico B, seções 2.1 a 2.3) ----------------------------------------
+
+# Nome e cores de cada categoria (`web/src/avisos/categorias.ts` e os tokens `--cat-*`): a
+# categoria nunca aparece só pela cor, sempre com o nome.
+_CATEGORIAS = {
+    "geral": ("Geral", "#4a5a50", "#e9ece9"),
+    "obra": ("Obra", "#9c4517", "#f7e6dc"),
+    "reuniao": ("Reunião", "#2f5d9e", "#e2eaf6"),
+    "financeiro": ("Financeiro", "#1f5e3b", "#e3eee6"),
+    "urgente": ("Urgente", "#a3322a", "#f8e4e1"),
+}
+RODAPE_DO_AVISO = (
+    "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, "
+    "apague o e-mail em Minha unidade. Sem e-mail, o “esqueci a senha” também deixa de funcionar."
+)
+RODAPE_DA_RECUPERACAO = (
+    "Mandado pelo Portal Capibaribe Prime porque alguém pediu “Esqueci minha senha” para este "
+    "apartamento."
+)
+_FONTE = "'Atkinson Hyperlegible',Arial,Helvetica,sans-serif"
+
+
+def _juntar(itens: list[str]) -> str:
+    return itens[0] if len(itens) < 2 else f"{', '.join(itens[:-1])} e {itens[-1]}"
+
+
+def destino_em_texto(aviso: AvisoParaNotificar) -> str:
+    """ "para todos os blocos", "para o Bloco 1", "para os Blocos 1 e 3" (como no mural)."""
+    if aviso.para_todos or not aviso.blocos:
+        return "para todos os blocos"
+    numeros = [str(b) for b in aviso.blocos]
+    if len(numeros) == 1:
+        return f"para o Bloco {numeros[0]}"
+    return f"para os Blocos {_juntar(numeros)}"
+
+
+def _uma_linha(texto: str) -> str:
+    """Assunto numa linha só: quebra no título não vira cabeçalho novo."""
+    return " ".join(texto.split())
+
+
+def _mensagem(config: ConfigEmail, para: str, assunto: str, texto: str, html_: str) -> EmailMessage:
+    mensagem = EmailMessage()
+    mensagem["From"] = formataddr((config.remetente_nome, config.usuario))
+    mensagem["To"] = para
+    mensagem["Subject"] = _uma_linha(assunto)
+    mensagem["Date"] = formatdate(localtime=False)
+    mensagem["Message-ID"] = make_msgid(domain=config.usuario.rpartition("@")[2] or None)
+    # RFC 3834: respostas automáticas ("estou de férias") não voltam para o Portal.
+    mensagem["Auto-Submitted"] = "auto-generated"
+    mensagem.set_content(texto)
+    mensagem.add_alternative(html_, subtype="html")
+    return mensagem
+
+
+_MOLDURA = {
+    "corpo": f"margin:0;padding:0;background:#f4f6f2;font-family:{_FONTE};color:{_COR_TINTA}",
+    "cartao": "max-width:600px;background:#ffffff;border:1px solid #cfd8d1;border-radius:12px",
+    "faixa": (
+        f"padding:18px 24px;background:{_COR_MATA};border-radius:12px 12px 0 0;"
+        "color:#ffffff;font-size:18px;font-weight:bold"
+    ),
+    "botao": (
+        "display:inline-block;padding:14px 28px;color:#ffffff;font-size:18px;"
+        "font-weight:bold;text-decoration:none;border-radius:8px"
+    ),
+    "copiar": "margin:0 0 20px;font-size:14px;line-height:1.5;color:#4a5a50",
+    "rodape": (
+        "padding:16px 24px 20px;border-top:1px solid #cfd8d1;font-size:14px;"
+        "line-height:1.5;color:#4a5a50"
+    ),
+}
+
+
+def _pagina(titulo: str, miolo: str, botao: str, endereco: str, rodape: str) -> str:
+    """Moldura do e-mail em HTML: tabela de 600 px, estilos inline, só cores dos tokens."""
+    e, m = html.escape, _MOLDURA
+    tabela = 'role="presentation" width="100%" cellpadding="0" cellspacing="0"'
+    return f"""<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{e(titulo)}</title></head>
+<body style="{m["corpo"]}">
+<table {tabela} style="background:#f4f6f2">
+<tr><td align="center" style="padding:24px 12px">
+<table {tabela} style="{m["cartao"]}">
+<tr><td style="{m["faixa"]}">Portal Capibaribe Prime</td></tr>
+<tr><td style="padding:24px 24px 8px">
+{miolo}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 12px"><tr>
+<td style="border-radius:8px;background:{_COR_MATA}">\
+<a href="{e(endereco)}" style="{m["botao"]}">{e(botao)}</a></td>
+</tr></table>
+<p style="{m["copiar"]}">Se o botão não abrir, copie este endereço no navegador:<br>\
+<a href="{e(endereco)}" style="{_E["a"]}">{e(endereco)}</a></p>
+</td></tr>
+<tr><td style="{m["rodape"]}">{e(rodape)}</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+"""
+
+
+def mensagem_do_aviso(aviso: AvisoParaNotificar, para: str, config: ConfigEmail) -> EmailMessage:
+    """Cópia do aviso para uma unidade (H-13): um destinatário só."""
+    nome, cor, fundo = _CATEGORIAS.get(aviso.categoria, _CATEGORIAS["geral"])
+    endereco = config.url_base + aviso.caminho
+    destino = destino_em_texto(aviso)
+    texto = (
+        f"{aviso.titulo}\n{nome} · {destino}\n\n{aviso.texto}\n\n"
+        f"Abrir no Portal: {endereco}\n\n--\n{RODAPE_DO_AVISO}\n"
+    )
+    miolo = (
+        f'<p style="margin:0 0 10px;font-size:15px;color:#4a5a50">'
+        f'<span style="display:inline-block;padding:2px 10px;border-radius:999px;'
+        f'background:{fundo};color:{cor};font-weight:bold">{html.escape(nome)}</span>'
+        f" &nbsp;{html.escape(destino[0].upper() + destino[1:])}</p>"
+        f'<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;color:{_COR_TINTA}">'
+        f"{html.escape(aviso.titulo)}</h1>"
+        f"{html_do_texto(aviso.texto)}"
+    )
+    html_ = _pagina(aviso.titulo, miolo, "Abrir no Portal", endereco, RODAPE_DO_AVISO)
+    return _mensagem(config, para, f"Aviso do Portal: {aviso.titulo}", texto, html_)
+
+
+def link_de_recuperacao(url_base: str, token: str) -> str:
+    """O token vai depois do `#`: o navegador não o manda ao servidor (nem em log, nem em
+    `Referer`). O endereço vem sempre da configuração, nunca do cabeçalho `Host`."""
+    return f"{url_base}/redefinir-senha#token={token}"
+
+
+def mensagem_de_recuperacao(
+    unidade: UnidadeRef, token: str, para: str, config: ConfigEmail
+) -> EmailMessage:
+    """O link de "esqueci a senha" (H-04)."""
+    endereco = link_de_recuperacao(config.url_base, token)
+    placa = f"Bloco {unidade.bloco}, apartamento {unidade.apartamento}"
+    pedido = f"Pediram um link para criar uma senha nova no Portal Capibaribe Prime para o {placa}."
+    validade = "O link vale por 1 hora e só uma vez."
+    nao_foi = "Se não foi você, apague este e-mail; sua senha continua a mesma."
+    texto = (
+        f"Olá!\n\n{pedido}\n\nPara criar a senha nova, abra este link:\n{endereco}\n\n"
+        f"{validade}\n\n{nao_foi}\n\n--\n{RODAPE_DA_RECUPERACAO}\n"
+    )
+    p = _E["p"]
+    miolo = (
+        f'<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;color:{_COR_TINTA}">'
+        f"Criar senha nova</h1>"
+        f'<p style="{p}">{html.escape(pedido)}</p>'
+        f'<p style="{p}"><strong>{html.escape(validade)}</strong></p>'
+    )
+    rodape = f"{nao_foi} {RODAPE_DA_RECUPERACAO}"
+    html_ = _pagina("Criar senha nova", miolo, "Criar senha nova", endereco, rodape)
+    return _mensagem(config, para, "Portal Capibaribe Prime: criar senha nova", texto, html_)
 
 
 # --- cópia do aviso (H-13) ------------------------------------------------------------------
