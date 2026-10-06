@@ -37,6 +37,9 @@ def test_upgrade_downgrade_upgrade(banco_vazio):
         "aviso_versao",
         "aviso_bloco",
         "aviso_leitura",
+        "inscricao_push",
+        "token_recuperacao",
+        "notificacao_envio",
     }
 
     rodar_alembic(banco_vazio, "upgrade", "head")
@@ -197,3 +200,43 @@ def test_downgrade_da_0003_volta_a_0002(banco_vazio):
     assert {"tentativas_falhas", "bloqueada_ate"} <= colunas
     rodar_alembic(banco_vazio, "upgrade", "head")
     assert "entrada_tentativa" in _tabelas(banco_vazio)
+
+
+NOVAS_DA_0005 = {"inscricao_push", "token_recuperacao", "notificacao_envio"}
+FUNCOES_DA_0005 = {
+    "inscricao_push_conferir",
+    "sessao_encerrada_sem_push",
+    "token_recuperacao_conferir",
+    "notificacao_envio_conferir",
+}
+
+
+def _funcoes(url: str) -> dict[str, list[str] | None]:
+    """Funções do schema public e a configuração de cada uma (`proconfig`)."""
+    with psycopg.connect(url) as con:
+        linhas = con.execute(
+            "select p.proname, p.proconfig from pg_proc p"
+            " join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'"
+        ).fetchall()
+    return dict(linhas)
+
+
+def test_downgrade_da_0005_volta_a_0004(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "0004")
+    funcoes_da_0004 = _funcoes(banco_vazio)
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0005
+    rodar_alembic(banco_vazio, "downgrade", "0004")
+    assert not NOVAS_DA_0005 & _tabelas(banco_vazio)
+    # Nada da 0005 fica para trás (funções de trigger incluídas).
+    assert _funcoes(banco_vazio) == funcoes_da_0004
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0005
+
+
+def test_funcoes_de_trigger_da_0005_com_search_path_fixo(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    funcoes = _funcoes(banco_vazio)
+    assert set(funcoes) >= FUNCOES_DA_0005
+    for nome in FUNCOES_DA_0005:
+        assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome

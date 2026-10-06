@@ -34,6 +34,9 @@ ADMIN_URL = os.environ.get(
 PAPEIS = {"dono": "dono-teste", "app": "app-teste"}
 BANCO = os.environ.get("PORTAL_TESTE_BANCO", "portal_teste")
 TABELAS = [
+    "notificacao_envio",
+    "token_recuperacao",
+    "inscricao_push",
     "aviso_leitura",
     "entrada_tentativa",
     "aviso_bloco",
