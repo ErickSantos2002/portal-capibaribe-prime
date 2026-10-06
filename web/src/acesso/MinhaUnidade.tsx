@@ -17,6 +17,7 @@ import { formatarCelular, formatarDataEHora, nomeDaUnidade, nomeDoPapel } from '
 import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
+import { SecaoNotificacoes } from '../notificacoes/SecaoNotificacoes'
 import { BotaoVersao } from '../sobre/BotaoVersao'
 import {
   apagarDados,
@@ -257,6 +258,8 @@ export function MinhaUnidade() {
               Senha trocada. Os outros aparelhos foram desconectados.
             </p>
           )}
+
+          <SecaoNotificacoes />
 
           <h2 className="secao">Aparelhos conectados</h2>
           {caixa('aparelhos')}

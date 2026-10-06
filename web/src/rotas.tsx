@@ -6,6 +6,8 @@ import { rotasAdministracao } from './administracao/rotas'
 import { rotasAvisos } from './avisos/rotas'
 import { NaoEncontrado } from './casca/guardas'
 import { Raiz } from './casca/Raiz'
+import { rotasNotificacoes } from './notificacoes/rotas'
+import { rotasRecuperacao } from './recuperacao/rotas'
 
 export const rotas: RouteObject[] = [
   {
@@ -15,6 +17,9 @@ export const rotas: RouteObject[] = [
       ...rotasAcesso,
       ...rotasAvisos,
       ...rotasAdministracao,
+      // M2: épico A (notificações) e épico B (esqueci a senha).
+      ...rotasNotificacoes,
+      ...rotasRecuperacao,
       { path: '*', element: <NaoEncontrado /> },
     ],
   },

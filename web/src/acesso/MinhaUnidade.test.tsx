@@ -19,6 +19,7 @@ function dados(mudar: Partial<MinhaUnidade> = {}): MinhaUnidade {
         criada_em: '2026-10-01T12:00:00Z',
         ultimo_uso_em: '2026-10-05T12:00:00Z',
         este_aparelho: true,
+        notificacoes: false,
       },
       {
         id: 9,
@@ -26,6 +27,7 @@ function dados(mudar: Partial<MinhaUnidade> = {}): MinhaUnidade {
         criada_em: '2026-10-02T12:00:00Z',
         ultimo_uso_em: '2026-10-04T12:00:00Z',
         este_aparelho: false,
+        notificacoes: false,
       },
     ],
     ...mudar,

@@ -7,6 +7,7 @@ import { useSessao } from '../casca/contextoSessao'
 import { formatarHora } from '../casca/formatar'
 import { Tela } from '../casca/Tela'
 import { Logo } from '../marca/Logo'
+import { LinkEsqueci } from '../recuperacao/LinkEsqueci'
 import { BotaoVersao } from '../sobre/BotaoVersao'
 import { entrar } from './api'
 import { CaixaDeErro } from './CaixaDeErro'
@@ -151,13 +152,7 @@ export function Entrar() {
           {enviando ? 'Entrando…' : 'Entrar'}
         </button>
       </form>
-      <details className="acesso-esqueci">
-        <summary className="texto-link">Esqueci minha senha</summary>
-        <p>
-          Fale com a administração do Portal no grupo do WhatsApp. Ela volta a senha do seu
-          apartamento para a inicial, e você escolhe uma nova ao entrar.
-        </p>
-      </details>
+      <LinkEsqueci />
       <p className="centro">
         <Link className="texto-link" to="/privacidade">
           Como o Portal usa seus dados (política de privacidade)

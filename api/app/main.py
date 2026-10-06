@@ -7,7 +7,17 @@ As rotas já carregam o prefixo `/api`: a Vercel repassa o caminho original para
 from fastapi import FastAPI
 
 from app.erros_api import instalar_tratadores
-from app.rotas import acesso, administracao, avisos, diagnostico, envios, saude, sessao
+from app.rotas import (
+    acesso,
+    administracao,
+    avisos,
+    diagnostico,
+    envios,
+    push,
+    recuperacao,
+    saude,
+    sessao,
+)
 from app.sem_cache import SemCache
 from app.servicos.erros import RegistroDeErros
 
@@ -34,3 +44,5 @@ app.include_router(administracao.rotas)
 app.include_router(avisos.rotas)
 # M2 (spec do M2, seção 4): envios é comum; push é do épico A e recuperação, do épico B.
 app.include_router(envios.rotas)
+app.include_router(push.rotas)
+app.include_router(recuperacao.rotas)

@@ -19,7 +19,7 @@ from app.esquemas.acesso import (
     TrocarSenha,
 )
 from app.esquemas.comum import Eu, UnidadeRef
-from app.modelos import Papel, Sessao, Unidade, UnidadePapel
+from app.modelos import InscricaoPush, Papel, Sessao, Unidade, UnidadePapel
 from app.seguranca.dependencias import PAPEIS_DE_GESTAO, Logado
 from app.seguranca.senhas import SENHA_INICIAL, conferir_sem_unidade, gerar_hash, senha_confere
 from app.seguranca.sessoes import (
@@ -124,8 +124,9 @@ def concluir_primeiro_acesso(
 def _aparelhos(db: Session, logado: Logado) -> list[Aparelho]:
     """Sessões em vigor da unidade, pelas mesmas regras de `buscar_sessao`: não encerradas,
     usadas nos últimos 180 dias e abertas depois da última troca de senha."""
-    sessoes = db.scalars(
-        select(Sessao)
+    inscrita = select(InscricaoPush.sessao_id).where(InscricaoPush.sessao_id == Sessao.id).exists()
+    sessoes = db.execute(
+        select(Sessao, inscrita)
         .join(Unidade, Unidade.id == Sessao.unidade_id)
         .where(
             Sessao.unidade_id == logado.unidade_id,
@@ -142,8 +143,9 @@ def _aparelhos(db: Session, logado: Logado) -> list[Aparelho]:
             criada_em=s.criada_em,
             ultimo_uso_em=s.ultimo_uso_em,
             este_aparelho=s.id == logado.sessao_id,
+            notificacoes=notificacoes,
         )
-        for s in sessoes
+        for s, notificacoes in sessoes
     ]
 
 

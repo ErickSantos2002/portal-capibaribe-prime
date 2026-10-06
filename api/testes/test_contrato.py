@@ -19,7 +19,7 @@ from typing import Annotated, Any, Literal, Union
 import pytest
 from pydantic import BaseModel
 
-from app.esquemas import acesso, administracao, avisos, comum
+from app.esquemas import acesso, administracao, avisos, comum, push, recuperacao
 from app.modelos import Canal, Papel, SituacaoEnvio
 
 WEB = Path(__file__).resolve().parents[2] / "web" / "src"
@@ -28,6 +28,9 @@ ARQUIVOS_TS = {
     acesso: WEB / "acesso" / "tipos.ts",
     administracao: WEB / "administracao" / "tipos.ts",
     avisos: WEB / "avisos" / "tipos.ts",
+    # M2: épico A (push) e épico B (recuperação).
+    push: WEB / "notificacoes" / "tipos.ts",
+    recuperacao: WEB / "recuperacao" / "tipos.ts",
 }
 BASES = {comum.Entrada, comum.Saida}
 # Apelidos de tipo do front que valem o tipo básico.
