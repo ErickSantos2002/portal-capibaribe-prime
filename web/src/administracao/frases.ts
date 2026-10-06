@@ -1,5 +1,5 @@
 // Épico B · Administração: o histórico (H-11) em frases, como no protótipo:
-// "Bloco 1, 101 resetou o Bloco 1, 106". Pertence ao épico B.
+// "Bloco 1, 101 voltou o Bloco 1, 106 para a senha inicial". Pertence ao épico B.
 import type { Papel } from '../api/tipos'
 import { nomeDaUnidade } from '../casca/formatar'
 import type { ItemHistorico } from './tipos'
@@ -38,7 +38,7 @@ function papel(item: ItemHistorico): string {
 function origem(item: ItemHistorico): string {
   switch (item.detalhes.origem) {
     case 'reset':
-      return ', no reset'
+      return ', ao voltar para a senha inicial'
     case 'promover_admin':
       return ', pelo comando de instalação'
     case 'migracao_0002':
@@ -48,7 +48,7 @@ function origem(item: ItemHistorico): string {
   }
 }
 
-/** O que foi feito, sem o sujeito: "resetou o Bloco 1, 106". */
+/** O que foi feito, sem o sujeito: "voltou o Bloco 1, 106 para a senha inicial". */
 export function oQueFez(item: ItemHistorico): string {
   switch (item.acao) {
     case 'primeiro_acesso':
@@ -62,7 +62,7 @@ export function oQueFez(item: ItemHistorico): string {
     case 'aparelho_desconectado':
       return 'desconectou um aparelho'
     case 'unidade_resetada':
-      return `resetou ${alvo(item)}`
+      return `voltou ${alvo(item)} para a senha inicial`
     case 'papel_concedido':
       return `deu papel de ${papel(item)} ${alvo(item, 'a')}${origem(item)}`
     case 'papel_retirado':

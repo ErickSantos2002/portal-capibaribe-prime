@@ -196,27 +196,52 @@ describe('ficha da unidade e reset (H-08)', () => {
           celular: null, aparelhos_conectados: 0 })),
     })
     abrir('/unidades/1203')
-    fireEvent.click(await screen.findByRole('button', { name: 'Resetar este apartamento' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Voltar para a senha inicial' }))
 
-    const pergunta = screen.getByRole('heading', { name: 'Resetar o Bloco 1, 203?' })
+    // U6: os títulos de seção da ficha são títulos de verdade.
+    expect(screen.queryByRole('heading', { level: 2, name: 'Papel de gestão' })).toBeNull()
+    const pergunta = screen.getByRole('heading', {
+      name: 'Voltar o Bloco 1, 203 para a senha inicial?',
+    })
     expect(document.activeElement).toBe(pergunta)
     expect(screen.getByText('A senha volta a ser a inicial (mudar123).')).toBeTruthy()
     expect(screen.getByText('Todos os aparelhos são desconectados.')).toBeTruthy()
     expect(chamadas.some((c) => c.metodo === 'POST')).toBe(false)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sim, resetar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sim, voltar para a senha inicial' }))
     expect(await screen.findByText('Ainda não entrou')).toBeTruthy()
-    expect(screen.getByText('Bloco 1, 203 resetado. A senha voltou a ser a inicial.')).toBeTruthy()
+    expect(screen.getByText('Bloco 1, 203 voltou para a senha inicial.')).toBeTruthy()
     const reset = chamadas.find((c) => c.metodo === 'POST')
     expect(reset?.corpo).toEqual({ confirmo: true })
+  })
+
+  it('revisão U6: seções com título de verdade e sem "resetar" na tela', async () => {
+    api({ 'GET /api/admin/unidades/1203': () => json(200, ficha('1203')) })
+    abrir('/unidades/1203')
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Voltar para a senha inicial' }),
+    ).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 2, name: 'Papel de gestão' })).toBeTruthy()
+    expect(document.body.textContent?.toLowerCase()).not.toMatch(/reset/)
+  })
+
+  it('revisão U2: a confirmação rola para o meio da tela', async () => {
+    const rolar = vi.fn()
+    Element.prototype.scrollIntoView = rolar
+    api({ 'GET /api/admin/unidades/1203': () => json(200, ficha('1203')) })
+    abrir('/unidades/1203')
+    fireEvent.click(await screen.findByRole('button', { name: 'Voltar para a senha inicial' }))
+    await waitFor(() => expect(rolar).toHaveBeenCalled())
+    expect(rolar.mock.calls.at(-1)?.[0]).toMatchObject({ block: 'center' })
+    expect((rolar.mock.contexts.at(-1) as Element).classList.contains('confirmacao')).toBe(true)
   })
 
   it('cancelar não reseta', async () => {
     api({ 'GET /api/admin/unidades/1203': () => json(200, ficha('1203')) })
     abrir('/unidades/1203')
-    fireEvent.click(await screen.findByRole('button', { name: 'Resetar este apartamento' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Voltar para a senha inicial' }))
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
-    expect(screen.getByRole('button', { name: 'Resetar este apartamento' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Voltar para a senha inicial' })).toBeTruthy()
     expect(chamadas.some((c) => c.metodo === 'POST')).toBe(false)
   })
 
@@ -230,11 +255,11 @@ describe('ficha da unidade e reset (H-08)', () => {
         }),
     })
     abrir('/unidades/1101')
-    fireEvent.click(await screen.findByRole('button', { name: 'Resetar este apartamento' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Voltar para a senha inicial' }))
     expect(
       screen.getByText('É o seu apartamento: você sai do Portal neste aparelho.'),
     ).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Sim, resetar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sim, voltar para a senha inicial' }))
     expect(
       (await screen.findByRole('alert')).textContent,
     ).toContain('Esta é a única unidade administradora.')
@@ -329,13 +354,13 @@ function item(extra: Partial<ItemHistorico>): ItemHistorico {
 describe('histórico (H-11)', () => {
   it('escreve cada ação como frase, com quem fez', () => {
     expect(quemFez(item({}))).toBe('Bloco 1, 101')
-    expect(oQueFez(item({}))).toBe('resetou o Bloco 1, 106')
+    expect(oQueFez(item({}))).toBe('voltou o Bloco 1, 106 para a senha inicial')
     expect(
       oQueFez(item({ acao: 'papel_concedido', unidade_afetada: ref('2304'), detalhes: { papel: 'comissao' } })),
     ).toBe('deu papel de Comissão ao Bloco 2, 304')
     expect(
       oQueFez(item({ acao: 'papel_retirado', detalhes: { papel: 'admin', origem: 'reset' } })),
-    ).toBe('tirou o papel de administrador do Bloco 1, 106, no reset')
+    ).toBe('tirou o papel de administrador do Bloco 1, 106, ao voltar para a senha inicial')
     const bloqueio = item({ acao: 'unidade_bloqueada', unidade: null, unidade_afetada: ref('5307') })
     expect(quemFez(bloqueio)).toBe('Portal')
     expect(oQueFez(bloqueio)).toBe(
@@ -365,13 +390,13 @@ describe('histórico (H-11)', () => {
     abrir('/historico')
 
     expect(await screen.findByText('Só o administrador vê. Ninguém consegue apagar.')).toBeTruthy()
-    expect(await screen.findByText('resetou o Bloco 1, 106', { exact: false })).toBeTruthy()
+    expect(await screen.findByText('voltou o Bloco 1, 106 para a senha inicial', { exact: false })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Carregar mais' }))
     expect(await screen.findByText('entrou pela primeira vez', { exact: false })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Carregar mais' })).toBeNull()
     const titulos = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
     expect(titulos).toEqual([
-      'Bloco 1, 101 resetou o Bloco 1, 106',
+      'Bloco 1, 101 voltou o Bloco 1, 106 para a senha inicial',
       'Bloco 1, 101 trocou a senha',
       'Bloco 1, 101 entrou pela primeira vez',
     ])
