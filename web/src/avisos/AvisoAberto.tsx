@@ -128,7 +128,7 @@ function ParaAGestao({
   return (
     <section aria-labelledby="para-a-gestao">
       <h2 id="para-a-gestao" className="secao">
-        Para a Comissão
+        Para a gestão
       </h2>
       {aviso.leitura && (
         <Link className="avisos-cartao" to={`/avisos/${aviso.id}/leitura`}>
