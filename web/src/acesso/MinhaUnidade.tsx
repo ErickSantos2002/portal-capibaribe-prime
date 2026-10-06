@@ -17,6 +17,7 @@ import { formatarCelular, formatarDataEHora, nomeDaUnidade, nomeDoPapel } from '
 import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
+import { BotaoVersao } from '../sobre/BotaoVersao'
 import {
   apagarDados,
   buscarMinhaUnidade,
@@ -327,6 +328,11 @@ export function MinhaUnidade() {
               Apagar meus dados
             </button>
           )}
+
+          {/* No computador, a versão já está no pé do menu lateral. */}
+          <p className="versao-rodape so-cel">
+            <BotaoVersao />
+          </p>
         </>
       )}
     </Tela>

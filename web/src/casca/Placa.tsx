@@ -23,13 +23,3 @@ export function Placa({ unidade, grande, gestao, decorativa }: Props) {
     </span>
   )
 }
-
-/** A marca do Portal na entrada: a placa sem número (número ali parecia apartamento escolhido). */
-export function Marca() {
-  return (
-    <span className="placa grande marca" aria-hidden="true">
-      <small>Capibaribe</small>
-      <strong>PRIME</strong>
-    </span>
-  )
-}

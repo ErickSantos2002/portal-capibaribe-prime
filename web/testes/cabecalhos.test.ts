@@ -65,6 +65,25 @@ test('o tema escolhido é aplicado por arquivo próprio, antes do React', async 
   assert.match(await resposta.text(), /portal-tema/)
 })
 
+test('o ícone do Portal: favicon e tela inicial, servidos pelo próprio site', async () => {
+  const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8')
+  const icones: [RegExp, string, string][] = [
+    [/<link rel="icon" href="\/favicon\.ico" sizes="48x48"/, '/favicon.ico', 'image/'],
+    [/<link rel="apple-touch-icon" href="\/apple-touch-icon\.png"/, '/apple-touch-icon.png', 'image/png'],
+  ]
+  for (const [link, caminho, tipo] of icones) {
+    assert.match(html, link, `index.html sem ${caminho}`)
+    const resposta = await fetch(new URL(caminho, base))
+    assert.equal(resposta.status, 200, caminho)
+    assert.ok(resposta.headers.get('content-type')?.startsWith(tipo), `${caminho}: tipo errado`)
+  }
+  // Os ícones grandes ficam prontos para o PWA do M2.
+  for (const caminho of ['/icon-192.png', '/icon-512.png']) {
+    assert.equal((await fetch(new URL(caminho, base))).status, 200, caminho)
+  }
+  assert.doesNotMatch(html, /favicon\.svg/, 'o ícone antigo continua no index.html')
+})
+
 test('a fonte vem do próprio Portal, não de terceiros', async () => {
   const resposta = await fetch(base)
   const html = await resposta.text()
