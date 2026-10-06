@@ -127,8 +127,11 @@ E também: layout de celular e de computador, tema claro/escuro (como no protót
 
 **Portão antes de abrir para o grupo** (nada de dado real antes disso):
 
-1. Backup diário rodando **e uma restauração testada** (ADR-0007, RNF-21). O backup vai para o
-   R2, então a conta da Cloudflare e o bucket nascem aqui, antes dos documentos.
+1. Backup diário rodando **e uma restauração testada** (ADR-0007, ADR-0009, RNF-21). O backup
+   vai para o R2, num bucket só de backups, então a conta da Cloudflare nasce aqui, antes dos
+   documentos. Workflow `.github/workflows/backup.yml` e scripts em `scripts/backup/` prontos e
+   testados localmente (ciclo inteiro contra Postgres e S3 falso); falta o primeiro backup e a
+   primeira restauração de verdade no Actions (README, seção "Backup").
 2. Regra de firewall da Vercel: 20 logins por IP a cada 10 minutos (ADR-0005).
 3. Testes de permissão: toda rota de gestão recusa a conta comum (RNF-13).
 4. Revisão independente (UX + código), como foi feita no protótipo.
