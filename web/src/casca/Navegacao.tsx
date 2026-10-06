@@ -6,6 +6,7 @@ import { contarNaoLidos } from '../avisos/api'
 import { nomeDoPapel } from './formatar'
 import { Icone } from './Icone'
 import { itensDoMenu } from './menu'
+import { Logo } from '../marca/Logo'
 import { BotaoVersao } from '../sobre/BotaoVersao'
 import { Placa } from './Placa'
 
@@ -35,9 +36,7 @@ export function Navegacao({ eu }: { eu: Eu }) {
   return (
     <nav className="nav" aria-label="Seções do Portal">
       <span className="nav-marca">
-        Portal
-        <br />
-        Capibaribe Prime
+        <Logo cartao />
       </span>
       {itensDoMenu(eu).map((item) => (
         <NavLink key={item.para} to={item.para}>

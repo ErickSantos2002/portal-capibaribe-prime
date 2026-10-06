@@ -1,4 +1,4 @@
-// "Versão 1.1.0": um botão discreto que abre a janela com o que mudou no Portal. Fica no rodapé
+// "Versão X.Y.Z": um botão discreto que abre a janela com o que mudou no Portal. Fica no rodapé
 // da entrada, no pé do menu lateral (computador) e no fim de Minha unidade (celular).
 import { useEffect, useId, useRef, useState } from 'react'
 import { Logo } from '../marca/Logo'

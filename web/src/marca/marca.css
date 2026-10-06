@@ -35,3 +35,17 @@
     width: 260px;
   }
 }
+
+/* Topo do menu lateral (verde): o azul-marinho e o verde do logo brigam com o verde do menu, então
+   ali ele vai sempre num cartão claro, nos dois temas. */
+.logo.cartao {
+  display: block;
+  padding: 12px 14px;
+  background: #ffffff;
+}
+
+.logo.cartao img {
+  width: 100%;
+  max-width: 190px;
+  margin: 0 auto;
+}

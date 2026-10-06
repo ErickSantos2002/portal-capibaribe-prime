@@ -1,4 +1,4 @@
-// Logo na entrada e a janela "Versão 1.1.0" com o que mudou.
+// Logo na entrada e a janela "Versão X.Y.Z" com o que mudou.
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { abrir, apiFalsa, eu, json } from '../acesso/apoioDeTeste'
@@ -122,6 +122,15 @@ describe('janela de versão', () => {
     fireEvent.click(await screen.findByRole('button', { name: NOME_DO_BOTAO }))
     fireEvent.click(janela())
     semJanela()
+  })
+
+  it('logado: o topo do menu lateral mostra o logo num cartão claro, no lugar do texto', async () => {
+    apiFalsa({ 'GET /api/acesso/eu': json(200, eu()), 'GET /api/avisos': json(200, { itens: [] }) })
+    abrir('/avisos')
+    const nav = await screen.findByRole('navigation', { name: 'Seções do Portal' })
+    const logo = within(nav).getByRole('img', { name: 'Capibaribe Prime Residence' })
+    expect(logo.closest('.logo')?.classList.contains('cartao')).toBe(true)
+    expect(within(nav).queryByText('Capibaribe Prime')).toBeNull()
   })
 
   it('logado: no menu lateral e no fim de Minha unidade', async () => {

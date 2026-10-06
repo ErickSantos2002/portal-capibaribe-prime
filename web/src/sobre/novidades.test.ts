@@ -14,7 +14,6 @@ function comparar(a: string, b: string): number {
 describe('versão e novidades', () => {
   it('a versão vem do package.json, injetada pelo Vite', () => {
     expect(VERSAO).toBe(pacote.version)
-    expect(pacote.version).toBe('1.1.0')
   })
 
   it('a primeira novidade é a da versão atual', () => {

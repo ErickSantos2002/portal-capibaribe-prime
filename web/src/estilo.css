@@ -1125,11 +1125,7 @@ details[open] > summary::after {
 
   .nav-marca {
     display: block;
-    padding: 4px 14px 24px;
-    color: var(--sobre-mata);
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.2;
+    padding: 0 4px 22px;
   }
 
   .nav-placa {

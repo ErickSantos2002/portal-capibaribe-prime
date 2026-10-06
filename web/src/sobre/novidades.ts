@@ -17,6 +17,11 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.1.1',
+    data: '2026-10-06',
+    itens: ['No computador, o logo do residencial também aparece no alto do menu lateral.'],
+  },
+  {
     versao: '1.1.0',
     data: '2026-10-06',
     itens: [
