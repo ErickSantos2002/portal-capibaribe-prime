@@ -34,6 +34,53 @@
   font-weight: 700;
 }
 
+/* Senha com "Mostrar"/"Ocultar" dentro do campo, à direita (alvo de 44 px). */
+.campo-senha {
+  position: relative;
+}
+
+.campo-senha input {
+  padding-right: 96px;
+}
+
+.campo-senha-ver {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-pequeno);
+  background: none;
+  color: var(--mata);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.campo-senha-ver:hover {
+  background: var(--mata-suave);
+}
+
+/* "Apagar meus dados": o risco de quem conhece a senha inicial, em destaque. */
+.acesso-risco {
+  border-width: 2px;
+}
+
+.acesso-risco strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.acesso-sucesso:focus {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
 .acesso-espaco {
   height: 20px;
 }

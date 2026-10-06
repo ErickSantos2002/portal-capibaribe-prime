@@ -1,13 +1,14 @@
-// H-08 · Resetar e H-09 · Papel de Comissão: a ficha de uma unidade (como `telaUnidade` do
-// protótipo). Pertence ao épico B.
+// H-08 · Voltar para a senha inicial ("reset" no código) e H-09 · Papel de Comissão: a ficha
+// de uma unidade (como `telaUnidade` do protótipo). Pertence ao épico B.
 //
-// O que é perigoso (resetar, mexer no papel de administrador) pede confirmação no lugar, em cima
-// das opções, dizendo o que vai acontecer. Dar ou tirar o papel de Comissão é direto, como no
-// protótipo, e o recado confirma.
+// O que é perigoso (voltar para a senha inicial, mexer no papel de administrador) pede
+// confirmação no lugar, em cima das opções, dizendo o que vai acontecer. Dar ou tirar o papel de
+// Comissão é direto, como no protótipo, e o recado confirma.
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useParams } from 'react-router'
 import { ErroDaApi } from '../api/cliente'
 import { Icone } from '../casca/Icone'
+import { centralizar } from '../casca/rolar'
 import { Placa } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
 import { useRecado } from '../casca/contextoRecado'
@@ -91,6 +92,7 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')
   const confirmacao = useRef<HTMLHeadingElement>(null)
+  const blocoDaConfirmacao = useRef<HTMLElement>(null)
   const propria = eu?.unidade.login === u.unidade.login
   const nome = nomeDaUnidade(u.unidade)
   const temComissao = u.papeis.includes('comissao')
@@ -98,7 +100,8 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
   const bloqueada = !!u.bloqueada_ate && new Date(u.bloqueada_ate) > new Date()
 
   useEffect(() => {
-    if (pendente) confirmacao.current?.focus()
+    // U2 (revisão do M1): o bloco inteiro no meio da tela, longe das abas e do recado.
+    if (pendente) centralizar(blocoDaConfirmacao.current, confirmacao.current)
   }, [pendente])
 
   async function executar(acao: Pendente) {
@@ -109,7 +112,7 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
       let texto: string
       if (acao.tipo === 'resetar') {
         nova = await resetarUnidade(u.unidade.login)
-        texto = `${nome} resetado. A senha voltou a ser a inicial.`
+        texto = `${nome} voltou para a senha inicial.`
       } else if (acao.tipo === 'dar') {
         nova = await darPapel(u.unidade.login, acao.papel)
         texto =
@@ -207,6 +210,7 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
           propria={propria}
           ocupado={ocupado}
           titulo={confirmacao}
+          bloco={blocoDaConfirmacao}
           aoConfirmar={() => void executar(pendente)}
           aoCancelar={() => setPendente(null)}
         />
@@ -214,10 +218,11 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
 
       {!pendente && (
         <div className="acoes-admin">
-          <p className="secao">Resetar</p>
+          {/* U6 (revisão do M1): sem "resetar", e as seções com título de verdade. */}
+          <h2 className="secao">Voltar para a senha inicial</h2>
           <p className="ajuda">
-            Resetar volta a senha para a inicial, apaga os contatos, desconecta os aparelhos e
-            tira o papel de gestão. As leituras e os votos continuam.
+            Volta a senha para a inicial, apaga os contatos, desconecta os aparelhos e tira o papel
+            de gestão. As leituras e os votos continuam.
             {!u.ativada && ' Também tira o bloqueio de senhas erradas.'}
           </p>
           <button
@@ -226,10 +231,10 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
             disabled={ocupado}
             onClick={() => pedir({ tipo: 'resetar' })}
           >
-            Resetar este apartamento
+            Voltar para a senha inicial
           </button>
 
-          <p className="secao">Papel de gestão</p>
+          <h2 className="secao">Papel de gestão</h2>
           {!u.ativada && !u.papeis.length ? (
             <div className="aviso-caixa info">
               <Icone nome="info" />
@@ -269,6 +274,7 @@ interface PropsConfirmacao {
   propria: boolean
   ocupado: boolean
   titulo: RefObject<HTMLHeadingElement | null>
+  bloco: RefObject<HTMLElement | null>
   aoConfirmar: () => void
   aoCancelar: () => void
 }
@@ -279,6 +285,7 @@ function Confirmacao({
   propria,
   ocupado,
   titulo,
+  bloco,
   aoConfirmar,
   aoCancelar,
 }: PropsConfirmacao) {
@@ -286,22 +293,22 @@ function Confirmacao({
   let efeitos: string[]
   let botao: string
   if (acao.tipo === 'resetar') {
-    pergunta = `Resetar o ${nome}?`
+    pergunta = `Voltar o ${nome} para a senha inicial?`
     efeitos = [
       'A senha volta a ser a inicial (mudar123).',
       'Nome, celular e e-mail são apagados.',
       'Todos os aparelhos são desconectados.',
       'O papel de gestão, se houver, é retirado.',
       'O apartamento volta a "ainda não entrou".',
-      'Leituras e votos continuam valendo. O reset fica no histórico.',
+      'Leituras e votos continuam valendo. Fica registrado no histórico.',
     ]
     if (propria) efeitos.push('É o seu apartamento: você sai do Portal neste aparelho.')
-    botao = 'Sim, resetar'
+    botao = 'Sim, voltar para a senha inicial'
   } else if (acao.tipo === 'dar') {
     pergunta = `Dar papel de administrador ao ${nome}?`
     efeitos = [
       'Ele vê o painel de unidades, os contatos e o histórico.',
-      'Ele pode resetar apartamentos e dar ou tirar papéis, inclusive o seu.',
+      'Ele pode voltar apartamentos para a senha inicial e dar ou tirar papéis, inclusive o seu.',
       'Fica registrado no histórico.',
     ]
     botao = 'Sim, dar o papel'
@@ -315,7 +322,7 @@ function Confirmacao({
     botao = 'Sim, tirar o papel'
   }
   return (
-    <section className="confirmacao" aria-labelledby="confirmacao-titulo">
+    <section className="confirmacao" aria-labelledby="confirmacao-titulo" ref={bloco}>
       <h2 id="confirmacao-titulo" ref={titulo} tabIndex={-1}>
         {pergunta}
       </h2>

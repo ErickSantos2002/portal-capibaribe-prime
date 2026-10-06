@@ -3,13 +3,17 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { cabecalhosDoVercel } from './cabecalhos.ts'
 
+// Para onde o /api vai em desenvolvimento e no preview. Várias cópias de trabalho ao mesmo tempo
+// usam portas diferentes: `PORTAL_API_URL=http://127.0.0.1:8120 npm run preview`.
+const API = process.env.PORTAL_API_URL ?? 'http://127.0.0.1:8000'
+
 export default defineConfig({
   plugins: [react()],
   server: {
     // Em desenvolvimento, /api vai para o uvicorn local (como a Vercel faz em produção).
     // Sem a CSP aqui: o modo dev do React injeta script embutido para o recarregamento.
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
+      '/api': API,
     },
   },
   // Testes de componente (Vitest + jsdom). Os testes de configuração em testes/ rodam com
@@ -23,7 +27,7 @@ export default defineConfig({
     // O build servido localmente recebe os mesmos cabeçalhos de produção (vercel.json).
     headers: cabecalhosDoVercel(),
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
+      '/api': API,
     },
   },
 })

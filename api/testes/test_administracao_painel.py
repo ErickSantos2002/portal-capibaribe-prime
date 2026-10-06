@@ -179,9 +179,12 @@ def test_ficha_conta_so_aparelhos_validos(admin, logar, engine_dono):
 
 def test_ficha_mostra_bloqueio_e_papeis(admin, engine_dono):
     with engine_dono.begin() as con:
+        # Bloqueio de um IP naquele login (revisão do M1, C2): a ficha mostra até quando.
         con.execute(
             text(
-                "update unidade set bloqueada_ate = now() + interval '10 minutes' where login = :l"
+                "insert into entrada_tentativa (login, ip_hash, bloqueada_ate, expira_em)"
+                " values (:l, repeat('a', 64), now() + interval '10 minutes',"
+                " now() + interval '10 minutes')"
             ),
             {"l": NAO_ATIVADA},
         )

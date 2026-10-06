@@ -30,6 +30,7 @@ function resumo(id: number, extra: Partial<AvisoResumo> = {}): AvisoResumo {
     blocos: [],
     arquivado_em: null,
     lido: true,
+    corrigido_desde_a_leitura: false,
     ...extra,
   }
 }
@@ -105,7 +106,7 @@ describe('mural (H-14)', () => {
 
     const reuniao = screen.getByText('Reunião').closest('a')!
     expect(reuniao.classList.contains('novo')).toBe(false)
-    expect(within(reuniao).getByText('corrigido')).toBeTruthy()
+    expect(within(reuniao).getByText('corrigido em 4 de novembro')).toBeTruthy()
   })
 
   it('a busca pergunta à API com o que foi digitado', async () => {
@@ -177,9 +178,8 @@ describe('aviso aberto', () => {
       url.pathname === '/api/avisos/5' ? json(200, completo(5, { texto })) : undefined,
     )
     abrir('/avisos/5')
-    const artigo = (await screen.findByRole('heading', { level: 2, name: 'Aviso 5' })).closest(
-      'article',
-    )!
+    await screen.findByRole('heading', { level: 1, name: 'Aviso 5' })
+    const artigo = document.querySelector('article')!
     expect(artigo.querySelector('b, img, script')).toBeNull()
     const paragrafos = artigo.querySelectorAll('.texto-aviso p')
     expect(paragrafos).toHaveLength(2)
@@ -207,14 +207,14 @@ describe('aviso aberto', () => {
       if (url.pathname === '/api/avisos/5/lido' && init.method === 'POST') return json(204, null)
     })
     abrir('/avisos/5')
-    await screen.findByRole('heading', { level: 2, name: 'Aviso 5' })
+    await screen.findByRole('heading', { level: 1, name: 'Aviso 5' })
     await waitFor(() => expect(chamadas(fetch, 'POST', '/api/avisos/5/lido')).toHaveLength(1))
     cleanup()
     const outro = api(eu(), (url) =>
       url.pathname === '/api/avisos/6' ? json(200, completo(6, { lido: true })) : undefined,
     )
     abrir('/avisos/6')
-    await screen.findByRole('heading', { level: 2, name: 'Aviso 6' })
+    await screen.findByRole('heading', { level: 1, name: 'Aviso 6' })
     expect(chamadas(outro, 'POST', '/api/avisos/6/lido')).toHaveLength(0)
   })
 
@@ -253,7 +253,7 @@ describe('aviso aberto', () => {
   it('unidade comum não vê ações de gestão', async () => {
     api(eu(), (url) => (url.pathname === '/api/avisos/5' ? json(200, completo(5)) : undefined))
     abrir('/avisos/5')
-    await screen.findByRole('heading', { level: 2, name: 'Aviso 5' })
+    await screen.findByRole('heading', { level: 1, name: 'Aviso 5' })
     expect(screen.queryByText(/Corrigir aviso/)).toBeNull()
     expect(screen.queryByText(/Arquivar/)).toBeNull()
   })
@@ -408,20 +408,165 @@ describe('quem leu (H-16)', () => {
         return json(200, {
           lidos: 125,
           total: 128,
-          nao_leram: [
+          nao_entraram: [{ login: '3001', bloco: 3, apartamento: '001' }],
+          entraram_sem_ler: [
             { login: '1101', bloco: 1, apartamento: '101' },
             { login: '1102', bloco: 1, apartamento: '102' },
-            { login: '3001', bloco: 3, apartamento: '001' },
           ],
         })
       }
     })
     abrir('/avisos/5/leitura')
-    expect(await screen.findByText('125')).toBeTruthy()
-    expect(screen.getByText('3')).toBeTruthy()
+    expect(await screen.findByText(/125 leram/)).toBeTruthy()
+    expect(screen.getByText(/3 ainda não/)).toBeTruthy()
     const bloco1 = screen.getByRole('heading', { name: 'Bloco 1' }).closest('section')!
     expect(within(bloco1).getByLabelText('Bloco 1, apartamento 102')).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Bloco 3' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Copiar a lista' })).toBeTruthy()
+  })
+})
+
+// --- revisão independente do M1 ----------------------------------------------------------------
+
+describe('revisão do M1 · U1: data, correção e selo "Corrigido"', () => {
+  it('o fixado mostra a data e "corrigido em", como os outros itens', async () => {
+    const itens = [
+      resumo(1, { titulo: 'Bem-vindos', fixado: true, editado_em: '2026-11-04T12:00:00Z' }),
+    ]
+    api(eu(), (url) => (url.pathname === '/api/avisos' ? json(200, { itens }) : undefined))
+    abrir('/avisos')
+    const fixado = (await screen.findByText('Bem-vindos')).closest('a')!
+    expect(within(fixado).getByText('3 de novembro')).toBeTruthy()
+    expect(within(fixado).getByText('corrigido em 4 de novembro')).toBeTruthy()
+  })
+
+  it('quem leu a versão anterior vê "Corrigido", não "Novo"', async () => {
+    const itens = [
+      resumo(1, { titulo: 'Fixado', fixado: true, corrigido_desde_a_leitura: true }),
+      resumo(2, { titulo: 'Comum', corrigido_desde_a_leitura: true }),
+    ]
+    api(eu(), (url) => (url.pathname === '/api/avisos' ? json(200, { itens }) : undefined))
+    abrir('/avisos')
+    for (const titulo of ['Fixado', 'Comum']) {
+      const item = (await screen.findByText(titulo)).closest('a')!
+      expect(within(item).getByText('Corrigido')).toBeTruthy()
+      expect(within(item).queryByText('Novo')).toBeNull()
+    }
+  })
+
+  it('abrir um aviso corrigido desde a leitura grava a leitura de novo', async () => {
+    const fetch = api(eu(), (url, init) => {
+      if (url.pathname === '/api/avisos/5' && (init.method ?? 'GET') === 'GET') {
+        return json(200, completo(5, { corrigido_desde_a_leitura: true }))
+      }
+      if (url.pathname === '/api/avisos/5/lido') return json(204, null)
+    })
+    abrir('/avisos/5')
+    await screen.findByText('Texto 5')
+    await waitFor(() => expect(chamadas(fetch, 'POST', '/api/avisos/5/lido')).toHaveLength(1))
+  })
+})
+
+describe('revisão do M1 · U2: confirmação de arquivar', () => {
+  it('rola para o meio da tela e leva o foco', async () => {
+    const rolar = vi.fn()
+    Element.prototype.scrollIntoView = rolar
+    api(eu(['comissao']), (url) =>
+      url.pathname === '/api/avisos/5'
+        ? json(200, completo(5, { leitura: { lidos: 1, total: 2 } }))
+        : undefined,
+    )
+    abrir('/avisos/5')
+    fireEvent.click(await screen.findByRole('button', { name: 'Arquivar' }))
+    const grupo = screen.getByRole('group', { name: /sai do mural/ })
+    await waitFor(() => expect(rolar).toHaveBeenCalled())
+    expect(rolar.mock.contexts.at(-1)).toBe(grupo)
+    expect(document.activeElement).toBe(grupo)
+  })
+})
+
+describe('revisão do M1 · U9: títulos', () => {
+  it('no mural, cada aviso é um título de nível 2 (depois do h1)', async () => {
+    const itens = [resumo(1, { titulo: 'Fixado', fixado: true }), resumo(2, { titulo: 'Comum' })]
+    api(eu(), (url) => (url.pathname === '/api/avisos' ? json(200, { itens }) : undefined))
+    abrir('/avisos')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Fixado' })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 2, name: 'Comum' })).toBeTruthy()
+  })
+
+  it('o aviso aberto tem o assunto no h1 e no título da aba', async () => {
+    api(eu(), (url) =>
+      url.pathname === '/api/avisos/5'
+        ? json(200, completo(5, { titulo: 'Vistoria da obra' }))
+        : undefined,
+    )
+    abrir('/avisos/5')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Vistoria da obra' })).toBeTruthy()
+    await waitFor(() => expect(document.title).toBe('Vistoria da obra · Portal Capibaribe Prime'))
+  })
+})
+
+describe('revisão do M1 · U5: quem leu', () => {
+  function leitura() {
+    return {
+      lidos: 120,
+      total: 128,
+      nao_entraram: [
+        { login: '1001', bloco: 1, apartamento: '001' },
+        { login: '1701', bloco: 1, apartamento: '701' },
+      ],
+      entraram_sem_ler: [
+        { login: '1101', bloco: 1, apartamento: '101' },
+        { login: '1702', bloco: 1, apartamento: '702' },
+      ],
+    }
+  }
+
+  async function abrirQuemLeu() {
+    api(eu(['comissao']), (url) => {
+      if (url.pathname === '/api/avisos/5') return json(200, completo(5, { titulo: 'Vistoria' }))
+      if (url.pathname === '/api/avisos/5/leitura') return json(200, leitura())
+    })
+    abrir('/avisos/5/leitura')
+    await screen.findByRole('heading', { name: /Ainda não entrou no Portal/ })
+  }
+
+  it('separa quem não entrou de quem entrou e não leu', async () => {
+    await abrirQuemLeu()
+    const naoEntrou = screen
+      .getByRole('heading', { name: /Ainda não entrou no Portal/ })
+      .closest('section')!
+    const naoLeu = screen
+      .getByRole('heading', { name: /Entrou, mas não leu este aviso/ })
+      .closest('section')!
+    expect(within(naoEntrou).getByLabelText('Bloco 1, apartamento 001')).toBeTruthy()
+    expect(within(naoEntrou).queryByLabelText('Bloco 1, apartamento 101')).toBeNull()
+    expect(within(naoLeu).getByLabelText('Bloco 1, apartamento 101')).toBeTruthy()
+  })
+
+  it('mesma ordem da grade do admin: do 7º andar ao térreo', async () => {
+    await abrirQuemLeu()
+    const naoEntrou = screen
+      .getByRole('heading', { name: /Ainda não entrou no Portal/ })
+      .closest('section')!
+    const ordem = within(naoEntrou)
+      .getAllByLabelText(/^Bloco 1, apartamento/)
+      .map((e) => e.textContent)
+    expect(ordem).toEqual(['701', '001'])
+  })
+
+  it('"Copiar a lista" fica no topo, antes das listas', async () => {
+    await abrirQuemLeu()
+    const copiar = screen.getByRole('button', { name: 'Copiar a lista' })
+    const primeiraLista = screen.getByRole('heading', { name: /Ainda não entrou no Portal/ })
+    expect(
+      copiar.compareDocumentPosition(primeiraLista) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('os números do resumo não parecem botões', async () => {
+    await abrirQuemLeu()
+    expect(document.querySelector('.resumo')).toBeNull()
+    expect(screen.getByText(/120 leram/)).toBeTruthy()
   })
 })

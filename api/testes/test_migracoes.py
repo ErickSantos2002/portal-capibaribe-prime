@@ -93,3 +93,58 @@ def test_0002_retira_o_admin_que_a_carga_do_m0_deu_a_unidade_nao_ativada(banco_v
         ).fetchone()
     assert em_vigor == (0,)
     assert registro == ("papel_retirado", {"papel": "admin", "origem": "migracao_0002"})
+
+
+def test_0003_preenche_a_versao_lida_pelas_datas(banco_vazio):
+    # Quem leu antes da correção leu a versão 1; quem leu depois, a 2 (revisão do M1, U1).
+    rodar_alembic(banco_vazio, "upgrade", "0002")
+    with psycopg.connect(banco_vazio, autocommit=True) as con:
+        con.execute("insert into bloco (numero, nome) values (1, 'Bloco 1')")
+        con.execute(
+            "insert into unidade (bloco_id, numero, andar, senha_hash)"
+            " select id, n, 1, 'h' from bloco, (values ('101'), ('102')) as v(n)"
+        )
+        with con.transaction():
+            con.execute(
+                "insert into aviso (publicado_por, publicado_como, para_todos)"
+                " select min(id), 'comissao', true from unidade"
+            )
+            con.execute(
+                "insert into aviso_versao (aviso_id, versao, titulo, texto, criada_por)"
+                " select a.id, 1, 'T', 'X', a.publicado_por from aviso a"
+            )
+        con.execute(
+            "insert into aviso_leitura (aviso_id, unidade_id)"
+            " select a.id, u.id from aviso a, unidade u where u.numero = '101'"
+        )
+        con.execute(
+            "insert into aviso_versao (aviso_id, versao, titulo, texto, criada_por)"
+            " select a.id, 2, 'T2', 'X2', a.publicado_por from aviso a"
+        )
+        con.execute(
+            "insert into aviso_leitura (aviso_id, unidade_id)"
+            " select a.id, u.id from aviso a, unidade u where u.numero = '102'"
+        )
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    with psycopg.connect(banco_vazio) as con:
+        lidas = con.execute(
+            "select u.numero, l.versao_lida from aviso_leitura l"
+            " join unidade u on u.id = l.unidade_id order by u.numero"
+        ).fetchall()
+    assert lidas == [("101", 1), ("102", 2)]
+
+
+def test_downgrade_da_0003_volta_a_0002(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    rodar_alembic(banco_vazio, "downgrade", "0002")
+    assert "entrada_tentativa" not in _tabelas(banco_vazio)
+    with psycopg.connect(banco_vazio) as con:
+        colunas = {
+            c
+            for (c,) in con.execute(
+                "select column_name from information_schema.columns where table_name = 'unidade'"
+            ).fetchall()
+        }
+    assert {"tentativas_falhas", "bloqueada_ate"} <= colunas
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert "entrada_tentativa" in _tabelas(banco_vazio)

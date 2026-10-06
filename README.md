@@ -138,6 +138,9 @@ Várias cópias de trabalho ao mesmo tempo (um agente por épico): cada uma usa 
 teste, com `PORTAL_TESTE_BANCO=portal_teste_<nome> uv run pytest`. Um `portal_dev` criado antes
 da migração 0002 (celulares com máscara) precisa ser recriado.
 
+A API em outra porta: `PORTAL_API_URL=http://127.0.0.1:8120 npm run dev` (ou `npm run preview`)
+faz o Vite repassar o `/api` para ela.
+
 Testes do front: `npm test` em `web/` roda os testes de componente (Vitest) e, depois do
 `npm run build`, os de configuração (cabeçalhos e `vercel.json`).
 

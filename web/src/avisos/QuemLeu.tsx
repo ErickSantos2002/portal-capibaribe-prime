@@ -8,7 +8,8 @@ import type { UnidadeRef } from '../api/tipos'
 import { abrirAviso, buscarLeitura } from './api'
 import { useCarga, useIdDoAviso } from './carregar'
 import { Carregando, FalhaAoCarregar } from './componentes'
-import { listaParaCopiar } from './formatos'
+import { listaParaCopiar, ordemDaGrade } from './formatos'
+import type { Leitura } from './tipos'
 import './avisos.css'
 
 export function PaginaQuemLeu() {
@@ -34,23 +35,24 @@ function QuemLeu({ id }: { id: number }) {
 
 function porBloco(unidades: UnidadeRef[]): [number, UnidadeRef[]][] {
   const grupos = new Map<number, UnidadeRef[]>()
-  for (const u of unidades) grupos.set(u.bloco, [...(grupos.get(u.bloco) ?? []), u])
+  for (const u of ordemDaGrade(unidades)) grupos.set(u.bloco, [...(grupos.get(u.bloco) ?? []), u])
   return [...grupos]
 }
 
 interface PropsConteudo {
   titulo: string
-  leitura: { lidos: number; total: number; nao_leram: UnidadeRef[] }
+  leitura: Leitura
 }
 
 function Conteudo({ titulo, leitura }: PropsConteudo) {
   const recado = useRecado()
-  const { eu } = useSessao()
   const faltam = leitura.total - leitura.lidos
 
   async function copiar() {
     try {
-      await navigator.clipboard.writeText(listaParaCopiar(titulo, leitura.nao_leram))
+      await navigator.clipboard.writeText(
+        listaParaCopiar(titulo, leitura.nao_entraram, leitura.entraram_sem_ler),
+      )
       recado('Lista copiada. Dá para colar no grupo.')
     } catch {
       recado('Não deu para copiar. Selecione os apartamentos e copie à mão.')
@@ -59,34 +61,65 @@ function Conteudo({ titulo, leitura }: PropsConteudo) {
 
   return (
     <>
-      <h2>{titulo}</h2>
-      <div className="resumo avisos-resumo">
-        <div>
-          <b>{leitura.lidos}</b>
-          {leitura.lidos === 1 ? 'leu' : 'leram'}
-        </div>
-        <div>
-          <b>{faltam}</b>
-          ainda não
-        </div>
-      </div>
+      <p className="suave avisos-quem-leu-aviso">
+        Aviso: <b>{titulo}</b>
+      </p>
+      {/* U5: números em texto corrido, sem cara de botão. */}
+      <p className="avisos-contagem">
+        <b>
+          {leitura.lidos} {leitura.lidos === 1 ? 'leu' : 'leram'}
+        </b>{' '}
+        · {faltam} ainda não
+      </p>
       <p className="ajuda">
         Contam todos os apartamentos do destino, inclusive os que ainda não entraram no Portal.
       </p>
-      {leitura.nao_leram.length === 0 ? (
+      {faltam === 0 ? (
         <div className="aviso-caixa info">
           <p>Todos os apartamentos do destino já leram.</p>
         </div>
       ) : (
         <>
-          <h3 className="secao">Apartamentos que ainda não leram</h3>
-          {porBloco(leitura.nao_leram).map(([bloco, unidades]) => (
-            <section key={bloco} aria-labelledby={`nao-leram-${bloco}`}>
-              <h4 className="avisos-bloco" id={`nao-leram-${bloco}`}>
-                Bloco {bloco}
-              </h4>
+          <button type="button" className="botao leve avisos-copiar" onClick={() => void copiar()}>
+            Copiar a lista
+          </button>
+          <Grupo
+            id="nao-entraram"
+            titulo="Ainda não entrou no Portal"
+            ajuda="Não fizeram o primeiro acesso: precisam da senha inicial e do endereço do Portal."
+            unidades={leitura.nao_entraram}
+          />
+          <Grupo
+            id="entraram-sem-ler"
+            titulo="Entrou, mas não leu este aviso"
+            ajuda="Já usam o Portal: basta lembrar de abrir o aviso."
+            unidades={leitura.entraram_sem_ler}
+          />
+        </>
+      )}
+    </>
+  )
+}
+
+function Grupo(props: { id: string; titulo: string; ajuda: string; unidades: UnidadeRef[] }) {
+  const { eu } = useSessao()
+  const { id, titulo, ajuda, unidades } = props
+  return (
+    <section aria-labelledby={id}>
+      <h2 className="secao" id={id}>
+        {titulo} ({unidades.length})
+      </h2>
+      {unidades.length === 0 ? (
+        <p className="ajuda">Nenhum apartamento.</p>
+      ) : (
+        <>
+          <p className="ajuda">{ajuda}</p>
+          {porBloco(unidades).map(([bloco, doBloco]) => (
+            // div, não section: duas regiões "Bloco 1" (uma por grupo) repetiriam o nome (axe).
+            <div key={bloco}>
+              <h3 className="avisos-bloco">Bloco {bloco}</h3>
               <ul className="grade avisos-grade">
-                {unidades.map((u) => (
+                {doBloco.map((u) => (
                   <li key={u.login}>
                     {eu?.admin ? (
                       <Link
@@ -103,13 +136,10 @@ function Conteudo({ titulo, leitura }: PropsConteudo) {
                   </li>
                 ))}
               </ul>
-            </section>
+            </div>
           ))}
-          <button type="button" className="botao leve avisos-copiar" onClick={() => void copiar()}>
-            Copiar a lista
-          </button>
         </>
       )}
-    </>
+    </section>
   )
 }

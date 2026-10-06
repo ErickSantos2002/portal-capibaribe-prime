@@ -118,7 +118,7 @@ describe('tela de entrar', () => {
     preencher('1', '101', 'mudar123')
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
     const alerta = await screen.findByRole('alert')
-    expect(alerta.textContent).toContain('Entrada bloqueada por 12 minutos')
+    expect(alerta.textContent).toContain('Tente de novo às 17h00.')
     expect(alerta.textContent).toContain('avise a administração do Portal')
   })
 

@@ -44,7 +44,7 @@ describe('primeiro acesso', () => {
   })
 
   it.each([
-    ['curta', 'curta', 'A senha nova precisa ter pelo menos 8 letras ou números.'],
+    ['curta', 'curta', 'A senha nova precisa ter pelo menos 8 caracteres.'],
     ['mudar123', 'mudar123', 'Escolha uma senha diferente da inicial, que todo mundo conhece.'],
   ])('recusa a senha "%s" e explica, sem chamar a API', async (senha, repetida, mensagem) => {
     const chamadas = apiFalsa(RESTRITA)

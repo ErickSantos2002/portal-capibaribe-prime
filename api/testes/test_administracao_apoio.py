@@ -28,7 +28,7 @@ def fotografia(engine: Engine) -> dict[str, Any]:
         "unidades": linhas(
             engine,
             "select id, senha_hash, precisa_trocar_senha, ativada_em, responsavel_nome, celular,"
-            " email, tentativas_falhas, bloqueada_ate from unidade order by id",
+            " email from unidade order by id",
         ),
         "sessoes_abertas": contar(engine, "select count(*) from sessao where encerrada_em is null"),
     }

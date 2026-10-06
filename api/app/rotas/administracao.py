@@ -5,13 +5,19 @@ Contrato: `docs/superpowers/specs/m1-contrato.md`, seção 4.3, e o spec do épi
 (`Admin` = `exige_admin`, dúvida 9 do M1); a regra de negócio mora em
 `app/servicos/administracao.py`.
 
-Painel, ficha e histórico têm dado pessoal ou de segurança: `Cache-Control: no-store`.
+`Cache-Control: no-store` vem do middleware comum (`app/sem_cache.py`).
 """
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query
+from psycopg import errors as erros_pg
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.orm import Session
 
+from app.erros_api import ErroApi
 from app.esquemas.administracao import (
     ConfirmarReset,
     PaginaHistorico,
@@ -26,52 +32,58 @@ from app.servicos import administracao as servico
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(prefix="/api/admin", dependencies=[Depends(exige_cabecalho_portal)])
 
+_CONCORRENCIA = (erros_pg.DeadlockDetected, erros_pg.SerializationFailure)
 
-def _sem_cache(resposta: Response) -> None:
-    resposta.headers["Cache-Control"] = "no-store"
+
+@contextmanager
+def _um_de_cada_vez(db: Session) -> Iterator[None]:
+    """Revisão do M1, C5: dois admins mexendo nos papéis um do outro ao mesmo tempo podem se
+    travar (o trigger do último admin trava as linhas de admin); o Postgres derruba um com
+    40P01. Esse, e a falha de serialização (40001), viram 409 "tente de novo", não 500."""
+    try:
+        yield
+    except DBAPIError as erro:
+        if not isinstance(erro.orig, _CONCORRENCIA):
+            raise
+        db.rollback()
+        raise ErroApi(
+            409,
+            "tente_de_novo",
+            "Outra pessoa mexeu nesta unidade ao mesmo tempo. Tente de novo.",
+        ) from erro
 
 
 @rotas.get("/unidades")
-def painel(
-    _: Admin, db: Banco, resposta: Response, situacao: Situacao = Situacao.todas
-) -> PainelAtivacao:
-    _sem_cache(resposta)
+def painel(_: Admin, db: Banco, situacao: Situacao = Situacao.todas) -> PainelAtivacao:
     return servico.painel(db, situacao)
 
 
 @rotas.get("/unidades/{login}")
-def unidade(login: str, _: Admin, db: Banco, resposta: Response) -> UnidadeAdmin:
-    _sem_cache(resposta)
+def unidade(login: str, _: Admin, db: Banco) -> UnidadeAdmin:
     return servico.ficha(db, login)
 
 
 @rotas.post("/unidades/{login}/resetar")
-def resetar(
-    login: str, _confirmacao: ConfirmarReset, logado: Admin, db: Banco, resposta: Response
-) -> UnidadeAdmin:
-    servico.resetar(db, login, logado.unidade_id)
-    db.commit()
-    _sem_cache(resposta)
+def resetar(login: str, _confirmacao: ConfirmarReset, logado: Admin, db: Banco) -> UnidadeAdmin:
+    with _um_de_cada_vez(db):
+        servico.resetar(db, login, logado.unidade_id)
+        db.commit()
     return servico.ficha(db, login)
 
 
 @rotas.put("/unidades/{login}/papeis/{papel}")
-def dar_papel(
-    login: str, papel: PapelGerenciavel, logado: Admin, db: Banco, resposta: Response
-) -> UnidadeAdmin:
-    servico.dar_papel(db, login, papel, logado.unidade_id)
-    db.commit()
-    _sem_cache(resposta)
+def dar_papel(login: str, papel: PapelGerenciavel, logado: Admin, db: Banco) -> UnidadeAdmin:
+    with _um_de_cada_vez(db):
+        servico.dar_papel(db, login, papel, logado.unidade_id)
+        db.commit()
     return servico.ficha(db, login)
 
 
 @rotas.delete("/unidades/{login}/papeis/{papel}")
-def retirar_papel(
-    login: str, papel: PapelGerenciavel, logado: Admin, db: Banco, resposta: Response
-) -> UnidadeAdmin:
-    servico.retirar_papel(db, login, papel, logado.unidade_id)
-    db.commit()
-    _sem_cache(resposta)
+def retirar_papel(login: str, papel: PapelGerenciavel, logado: Admin, db: Banco) -> UnidadeAdmin:
+    with _um_de_cada_vez(db):
+        servico.retirar_papel(db, login, papel, logado.unidade_id)
+        db.commit()
     return servico.ficha(db, login)
 
 
@@ -79,9 +91,7 @@ def retirar_papel(
 def historico(
     _: Admin,
     db: Banco,
-    resposta: Response,
     antes_de: Annotated[int | None, Query(ge=1)] = None,
     limite: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginaHistorico:
-    _sem_cache(resposta)
     return servico.historico(db, antes_de, limite)

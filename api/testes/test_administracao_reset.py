@@ -44,10 +44,7 @@ def test_resetar_sem_confirmar_recusa(admin, engine_app, corpo):
 def test_resetar_volta_a_unidade_ao_estado_inicial(admin, engine_app, engine_dono):
     with engine_dono.begin() as con:
         con.execute(
-            text(
-                "update unidade set email = 'fulano@example.com', tentativas_falhas = 3"
-                " where login = :l"
-            ),
+            text("update unidade set email = 'fulano@example.com' where login = :l"),
             {"l": COMUM},
         )
 
@@ -73,8 +70,6 @@ def test_resetar_volta_a_unidade_ao_estado_inicial(admin, engine_app, engine_don
     assert unidade["responsavel_nome"] is None
     assert unidade["celular"] is None
     assert unidade["email"] is None
-    assert unidade["tentativas_falhas"] == 0
-    assert unidade["bloqueada_ate"] is None
 
 
 def test_resetar_desconecta_todos_os_aparelhos(admin, logar, engine_app):
@@ -112,22 +107,27 @@ def test_resetar_retira_os_papeis(admin, logar, engine_app, predio):
 
 
 def test_resetar_tira_o_bloqueio_de_unidade_nao_ativada(admin, engine_app, engine_dono):
-    """Unidade não ativada também pode ser resetada: tira o bloqueio de 15 minutos."""
+    """Unidade não ativada também pode ser resetada: tira os bloqueios de 15 minutos (de todos
+    os IPs daquele login) e os contadores."""
     with engine_dono.begin() as con:
-        con.execute(
-            text(
-                "update unidade set bloqueada_ate = now() + interval '15 minutes',"
-                " tentativas_falhas = 4 where login = :l"
-            ),
-            {"l": NAO_ATIVADA},
-        )
+        for letra in ("a", "b"):
+            con.execute(
+                text(
+                    "insert into entrada_tentativa (login, ip_hash, bloqueada_ate, expira_em)"
+                    " values (:l, repeat(:x, 64), now() + interval '15 minutes',"
+                    " now() + interval '15 minutes')"
+                ),
+                {"l": NAO_ATIVADA, "x": letra},
+            )
 
     resposta = _resetar(admin, NAO_ATIVADA)
 
     assert resposta.status_code == 200
-    unidade = _unidade(engine_app, NAO_ATIVADA)
-    assert unidade["bloqueada_ate"] is None
-    assert unidade["tentativas_falhas"] == 0
+    assert resposta.json()["bloqueada_ate"] is None
+    restantes = contar(
+        engine_app, "select count(*) from entrada_tentativa where login = :l", l=NAO_ATIVADA
+    )
+    assert restantes == 0
 
 
 def test_resetar_mantem_as_leituras(admin, engine_app, predio):

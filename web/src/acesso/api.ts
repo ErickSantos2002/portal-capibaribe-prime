@@ -1,7 +1,14 @@
 // Épico A · Acesso: uma função por rota do contrato (spec do M1, seção 4.2). Pertence ao épico A.
 import { api } from '../api/cliente'
 import type { Eu } from '../api/tipos'
-import type { DadosDaUnidade, Entrar, MinhaUnidade, PrimeiroAcesso, TrocarSenha } from './tipos'
+import type {
+  ApagarDados,
+  DadosDaUnidade,
+  Entrar,
+  MinhaUnidade,
+  PrimeiroAcesso,
+  TrocarSenha,
+} from './tipos'
 
 export const entrar = (dados: Entrar) => api.post<Eu>('/api/acesso/entrar', dados)
 
@@ -18,5 +25,5 @@ export const trocarSenha = (dados: TrocarSenha) => api.put<void>('/api/minha-uni
 export const desconectarAparelho = (id: number) =>
   api.delete<void>(`/api/minha-unidade/aparelhos/${id}`)
 
-export const apagarDados = () =>
-  api.post<void>('/api/minha-unidade/apagar-dados', { confirmo: true })
+export const apagarDados = (senha: string) =>
+  api.post<void>('/api/minha-unidade/apagar-dados', { confirmo: true, senha } satisfies ApagarDados)

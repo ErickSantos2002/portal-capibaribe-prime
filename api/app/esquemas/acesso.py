@@ -9,7 +9,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, Field, ValidationInfo, field_validator
 
-from app.esquemas.comum import Entrada, ErroResposta, Papel, Saida, UnidadeRef
+from app.esquemas.comum import Entrada, ErroResposta, Papel, Saida, UnidadeRef, sem_controle
 from app.seguranca.senhas import SENHA_INICIAL
 
 LIMITE_SENHA = 200
@@ -26,10 +26,11 @@ MSG_CELULAR = "Confira o celular: DDD e número, como (81) 9 1234-5678."
 
 
 def validar_senha_nova(senha: str) -> str:
+    sem_controle(senha)
     if len(senha) < MINIMO_SENHA:
-        raise ValueError("A senha nova precisa ter pelo menos 8 letras ou números.")
+        raise ValueError("A senha nova precisa ter pelo menos 8 caracteres.")
     if len(senha) > LIMITE_SENHA:
-        raise ValueError("A senha pode ter até 200 letras ou números.")
+        raise ValueError("A senha pode ter até 200 caracteres.")
     if senha == SENHA_INICIAL:
         raise ValueError("Escolha uma senha diferente da inicial, que todo mundo conhece.")
     return senha
@@ -42,6 +43,7 @@ def validar_repetida(repetida: str, info: ValidationInfo) -> str:
 
 
 def validar_nome(nome: str) -> str:
+    sem_controle(nome)
     nome = nome.strip()
     if not nome:
         raise ValueError("Escreva o nome de quem responde pela unidade.")
@@ -52,6 +54,7 @@ def validar_nome(nome: str) -> str:
 
 def validar_celular(celular: str) -> str:
     """Aceita com ou sem máscara; guarda só os dígitos (DDD + número, 10 ou 11)."""
+    sem_controle(celular)
     digitos = re.sub(r"\D", "", celular)
     if not 10 <= len(digitos) <= 11 or digitos[0] == "0":
         raise ValueError(MSG_CELULAR)
@@ -59,7 +62,7 @@ def validar_celular(celular: str) -> str:
 
 
 def validar_email(email: str | None) -> str | None:
-    email = (email or "").strip().lower()
+    email = sem_controle(email or "").strip().lower()
     if not email:
         return None
     if len(email) > LIMITE_EMAIL or not _EMAIL.match(email):
@@ -125,11 +128,31 @@ class TrocarSenha(Entrada):
     senha_nova: SenhaNova
     senha_nova_repetida: SenhaRepetida
 
+    @field_validator("senha_nova")
+    @classmethod
+    def _diferente_da_atual(cls, senha_nova: str, info: ValidationInfo) -> str:
+        # U7 (revisão do M1): a mesma senha não troca nada e derrubaria os outros aparelhos.
+        if senha_nova == info.data.get("senha_atual"):
+            raise ValueError("A senha nova é igual à atual. Escolha uma diferente.")
+        return senha_nova
+
 
 class ApagarDados(Entrada):
-    """`POST /api/minha-unidade/apagar-dados`: `{"confirmo": true}` (H-06)."""
+    """`POST /api/minha-unidade/apagar-dados`: `{"confirmo": true, "senha": "..."}` (H-06).
+
+    A senha atual é obrigatória (revisão do M1, C1): sem ela, uma sessão esquecida num aparelho
+    bastava para tomar a conta.
+    """
 
     confirmo: bool
+    senha: str = Field(max_length=LIMITE_SENHA)
+
+    @field_validator("senha")
+    @classmethod
+    def _senha(cls, senha: str) -> str:
+        if not senha:
+            raise ValueError("Escreva a senha atual.")
+        return senha
 
     @field_validator("confirmo")
     @classmethod

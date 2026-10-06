@@ -30,14 +30,22 @@ export function TextoDoAviso({ texto }: { texto: string }) {
   )
 }
 
+/** Ainda não lido ("Novo") ou corrigido depois da leitura ("Corrigido", revisão do M1, U1). */
+function chamaAtencao(aviso: AvisoResumo, arquivados?: boolean): 'novo' | 'corrigido' | null {
+  if (arquivados) return null
+  if (!aviso.lido) return 'novo'
+  return aviso.corrigido_desde_a_leitura ? 'corrigido' : null
+}
+
 function Meta({ aviso, arquivados }: { aviso: AvisoResumo; arquivados?: boolean }) {
-  const novo = !aviso.lido && !arquivados
+  const selo = chamaAtencao(aviso, arquivados)
   return (
     <span className="linha-meta">
-      {novo && <span className="selo novo">Novo</span>}
+      {selo === 'novo' && <span className="selo novo">Novo</span>}
+      {selo === 'corrigido' && <span className="selo novo">Corrigido</span>}
       <span>{formatarData(aviso.publicado_em)}</span>
       {!aviso.para_todos && <span>{blocosEmTexto(aviso.blocos)}</span>}
-      {aviso.editado_em && <span>corrigido</span>}
+      {aviso.editado_em && <span>corrigido em {formatarData(aviso.editado_em)}</span>}
       {arquivados && aviso.arquivado_em && (
         <span>arquivado em {formatarData(aviso.arquivado_em)}</span>
       )}
@@ -54,10 +62,11 @@ interface PropsItem {
 
 /** Uma linha do mural: título (negrito se ainda não lido) e detalhes. */
 export function ItemAviso({ aviso, arquivados, previa }: PropsItem) {
-  const classe = `item${!aviso.lido && !arquivados ? ' novo' : ''}`
+  const classe = `item${chamaAtencao(aviso, arquivados) ? ' novo' : ''}`
+  // h2: no mural, o h1 é o título da tela (U9, heading-order).
   const conteudo = (
     <>
-      <h3>{aviso.titulo}</h3>
+      <h2>{aviso.titulo}</h2>
       {!previa && (
         <span className="seta">
           <Icone nome="seta" />
@@ -81,10 +90,11 @@ export function AvisoFixado({ aviso, previa }: { aviso: AvisoResumo; previa?: bo
       <span className="rotulo">
         <Icone nome="pino" tamanho={20} /> Fixado {assinatura(aviso.publicado_por)}
         {!aviso.para_todos && `, para ${destinoEmTexto(aviso)}`}
-        {!aviso.lido && <span className="selo novo">Novo</span>}
       </span>
-      <h3>{aviso.titulo}</h3>
+      <h2>{aviso.titulo}</h2>
       <p>{aviso.resumo}</p>
+      {/* U1: a mesma linha de detalhes dos outros itens (data, correção, selo). */}
+      <Meta aviso={{ ...aviso, para_todos: true }} />
     </>
   )
   if (previa) return <div className="fixado">{conteudo}</div>

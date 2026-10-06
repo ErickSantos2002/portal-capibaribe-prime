@@ -9,13 +9,14 @@ from typing import Annotated
 
 from pydantic import AfterValidator, Field, ValidationInfo, field_validator
 
-from app.esquemas.comum import Entrada, Saida, UnidadeRef
+from app.esquemas.comum import Entrada, Saida, UnidadeRef, sem_controle
 from app.modelos.avisos import LIMITE_TEXTO, LIMITE_TITULO
 
 NumeroDeBloco = Annotated[int, Field(ge=1, le=9)]
 
 
 def validar_titulo(titulo: str) -> str:
+    sem_controle(titulo)
     titulo = titulo.strip()
     if not titulo:
         raise ValueError("Escreva o título do aviso.")
@@ -25,7 +26,8 @@ def validar_titulo(titulo: str) -> str:
 
 
 def validar_texto(texto: str) -> str:
-    texto = texto.replace("\r\n", "\n").replace("\r", "\n").strip()
+    texto = texto.replace("\r\n", "\n").replace("\r", "\n")
+    texto = sem_controle(texto, permitidos="\n\t").strip()
     if not texto:
         raise ValueError("Escreva o texto do aviso.")
     if len(texto) > LIMITE_TEXTO:
@@ -35,6 +37,8 @@ def validar_texto(texto: str) -> str:
 
 Titulo = Annotated[str, AfterValidator(validar_titulo)]
 Texto = Annotated[str, AfterValidator(validar_texto)]
+# `?busca=` do mural (texto livre de uma linha, como o título).
+Busca = Annotated[str, AfterValidator(sem_controle)]
 
 
 # --- requisições -------------------------------------------------------------------------------
@@ -89,6 +93,8 @@ class AvisoResumo(Saida):
     blocos: list[int]
     arquivado_em: datetime | None
     lido: bool
+    # A unidade leu uma versão anterior à atual e ainda não abriu a correção (U1, revisão do M1).
+    corrigido_desde_a_leitura: bool
 
 
 class VersaoAviso(Saida):
@@ -150,4 +156,6 @@ class Leitura(Saida):
 
     lidos: int
     total: int
-    nao_leram: list[UnidadeRef]
+    # Quem não leu, em dois grupos (U5, revisão do M1): a Comissão cobra de jeitos diferentes.
+    nao_entraram: list[UnidadeRef]
+    entraram_sem_ler: list[UnidadeRef]

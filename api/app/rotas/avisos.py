@@ -30,6 +30,7 @@ from fastapi import APIRouter, Depends, Query
 from app.esquemas.avisos import (
     Alcance,
     AvisoCompleto,
+    Busca,
     ContagemNaoLidos,
     CorrigirAviso,
     Destinos,
@@ -49,7 +50,7 @@ rotas = APIRouter(prefix="/api/avisos", dependencies=[Depends(exige_cabecalho_po
 def listar(
     logado: UnidadeLogada,
     db: Banco,
-    busca: Annotated[str, Query(max_length=100)] = "",
+    busca: Annotated[Busca, Query(max_length=100)] = "",
     arquivados: bool = False,
 ) -> ListaAvisos:
     return ListaAvisos(itens=servico.listar(db, logado, busca=busca, arquivados=arquivados))

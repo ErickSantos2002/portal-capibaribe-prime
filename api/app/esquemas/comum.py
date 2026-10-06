@@ -4,11 +4,36 @@ Cada esquema tem um espelho em TypeScript (`web/src/api/tipos.ts` para estes); o
 `testes/test_contrato.py` confere que os campos batem.
 """
 
+import unicodedata
+
 from pydantic import BaseModel, ConfigDict
 
 from app.modelos import Papel
 
-__all__ = ["CampoInvalido", "Entrada", "ErroResposta", "Eu", "Papel", "Saida", "UnidadeRef"]
+__all__ = [
+    "MSG_CONTROLE",
+    "CampoInvalido",
+    "Entrada",
+    "ErroResposta",
+    "Eu",
+    "Papel",
+    "Saida",
+    "UnidadeRef",
+    "sem_controle",
+]
+
+MSG_CONTROLE = "Tem um caractere invisível no texto. Apague e escreva de novo."
+
+
+def sem_controle(texto: str, *, permitidos: str = "") -> str:
+    """Recusa NUL e caracteres de controle (Unicode `Cc`: C0, DEL e C1) em texto livre
+    (revisão do M1, C3). O Postgres não guarda `\\x00` em `text` e isso virava erro 500; os
+    outros não têm uso em nome, título ou busca. `permitidos`: os que o campo aceita (o texto
+    do aviso aceita `\\n` e `\\t`)."""
+    for caractere in texto:
+        if unicodedata.category(caractere) == "Cc" and caractere not in permitidos:
+            raise ValueError(MSG_CONTROLE)
+    return texto
 
 
 class Entrada(BaseModel):

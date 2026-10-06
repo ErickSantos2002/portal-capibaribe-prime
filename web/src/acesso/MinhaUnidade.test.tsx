@@ -56,7 +56,7 @@ describe('minha unidade · ver', () => {
     expect(texto).toContain('não informado')
     expect(screen.getByText('Android · Chrome')).toBeTruthy()
     expect(screen.getByText('iPhone · Safari')).toBeTruthy()
-    expect(screen.getByText('este aparelho')).toBeTruthy()
+    expect(screen.getByText(/^este aparelho ·/)).toBeTruthy()
   })
 
   it('mostra o papel de gestão', async () => {
@@ -200,10 +200,12 @@ describe('minha unidade · apagar meus dados', () => {
       'POST /api/minha-unidade/apagar-dados': json(204),
     })
     fireEvent.click(screen.getByRole('button', { name: 'Apagar meus dados' }))
+    fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: 'minha-senha' } })
     fireEvent.click(screen.getByRole('button', { name: 'Sim, apagar meus dados' }))
     await waitFor(() => expect(roteador.state.location.pathname).toBe('/entrar'))
     expect(chamadas.find((c) => c.caminho === '/api/minha-unidade/apagar-dados')?.corpo).toEqual({
       confirmo: true,
+      senha: 'minha-senha',
     })
     expect(screen.getByRole('status').textContent).toContain('Seus dados foram apagados.')
   })
@@ -217,6 +219,7 @@ describe('minha unidade · apagar meus dados', () => {
       }),
     })
     fireEvent.click(screen.getByRole('button', { name: 'Apagar meus dados' }))
+    fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: 'minha-senha' } })
     fireEvent.click(screen.getByRole('button', { name: 'Sim, apagar meus dados' }))
     expect((await screen.findByRole('alert')).textContent).toContain('papel de gestão')
   })

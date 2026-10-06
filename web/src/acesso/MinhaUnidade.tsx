@@ -15,6 +15,7 @@ import { useRecado } from '../casca/contextoRecado'
 import { useSessao } from '../casca/contextoSessao'
 import { formatarCelular, formatarDataEHora, nomeDaUnidade, nomeDoPapel } from '../casca/formatar'
 import { Icone } from '../casca/Icone'
+import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
 import {
   apagarDados,
@@ -26,6 +27,7 @@ import {
 import { CaixaDeErro } from './CaixaDeErro'
 import { Campo } from './Campo'
 import {
+  AJUDA_DA_SENHA,
   contatoParaApi,
   erroDaFalha,
   validarContato,
@@ -48,6 +50,7 @@ interface Erro {
 
 const PREFIXO_DADOS = 'md'
 const PREFIXO_SENHA = 'ts'
+const PREFIXO_APAGAR = 'ap'
 
 export function MinhaUnidade() {
   const { definir, sair, recarregar } = useSessao()
@@ -57,6 +60,13 @@ export function MinhaUnidade() {
   const [painel, setPainel] = useState<Painel>(null)
   const [erro, setErro] = useState<Erro | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  // U7: depois de trocar a senha, o recado fica na tela (não só no aviso que some) e recebe o
+  // foco, para quem usa leitor de tela saber que deu certo e onde está.
+  const [senhaTrocada, setSenhaTrocada] = useState(false)
+  const recadoDaSenha = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    if (senhaTrocada) recadoDaSenha.current?.focus()
+  }, [senhaTrocada])
 
   const mostrarErro = useCallback((onde: Onde, falha: unknown, campo?: string) => {
     const lido = erroDaFalha(falha)
@@ -95,6 +105,7 @@ export function MinhaUnidade() {
 
   function abrirPainel(qual: Painel) {
     setErro(null)
+    setSenhaTrocada(false)
     setPainel((atual) => (atual === qual ? null : qual))
   }
 
@@ -122,10 +133,11 @@ export function MinhaUnidade() {
     }
   }
 
-  async function aoApagar() {
+  async function aoApagar(senha: string) {
+    if (!senha) return mostrarErro('privacidade', new ErroLocal('Escreva a senha atual.'), 'senha')
     setOcupado(true)
     try {
-      await apagarDados()
+      await apagarDados(senha)
       // Na mesma transição: senão a guarda da tela (sem sessão → /entrar) navega primeiro e o
       // recado se perde.
       startTransition(() => {
@@ -227,11 +239,22 @@ export function MinhaUnidade() {
               aoSalvar={async () => {
                 setPainel(null)
                 setErro(null)
-                recado('Senha trocada. Os outros aparelhos foram desconectados.')
+                setSenhaTrocada(true)
                 await carregar()
               }}
               aoCancelar={() => abrirPainel(null)}
             />
+          )}
+
+          {senhaTrocada && (
+            <p
+              className="aviso-caixa info acesso-sucesso"
+              ref={recadoDaSenha}
+              tabIndex={-1}
+              role="status"
+            >
+              Senha trocada. Os outros aparelhos foram desconectados.
+            </p>
           )}
 
           <h2 className="secao">Aparelhos conectados</h2>
@@ -245,13 +268,15 @@ export function MinhaUnidade() {
                   />
                   {aparelho.descricao}
                 </h3>
-                {aparelho.este_aparelho ? (
-                  <span className="linha-meta">este aparelho</span>
-                ) : (
+                {/* U11: aparelhos de mesmo nome se distinguem por quando entraram e pelo uso. */}
+                <span className="linha-meta">
+                  {aparelho.este_aparelho ? 'este aparelho · ' : ''}entrou em{' '}
+                  {formatarDataEHora(aparelho.criada_em)}
+                  {!aparelho.este_aparelho &&
+                    ` · último uso em ${formatarDataEHora(aparelho.ultimo_uso_em)}`}
+                </span>
+                {!aparelho.este_aparelho && (
                   <>
-                    <span className="linha-meta">
-                      usado em {formatarDataEHora(aparelho.ultimo_uso_em)}
-                    </span>
                     <button
                       type="button"
                       className="texto-link"
@@ -286,11 +311,15 @@ export function MinhaUnidade() {
               Ler a política de privacidade
             </Link>
           </p>
-          {caixa('privacidade')}
+          {painel !== 'apagar' && caixa('privacidade')}
           {painel === 'apagar' ? (
             <ConfirmarApagar
               ocupado={ocupado}
-              aoConfirmar={() => void aoApagar()}
+              caixa={caixa('privacidade', PREFIXO_APAGAR)}
+              erro={
+                erro?.onde === 'privacidade' && erro.campo === 'senha' ? erro.mensagem : undefined
+              }
+              aoConfirmar={(senha) => void aoApagar(senha)}
               aoCancelar={() => abrirPainel(null)}
             />
           ) : (
@@ -367,7 +396,7 @@ function FormularioDeSenha({ caixa, erro, aoErrar, aoSalvar, aoCancelar }: Props
   async function aoEnviar(evento: FormEvent) {
     evento.preventDefault()
     if (!atual) return aoErrar(new ErroLocal('Escreva a senha atual.'), 'senha_atual')
-    const problema = validarSenhaNova(nova, repetida)
+    const problema = validarSenhaNova(nova, repetida, atual)
     if (problema) return aoErrar(new ErroLocal(problema.mensagem), problema.campo)
     setEnviando(true)
     try {
@@ -402,7 +431,7 @@ function FormularioDeSenha({ caixa, erro, aoErrar, aoSalvar, aoCancelar }: Props
         autoComplete="new-password"
         valor={nova}
         aoMudar={setNova}
-        ajuda="Pelo menos 8 letras ou números, diferente de mudar123."
+        ajuda={AJUDA_DA_SENHA}
         erro={erroDe('senha_nova')}
       />
       <Campo
@@ -426,34 +455,69 @@ function FormularioDeSenha({ caixa, erro, aoErrar, aoSalvar, aoCancelar }: Props
 
 function ConfirmarApagar({
   ocupado,
+  caixa,
+  erro,
   aoConfirmar,
   aoCancelar,
 }: {
   ocupado: boolean
-  aoConfirmar: () => void
+  caixa: ReactNode
+  erro?: string
+  aoConfirmar: (senha: string) => void
   aoCancelar: () => void
 }) {
+  const [senha, setSenha] = useState('')
+  const bloco = useRef<HTMLFormElement>(null)
   const titulo = useRef<HTMLHeadingElement>(null)
-  useEffect(() => titulo.current?.focus(), [])
+  // U2: o bloco inteiro vai para o meio da tela, longe das abas de baixo.
+  useEffect(() => centralizar(bloco.current, titulo.current), [])
   return (
-    <div className="acesso-painel" role="group" aria-labelledby="confirmar-apagar">
+    <form
+      ref={bloco}
+      className="acesso-painel acesso-confirmar"
+      role="group"
+      aria-labelledby="confirmar-apagar"
+      noValidate
+      onSubmit={(evento) => {
+        evento.preventDefault()
+        aoConfirmar(senha)
+      }}
+    >
       <h2 id="confirmar-apagar" ref={titulo} tabIndex={-1}>
         Apagar os dados do apartamento?
       </h2>
-      <div className="aviso-caixa atencao">
+      <p>
+        Nome, celular e e-mail somem, todos os aparelhos saem e a senha volta a ser a inicial. O
+        apartamento vai precisar fazer o primeiro acesso de novo.
+      </p>
+      {/* C1: o risco de a senha voltar a ser a inicial, em destaque. */}
+      <div className="aviso-caixa atencao acesso-risco" role="note">
         <Icone nome="alerta" />
         <p>
-          Nome, celular e e-mail somem, todos os aparelhos saem e a senha volta a ser a inicial. O
-          apartamento vai precisar fazer o primeiro acesso de novo.
+          <strong>Depois de apagar, qualquer pessoa com a senha inicial pode entrar.</strong>
+          Quem chegar primeiro faz o primeiro acesso e fica com a conta do apartamento. Logo depois
+          de apagar, faça o primeiro acesso de novo ou avise a administração do Portal no grupo do
+          WhatsApp.
         </p>
       </div>
-      <button type="button" className="botao perigo" disabled={ocupado} onClick={aoConfirmar}>
+      {caixa}
+      <Campo
+        id={`${PREFIXO_APAGAR}-senha`}
+        rotulo="Senha atual"
+        type="password"
+        autoComplete="current-password"
+        valor={senha}
+        aoMudar={setSenha}
+        ajuda="Para confirmar que é você."
+        erro={erro}
+      />
+      <button type="submit" className="botao perigo" disabled={ocupado}>
         {ocupado ? 'Apagando…' : 'Sim, apagar meus dados'}
       </button>
       <button type="button" className="botao leve" onClick={aoCancelar}>
         Cancelar
       </button>
-    </div>
+    </form>
   )
 }
 

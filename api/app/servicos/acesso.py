@@ -2,10 +2,10 @@
 
 Spec: `docs/superpowers/specs/m1-acesso.md`. Nada aqui faz commit: a rota decide (mesma regra das
 peças comuns), para a ação e o registro no histórico irem juntos na mesma transação.
-"""
 
-import math
-from datetime import datetime, timedelta
+O bloqueio por senhas erradas é por (login, IP) e mora em `app/servicos/tentativas.py`
+(revisão do M1, C2).
+"""
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -28,17 +28,15 @@ from app.seguranca.sessoes import (
     encerrar_sessao,
     trocar_senha_e_sessao,
 )
+from app.servicos import tentativas
 from app.servicos.historico import Acao, registrar
-
-TENTATIVAS_ATE_BLOQUEAR = 5
-TEMPO_DE_BLOQUEIO = timedelta(minutes=15)
+from app.servicos.tentativas import ErroQueConta
 
 MSG_CREDENCIAIS = "Bloco, apartamento ou senha incorretos. Confira e tente de novo."
+MSG_SENHA_ATUAL = "A senha atual não confere."
 
-
-class ErroEntrar(ErroApi):
-    """Recusa de `entrar` que ainda precisa de commit: a tentativa errada e o bloqueio ficam
-    gravados mesmo com a resposta de erro. A rota faz o commit e então levanta."""
+# Recusa de `entrar` (e de "apagar meus dados") que precisa de commit antes de levantar.
+ErroEntrar = ErroQueConta
 
 
 def papeis_em_vigor(db: Session, unidade_id: int) -> list[Papel]:
@@ -62,61 +60,35 @@ def eu_da_unidade(db: Session, unidade: Unidade) -> Eu:
     )
 
 
-def _mensagem_de_bloqueio(minutos: int) -> str:
-    tempo = "1 minuto" if minutos == 1 else f"{minutos} minutos"
-    return (
-        f"Entrada bloqueada por {tempo} depois de várias senhas erradas. Se não foi você, "
-        "avise a administração do Portal no grupo do WhatsApp."
+def _credenciais_invalidas(restantes: int) -> ErroQueConta:
+    return ErroQueConta(
+        401,
+        "credenciais_invalidas",
+        MSG_CREDENCIAIS + tentativas.aviso_de_restantes(restantes),
+        tentativas_restantes=restantes,
     )
 
 
-def _erro_bloqueio(bloqueada_ate: datetime, agora: datetime) -> ErroEntrar:
-    minutos = max(1, math.ceil((bloqueada_ate - agora).total_seconds() / 60))
-    return ErroEntrar(
-        423,
-        "unidade_bloqueada",
-        _mensagem_de_bloqueio(minutos),
-        bloqueada_ate=bloqueada_ate.isoformat(),
-        minutos_restantes=minutos,
-    )
+def entrar(
+    db: Session, login: str, senha: str, ip_hash: str, user_agent: str | None
+) -> tuple[Eu, str]:
+    """Confere login e senha (H-02) com o bloqueio por (login, IP) (H-03).
 
-
-def entrar(db: Session, login: str, senha: str, user_agent: str | None) -> tuple[Eu, str]:
-    """Confere login e senha (H-02) com o bloqueio por tentativas (H-03).
-
-    Devolve o `Eu` e o token da sessão nova. Recusa com `ErroEntrar` (401 ou 423); quem chama
-    faz commit antes de levantar, para a tentativa contar.
+    Devolve o `Eu` e o token da sessão nova. Recusa com `ErroQueConta` (401 ou 423); quem chama
+    faz commit antes de levantar, para a tentativa contar. Login inexistente ou desativado conta
+    e bloqueia como os outros: a resposta é a mesma.
     """
-    # A linha fica travada até o commit: tentativas ao mesmo tempo contam uma a uma.
+    # Trava o par (login, IP): tentativas ao mesmo tempo contam uma a uma.
+    tentativa = tentativas.abrir(db, login, ip_hash)
     unidade = db.scalars(
-        select(Unidade).where(Unidade.login == login, Unidade.ativa.is_(True)).with_for_update()
+        select(Unidade).where(Unidade.login == login, Unidade.ativa.is_(True))
     ).one_or_none()
     if unidade is None:
         conferir_sem_unidade(senha)
-        raise ErroEntrar(401, "credenciais_invalidas", MSG_CREDENCIAIS)
-
-    agora: datetime = db.scalar(select(func.now()))  # type: ignore[assignment]
-    if unidade.bloqueada_ate is not None and unidade.bloqueada_ate > agora:
-        raise _erro_bloqueio(unidade.bloqueada_ate, agora)
-
+        raise _credenciais_invalidas(tentativas.falhou(db, tentativa, None))
     if not senha_confere(unidade.senha_hash, senha):
-        unidade.tentativas_falhas += 1
-        if unidade.tentativas_falhas >= TENTATIVAS_ATE_BLOQUEAR:
-            unidade.tentativas_falhas = 0
-            unidade.bloqueada_ate = agora + TEMPO_DE_BLOQUEIO
-            # Ação do sistema (unidade_id nulo): quem errou pode nem ser da unidade.
-            registrar(
-                db,
-                Acao.unidade_bloqueada,
-                unidade_id=None,
-                entidade="unidade",
-                entidade_id=unidade.id,
-            )
-        db.flush()
-        raise ErroEntrar(401, "credenciais_invalidas", MSG_CREDENCIAIS)
-
-    unidade.tentativas_falhas = 0
-    unidade.bloqueada_ate = None
+        raise _credenciais_invalidas(tentativas.falhou(db, tentativa, unidade.id))
+    tentativas.acertou(db, tentativa)
     token = criar_sessao(db, unidade.id, user_agent)
     return eu_da_unidade(db, unidade), token
 
@@ -201,7 +173,7 @@ def trocar_senha(db: Session, logado: Logado, dados: TrocarSenha, user_agent: st
     deste (dúvida 8 do M1: na conta compartilhada, é o jeito de tirar quem não devia estar lá)."""
     unidade = db.get_one(Unidade, logado.unidade_id, with_for_update=True)
     if not senha_confere(unidade.senha_hash, dados.senha_atual):
-        raise ErroApi(400, "senha_atual_incorreta", "A senha atual não confere.")
+        raise ErroApi(400, "senha_atual_incorreta", MSG_SENHA_ATUAL)
     token = trocar_senha_e_sessao(db, unidade.id, dados.senha_nova, user_agent)
     registrar(
         db, Acao.senha_trocada, unidade_id=unidade.id, entidade="unidade", entidade_id=unidade.id
@@ -224,11 +196,27 @@ def desconectar_aparelho(db: Session, logado: Logado, sessao_id: int) -> None:
     )
 
 
-def apagar_dados(db: Session, logado: Logado) -> None:
+def apagar_dados(db: Session, logado: Logado, senha: str, ip_hash: str) -> None:
     """H-06 / RF-08: apaga os contatos, volta a senha para `mudar123` e a unidade a "não
     ativada". As linhas de sessão são apagadas (a descrição do aparelho é dado pessoal); votos e
-    leituras ficam, porque são da unidade."""
+    leituras ficam, porque são da unidade.
+
+    Pede a senha atual (revisão do M1, C1): sem ela, uma sessão esquecida num aparelho bastava
+    para tomar a conta (apagar → `mudar123` → primeiro acesso). Senha errada conta para o
+    bloqueio daquele IP (`ErroQueConta`: a rota faz commit antes de responder).
+    """
     unidade = db.get_one(Unidade, logado.unidade_id, with_for_update=True)
+    tentativa = tentativas.abrir(db, logado.login, ip_hash)
+    if not senha_confere(unidade.senha_hash, senha):
+        restantes = tentativas.falhou(db, tentativa, unidade.id)
+        raise ErroQueConta(
+            400,
+            "senha_atual_incorreta",
+            MSG_SENHA_ATUAL + tentativas.aviso_de_restantes(restantes),
+            campos=[{"campo": "senha", "mensagem": MSG_SENHA_ATUAL}],
+            tentativas_restantes=restantes,
+        )
+    tentativas.acertou(db, tentativa)
     if papeis_em_vigor(db, unidade.id):
         raise ErroApi(
             409,
@@ -242,7 +230,6 @@ def apagar_dados(db: Session, logado: Logado) -> None:
     unidade.ativada_em = None
     unidade.precisa_trocar_senha = True
     unidade.senha_hash = gerar_hash(SENHA_INICIAL)
-    unidade.tentativas_falhas = 0
     db.flush()
     db.execute(delete(Sessao).where(Sessao.unidade_id == unidade.id))
     registrar(

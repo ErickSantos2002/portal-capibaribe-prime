@@ -51,8 +51,20 @@
   margin-bottom: 4px;
 }
 
-.avisos-versao h3 {
-  margin-bottom: 8px;
+.avisos-versao .avisos-versao-titulo {
+  margin: 0 0 8px;
+  font-size: 19px;
+  line-height: 1.3;
+}
+
+/* "Quem leu" (revisão, U5): contagem em texto, sem cara de botão. */
+.avisos-contagem {
+  margin: 12px 0 4px;
+  font-size: 19px;
+}
+
+.avisos-contagem b {
+  color: var(--mata);
 }
 
 /* "X de Y apartamentos leram" (o cartão `.arquivo` do protótipo). */
@@ -166,10 +178,16 @@ a.avisos-cartao:hover {
   text-decoration: none;
 }
 
+.avisos-grade span {
+  /* Sem link (morador comum): número solto, sem borda nem fundo de botão (U5). */
+  border-color: transparent;
+  background: none;
+}
+
 .avisos-grade a:hover {
   background: var(--mata-suave);
 }
 
 .avisos-copiar {
-  margin-top: 20px;
+  margin-top: 12px;
 }

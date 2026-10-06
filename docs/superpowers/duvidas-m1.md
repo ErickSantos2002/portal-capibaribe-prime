@@ -267,3 +267,95 @@ atualizados.
   A mostra `erro.mensagem`.
 - **Por quê:** dizer "saiu" com o cookie ainda válido no aparelho (num celular emprestado, por
   exemplo) seria mentir para a pessoa.
+
+---
+
+## Revisão do marco (05–06/10/2026)
+
+Correções dos dois revisores independentes (código e UX), branch `m1/revisao`, plano em
+`docs/superpowers/plans/m1-revisao.md`. As decisões de produto vieram do coordenador; aqui fica
+o que foi decidido na implementação.
+
+## 35. H-03: o bloqueio é por (login, IP), não da unidade (C2)
+- **Problema:** 5 senhas erradas de qualquer pessoa trancavam a unidade inteira por 15 minutos.
+  Bastava saber o bloco e o apartamento de alguém para deixá-lo do lado de fora (negação de
+  serviço contra terceiros). E o contador nunca zerava com o tempo.
+- **Decisão:** tabela `entrada_tentativa` (migração 0003), chave (login, `ip_hash`). 5 erros do
+  mesmo IP naquele login **dentro de 15 minutos** bloqueiam aquele IP naquele login por 15
+  minutos; o dono, de outro IP, entra. Erros mais velhos que 15 minutos deixam de contar
+  (`falhas_em` guarda as datas). Senha certa apaga a linha do par. O histórico
+  `unidade_bloqueada` continua (sem o IP). `unidade.tentativas_falhas` e `unidade.bloqueada_ate`
+  saíram; a ficha do admin mostra o bloqueio mais longo em vigor daquele login.
+- **IP:** na Vercel, `x-real-ip`. Fonte: documentação "Request headers" da Vercel
+  (https://vercel.com/docs/headers/request-headers): `x-real-ip` é idêntico ao
+  `x-forwarded-for`, que a Vercel sobrescreve e não repassa de fora, "para impedir falsificação
+  de IP". Fora da Vercel (sem `VERCEL=1`), o cabeçalho viria do próprio cliente: vale
+  `request.client.host`.
+- **LGPD:** só `HMAC-SHA256` do IP vai ao banco (hash simples se desfaz por força bruta: são só
+  4 bilhões de IPv4). A chave deriva da `DATABASE_URL`, que já é segredo em todo ambiente (sem
+  variável nova). Cada linha tem `expira_em` e as vencidas são apagadas na tentativa seguinte.
+- **A chave é o login, não a unidade:** login inexistente conta e bloqueia igual a um que
+  existe; antes, ele nunca contava (A3), o que deixava a diferença visível.
+- **O 5º erro já responde 423** com o horário (antes: 401, e só o 6º via o bloqueio; dúvida A3
+  do épico A, revista). Com a mensagem "faltam N tentativas" (U3), dizer "falta 1" e depois
+  "senha incorreta" sem avisar do bloqueio seria pior do que mostrar o bloqueio na hora.
+- **Por quê basta:** contra tentativa em massa (muitos logins de um IP) a barreira continua
+  sendo o firewall da Vercel, 20 logins por IP a cada 10 minutos (ADR-0005). O bloqueio por
+  (login, IP) só segura a adivinhação focada numa unidade, sem tirar o dono do ar.
+
+## 36. "Apagar meus dados" pede a senha atual (C1)
+- **Decisão:** `ApagarDados` ganhou `senha`. Errada: 400 `senha_atual_incorreta` (campo `senha`)
+  e **conta** no mesmo contador do bloqueio (login, IP). A dúvida A5 (trocar a senha não conta)
+  continua valendo para a troca de senha: lá a pessoa ainda precisa da senha atual para ganhar
+  algo, e o pior caso é trocar a senha de quem já está dentro.
+- **Continua** voltando a `mudar123` depois (decisão do dono do projeto: risco aceito; o admin
+  devolve a senha inicial de uma conta tomada). A tela avisa com destaque que, depois de
+  apagar, qualquer pessoa com a senha inicial pode refazer o primeiro acesso, e por isso convém
+  avisar a administração.
+
+## 37. Uma migração 0003 para a revisão
+- **Decisão:** uma só 0003, no padrão da 0002 (grants ao `app`, testada com
+  upgrade/downgrade/upgrade): `entrada_tentativa` (C2), trigger de `aviso_versao` que trava o
+  aviso (`for share`) e recusa versão em aviso arquivado (C4, restrição
+  `aviso_versao_arquivado`) e `aviso_leitura.versao_lida` (U1).
+- **Por quê nova e não editar a 0002:** a 0002 pode já ter rodado nas prévias com banco; a
+  partir daqui toda mudança vira migração nova (dúvida 31).
+- **Downgrade:** recria `tentativas_falhas`/`bloqueada_ate` zerados (os contadores de 15 minutos
+  não valem a pena converter) e volta os triggers da 0002.
+
+## 38. Trocar a senha recusa a mesma senha (U7)
+- **Decisão:** 422 no campo `senha_nova`, "A senha nova é igual à atual. Escolha uma
+  diferente." A tela confere antes de chamar a API.
+- **Por quê:** a troca derruba os outros aparelhos; com a mesma senha, a pessoa perderia as
+  outras sessões sem mudar nada.
+
+## 39. A regra da senha, dita como ela é (U8)
+- **Decisão:** as mensagens dizem "caracteres" (não "letras ou números"): a senha aceita espaço
+  e símbolo. A dica do primeiro acesso diz a regra inteira.
+
+## 40. Impasse entre dois admins vira 409 "tente de novo" (C5)
+- **Problema:** dois admins tirando o papel um do outro ao mesmo tempo se travam (o trigger do
+  último admin trava as linhas de admin) e o Postgres derruba um com 40P01: virava 500.
+  Reproduzido de verdade em `test_dois_admins_tirando_o_papel_um_do_outro_nunca_da_500`.
+- **Decisão:** nas rotas de papéis e de voltar para a senha inicial, `deadlock_detected` (40P01)
+  e `serialization_failure` (40001) fazem rollback e respondem 409 `tente_de_novo`, "Outra
+  pessoa mexeu nesta unidade ao mesmo tempo. Tente de novo." Sem repetir sozinho: o admin vê a
+  ficha de novo e decide (o outro pedido pode ter mudado tudo).
+
+## 41. Aviso corrigido depois da leitura: "Corrigido", sem mexer em quem leu (U1)
+- **Decisão:** `aviso_leitura.versao_lida` (0003) guarda a maior versão aberta; `lido_em` e a
+  contagem "quem leu" continuam da primeira leitura. `AvisoResumo.corrigido_desde_a_leitura`
+  liga o selo "Corrigido" até a unidade abrir de novo.
+- **O número na aba "Avisos" não conta correção:** continua sendo de avisos nunca abertos. A
+  correção aparece no selo do próprio aviso; somar ao número faria um aviso já lido parecer
+  "novo", que é o que o coordenador pediu para não acontecer.
+
+## 42. Registrado para depois (C7, sem implementar)
+- **Mural sem paginação e busca em Python:** `GET /api/avisos` devolve o mural inteiro e a busca
+  sem acento filtra em Python. Com ~320 unidades e poucos avisos por semana, cabe por anos;
+  vai para o **M5**, com medição antes (tempo de resposta e tamanho do mural real), e aí
+  paginação por cursor e busca no banco (`unaccent` + índice).
+- **Sessões ilimitadas em unidade não ativada:** cada entrada com `mudar123` cria uma sessão
+  restrita, sem limite por unidade. Coberto pelo firewall do portão (20 entradas por IP a cada
+  10 minutos, ADR-0005) e pelo fato de essas sessões morrerem no primeiro acesso (dúvida 29).
+  Se o painel do Neon mostrar crescimento estranho de `sessao`, limitar por unidade.

@@ -109,10 +109,7 @@ def test_padroes_da_unidade_nova(engine_app):
     with engine_app.begin() as con:
         u = _unidade(con, _bloco(con, 1), "101")
         linha = con.execute(
-            text(
-                "select ativa, precisa_trocar_senha, tentativas_falhas, ativada_em"
-                " from unidade where id = :u"
-            ),
+            text("select ativa, precisa_trocar_senha, ativada_em from unidade where id = :u"),
             {"u": u},
         ).one()
-    assert tuple(linha) == (True, True, 0, None)
+    assert tuple(linha) == (True, True, None)

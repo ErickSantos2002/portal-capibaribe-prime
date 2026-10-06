@@ -34,7 +34,7 @@ describe('validarSenhaNova', () => {
   it('menos de 8', () =>
     expect(validarSenhaNova('curta', 'curta')).toEqual({
       campo: 'senha_nova',
-      mensagem: 'A senha nova precisa ter pelo menos 8 letras ou números.',
+      mensagem: 'A senha nova precisa ter pelo menos 8 caracteres.',
     }))
   it('mudar123', () =>
     expect(validarSenhaNova('mudar123', 'mudar123')?.mensagem).toBe(

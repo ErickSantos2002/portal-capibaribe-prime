@@ -14,6 +14,8 @@ CONTATO = {
     "celular": "81 98765-4321",
     "email": "rafael@exemplo.com",
 }
+# "Apagar meus dados" pede a senha atual (revisão do M1, C1).
+APAGAR = {"confirmo": True, "senha": f"senha-{COMUM}"}
 
 
 def unidade(engine_app, login: str = COMUM) -> Unidade:
@@ -158,7 +160,7 @@ def test_h06_trocar_senha_grava_a_nova_e_desconecta_os_outros(logar, predio, eng
 @pytest.mark.parametrize(
     ("nova", "repetida", "mensagem"),
     [
-        ("curta", "curta", "A senha nova precisa ter pelo menos 8 letras ou números."),
+        ("curta", "curta", "A senha nova precisa ter pelo menos 8 caracteres."),
         (
             SENHA_INICIAL,
             SENHA_INICIAL,
@@ -168,6 +170,12 @@ def test_h06_trocar_senha_grava_a_nova_e_desconecta_os_outros(logar, predio, eng
             "nova-senha-123",
             "outra-senha-123",
             "As duas senhas estão diferentes. Escreva a mesma nas duas.",
+        ),
+        # U7 (revisão do M1): trocar pela mesma senha não troca nada e derrubaria os aparelhos.
+        (
+            f"senha-{COMUM}",
+            f"senha-{COMUM}",
+            "A senha nova é igual à atual. Escolha uma diferente.",
         ),
     ],
 )
@@ -243,13 +251,15 @@ def test_h06_aparelho_ja_desconectado_ou_inexistente_e_404(logar, predio, engine
 
 
 def test_h06_apagar_dados_exige_confirmacao(logar, predio, engine_app):
-    resposta = logar(COMUM).post("/api/minha-unidade/apagar-dados", json={"confirmo": False})
+    resposta = logar(COMUM).post(
+        "/api/minha-unidade/apagar-dados", json={**APAGAR, "confirmo": False}
+    )
     assert resposta.status_code == 422
     assert unidade(engine_app).responsavel_nome is not None
 
 
 def test_h06_apagar_dados_volta_a_nao_ativada_com_mudar123(logar, predio, engine_app):
-    resposta = logar(COMUM).post("/api/minha-unidade/apagar-dados", json={"confirmo": True})
+    resposta = logar(COMUM).post("/api/minha-unidade/apagar-dados", json=APAGAR)
     assert resposta.status_code == 204
     assert "Max-Age=0" in resposta.headers["set-cookie"]
     u = unidade(engine_app)
@@ -264,7 +274,7 @@ def test_h06_apagar_dados_volta_a_nao_ativada_com_mudar123(logar, predio, engine
 def test_h06_apagar_dados_desconecta_todos_os_aparelhos(logar, predio, engine_app):
     outro = logar(COMUM)
     eu = logar(COMUM)
-    eu.post("/api/minha-unidade/apagar-dados", json={"confirmo": True})
+    eu.post("/api/minha-unidade/apagar-dados", json=APAGAR)
     assert outro.get("/api/acesso/eu").status_code == 401
     assert eu.get("/api/acesso/eu").status_code == 401
     # A descrição do aparelho também é dado pessoal (modelo de dados, seção 5): some.
@@ -272,7 +282,7 @@ def test_h06_apagar_dados_desconecta_todos_os_aparelhos(logar, predio, engine_ap
 
 
 def test_h06_depois_de_apagar_entra_com_mudar123_no_primeiro_acesso(cliente, logar, predio):
-    logar(COMUM).post("/api/minha-unidade/apagar-dados", json={"confirmo": True})
+    logar(COMUM).post("/api/minha-unidade/apagar-dados", json=APAGAR)
     resposta = cliente.post(
         "/api/acesso/entrar",
         json={"login": COMUM, "senha": SENHA_INICIAL},
@@ -299,7 +309,7 @@ def test_h06_apagar_dados_mantem_as_leituras_da_unidade(logar, predio, engine_do
             ),
             {"admin": predio[ADMIN], "comum": predio[COMUM]},
         )
-    logar(COMUM).post("/api/minha-unidade/apagar-dados", json={"confirmo": True})
+    logar(COMUM).post("/api/minha-unidade/apagar-dados", json=APAGAR)
     with Session(engine_app) as db:
         leituras = db.scalar(
             text("select count(*) from aviso_leitura where unidade_id = :u"), {"u": predio[COMUM]}
@@ -308,7 +318,9 @@ def test_h06_apagar_dados_mantem_as_leituras_da_unidade(logar, predio, engine_do
 
 
 def test_h06_unidade_com_papel_de_gestao_nao_apaga(logar, predio, engine_app):
-    resposta = logar(COMISSAO).post("/api/minha-unidade/apagar-dados", json={"confirmo": True})
+    resposta = logar(COMISSAO).post(
+        "/api/minha-unidade/apagar-dados", json={**APAGAR, "senha": f"senha-{COMISSAO}"}
+    )
     assert resposta.status_code == 409
     assert resposta.json() == {
         "codigo": "unidade_com_papel_de_gestao",
@@ -322,7 +334,61 @@ def test_h06_unidade_com_papel_de_gestao_nao_apaga(logar, predio, engine_app):
 
 def test_h06_sessao_restrita_nao_apaga_nem_edita(logar, predio):
     restrita = logar(NAO_ATIVADA)
-    assert (
-        restrita.post("/api/minha-unidade/apagar-dados", json={"confirmo": True}).status_code == 403
-    )
+    assert restrita.post("/api/minha-unidade/apagar-dados", json=APAGAR).status_code == 403
     assert restrita.put("/api/minha-unidade/dados", json=CONTATO).status_code == 403
+
+
+# --- C1: apagar exige a senha atual (sessão esquecida não toma a conta) --------------------------
+
+
+def test_c1_apagar_sem_senha_e_recusado(logar, predio, engine_app):
+    resposta = logar(COMUM).post("/api/minha-unidade/apagar-dados", json={"confirmo": True})
+    assert resposta.status_code == 422
+    assert resposta.json()["campos"][0]["campo"] == "senha"
+    assert unidade(engine_app).ativada_em is not None
+
+
+def test_c1_apagar_com_senha_errada_e_recusado_e_conta_tentativa(logar, predio, engine_app):
+    eu = logar(COMUM)
+    resposta = eu.post("/api/minha-unidade/apagar-dados", json={**APAGAR, "senha": "chute"})
+    assert resposta.status_code == 400
+    assert resposta.json()["codigo"] == "senha_atual_incorreta"
+    assert unidade(engine_app).ativada_em is not None
+    # A sessão continua (errar a senha não derruba quem já está dentro).
+    assert eu.get("/api/acesso/eu").status_code == 200
+    with Session(engine_app) as db:
+        assert (
+            db.scalar(text("select count(*) from entrada_tentativa where login = :l"), {"l": COMUM})
+            == 1
+        )
+
+
+def test_c1_cinco_erros_ao_apagar_bloqueiam_aquele_ip(logar, cliente, predio, engine_app):
+    eu = logar(COMUM)
+    codigos = [
+        eu.post("/api/minha-unidade/apagar-dados", json={**APAGAR, "senha": "chute"}).status_code
+        for _ in range(5)
+    ]
+    assert codigos == [400, 400, 400, 400, 423]
+    # Bloqueado: nem a senha certa apaga, e a entrada daquele IP também está bloqueada.
+    assert eu.post("/api/minha-unidade/apagar-dados", json=APAGAR).status_code == 423
+    entrar = cliente.post(
+        "/api/acesso/entrar",
+        json={"login": COMUM, "senha": f"senha-{COMUM}"},
+        headers=CABECALHO_PORTAL,
+    )
+    assert entrar.status_code == 423
+    assert unidade(engine_app).ativada_em is not None
+
+
+def test_c1_a_partir_do_terceiro_erro_ao_apagar_diz_quantas_faltam(logar, predio):
+    eu = logar(COMUM)
+    mensagens = [
+        eu.post("/api/minha-unidade/apagar-dados", json={**APAGAR, "senha": "x"}).json()["mensagem"]
+        for _ in range(3)
+    ]
+    assert mensagens[0] == "A senha atual não confere."
+    assert mensagens[2] == (
+        "A senha atual não confere. Faltam 2 tentativas antes de a entrada ser bloqueada por 15 "
+        "minutos."
+    )

@@ -27,6 +27,8 @@ que só o Erick pode confirmar; o resto é decisão técnica, revisável na revi
 ## Decisões do épico
 
 ### A3. O bloqueio responde 423 a partir da 6ª tentativa
+- **Revista na revisão do marco:** o bloqueio passou a ser por (login, IP), o 5º erro já
+  responde 423 e login inexistente conta. Ver a dúvida 35 de `duvidas-m1.md`.
 - **Dúvida:** o contrato diz "5 erros seguidos: `bloqueada_ate = now() + 15 min`"; H-03 diz
   "5 tentativas erradas, quando vier a 6ª, fica bloqueado".
 - **Decisão:** a 5ª errada grava o bloqueio e ainda responde 401 `credenciais_invalidas`; a 6ª

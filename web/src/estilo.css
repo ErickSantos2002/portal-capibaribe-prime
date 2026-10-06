@@ -58,6 +58,17 @@ body {
   margin: 0;
 }
 
+/* O foco e as âncoras nunca param embaixo do topo fixo nem das abas de baixo (revisão, U2). */
+html {
+  scroll-padding-top: 80px;
+  scroll-padding-bottom: 88px;
+}
+
+/* Com o botão flutuante ("Novo aviso"), o fim da tela rola até ficar acima dele (U2). */
+.app:has(> .flutuante) .conteudo {
+  padding-bottom: 104px;
+}
+
 body {
   min-height: 100dvh;
   background: var(--papel);
@@ -121,6 +132,9 @@ select {
 
 .topo h1 {
   flex: 1;
+  /* O assunto do aviso vira o h1 (revisão, U9): título longo quebra, nunca vaza. */
+  min-width: 0;
+  overflow-wrap: anywhere;
   margin: 0;
   font-size: 21px;
   font-weight: 700;
@@ -286,7 +300,8 @@ p {
   min-height: 64px;
   padding: 10px 2px 8px;
   color: var(--tinta-suave);
-  font-size: 13px;
+  /* 15 px no mínimo (revisão, U10): a persona mais velha lê as abas sem óculos. */
+  font-size: 15px;
   line-height: 1.15;
   text-align: center;
   text-decoration: none;
@@ -320,7 +335,7 @@ p {
   border-radius: 9px;
   background: var(--ipe);
   color: #17231c;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -362,11 +377,14 @@ a.item:hover {
   background: var(--mata-suave);
 }
 
-.item h3 {
+.item :is(h2, h3) {
+  margin: 0;
+  font-size: 19px;
   font-weight: 400;
+  line-height: 1.3;
 }
 
-.item.novo h3 {
+.item.novo :is(h2, h3) {
   font-weight: 700;
 }
 
@@ -390,7 +408,7 @@ a.item:hover {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -431,6 +449,22 @@ a.item:hover {
   margin-bottom: 4px;
   font-size: 15px;
   font-weight: 700;
+}
+
+.fixado h2 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.3;
+}
+
+.fixado .linha-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 8px;
+  color: var(--tinta-suave);
+  font-size: 15px;
 }
 
 .fixado p {
@@ -838,13 +872,18 @@ input.apto {
 }
 
 .ficha dt {
+  /* O rótulo não encolhe: quem quebra é o valor (U4). */
+  flex: none;
   color: var(--tinta-suave);
 }
 
 .ficha dd {
+  /* min-width: 0 + anywhere: e-mail longo quebra em vez de empurrar a tela (revisão, U4). */
+  min-width: 0;
   margin: 0;
   font-weight: 700;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 /* ---------- entrada ---------- */
@@ -885,10 +924,12 @@ input.apto {
 }
 
 .recado {
+  /* No celular, o recado aparece embaixo do topo: embaixo ele cobria o botão que a pessoa
+     acabou de tocar e o "Novo aviso" (revisão, U2). No computador volta para baixo, à direita. */
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: 92px;
+  top: 76px;
   z-index: 5;
   padding: 14px 16px;
   border-radius: var(--r-medio);
@@ -1089,6 +1130,7 @@ details[open] > summary::after {
   }
 
   .recado {
+    top: auto;
     left: auto;
     right: 40px;
     bottom: 100px;

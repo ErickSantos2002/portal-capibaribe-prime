@@ -51,7 +51,7 @@ def test_primeiro_acesso_normaliza():
         (
             {"senha_nova": "curta", "senha_nova_repetida": "curta"},
             "senha_nova",
-            "A senha nova precisa ter pelo menos 8 letras ou números.",
+            "A senha nova precisa ter pelo menos 8 caracteres.",
         ),
         (
             {"senha_nova": "mudar123", "senha_nova_repetida": "mudar123"},
@@ -122,12 +122,20 @@ def test_trocar_senha_e_dados():
     assert DadosDaUnidade(**CONTATO).celular == "81912345678"
 
 
-@pytest.mark.parametrize("modelo", [ApagarDados, ConfirmarReset])
-def test_confirmacao_precisa_ser_verdadeira(modelo):
-    assert modelo(confirmo=True).confirmo is True
+@pytest.mark.parametrize(
+    ("modelo", "extra"), [(ApagarDados, {"senha": "senha-atual"}), (ConfirmarReset, {})]
+)
+def test_confirmacao_precisa_ser_verdadeira(modelo, extra):
+    assert modelo(confirmo=True, **extra).confirmo is True
     for valor in (False, None):
         with pytest.raises(ValidationError):
-            modelo(confirmo=valor)
+            modelo(confirmo=valor, **extra)
+
+
+def test_apagar_dados_pede_a_senha():
+    for corpo in ({"confirmo": True}, {"confirmo": True, "senha": ""}):
+        with pytest.raises(ValidationError):
+            ApagarDados.model_validate(corpo)
 
 
 # --- épico C ---------------------------------------------------------------------------------
