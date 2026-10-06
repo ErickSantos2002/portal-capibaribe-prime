@@ -24,6 +24,9 @@ from app.modelos.base import Base, chave_primaria
 
 LIMITE_TITULO = 120
 LIMITE_TEXTO = 10_000
+LIMITE_ONDE = 120
+# A ordem é a dos botões do formulário; `geral` é o padrão.
+CATEGORIAS = ("geral", "obra", "reuniao", "financeiro", "urgente")
 
 
 class Aviso(Base):
@@ -57,6 +60,20 @@ class AvisoVersao(Base):
             f" and char_length(texto) <= {LIMITE_TEXTO}",
             name="aviso_versao_texto_tamanho",
         ),
+        # Migração 0004 (spec dos avisos com formatação, seção 3.2).
+        CheckConstraint(
+            "categoria in (" + ", ".join(f"'{c}'" for c in CATEGORIAS) + ")",
+            name="aviso_versao_categoria",
+        ),
+        CheckConstraint(
+            f"char_length(btrim(evento_onde)) between 1 and {LIMITE_ONDE}"
+            f" and char_length(evento_onde) <= {LIMITE_ONDE}",
+            name="aviso_versao_evento_onde_tamanho",
+        ),
+        CheckConstraint(
+            "evento_onde is null or evento_quando is not null",
+            name="aviso_versao_evento_completo",
+        ),
     )
 
     aviso_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("aviso.id"), primary_key=True)
@@ -65,6 +82,11 @@ class AvisoVersao(Base):
     texto: Mapped[str]
     criada_em: Mapped[datetime] = mapped_column(server_default=func.now())
     criada_por: Mapped[int] = mapped_column(BigInteger, ForeignKey("unidade.id"))
+    # Na versão (não no aviso): a correção pode mudar, e a versão antiga guarda a dela.
+    categoria: Mapped[str] = mapped_column(server_default="geral")
+    # Evento: "Quando" e, opcional, "Onde". Local sem data não existe (CHECK).
+    evento_quando: Mapped[datetime | None]
+    evento_onde: Mapped[str | None]
 
 
 class AvisoBloco(Base):
