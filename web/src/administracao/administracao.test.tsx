@@ -164,6 +164,10 @@ describe('painel de ativação (H-07)', () => {
 
     expect(await screen.findByText('Maria (fictícia)')).toBeTruthy()
     expect(screen.getByText('(81) 9 0000-0002')).toBeTruthy()
+    // axe (heading-order): o bloco é h2, o responsável de cada linha é h3.
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Bloco 1: 2 de 3 (67%)' }),
+    ).toBeTruthy()
     expect(screen.getByText('entrou em 2 de novembro')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Ainda não' }))
