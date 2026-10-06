@@ -192,7 +192,9 @@ describe('aviso aberto', () => {
     expect(artigo.querySelector('b, img, script')).toBeNull()
     const paragrafos = artigo.querySelectorAll('.texto-aviso p')
     expect(paragrafos).toHaveLength(2)
-    expect(paragrafos[0].textContent).toBe('<b>negrito?</b> <img src=x onerror=alert(1)>\nlinha 2')
+    // A quebra simples virou `<br>` (spec dos avisos com formatação: sai o `pre-line`).
+    expect(paragrafos[0].textContent).toBe('<b>negrito?</b> <img src=x onerror=alert(1)>linha 2')
+    expect(paragrafos[0].querySelectorAll('br')).toHaveLength(1)
     const link = within(artigo).getByRole('link', { name: 'https://exemplo.com.br/regras' })
     expect(link.getAttribute('href')).toBe('https://exemplo.com.br/regras')
     expect(link.getAttribute('rel')).toBe('noopener noreferrer')
@@ -590,5 +592,170 @@ describe('revisão do M1 · U5: quem leu', () => {
     await abrirQuemLeu()
     expect(document.querySelector('.resumo')).toBeNull()
     expect(screen.getByText(/120 leram/)).toBeTruthy()
+  })
+})
+
+// --- avisos com formatação, categoria e evento (spec de 06/10/2026) ---------------------------
+
+const FUTURO = '2099-10-10T12:00:00Z' // um sábado, 9h em Recife
+const PASSADO = '2020-10-10T12:00:00Z' // também sábado
+
+describe('mural modelo A: categoria, data em bloco e evento', () => {
+  const itens = [
+    resumo(1, { titulo: 'Bem-vindos', fixado: true, categoria: 'geral' }),
+    resumo(2, {
+      titulo: 'Vistoria',
+      categoria: 'obra',
+      resumo: 'A construtora liberou a visita.',
+      evento_quando: FUTURO,
+      publicado_em: '2026-10-04T12:00:00Z',
+    }),
+    resumo(3, { titulo: 'Assembleia', categoria: 'reuniao', evento_quando: PASSADO }),
+    resumo(4, { titulo: 'Reajuste', categoria: 'financeiro' }),
+    resumo(5, { titulo: 'Prazo da Caixa', categoria: 'urgente' }),
+  ]
+
+  async function abrirMural() {
+    api(eu(), (url) => (url.pathname === '/api/avisos' ? json(200, { itens }) : undefined))
+    abrir('/avisos')
+    return (await screen.findByText('Vistoria')).closest('a')!
+  }
+
+  it('cada aviso mostra a categoria com nome (nunca só a cor) e a classe da cor', async () => {
+    const vistoria = await abrirMural()
+    expect(vistoria.classList.contains('cat-obra')).toBe(true)
+    expect(within(vistoria).getByText('Obra')).toBeTruthy()
+    for (const [titulo, nome] of [
+      ['Assembleia', 'Reunião'],
+      ['Reajuste', 'Financeiro'],
+      ['Prazo da Caixa', 'Urgente'],
+    ]) {
+      const item = screen.getByText(titulo).closest('a')!
+      expect(within(item).getByText(nome)).toBeTruthy()
+    }
+    const fixado = screen.getByText('Bem-vindos').closest('a')!
+    expect(fixado.classList.contains('fixado')).toBe(true)
+    expect(within(fixado).getByText('Geral')).toBeTruthy()
+  })
+
+  it('data da publicação em bloco (dia e mês), lida por extenso pelo leitor de tela', async () => {
+    const vistoria = await abrirMural()
+    const bloco = vistoria.querySelector('.data-bloco')!
+    expect(bloco.getAttribute('aria-hidden')).toBe('true')
+    expect(bloco.textContent).toBe('04out')
+    expect(within(vistoria).getByText('4 de outubro')).toBeTruthy()
+  })
+
+  it('resumo embaixo do título', async () => {
+    const vistoria = await abrirMural()
+    expect(within(vistoria).getByText('A construtora liberou a visita.')).toBeTruthy()
+  })
+
+  it('evento futuro mostra dia e hora; o que já passou mostra "Já aconteceu"', async () => {
+    const vistoria = await abrirMural()
+    expect(within(vistoria).getByText('Sáb, 10/10 · 9h')).toBeTruthy()
+    const assembleia = screen.getByText('Assembleia').closest('a')!
+    expect(within(assembleia).getByText('Sáb, 10/10 · Já aconteceu')).toBeTruthy()
+    const reajuste = screen.getByText('Reajuste').closest('a')!
+    expect(reajuste.querySelector('.linha-evento')).toBeNull()
+  })
+})
+
+describe('aviso aberto: cabeçalho, quadro do evento e texto formatado', () => {
+  const formatado = [
+    'Olá, vizinhos! O importante **não se perde mais**.',
+    '',
+    '## Como entrar',
+    'Cada apartamento tem **uma conta só**.',
+    '',
+    '- Ler os avisos',
+    '- Ver só o seu bloco',
+    '',
+    '1. Escolha o bloco',
+    '2. Digite o apartamento',
+    '',
+    '> Seu celular só é visto pela Comissão.',
+  ].join('\n')
+
+  function abrirAviso(extra: Partial<AvisoCompleto>) {
+    api(eu(), (url) =>
+      url.pathname === '/api/avisos/5' ? json(200, completo(5, extra)) : undefined,
+    )
+    abrir('/avisos/5')
+    return screen.findByRole('heading', { level: 1, name: 'Aviso 5' })
+  }
+
+  it('categoria e data em bloco no cabeçalho', async () => {
+    await abrirAviso({ categoria: 'obra' })
+    const artigo = document.querySelector('article')!
+    expect(artigo.classList.contains('cat-obra')).toBe(true)
+    expect(within(artigo).getByText('Obra')).toBeTruthy()
+    expect(artigo.querySelector('.data-bloco')?.textContent).toBe('03nov')
+  })
+
+  it('evento: quadro "Quando / Onde" logo depois do cabeçalho', async () => {
+    await abrirAviso({ evento: { quando: FUTURO, onde: 'Stand de vendas' } })
+    const quadro = document.querySelector('.aviso-evento') as HTMLElement
+    expect(within(quadro).getByText('Quando')).toBeTruthy()
+    expect(within(quadro).getByText('Sábado, 10 de outubro, 9h')).toBeTruthy()
+    expect(within(quadro).getByText('Onde')).toBeTruthy()
+    expect(within(quadro).getByText('Stand de vendas')).toBeTruthy()
+    // Antes do texto.
+    const texto = document.querySelector('.texto-aviso')!
+    expect(quadro.compareDocumentPosition(texto) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('evento sem local: só "Quando"; evento passado avisa que já aconteceu', async () => {
+    await abrirAviso({ evento: { quando: PASSADO, onde: null } })
+    const quadro = document.querySelector('.aviso-evento') as HTMLElement
+    expect(within(quadro).queryByText('Onde')).toBeNull()
+    expect(within(quadro).getByText(/Já aconteceu/)).toBeTruthy()
+  })
+
+  it('sem evento: nenhum quadro', async () => {
+    await abrirAviso({})
+    expect(document.querySelector('.aviso-evento')).toBeNull()
+  })
+
+  it('texto formatado: seção h2, negrito, listas e destaque', async () => {
+    await abrirAviso({ texto: formatado })
+    const texto = document.querySelector('.texto-aviso') as HTMLElement
+    expect(within(texto).getByRole('heading', { level: 2, name: 'Como entrar' })).toBeTruthy()
+    expect([...texto.querySelectorAll('strong')].map((s) => s.textContent)).toEqual([
+      'não se perde mais',
+      'uma conta só',
+    ])
+    expect([...texto.querySelectorAll('ul > li')].map((li) => li.textContent)).toEqual([
+      'Ler os avisos',
+      'Ver só o seu bloco',
+    ])
+    expect(texto.querySelectorAll('ol > li')).toHaveLength(2)
+    expect(texto.querySelector('.aviso-destaque')?.textContent).toBe(
+      'Seu celular só é visto pela Comissão.',
+    )
+    expect(texto.textContent).not.toMatch(/\*\*|## |^- /m)
+  })
+
+  it('a versão antiga aparece formatada, com a categoria e o evento dela', async () => {
+    await abrirAviso({
+      categoria: 'urgente',
+      editado_em: '2026-11-04T12:00:00Z',
+      versoes_anteriores: [
+        {
+          versao: 1,
+          titulo: 'Antes',
+          texto: '## Seção antiga\n- item antigo',
+          criada_em: '2026-11-03T12:00:00Z',
+          categoria: 'reuniao',
+          evento: { quando: FUTURO, onde: 'Salão' },
+        },
+      ],
+    })
+    const antiga = document.querySelector('.avisos-versao') as HTMLElement
+    expect(within(antiga).getByText('Reunião')).toBeTruthy()
+    expect(within(antiga).getByText('Salão')).toBeTruthy()
+    // Dentro da versão antiga (cujo título é h2), a seção desce um nível.
+    expect(within(antiga).getByRole('heading', { level: 3, name: 'Seção antiga' })).toBeTruthy()
+    expect(within(antiga).getByText('item antigo').tagName).toBe('LI')
   })
 })

@@ -21,6 +21,18 @@
   --erro-suave: #f8e4e1;
   --sobre-mata: #ffffff;
   --sombra: 0 1px 0 rgba(23, 35, 28, 0.06);
+  /* Categorias do aviso (spec dos avisos com formatação, 3.4): a cor é do rótulo, da faixa e
+     do bloco de data; `-suave` é o fundo do bloco. Rótulo ≥ 4,5:1 na folha e no -suave. */
+  --cat-geral: #4a5a50;
+  --cat-geral-suave: #e9ece9;
+  --cat-obra: #9c4517; /* terra */
+  --cat-obra-suave: #f7e6dc;
+  --cat-reuniao: #2f5d9e; /* azul */
+  --cat-reuniao-suave: #e2eaf6;
+  --cat-financeiro: #1f5e3b; /* mata */
+  --cat-financeiro-suave: #e3eee6;
+  --cat-urgente: #a3322a; /* erro */
+  --cat-urgente-suave: #f8e4e1;
   --fonte: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --r-pequeno: 8px;
   --r-medio: 12px;
@@ -46,6 +58,16 @@
   --erro-suave: #3a1d1a;
   --sobre-mata: #0d1a12;
   --sombra: none;
+  --cat-geral: #a9b8ae;
+  --cat-geral-suave: #26302a;
+  --cat-obra: #f0a77a;
+  --cat-obra-suave: #3a2416;
+  --cat-reuniao: #9dbdf0;
+  --cat-reuniao-suave: #1b2840;
+  --cat-financeiro: #7fc79a;
+  --cat-financeiro-suave: #1c2e23;
+  --cat-urgente: #f19a90;
+  --cat-urgente-suave: #3a1d1a;
   color-scheme: dark;
 }
 
@@ -273,10 +295,8 @@ p {
   font-weight: 700;
 }
 
-/* Texto do aviso: texto puro, parágrafo = linha em branco, quebra simples continua quebra. */
-.texto-aviso p {
-  white-space: pre-line;
-}
+/* Texto do aviso: parágrafos e `<br>` vêm do renderizador (avisos/formatacao.ts); o estilo das
+   marcas mora em avisos/avisos.css. */
 
 /* ---------- navegação: abas embaixo no celular ---------- */
 .nav {
