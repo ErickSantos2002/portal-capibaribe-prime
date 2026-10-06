@@ -13,7 +13,7 @@ pytestmark = pytest.mark.usefixtures("predio")
 
 # Rotas do contrato do M2 que ainda respondem 501 (spec do M2, seção 4). O épico A tira daqui
 # o `/api/notificacoes` quando implementar.
-EM_CONSTRUCAO = {"/api/notificacoes"}
+EM_CONSTRUCAO: set[str] = set()
 
 
 def _caminhos_get() -> list[str]:
