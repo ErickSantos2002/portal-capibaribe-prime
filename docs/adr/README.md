@@ -14,3 +14,4 @@ substitui.
 | [0006](0006-notificacoes.md) | Notificações por Web Push, com e-mail pelo Gmail como reserva |
 | [0007](0007-backup.md) | Backup diário próprio, fora do Neon |
 | [0008](0008-sem-dominio-proprio.md) | Sem domínio próprio: endereço gratuito da Vercel |
+| [0009](0009-backup-bucket-papel-e-chave.md) | Backup em bucket próprio, papel só de leitura e chave de restauração no Actions (complementa 0007 e 0004) |

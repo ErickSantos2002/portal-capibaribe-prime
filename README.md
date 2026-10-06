@@ -41,6 +41,7 @@ docs/              visão, requisitos, histórias, modelo de dados, arquitetura,
 docs/adr/          registros de decisão de arquitetura
 prototipo/         protótipo em HTML único, publicado na Vercel
 scripts/dev/       teste automatizado do protótipo e gerador da imagem de prévia
+scripts/backup/    backup diário do banco (dump, cifra, R2, retenção) e restauração
 vercel.json        front + API no mesmo projeto: /api/* vai para a FastAPI, o resto para o front
 ```
 
@@ -71,6 +72,53 @@ cd ../web && npm ci && npm run dev
 
 Os papéis `dono` e `app` só existem no Postgres local depois que os testes rodaram uma vez
 (passo 2). As variáveis estão explicadas em `api/.env.example`.
+
+## Backup
+
+Todo dia às 03:00 (Recife), o workflow `Backup` (`.github/workflows/backup.yml`) faz o
+`pg_dump` da produção com o papel `backup` (só leitura), cifra com `age` e envia ao bucket
+privado `portal-capibaribe-backups`: `diarios/AAAA-MM-DD.dump.age` e, no dia 1,
+`mensais/AAAA-MM.dump.age`. Guarda 30 diários + 12 mensais. No dia 2 de cada mês ele restaura o
+backup num Postgres temporário e confere tudo; se algo falhar, o GitHub manda e-mail.
+Decisões: [ADR-0007](docs/adr/0007-backup.md) e [ADR-0009](docs/adr/0009-backup-bucket-papel-e-chave.md).
+
+- **Disparar à mão:** `gh workflow run backup.yml -f restaurar=true` (backup + restauração de
+  teste) ou `gh workflow run backup.yml` (só backup).
+- **Testar o ciclo inteiro localmente** (Postgres do passo 1 de "Rodar localmente", S3 falso,
+  nada de R2 nem Neon): `scripts/backup/testes/testar-ciclo.sh`. Precisa de Docker, `uv` e
+  `age`; sem `pg_dump` 17 no PATH, usa o da imagem `postgres:17`.
+
+### Restaurar num desastre (passo a passo)
+
+O script nunca escreve por cima de um banco em uso: restaura num banco **novo e vazio**, confere,
+e só então a aplicação passa a usá-lo.
+
+1. **Ferramentas:** cliente do Postgres **17** (`pg_restore`, `psql`), `age` e `uv`. Em outra
+   versão, aponte `PG_BIN` para a pasta do 17.
+2. **Chave privada:** a cópia offline do dono, num arquivo com permissão 600
+   (`chmod 600 chave.age`). O segredo `BACKUP_AGE_KEY` do GitHub não pode ser lido de volta.
+3. **O backup:** baixe o `.dump.age` pelo painel da Cloudflare (R2 → `portal-capibaribe-backups`
+   → `diarios/`), ou deixe o script baixar, com as variáveis `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`,
+   `R2_SECRET_ACCESS_KEY` e `R2_BUCKET` de uma chave do bucket de backups.
+4. **Banco vazio:** no Neon, crie o banco `portal_restaurado` com dono `dono` (os papéis `dono`
+   e `app` já existem no projeto). Use a URL **direta** do `dono` (host sem `-pooler`).
+5. **Restaurar e conferir** (da raiz do repositório):
+   ```sh
+   head="$(uv run --directory api --frozen alembic heads | awk '{print $1}')"
+   BACKUP_AGE_KEY_FILE=chave.age scripts/backup/restaurar.sh \
+     --destino "postgresql://dono:...@<host-direto>/portal_restaurado?sslmode=require" \
+     --arquivo 2026-10-05.dump.age --head "$head"
+   ```
+   Sem `--arquivo`, baixa o diário mais novo (ou `--objeto diarios/AAAA-MM-DD.dump.age`). Se a
+   produção estava numa migração mais velha que a `main`, a conferência acusa; rode sem `--head`
+   e aplique as migrações depois (`alembic upgrade head`, como `dono`).
+   O script termina com "restauração ok" e a contagem de linhas por tabela; qualquer outra
+   saída é falha, e nada foi gravado pela metade (o `pg_restore` roda numa transação só).
+6. **Apontar a aplicação:** na Vercel, troque o nome do banco em `DATABASE_URL` (e no
+   `DATABASE_URL_DONO` de onde as migrações rodam) para `portal_restaurado` e faça um redeploy. Confira
+   `/api/saude` e um login. O banco antigo fica guardado até a causa do desastre ser entendida.
+7. **Papel de backup:** rode `scripts/backup/criar-papel-backup.sql` no banco novo e atualize o
+   segredo `BACKUP_DATABASE_URL` (o backup das 03:00 passa a ler o banco novo).
 
 ## O primeiro administrador (produção)
 
