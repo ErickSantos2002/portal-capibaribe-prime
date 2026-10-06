@@ -58,8 +58,8 @@ export function TextoDaPolitica() {
 
       <h2>Onde os dados ficam</h2>
       <p>
-        Num banco de dados da Neon, e o Portal funciona na Vercel. As duas empresas guardam tudo em
-        servidores em São Paulo.
+        Os dados ficam num banco de dados (Postgres) da empresa Neon, e o Portal funciona na
+        Vercel. As duas usam servidores em São Paulo.
       </p>
 
       <h2>O que não guardamos</h2>
