@@ -26,6 +26,7 @@ def _publicar(cliente, **extra: Any) -> dict[str, Any]:
     ("texto", "esperado"),
     [
         ("Olá, **vizinhos**!\n\nResto.", "Olá, vizinhos!"),
+        ("**a** e **b**", "a e b"),
         ("## Como entrar\nCada apartamento.", "Como entrar Cada apartamento."),
         ("- um\n- dois", "um dois"),
         ("1. um\n2. dois\n10. dez", "um dois dez"),

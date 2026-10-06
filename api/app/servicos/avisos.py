@@ -54,7 +54,7 @@ _PARAGRAFO = re.compile(r"\n[ \t]*\n")
 # iguais às do renderizador da tela (`web/src/avisos/formatacao.ts`).
 _MARCA_DA_LINHA = re.compile(r"^(?:## |- |\d{1,3}\. |> )(?=\S)", re.M)
 # Negrito: `**trecho**`, sem espaço colado por dentro das marcas.
-_NEGRITO = re.compile(r"\*\*(\S(?:.*?\S)?)\*\*")
+_NEGRITO = re.compile(r"\*\*(\S(?:.*?\S)??)\*\*")
 
 
 # --- erros ------------------------------------------------------------------------------------
