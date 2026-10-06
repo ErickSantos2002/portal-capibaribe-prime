@@ -1,9 +1,10 @@
 """Épico B · Administração (H-07, H-08, H-09, H-11). Pertence ao épico B.
 
 Contrato: `docs/superpowers/specs/m1-contrato.md`, seção 4.3, e o spec do épico
-(`docs/superpowers/specs/m1-administracao.md`). Todas as rotas só para o administrador
-(`Admin` = `exige_admin`, dúvida 9 do M1); a regra de negócio mora em
-`app/servicos/administracao.py`.
+(`docs/superpowers/specs/m1-administracao.md`). O painel e a ficha são lidos pela gestão
+(`Gestao` = `exige_gestao`: a Comissão vê os contatos das unidades, decisão do Erick em
+06/10/2026); voltar para a senha inicial, papéis e histórico são só do administrador (`Admin`).
+A regra de negócio mora em `app/servicos/administracao.py`.
 
 `Cache-Control: no-store` vem do middleware comum (`app/sem_cache.py`).
 """
@@ -26,7 +27,7 @@ from app.esquemas.administracao import (
     Situacao,
     UnidadeAdmin,
 )
-from app.seguranca.dependencias import Admin, Banco, exige_cabecalho_portal
+from app.seguranca.dependencias import Admin, Banco, Gestao, exige_cabecalho_portal
 from app.servicos import administracao as servico
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
@@ -54,12 +55,12 @@ def _um_de_cada_vez(db: Session) -> Iterator[None]:
 
 
 @rotas.get("/unidades")
-def painel(_: Admin, db: Banco, situacao: Situacao = Situacao.todas) -> PainelAtivacao:
+def painel(_: Gestao, db: Banco, situacao: Situacao = Situacao.todas) -> PainelAtivacao:
     return servico.painel(db, situacao)
 
 
 @rotas.get("/unidades/{login}")
-def unidade(login: str, _: Admin, db: Banco) -> UnidadeAdmin:
+def unidade(login: str, _: Gestao, db: Banco) -> UnidadeAdmin:
     return servico.ficha(db, login)
 
 

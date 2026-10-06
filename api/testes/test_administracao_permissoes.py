@@ -1,4 +1,6 @@
-"""Portão do M1 (issue #18, RNF-13): toda rota `/api/admin/**` recusa quem não é administrador.
+"""Portão do M1 (issue #18, RNF-13): toda rota `/api/admin/**` recusa quem não é da gestão, e
+só as de leitura do painel e da ficha atendem a Comissão (decisão de 06/10/2026: a Comissão vê os
+contatos das unidades; voltar para a senha inicial, papéis e histórico continuam do admin).
 
 As rotas são descobertas na própria aplicação (`app.openapi()`, que lista toda rota publicada,
 de qualquer roteador), não numa lista escrita à mão: uma rota nova de administração entra no
@@ -33,6 +35,11 @@ ESPERADAS = {
     ("DELETE", "/api/admin/unidades/{login}/papeis/{papel}"),
     ("GET", "/api/admin/historico"),
 }
+# As únicas que a gestão (Comissão, síndico, conselho) lê. Todo o resto é só do admin.
+LEITURA_DA_GESTAO = {
+    ("GET", "/api/admin/unidades"),
+    ("GET", "/api/admin/unidades/{login}"),
+}
 # Valores dos parâmetros de caminho: o alvo é uma unidade comum ativada (a rota faria efeito se
 # a permissão falhasse) e o papel mais sensível.
 VALORES = {"login": COMUM, "papel": "admin"}
@@ -49,6 +56,7 @@ def _rotas_admin() -> list[tuple[str, str]]:
 
 
 ROTAS = _rotas_admin()
+SO_DO_ADMIN = [r for r in ROTAS if r not in LEITURA_DA_GESTAO]
 
 
 def _chamar(cliente: TestClient, metodo: str, caminho: str):
@@ -75,10 +83,9 @@ def test_nenhuma_rota_admin_fica_fora_da_lista():
     ("perfil", "status", "codigo"),
     [
         (COMUM, 403, "sem_permissao"),
-        (COMISSAO, 403, "sem_permissao"),
         (NAO_ATIVADA, 403, "primeiro_acesso_pendente"),
     ],
-    ids=["unidade-comum", "comissao", "sessao-restrita"],
+    ids=["unidade-comum", "sessao-restrita"],
 )
 def test_toda_rota_admin_recusa(predio, logar, engine_app, metodo, caminho, perfil, status, codigo):
     cliente = logar(perfil)
@@ -89,6 +96,49 @@ def test_toda_rota_admin_recusa(predio, logar, engine_app, metodo, caminho, perf
     assert resposta.status_code == status, resposta.text
     assert resposta.json()["codigo"] == codigo
     assert fotografia(engine_app) == antes
+
+
+def test_leitura_da_gestao_e_so_painel_e_ficha():
+    """Rota nova em `/api/admin` nasce só do admin: a lista de leitura é escrita à mão."""
+    assert set(ROTAS) >= LEITURA_DA_GESTAO
+    assert all(metodo == "GET" for metodo, _ in LEITURA_DA_GESTAO)
+    assert ("GET", "/api/admin/historico") in SO_DO_ADMIN
+
+
+@pytest.mark.parametrize(("metodo", "caminho"), SO_DO_ADMIN)
+def test_comissao_nao_mexe_em_senha_papel_nem_ve_o_historico(
+    predio, logar, engine_app, metodo, caminho
+):
+    cliente = logar(COMISSAO)
+    antes = fotografia(engine_app)
+
+    resposta = _chamar(cliente, metodo, caminho)
+
+    assert resposta.status_code == 403, resposta.text
+    assert resposta.json()["codigo"] == "sem_permissao"
+    assert fotografia(engine_app) == antes
+
+
+@pytest.mark.parametrize(("metodo", "caminho"), sorted(LEITURA_DA_GESTAO))
+def test_comissao_le_o_painel_e_a_ficha(predio, logar, engine_app, metodo, caminho):
+    cliente = logar(COMISSAO)
+    antes = fotografia(engine_app)
+
+    resposta = _chamar(cliente, metodo, caminho)
+
+    assert resposta.status_code == 200, resposta.text
+    assert fotografia(engine_app) == antes
+
+
+def test_comissao_ve_celular_e_email_das_unidades(predio, logar):
+    """Tabela de permissões (requisitos, seção 2): a Comissão vê os contatos das unidades."""
+    comissao = logar(COMISSAO)
+    painel = comissao.get("/api/admin/unidades").json()
+    linha = next(u for u in painel["unidades"] if u["unidade"]["login"] == COMUM)
+    assert linha["celular"]
+    ficha = comissao.get(f"/api/admin/unidades/{COMUM}").json()
+    assert ficha["celular"] == linha["celular"]
+    assert "email" in ficha
 
 
 @pytest.mark.parametrize(("metodo", "caminho"), ROTAS)
@@ -122,7 +172,7 @@ def test_alteracao_sem_cabecalho_portal_recusa_ate_o_admin(
     assert fotografia(engine_app) == antes
 
 
-def test_comissao_perde_o_acesso_e_admin_entra(predio, logar):
+def test_comissao_nao_ve_o_historico_e_admin_ve(predio, logar):
     """Controle positivo: a mesma rota que recusa a Comissão atende o admin."""
-    assert logar(COMISSAO).get("/api/admin/unidades").status_code == 403
-    assert logar(ADMIN).get("/api/admin/unidades").status_code == 200
+    assert logar(COMISSAO).get("/api/admin/historico").status_code == 403
+    assert logar(ADMIN).get("/api/admin/historico").status_code == 200
