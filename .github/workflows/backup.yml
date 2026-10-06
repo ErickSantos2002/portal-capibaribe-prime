@@ -102,13 +102,15 @@ jobs:
         working-directory: api
         run: echo "head=$(uv run --frozen alembic heads | awk '{print $1}')" >>"$GITHUB_OUTPUT"
       # Os papéis donos dos objetos no dump precisam existir no servidor (sem login: ninguém
-      # entra com eles aqui). neon_superuser: o Neon pode citá-lo em permissões do banco.
+      # entra com eles aqui). neon_superuser e cloud_admin: papéis internos do Neon que o dump cita
+      # (cloud_admin em ALTER DEFAULT PRIVILEGES; conferido em produção em 06/10/2026).
       - name: Papéis de produção e banco vazio
         run: |
           "$PG_BIN/psql" --no-psqlrc -v ON_ERROR_STOP=1 --dbname="$ADMIN_URL" <<'SQL'
           create role dono nologin;
           create role app nologin;
           create role neon_superuser nologin;
+          create role cloud_admin nologin;
           create database restaurado;
           SQL
       - name: Restaurar e verificar

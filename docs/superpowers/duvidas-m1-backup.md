@@ -48,7 +48,7 @@ do marco. **[Erick]** marca o que só o Erick pode confirmar.
   e o `pg_dump` não leva.
 - **Decisão:** `restaurar.sh` reaplica o `revoke temporary` e `verificacoes.sql` confere.
 
-## 8. Restauração de teste com `dono` e `app` sem login, mais `neon_superuser`
+## 8. Restauração de teste com `dono` e `app` sem login, mais `neon_superuser` e `cloud_admin`
 - **Decisão:** no Postgres descartável do Actions, os papéis do dump nascem `nologin` (ninguém
   entra com eles ali). Cria-se também `neon_superuser`, porque o Neon pode citá-lo em permissões
   do banco; sem ele, o `pg_restore` pararia por um papel que não existe.
