@@ -34,8 +34,10 @@ export function BotaoVersao({ className }: { className?: string }) {
   )
 }
 
+const FOCAVEIS = 'button:not([disabled]), a[href], [tabindex="0"]'
+
 /**
- * `<dialog>` nativo aberto com showModal(): o resto da tela fica inerte (o Tab não sai da
+ * `<dialog>` nativo aberto com showModal(): o resto da tela fica inerte (e o Tab dá a volta dentro da
  * janela), Esc fecha, e o fundo escurecido também. Toda forma de fechar passa pelo evento
  * `close`, que chama `aoFechar` uma vez.
  */
@@ -57,6 +59,22 @@ function JanelaDeVersao({ aoFechar }: { aoFechar: () => void }) {
       aria-modal="true"
       aria-labelledby={idTitulo}
       onClose={aoFechar}
+      onKeyDown={(evento) => {
+        // O <dialog> já deixa o resto da tela inerte, mas o Tab ainda passaria pela barra do
+        // navegador antes de voltar. Aqui ele dá a volta direto, do último ao primeiro.
+        if (evento.key !== 'Tab') return
+        const focaveis = evento.currentTarget.querySelectorAll<HTMLElement>(FOCAVEIS)
+        const primeiro = focaveis[0]
+        const ultimo = focaveis[focaveis.length - 1]
+        if (!primeiro) return
+        if (!evento.shiftKey && document.activeElement === ultimo) {
+          evento.preventDefault()
+          primeiro.focus()
+        } else if (evento.shiftKey && document.activeElement === primeiro) {
+          evento.preventDefault()
+          ultimo.focus()
+        }
+      }}
       onClick={(evento) => {
         // O clique cai no próprio <dialog> só fora da caixa (no fundo escurecido).
         if (evento.target === evento.currentTarget) evento.currentTarget.close()

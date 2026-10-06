@@ -71,6 +71,8 @@
   border-radius: var(--r-medio);
   background: var(--folha);
   color: var(--tinta);
+  /* A janela nasce dentro do rodapé centralizado da entrada: o texto volta a ser à esquerda. */
+  text-align: left;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
 }
 

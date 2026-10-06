@@ -102,6 +102,20 @@ describe('janela de versão', () => {
     await waitFor(() => expect(document.activeElement).toBe(botao))
   })
 
+  it('o Tab dá a volta dentro da janela (não vai para a barra do navegador)', async () => {
+    apiFalsa({})
+    abrir('/entrar')
+    fireEvent.click(await screen.findByRole('button', { name: NOME_DO_BOTAO }))
+    const dialogo = janela()
+    const fechar = within(dialogo).getByRole('button', { name: 'Fechar', hidden: true })
+    const rolagem = dialogo.querySelector<HTMLElement>('.janela-rolagem')!
+    fechar.focus()
+    fireEvent.keyDown(fechar, { key: 'Tab' })
+    expect(document.activeElement).toBe(rolagem)
+    fireEvent.keyDown(rolagem, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(fechar)
+  })
+
   it('clicar fora da janela (no fundo escurecido) fecha', async () => {
     apiFalsa({})
     abrir('/entrar')
