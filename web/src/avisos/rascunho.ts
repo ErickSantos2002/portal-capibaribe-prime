@@ -65,3 +65,28 @@ export function conferir(r: Rascunho): Erros {
   if (r.eEvento && (!r.dia || !r.hora)) erros.evento = 'Escolha o dia e a hora do evento.'
   return erros
 }
+
+/** Qual erro cada pedaço do rascunho apaga quando a pessoa mexe nele (revisão UX 6). */
+const CAMPO_DE: Record<keyof Rascunho, Campo> = {
+  titulo: 'titulo',
+  texto: 'texto',
+  categoria: 'categoria',
+  eEvento: 'evento',
+  dia: 'evento',
+  hora: 'evento',
+  onde: 'evento',
+}
+
+/** Os erros sem os dos campos que acabaram de mudar. */
+export function semErrosDe(erros: Erros, mudanca: Partial<Rascunho>): Erros {
+  const restantes = { ...erros }
+  for (const chave of Object.keys(mudanca) as (keyof Rascunho)[]) delete restantes[CAMPO_DE[chave]]
+  return restantes
+}
+
+/** A mensagem da caixa do topo: o erro, ou quantos são e quais (revisão UX 6). */
+export function mensagemGeral(erros: Erros): string {
+  const mensagens = Object.values(erros)
+  if (mensagens.length < 2) return mensagens[0] ?? ''
+  return `Confira ${mensagens.length} coisas: ${mensagens.join(' ')}`
+}

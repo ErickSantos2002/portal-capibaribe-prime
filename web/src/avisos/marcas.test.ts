@@ -1,6 +1,6 @@
 // A barra Título · Negrito · Lista · Destaque do formulário: insere a marca no texto.
 import { describe, expect, it } from 'vitest'
-import { aplicarMarca } from './marcas'
+import { aplicarMarca, continuarLista } from './marcas'
 
 /** `|` marca o cursor; `[` e `]` marcam a seleção. */
 function com(modelo: string) {
@@ -18,6 +18,30 @@ function aplicar(modelo: string, marca: Parameters<typeof aplicarMarca>[3]) {
     ? r.texto.slice(0, r.inicio) + '|' + r.texto.slice(r.inicio)
     : r.texto.slice(0, r.inicio) + '[' + r.texto.slice(r.inicio, r.fim) + ']' + r.texto.slice(r.fim)
 }
+
+describe('Enter dentro de lista (revisão UX 3)', () => {
+  function enter(modelo: string) {
+    const { texto, inicio } = com(modelo)
+    const r = continuarLista(texto, inicio)
+    return r && r.texto.slice(0, r.inicio) + '|' + r.texto.slice(r.inicio)
+  }
+
+  it('continua a lista, a numerada (com o próximo número) e o destaque', () => {
+    expect(enter('- Luvas|')).toBe('- Luvas\n- |')
+    expect(enter('1. Eleição|\nFim')).toBe('1. Eleição\n2. |\nFim')
+    expect(enter('> Atenção|')).toBe('> Atenção\n> |')
+  })
+
+  it('Enter num item vazio encerra a lista', () => {
+    expect(enter('- Luvas\n- |')).toBe('- Luvas\n|')
+  })
+
+  it('fora de lista, ou no meio do item, o Enter é o normal', () => {
+    expect(enter('Texto|')).toBeNull()
+    expect(enter('## Título|')).toBeNull()
+    expect(enter('- Lu|vas')).toBeNull()
+  })
+})
 
 describe('negrito', () => {
   it('põe ** em volta da seleção e mantém a palavra selecionada', () => {

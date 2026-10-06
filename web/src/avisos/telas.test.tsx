@@ -657,9 +657,9 @@ describe('mural modelo A: categoria, data em bloco e evento', () => {
 
   it('evento futuro mostra dia e hora; o que já passou mostra "Já aconteceu"', async () => {
     const vistoria = await abrirMural()
-    expect(within(vistoria).getByText('Sáb, 10/10 · 9h')).toBeTruthy()
+    expect(within(vistoria).getByText('Sáb, 10/10/99 · 9h')).toBeTruthy()
     const assembleia = screen.getByText('Assembleia').closest('a')!
-    expect(within(assembleia).getByText('Sáb, 10/10 · Já aconteceu')).toBeTruthy()
+    expect(within(assembleia).getByText('Sáb, 10/10/20 · Já aconteceu')).toBeTruthy()
     const reajuste = screen.getByText('Reajuste').closest('a')!
     expect(reajuste.querySelector('.linha-evento')).toBeNull()
   })
@@ -701,7 +701,7 @@ describe('aviso aberto: cabeçalho, quadro do evento e texto formatado', () => {
     await abrirAviso({ evento: { quando: FUTURO, onde: 'Stand de vendas' } })
     const quadro = document.querySelector('.aviso-evento') as HTMLElement
     expect(within(quadro).getByText('Quando')).toBeTruthy()
-    expect(within(quadro).getByText('Sábado, 10 de outubro, 9h')).toBeTruthy()
+    expect(within(quadro).getByText('Sábado, 10 de outubro de 2099, 9h')).toBeTruthy()
     expect(within(quadro).getByText('Onde')).toBeTruthy()
     expect(within(quadro).getByText('Stand de vendas')).toBeTruthy()
     // Antes do texto.
@@ -827,8 +827,37 @@ describe('formulário: categoria, barra de marcas, "Ver como fica" e evento', ()
     expect(texto.value).toBe('- Leve **documento**')
     fireEvent.click(screen.getByRole('button', { name: 'Destaque' }))
     expect(texto.value).toBe('> Leve **documento**')
-    fireEvent.click(screen.getByRole('button', { name: 'Título' }))
+    // Revisão UX 5: "Subtítulo", para não confundir com o campo "Título" do aviso.
+    fireEvent.click(screen.getByRole('button', { name: 'Subtítulo' }))
     expect(texto.value).toBe('## Leve **documento**')
+  })
+
+  it('revisão UX 3: Enter no fim de um item continua a lista', async () => {
+    apiDoFormulario()
+    abrir('/avisos/novo')
+    const texto = (await screen.findByLabelText('Texto do aviso')) as HTMLTextAreaElement
+    fireEvent.change(texto, { target: { value: '- Luvas' } })
+    texto.setSelectionRange(7, 7)
+    fireEvent.keyDown(texto, { key: 'Enter' })
+    expect(texto.value).toBe('- Luvas\n- ')
+    // Shift+Enter é a quebra normal.
+    texto.setSelectionRange(10, 10)
+    const comShift = fireEvent.keyDown(texto, { key: 'Enter', shiftKey: true })
+    expect(comShift).toBe(true)
+    expect(texto.value).toBe('- Luvas\n- ')
+  })
+
+  it('revisão UX 6: corrigir o campo apaga o erro dele; mais de um erro diz quantos', async () => {
+    apiDoFormulario()
+    abrir('/avisos/novo')
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver prévia' }))
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Confira 2 coisas: Escreva o título do aviso. Escreva o texto do aviso.',
+    )
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Vistoria' } })
+    expect(screen.getByLabelText('Título').getAttribute('aria-invalid')).toBe('false')
+    expect(screen.queryByText('Escreva o título do aviso.', { selector: '.avisos-erro-campo' })).toBeNull()
+    expect(screen.getByLabelText('Texto do aviso').getAttribute('aria-invalid')).toBe('true')
   })
 
   it('"Ver como fica" troca o campo pela prévia formatada, e volta', async () => {
@@ -890,8 +919,8 @@ describe('formulário: categoria, barra de marcas, "Ver como fica" e evento', ()
       '.previa',
     ) as HTMLElement
     expect(within(previa).getAllByText('Reunião').length).toBe(2)
-    expect(within(previa).getByText('Sáb, 10/10 · 19h30')).toBeTruthy()
-    expect(within(previa).getByText('Sábado, 10 de outubro, 19h30')).toBeTruthy()
+    expect(within(previa).getByText('Sáb, 10/10/99 · 19h30')).toBeTruthy()
+    expect(within(previa).getByText('Sábado, 10 de outubro de 2099, 19h30')).toBeTruthy()
   })
 
   it('corrigir vem com a categoria e o evento da versão em vigor e manda os novos', async () => {

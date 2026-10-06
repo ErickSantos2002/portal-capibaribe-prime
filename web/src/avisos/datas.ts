@@ -76,18 +76,27 @@ export function dataEmBloco(iso: string): { dia: string; mes: string } {
   return { dia: doisDigitos(p.dia), mes: MESES[p.mes - 1] }
 }
 
-/** Linha do evento no mural: "Sáb, 11/10 · 9h" ou, se já passou, "Sáb, 11/10 · Já aconteceu". */
+/** O evento é de outro ano que o de hoje (em Recife)? Aí a data leva o ano (revisão UX 1). */
+function outroAno(p: Partes, agora: Date): boolean {
+  return p.ano !== emRecife(agora.toISOString()).ano
+}
+
+/** Linha do evento no mural: "Sáb, 11/10 · 9h" ou, se já passou, "Sáb, 11/10 · Já aconteceu".
+ *  Em outro ano: "Sáb, 09/10/27 · 9h". */
 export function eventoCurto(iso: string, agora: Date = new Date()): string {
   const p = emRecife(iso)
   const quando = new Date(iso) < agora ? 'Já aconteceu' : horario(p)
-  return `${DIAS[p.semana]}, ${doisDigitos(p.dia)}/${doisDigitos(p.mes)} · ${quando}`
+  const ano = outroAno(p, agora) ? `/${doisDigitos(p.ano % 100)}` : ''
+  return `${DIAS[p.semana]}, ${doisDigitos(p.dia)}/${doisDigitos(p.mes)}${ano} · ${quando}`
 }
 
-/** "Sábado, 11 de outubro, 9h" (o dia 1 é "1º", como se escreve no Brasil). */
-export function eventoPorExtenso(iso: string): string {
+/** "Sábado, 11 de outubro, 9h" (o dia 1 é "1º", como se escreve no Brasil). Em outro ano:
+ *  "Sábado, 9 de outubro de 2027, 9h". */
+export function eventoPorExtenso(iso: string, agora: Date = new Date()): string {
   const p = emRecife(iso)
   const dia = p.dia === 1 ? '1º' : String(p.dia)
-  return `${DIAS_POR_EXTENSO[p.semana]}, ${dia} de ${MESES_POR_EXTENSO[p.mes - 1]}, ${horario(p)}`
+  const ano = outroAno(p, agora) ? ` de ${p.ano}` : ''
+  return `${DIAS_POR_EXTENSO[p.semana]}, ${dia} de ${MESES_POR_EXTENSO[p.mes - 1]}${ano}, ${horario(p)}`
 }
 
 /** O evento já aconteceu? */

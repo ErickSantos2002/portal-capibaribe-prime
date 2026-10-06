@@ -15,8 +15,10 @@ import { semMarcas } from './formatacao'
 import {
   conferir,
   eventoDe,
+  mensagemGeral,
   RASCUNHO_VAZIO,
   rascunhoDe,
+  semErrosDe,
   type Campo,
   type Erros,
   type Rascunho,
@@ -92,6 +94,7 @@ export function NovoAviso() {
   // Mexeu em qualquer coisa, a prévia some e o botão volta a "Ver prévia" (protótipo).
   function mudar(mudanca: Partial<Rascunho>) {
     setRascunho((atual) => ({ ...atual, ...mudanca }))
+    setErros((atuais) => semErrosDe(atuais, mudanca))
     setPrevia(false)
   }
   function escolherBloco(numero: number) {
@@ -108,7 +111,7 @@ export function NovoAviso() {
     const encontrados = conferir(rascunho)
     setErros(encontrados)
     if (Object.keys(encontrados).length > 0) {
-      setGeral(Object.values(encontrados)[0] ?? '')
+      setGeral(mensagemGeral(encontrados))
       return
     }
     setGeral('')
@@ -294,7 +297,7 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
     const encontrados = conferir(rascunho)
     setErros(encontrados)
     if (Object.keys(encontrados).length > 0) {
-      setGeral(Object.values(encontrados)[0] ?? '')
+      setGeral(mensagemGeral(encontrados))
       return
     }
     setEnviando(true)
@@ -323,7 +326,10 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
       <CamposDoAviso
         rascunho={rascunho}
         erros={erros}
-        mudar={(mudanca) => setRascunho((atual) => ({ ...atual, ...mudanca }))}
+        mudar={(mudanca) => {
+          setRascunho((atual) => ({ ...atual, ...mudanca }))
+          setErros((atuais) => semErrosDe(atuais, mudanca))
+        }}
       />
       <button className="botao avisos-enviar" type="submit" disabled={enviando}>
         {enviando ? 'Salvando…' : 'Salvar correção'}

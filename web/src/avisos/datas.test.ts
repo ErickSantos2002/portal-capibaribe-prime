@@ -25,6 +25,17 @@ describe('datas do aviso (America/Recife)', () => {
     expect(eventoPorExtenso('2026-12-01T13:05:00Z')).toBe('Terça-feira, 1º de dezembro, 10h05')
   })
 
+  it('revisão UX 1: evento em outro ano mostra o ano (senão parece desta semana)', () => {
+    const em2026 = new Date('2026-10-06T12:00:00Z')
+    expect(eventoCurto('2027-10-09T12:00:00Z', em2026)).toBe('Sáb, 09/10/27 · 9h')
+    expect(eventoPorExtenso('2027-10-09T12:00:00Z', em2026)).toBe(
+      'Sábado, 9 de outubro de 2027, 9h',
+    )
+    expect(eventoCurto('2025-10-11T12:00:00Z', em2026)).toBe('Sáb, 11/10/25 · Já aconteceu')
+    // No mesmo ano, sem o ano.
+    expect(eventoPorExtenso('2026-10-10T12:00:00Z', em2026)).toBe('Sábado, 10 de outubro, 9h')
+  })
+
   it('formulário: dia e hora de Recife, ida e volta', () => {
     expect(paraOFormulario('2026-10-11T12:00:00Z')).toEqual({ data: '2026-10-11', hora: '09:00' })
     expect(deRecife('2026-10-11', '09:00')).toBe('2026-10-11T09:00:00-03:00')

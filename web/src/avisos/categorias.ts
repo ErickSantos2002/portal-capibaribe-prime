@@ -12,7 +12,7 @@ export interface InfoCategoria {
 
 /** Na ordem dos botões do formulário; `geral` é o padrão. */
 export const CATEGORIAS: readonly InfoCategoria[] = [
-  { valor: 'geral', nome: 'Geral', icone: 'avisos' },
+  { valor: 'geral', nome: 'Geral', icone: 'geral' },
   { valor: 'obra', nome: 'Obra', icone: 'obra' },
   { valor: 'reuniao', nome: 'Reunião', icone: 'reuniao' },
   { valor: 'financeiro', nome: 'Financeiro', icone: 'financeiro' },

@@ -31,6 +31,8 @@ const DESENHOS = {
   arquivar:
     '<rect x="3.5" y="4" width="17" height="4.5" rx="1"/><path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 12.5h4"/>',
   // Categorias e evento dos avisos (spec dos avisos com formatação, seção 3.4).
+  // Geral: balão de conversa (o alto-falante lembrava "som", revisão UX 10).
+  geral: '<path d="M4 5h16v11H10.5L6 19.5V16H4z"/><path d="M8.5 9.5h7M8.5 12.5h4.5"/>',
   obra: '<path d="M2.5 20h19"/><path d="M5 20V9.5l7-5 7 5V20"/><path d="M10 20v-6h4v6"/>',
   reuniao:
     '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6.5 6.5 0 0 1 3.5 6"/>',

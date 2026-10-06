@@ -1,14 +1,16 @@
 // Campos comuns de "Novo aviso" e "Corrigir aviso" (spec dos avisos com formatação, seção 3.4):
-// título, categoria, texto com a barra de marcas e "Ver como fica", e "É um evento?".
-import { useLayoutEffect, useRef, useState } from 'react'
+// título, categoria, "É um evento?" (logo depois da categoria: quem marca Reunião já vê a
+// pergunta, revisão UX 7) e o texto com a barra de marcas e "Ver como fica".
+import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Icone, type NomeDoIcone } from '../casca/Icone'
 import { CATEGORIAS } from './categorias'
 import { TextoDoAviso } from './componentes'
-import { aplicarMarca, type Marca } from './marcas'
+import { aplicarMarca, continuarLista, type Marca } from './marcas'
 import { LIMITE_ONDE, LIMITE_TEXTO, LIMITE_TITULO, type Erros, type Rascunho } from './rascunho'
 
 const BARRA: { marca: Marca; nome: string; icone: NomeDoIcone }[] = [
-  { marca: 'titulo', nome: 'Título', icone: 'titulo' },
+  // "Subtítulo", não "Título": o campo do título do aviso já se chama assim (revisão UX 5).
+  { marca: 'titulo', nome: 'Subtítulo', icone: 'titulo' },
   { marca: 'negrito', nome: 'Negrito', icone: 'negrito' },
   { marca: 'lista', nome: 'Lista', icone: 'lista' },
   { marca: 'destaque', nome: 'Destaque', icone: 'info' },
@@ -55,6 +57,19 @@ export function CamposDoAviso({ rascunho, erros, mudar }: Props) {
     mudar({ texto: r.texto })
   }
 
+  // Enter no fim de um item continua a lista (revisão UX 3). Shift+Enter é a quebra normal.
+  function aoTeclar(evento: KeyboardEvent<HTMLTextAreaElement>) {
+    const campo = evento.currentTarget
+    if (evento.key !== 'Enter' || evento.shiftKey || evento.altKey || evento.ctrlKey) return
+    if (evento.metaKey || evento.nativeEvent.isComposing) return
+    if (campo.selectionStart !== campo.selectionEnd) return
+    const r = continuarLista(campo.value, campo.selectionStart)
+    if (!r) return
+    evento.preventDefault()
+    selecao.current = { inicio: r.inicio, fim: r.fim }
+    mudar({ texto: r.texto })
+  }
+
   return (
     <>
       <label htmlFor="aviso-titulo">Título</label>
@@ -90,68 +105,6 @@ export function CamposDoAviso({ rascunho, erros, mudar }: Props) {
           ))}
         </div>
       </fieldset>
-
-      <div className="avisos-texto-topo">
-        {mostrandoPrevia ? (
-          <p className="avisos-rotulo" id="aviso-texto-rotulo">
-            Texto do aviso: assim vai ficar
-          </p>
-        ) : (
-          <label htmlFor="aviso-texto" id="aviso-texto-rotulo">
-            Texto do aviso
-          </label>
-        )}
-        <button
-          type="button"
-          className="texto-link avisos-ver"
-          aria-pressed={mostrandoPrevia}
-          onClick={() => setVendo(!mostrandoPrevia)}
-        >
-          <Icone nome={mostrandoPrevia ? 'editar' : 'olho'} />
-          {mostrandoPrevia ? 'Voltar a escrever' : 'Ver como fica'}
-        </button>
-      </div>
-      {mostrandoPrevia ? (
-        <div className="avisos-como-fica" aria-labelledby="aviso-texto-rotulo" role="region">
-          {rascunho.texto.trim() ? (
-            <TextoDoAviso texto={rascunho.texto} />
-          ) : (
-            <p className="suave">Ainda não tem texto.</p>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="avisos-barra" role="group" aria-label="Formatar o texto">
-            {BARRA.map((b) => (
-              <button
-                key={b.marca}
-                type="button"
-                className="avisos-marca"
-                onClick={() => marcar(b.marca)}
-              >
-                <Icone nome={b.icone} tamanho={20} />
-                {b.nome}
-              </button>
-            ))}
-          </div>
-          <textarea
-            id="aviso-texto"
-            ref={campoDoTexto}
-            value={rascunho.texto}
-            onChange={(e) => mudar({ texto: e.target.value })}
-            maxLength={LIMITE_TEXTO}
-            aria-invalid={!!erros.texto}
-            aria-describedby={`aviso-texto-ajuda${erros.texto ? ' aviso-texto-erro' : ''}`}
-            className={erros.texto ? 'campo-erro' : undefined}
-          />
-          <p className="ajuda" id="aviso-texto-ajuda">
-            Deixe uma linha em branco entre os parágrafos. Se preferir digitar: <b>##</b> no começo
-            da linha faz um título, <b>-</b> faz uma lista, <b>&gt;</b> faz um destaque e{' '}
-            <b>**assim**</b> fica em negrito. Endereços com https:// viram link.
-          </p>
-          <ErroDoCampo id="aviso-texto-erro" mensagem={erros.texto} />
-        </>
-      )}
 
       <label className="opcao avisos-evento-chave">
         <input
@@ -206,6 +159,71 @@ export function CamposDoAviso({ rascunho, erros, mudar }: Props) {
           </p>
         </fieldset>
       )}
+
+      <div className="avisos-texto-topo">
+        {mostrandoPrevia ? (
+          <p className="avisos-rotulo" id="aviso-texto-rotulo">
+            Texto do aviso: assim vai ficar
+          </p>
+        ) : (
+          <label htmlFor="aviso-texto" id="aviso-texto-rotulo">
+            Texto do aviso
+          </label>
+        )}
+        <button
+          type="button"
+          className="texto-link avisos-ver"
+          aria-pressed={mostrandoPrevia}
+          onClick={() => setVendo(!mostrandoPrevia)}
+        >
+          <Icone nome={mostrandoPrevia ? 'editar' : 'olho'} />
+          {mostrandoPrevia ? 'Voltar a escrever' : 'Ver como fica'}
+        </button>
+      </div>
+      {mostrandoPrevia ? (
+        <div className="avisos-como-fica" aria-labelledby="aviso-texto-rotulo" role="region">
+          {rascunho.texto.trim() ? (
+            <TextoDoAviso texto={rascunho.texto} />
+          ) : (
+            <p className="suave">Ainda não tem texto.</p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="avisos-barra" role="group" aria-label="Formatar o texto">
+            {BARRA.map((b) => (
+              <button
+                key={b.marca}
+                type="button"
+                className="avisos-marca"
+                onClick={() => marcar(b.marca)}
+              >
+                <Icone nome={b.icone} tamanho={20} />
+                {b.nome}
+              </button>
+            ))}
+          </div>
+          <textarea
+            id="aviso-texto"
+            ref={campoDoTexto}
+            value={rascunho.texto}
+            onChange={(e) => mudar({ texto: e.target.value })}
+            onKeyDown={aoTeclar}
+            maxLength={LIMITE_TEXTO}
+            aria-invalid={!!erros.texto}
+            aria-describedby={`aviso-texto-ajuda${erros.texto ? ' aviso-texto-erro' : ''}`}
+            className={erros.texto ? 'campo-erro' : undefined}
+          />
+          <p className="ajuda" id="aviso-texto-ajuda">
+            Deixe uma linha em branco entre os parágrafos. Se preferir digitar: <b>##</b> no começo
+            da linha faz um subtítulo, <b>-</b> faz uma lista, <b>1.</b> faz uma lista numerada,{' '}
+            <b>&gt;</b> faz um destaque e <b>**assim**</b> fica em negrito. Endereços com https://
+            viram link.
+          </p>
+          <ErroDoCampo id="aviso-texto-erro" mensagem={erros.texto} />
+        </>
+      )}
+
     </>
   )
 }

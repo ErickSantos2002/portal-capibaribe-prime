@@ -42,11 +42,14 @@ const falhar = (msg) => {
 }
 const conferirQue = (ok, msg) => (ok ? console.log('ok:', msg) : falhar(msg))
 
-const navegador = await chromium.launch({ channel: 'chrome', headless: true })
+// pt-BR: os campos de dia e hora aparecem como no celular do morador (revisão UX 12).
+const navegador = await chromium.launch({ channel: 'chrome', headless: true, args: ['--lang=pt-BR'] })
 
 async function novoContexto(largura, tema) {
   const contexto = await navegador.newContext({
     viewport: { width: largura, height: largura < 900 ? 800 : 900 },
+    locale: 'pt-BR',
+    timezoneId: 'America/Recife',
     colorScheme: tema === 'escuro' ? 'dark' : 'light',
   })
   await contexto.addInitScript((t) => {

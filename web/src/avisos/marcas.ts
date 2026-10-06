@@ -56,6 +56,30 @@ function deLinha(texto: string, inicio: number, fim: number, prefixo: string): C
   return { texto: novo, inicio: comeco, fim: comeco + trecho.length }
 }
 
+const ITEM_DA_LINHA = /^(?:(- )|(> )|(\d{1,3})\. )/
+
+/**
+ * Enter no fim de uma linha de lista, lista numerada ou destaque (revisão UX 3): a linha nova
+ * já vem com a marca (o próximo número, na numerada), como no WhatsApp e no Word. Enter num item
+ * vazio encerra a lista. Devolve nulo quando o Enter deve ser o normal.
+ */
+export function continuarLista(texto: string, cursor: number): ComSelecao | null {
+  const fimDaLinha = texto.indexOf('\n', cursor)
+  if (fimDaLinha !== -1 ? fimDaLinha !== cursor : cursor !== texto.length) return null
+  const comeco = texto.lastIndexOf('\n', cursor - 1) + 1
+  const linha = texto.slice(comeco, cursor)
+  const achado = linha.match(ITEM_DA_LINHA)
+  if (!achado) return null
+  if (linha === achado[0]) {
+    const novo = texto.slice(0, comeco) + texto.slice(cursor)
+    return { texto: novo, inicio: comeco, fim: comeco }
+  }
+  const prefixo = achado[3] ? `${Number(achado[3]) + 1}. ` : achado[0]
+  const novo = texto.slice(0, cursor) + '\n' + prefixo + texto.slice(cursor)
+  const depois = cursor + 1 + prefixo.length
+  return { texto: novo, inicio: depois, fim: depois }
+}
+
 /** Aplica a marca na seleção (`inicio`..`fim`) ou na linha do cursor. Repetir desfaz. */
 export function aplicarMarca(texto: string, inicio: number, fim: number, marca: Marca): ComSelecao {
   if (marca === 'negrito') return negrito(texto, inicio, fim)
