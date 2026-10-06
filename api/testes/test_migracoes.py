@@ -134,6 +134,55 @@ def test_0003_preenche_a_versao_lida_pelas_datas(banco_vazio):
     assert lidas == [("101", 1), ("102", 2)]
 
 
+def _colunas(url: str, tabela: str) -> set[str]:
+    with psycopg.connect(url) as con:
+        linhas = con.execute(
+            "select column_name from information_schema.columns where table_name = %s", [tabela]
+        ).fetchall()
+    return {c for (c,) in linhas}
+
+
+NOVAS_DA_0004 = {"categoria", "evento_quando", "evento_onde"}
+
+
+def test_0004_avisos_existentes_viram_geral_sem_evento(banco_vazio):
+    # Avisos publicados antes da 0004 (produção do M1): categoria "geral" e nenhum evento.
+    rodar_alembic(banco_vazio, "upgrade", "0003")
+    with psycopg.connect(banco_vazio, autocommit=True) as con:
+        con.execute("insert into bloco (numero, nome) values (1, 'Bloco 1')")
+        con.execute(
+            "insert into unidade (bloco_id, numero, andar, senha_hash)"
+            " select id, '101', 1, 'h' from bloco"
+        )
+        with con.transaction():
+            con.execute(
+                "insert into aviso (publicado_por, publicado_como, para_todos)"
+                " select id, 'comissao', true from unidade"
+            )
+            con.execute(
+                "insert into aviso_versao (aviso_id, versao, titulo, texto, criada_por)"
+                " select a.id, 1, 'Bem-vindos', 'Olá', a.publicado_por from aviso a"
+            )
+        con.execute(
+            "insert into aviso_versao (aviso_id, versao, titulo, texto, criada_por)"
+            " select a.id, 2, 'Bem-vindos', 'Olá, vizinhos', a.publicado_por from aviso a"
+        )
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    with psycopg.connect(banco_vazio) as con:
+        versoes = con.execute(
+            "select versao, categoria, evento_quando, evento_onde from aviso_versao order by versao"
+        ).fetchall()
+    assert versoes == [(1, "geral", None, None), (2, "geral", None, None)]
+
+
+def test_downgrade_da_0004_volta_a_0003(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    rodar_alembic(banco_vazio, "downgrade", "0003")
+    assert not NOVAS_DA_0004 & _colunas(banco_vazio, "aviso_versao")
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _colunas(banco_vazio, "aviso_versao") >= NOVAS_DA_0004
+
+
 def test_downgrade_da_0003_volta_a_0002(banco_vazio):
     rodar_alembic(banco_vazio, "upgrade", "head")
     rodar_alembic(banco_vazio, "downgrade", "0002")

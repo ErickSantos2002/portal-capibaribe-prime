@@ -1,11 +1,23 @@
 // Épico C · Avisos: tipos do contrato (spec do M1, seção 4.4). Pertence ao épico C.
 // Espelho de api/app/esquemas/avisos.py: o teste api/testes/test_contrato.py confere os campos.
-// O texto do aviso é texto puro: nunca renderizar como HTML.
+// O texto do aviso tem as marcas do Markdown restrito: quem interpreta é `formatacao.ts`, que
+// nunca transforma texto em HTML.
 import type { DataHora, UnidadeRef } from '../api/tipos'
+
+/** Do que o aviso trata. `geral` é o padrão. */
+export type Categoria = 'geral' | 'obra' | 'reuniao' | 'financeiro' | 'urgente'
+
+/** "Quando / Onde" do aviso que é um evento. `quando` com fuso; `onde` é opcional. */
+export interface Evento {
+  quando: DataHora
+  onde?: string | null
+}
 
 export interface CorrigirAviso {
   titulo: string
   texto: string
+  categoria?: Categoria
+  evento?: Evento | null
 }
 
 export interface NovoAviso extends CorrigirAviso {
@@ -33,6 +45,9 @@ export interface AvisoResumo {
   lido: boolean
   /** Leu uma versão anterior e ainda não abriu a correção (revisão do M1, U1). */
   corrigido_desde_a_leitura: boolean
+  categoria: Categoria
+  /** Para a linha do evento no mural; nulo se não é evento. */
+  evento_quando: DataHora | null
 }
 
 export interface VersaoAviso {
@@ -40,6 +55,8 @@ export interface VersaoAviso {
   titulo: string
   texto: string
   criada_em: DataHora
+  categoria: Categoria
+  evento: Evento | null
 }
 
 export interface ContagemLeitura {
@@ -49,6 +66,7 @@ export interface ContagemLeitura {
 
 export interface AvisoCompleto extends AvisoResumo {
   texto: string
+  evento: Evento | null
   versoes_anteriores: VersaoAviso[]
   /** Só para a gestão. */
   leitura: ContagemLeitura | null

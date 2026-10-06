@@ -1,9 +1,304 @@
 /* Épico C · Avisos: só o que o estilo comum (estilo.css, do protótipo) não tem. Pertence ao
    épico C. Tokens do estilo comum; nada de cor solta. */
 
-/* ---------- texto do aviso ---------- */
+/* ---------- categorias (spec dos avisos com formatação, 3.4) ----------
+   Cada `.cat-<categoria>` escolhe a cor da faixa, do rótulo e do bloco de data (tokens
+   `--cat-*` de estilo.css, claro e escuro). A cor nunca vem sozinha: sempre ícone e nome. */
+.cat-geral {
+  --cat: var(--cat-geral);
+  --cat-fundo: var(--cat-geral-suave);
+}
+
+.cat-obra {
+  --cat: var(--cat-obra);
+  --cat-fundo: var(--cat-obra-suave);
+}
+
+.cat-reuniao {
+  --cat: var(--cat-reuniao);
+  --cat-fundo: var(--cat-reuniao-suave);
+}
+
+.cat-financeiro {
+  --cat: var(--cat-financeiro);
+  --cat-fundo: var(--cat-financeiro-suave);
+}
+
+.cat-urgente {
+  --cat: var(--cat-urgente);
+  --cat-fundo: var(--cat-urgente-suave);
+}
+
+/* "ÍCONE OBRA" acima do título. */
+.rotulo-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cat);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rotulo-cat svg {
+  flex: none;
+}
+
+/* Data da publicação em bloco: dia grande, mês abreviado embaixo (modelo A). */
+.data-bloco {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  width: 50px;
+  padding: 7px 0 6px;
+  border-radius: var(--r-pequeno);
+  background: var(--cat-fundo);
+  color: var(--cat);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.data-bloco .dia {
+  font-size: 22px;
+}
+
+.data-bloco .ano {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.data-bloco .mes {
+  margin-top: 4px;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ---------- mural: cartões do modelo A ---------- */
+.avisos-lista {
+  display: grid;
+  gap: 12px;
+}
+
+.cartao-aviso {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  min-height: 72px;
+  padding: 14px 12px;
+  border: 1px solid var(--linha);
+  border-left: 5px solid var(--cat);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+  box-shadow: var(--sombra);
+  color: inherit;
+  text-decoration: none;
+}
+
+a.cartao-aviso:hover {
+  background: var(--mata-suave);
+}
+
+.cartao-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cartao-aviso h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.cartao-aviso.novo h2 {
+  font-weight: 700;
+}
+
+.cartao-resumo {
+  color: var(--tinta-suave);
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.linha-evento {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tinta);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.linha-evento svg {
+  flex: none;
+  color: var(--cat);
+}
+
+.cartao-aviso .linha-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  color: var(--tinta-suave);
+  font-size: 15px;
+}
+
+.cartao-aviso .linha-meta:empty {
+  display: none;
+}
+
+.cartao-aviso .seta {
+  align-self: center;
+  color: var(--tinta-suave);
+}
+
+/* O fixado continua com o fundo ipê (protótipo) e ganha a categoria. */
+.fixado .rotulo-cat {
+  margin-top: 4px;
+}
+
+.fixado .linha-evento {
+  margin-top: 6px;
+}
+
+/* ---------- aviso aberto: cabeçalho e quadro do evento ---------- */
+.aviso-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.aviso-cabecalho .suave {
+  margin: 4px 0 0;
+}
+
+.aviso-evento {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+}
+
+.aviso-evento > div {
+  display: grid;
+  grid-template-columns: auto 64px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.aviso-evento svg {
+  align-self: center;
+  color: var(--cat);
+}
+
+.aviso-evento dt {
+  color: var(--tinta-suave);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aviso-evento dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ja-aconteceu {
+  color: var(--tinta-suave);
+  font-weight: 700;
+}
+
+/* ---------- texto do aviso (Markdown restrito, avisos/formatacao.ts) ---------- */
 .texto-aviso {
   overflow-wrap: anywhere; /* endereço longo não estica a tela no celular */
+}
+
+.texto-aviso .aviso-secao {
+  margin: 26px 0 8px;
+  color: var(--mata);
+  font-size: 21px;
+  line-height: 1.25;
+}
+
+.texto-aviso > .aviso-secao:first-child {
+  margin-top: 0;
+}
+
+.texto-aviso strong {
+  font-weight: 700;
+}
+
+.aviso-lista {
+  margin: 0 0 14px;
+  padding-left: 28px;
+}
+
+.aviso-lista li {
+  margin: 6px 0;
+  padding-left: 4px;
+}
+
+ul.aviso-lista {
+  list-style: none;
+  padding-left: 0;
+}
+
+ul.aviso-lista li {
+  position: relative;
+  padding-left: 24px;
+}
+
+/* Marcador ipê (o do protótipo), no tom que dá 3:1 sobre o papel. */
+ul.aviso-lista li::before {
+  content: '';
+  position: absolute;
+  top: 0.6em;
+  left: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ipe-forte);
+}
+
+ol.aviso-lista li::marker {
+  color: var(--mata);
+  font-weight: 700;
+}
+
+/* Caixa de destaque ("> "): fundo ipê suave e ícone de informação. */
+.aviso-destaque {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--ipe);
+  border-radius: var(--r-medio);
+  background: var(--ipe-suave);
+}
+
+.aviso-destaque svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--ipe-forte);
+}
+
+.aviso-destaque p {
+  margin: 0;
 }
 
 .texto-aviso a {
@@ -127,6 +422,155 @@ a.avisos-cartao:hover {
 
 .avisos-fixar {
   margin-top: 18px;
+}
+
+/* Categoria: 5 rádios de verdade (setas do teclado), com roupa de botão, ícone e nome. */
+.avisos-categorias {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.avisos-categorias legend {
+  margin: 18px 0 6px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.categorias-op {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.categorias-op label {
+  position: relative;
+  margin: 0;
+  font-weight: 400;
+}
+
+.categorias-op input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.categorias-op span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  cursor: pointer;
+}
+
+.categorias-op svg {
+  flex: none;
+  color: var(--cat);
+}
+
+.categorias-op input:checked + span {
+  border-color: var(--cat);
+  background: var(--cat-fundo);
+  color: var(--cat);
+  font-weight: 700;
+  box-shadow: inset 0 -4px 0 var(--cat);
+}
+
+/* Marca de "escolhida" além da cor (revisão UX 11); o texto alternativo vazio não é lido. */
+.categorias-op input:checked + span::after {
+  content: '✓' / '';
+  margin-left: auto;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.categorias-op input:focus-visible + span {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
+/* Texto do aviso: rótulo e "Ver como fica" na mesma linha, a barra embaixo. */
+.avisos-texto-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0 12px;
+  margin-top: 18px;
+}
+
+.avisos-texto-topo :is(label, .avisos-rotulo) {
+  margin: 0 0 6px;
+}
+
+.avisos-ver {
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.avisos-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.avisos-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.avisos-marca:hover {
+  border-color: var(--mata);
+  background: var(--mata-suave);
+}
+
+.avisos-como-fica {
+  min-height: 140px;
+  padding: 12px 14px;
+  border: 2px dashed var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+}
+
+.avisos-como-fica .texto-aviso > :last-child {
+  margin-bottom: 0;
+}
+
+.avisos-evento-chave {
+  margin-top: 18px;
+}
+
+.avisos-evento-campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.avisos-quando {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 0 12px;
+}
+
+.avisos-quando label {
+  margin-top: 4px;
 }
 
 .avisos-previa-titulo {

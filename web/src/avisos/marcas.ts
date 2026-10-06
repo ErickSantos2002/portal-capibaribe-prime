@@ -1,0 +1,102 @@
+// A barra Título · Negrito · Lista · Destaque do formulário (spec dos avisos com formatação,
+// seção 3.4): função pura que devolve o texto novo e a seleção que o campo deve mostrar.
+export type Marca = 'titulo' | 'negrito' | 'lista' | 'destaque'
+
+export interface ComSelecao {
+  texto: string
+  inicio: number
+  fim: number
+}
+
+const PREFIXOS: Record<Exclude<Marca, 'negrito'>, string> = {
+  titulo: '## ',
+  lista: '- ',
+  destaque: '> ',
+}
+// Qualquer marca de linha que já esteja lá: trocar de uma para outra não empilha.
+const MARCA_DE_LINHA = /^(?:## |- |[0-9]{1,3}\. |> )/
+const EXEMPLO_DO_NEGRITO = 'negrito'
+
+function negrito(texto: string, inicio: number, fim: number): ComSelecao {
+  // Várias linhas: negrito em cada uma (o `**` não atravessa a quebra; revisão de código, 4).
+  if (texto.slice(inicio, fim).trim().includes('\n')) {
+    const trecho = texto
+      .slice(inicio, fim)
+      .split('\n')
+      .map((linha) => (linha.trim() ? linha.replace(/^(\s*)(.*?)(\s*)$/, '$1**$2**$3') : linha))
+      .join('\n')
+    return {
+      texto: texto.slice(0, inicio) + trecho + texto.slice(fim),
+      inicio,
+      fim: inicio + trecho.length,
+    }
+  }
+  // Espaço nas pontas fica fora: "** palavra **" não seria negrito.
+  while (inicio < fim && /\s/.test(texto[inicio])) inicio++
+  while (fim > inicio && /\s/.test(texto[fim - 1])) fim--
+  if (inicio === fim) {
+    const novo = texto.slice(0, inicio) + `**${EXEMPLO_DO_NEGRITO}**` + texto.slice(fim)
+    return { texto: novo, inicio: inicio + 2, fim: inicio + 2 + EXEMPLO_DO_NEGRITO.length }
+  }
+  if (texto.slice(inicio - 2, inicio) === '**' && texto.slice(fim, fim + 2) === '**') {
+    const novo = texto.slice(0, inicio - 2) + texto.slice(inicio, fim) + texto.slice(fim + 2)
+    return { texto: novo, inicio: inicio - 2, fim: fim - 2 }
+  }
+  const novo = texto.slice(0, inicio) + '**' + texto.slice(inicio, fim) + '**' + texto.slice(fim)
+  return { texto: novo, inicio: inicio + 2, fim: fim + 2 }
+}
+
+function deLinha(texto: string, inicio: number, fim: number, prefixo: string): ComSelecao {
+  const comeco = texto.lastIndexOf('\n', inicio - 1) + 1
+  // Seleção que acaba logo depois de uma quebra de linha não inclui a linha seguinte.
+  const ate = fim > inicio && texto[fim - 1] === '\n' ? fim - 1 : fim
+  const quebra = texto.indexOf('\n', ate)
+  const final = quebra === -1 ? texto.length : quebra
+  const linhas = texto.slice(comeco, final).split('\n')
+  const preenchidas = linhas.filter((l) => l.trim() !== '')
+  const tirar = preenchidas.length > 0 && preenchidas.every((l) => l.startsWith(prefixo))
+  const novas = linhas.map((linha) => {
+    if (tirar) return linha.slice(prefixo.length)
+    if (linha.trim() === '' && linhas.length > 1) return linha
+    return prefixo + linha.replace(MARCA_DE_LINHA, '')
+  })
+  const trecho = novas.join('\n')
+  const novo = texto.slice(0, comeco) + trecho + texto.slice(final)
+  if (inicio === fim) {
+    const cursor = comeco + trecho.length
+    return { texto: novo, inicio: cursor, fim: cursor }
+  }
+  return { texto: novo, inicio: comeco, fim: comeco + trecho.length }
+}
+
+const ITEM_DA_LINHA = /^(?:(- )|(> )|([0-9]{1,3})\. )/
+
+/**
+ * Enter no fim de uma linha de lista, lista numerada ou destaque (revisão UX 3): a linha nova
+ * já vem com a marca (o próximo número, na numerada), como no WhatsApp e no Word. Enter num item
+ * vazio encerra a lista. Devolve nulo quando o Enter deve ser o normal.
+ */
+export function continuarLista(texto: string, cursor: number): ComSelecao | null {
+  const fimDaLinha = texto.indexOf('\n', cursor)
+  if (fimDaLinha !== -1 ? fimDaLinha !== cursor : cursor !== texto.length) return null
+  const comeco = texto.lastIndexOf('\n', cursor - 1) + 1
+  const linha = texto.slice(comeco, cursor)
+  const achado = linha.match(ITEM_DA_LINHA)
+  if (!achado) return null
+  if (linha === achado[0]) {
+    const novo = texto.slice(0, comeco) + texto.slice(cursor)
+    return { texto: novo, inicio: comeco, fim: comeco }
+  }
+  // A numerada vai até 999 (a marca tem até 3 dígitos; revisão de código, achado 7).
+  if (achado[3] && Number(achado[3]) >= 999) return null
+  const prefixo = achado[3] ? `${Number(achado[3]) + 1}. ` : achado[0]
+  const novo = texto.slice(0, cursor) + '\n' + prefixo + texto.slice(cursor)
+  const depois = cursor + 1 + prefixo.length
+  return { texto: novo, inicio: depois, fim: depois }
+}
+
+/** Aplica a marca na seleção (`inicio`..`fim`) ou na linha do cursor. Repetir desfaz. */
+export function aplicarMarca(texto: string, inicio: number, fim: number, marca: Marca): ComSelecao {
+  if (marca === 'negrito') return negrito(texto, inicio, fim)
+  return deLinha(texto, inicio, fim, PREFIXOS[marca])
+}

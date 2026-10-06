@@ -30,6 +30,21 @@ const DESENHOS = {
   editar: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   arquivar:
     '<rect x="3.5" y="4" width="17" height="4.5" rx="1"/><path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 12.5h4"/>',
+  // Categorias e evento dos avisos (spec dos avisos com formatação, seção 3.4).
+  // Geral: balão de conversa (o alto-falante lembrava "som", revisão UX 10).
+  geral: '<path d="M4 5h16v11H10.5L6 19.5V16H4z"/><path d="M8.5 9.5h7M8.5 12.5h4.5"/>',
+  obra: '<path d="M2.5 20h19"/><path d="M5 20V9.5l7-5 7 5V20"/><path d="M10 20v-6h4v6"/>',
+  reuniao:
+    '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+  financeiro:
+    '<rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19M16 15h2"/>',
+  calendario: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  local:
+    '<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  // Barra de formatação do texto do aviso.
+  titulo: '<path d="M6 4.5v15M18 4.5v15M6 12h12"/>',
+  negrito: '<path d="M7 4.5h6a3.75 3.75 0 0 1 0 7.5H7zM7 12h7a3.75 3.75 0 0 1 0 7.5H7z"/>',
+  lista: '<path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20"/><path d="M4.5 6.5v.1M4.5 12v.1M4.5 17.5v.1"/>',
 } as const
 
 export type NomeDoIcone = keyof typeof DESENHOS

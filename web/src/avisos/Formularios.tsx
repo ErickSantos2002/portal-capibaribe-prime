@@ -1,4 +1,5 @@
-// H-12 · Publicar aviso (com prévia) e H-15 · Corrigir aviso.
+// H-12 · Publicar aviso (com prévia) e H-15 · Corrigir aviso. Os campos do aviso (título,
+// categoria, texto formatado, evento) são de `CamposDoAviso.tsx`.
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { useNavigate } from 'react-router'
 import { useSessao } from '../casca/contextoSessao'
@@ -6,38 +7,41 @@ import { NaoEncontrado } from '../casca/guardas'
 import { Icone } from '../casca/Icone'
 import { Tela } from '../casca/Tela'
 import { abrirAviso, calcularAlcance, corrigirAviso, listarDestinos, publicarAviso } from './api'
+import { CamposDoAviso } from './CamposDoAviso'
 import { comoErroDaApi, useCarga, useIdDoAviso } from './carregar'
-import { AvisoFixado, Carregando, FalhaAoCarregar, ItemAviso, TextoDoAviso } from './componentes'
+import { AvisoFixado, Carregando, CorpoDoAviso, FalhaAoCarregar, ItemAviso } from './componentes'
 import { destinoEmTexto } from './formatos'
-import type { AvisoCompleto, AvisoResumo } from './tipos'
+import { semMarcas } from './formatacao'
+import {
+  conferir,
+  eventoDe,
+  mensagemGeral,
+  RASCUNHO_VAZIO,
+  rascunhoDe,
+  semErrosDe,
+  type Campo,
+  type Erros,
+  type Rascunho,
+} from './rascunho'
+import type { AvisoCompleto, AvisoResumo, CorrigirAviso } from './tipos'
 import './avisos.css'
 
-const LIMITE_TITULO = 120
-const LIMITE_TEXTO = 10_000
+const CAMPOS: readonly Campo[] = ['titulo', 'texto', 'blocos', 'evento', 'categoria']
 
-type Campo = 'titulo' | 'texto' | 'blocos'
-type Erros = Partial<Record<Campo, string>>
-
-/** As mesmas regras da API (`app/esquemas/avisos.py`), para avisar antes de enviar. */
-function conferir(titulo: string, texto: string): Erros {
-  const erros: Erros = {}
-  if (!titulo.trim()) erros.titulo = 'Escreva o título do aviso.'
-  else if (titulo.trim().length > LIMITE_TITULO) erros.titulo = 'O título pode ter até 120 letras.'
-  if (!texto.trim()) erros.texto = 'Escreva o texto do aviso.'
-  else if (texto.trim().length > LIMITE_TEXTO) erros.texto = 'O texto pode ter até 10.000 letras.'
-  return erros
-}
-
-/** Erro da API: os campos marcados (422) e a mensagem geral. */
+/** Erro da API: os campos marcados (422) e a mensagem geral. `evento.quando` marca o evento. */
 function errosDaApi(e: unknown): { geral: string; campos: Erros } {
   const erro = comoErroDaApi(e)
   const campos: Erros = {}
   for (const c of erro.campos) {
-    if (c.campo === 'titulo' || c.campo === 'texto' || c.campo === 'blocos') {
-      campos[c.campo] ??= c.mensagem
-    }
+    const campo = c.campo?.split('.')[0] as Campo | undefined
+    if (campo && CAMPOS.includes(campo)) campos[campo] ??= c.mensagem
   }
   return { geral: erro.mensagem, campos }
+}
+
+/** O corpo que a API recebe, a partir do rascunho. */
+function corpoDe(r: Rascunho): CorrigirAviso {
+  return { titulo: r.titulo, texto: r.texto, categoria: r.categoria, evento: eventoDe(r) }
 }
 
 function ErroGeral({
@@ -55,54 +59,11 @@ function ErroGeral({
   )
 }
 
-interface PropsCampos {
-  titulo: string
-  texto: string
-  erros: Erros
-  mudarTitulo: (v: string) => void
-  mudarTexto: (v: string) => void
-}
-
-function CamposDoTexto({ titulo, texto, erros, mudarTitulo, mudarTexto }: PropsCampos) {
-  return (
-    <>
-      <label htmlFor="aviso-titulo">Título</label>
-      <input
-        id="aviso-titulo"
-        type="text"
-        value={titulo}
-        onChange={(e) => mudarTitulo(e.target.value)}
-        maxLength={LIMITE_TITULO}
-        aria-invalid={!!erros.titulo}
-        aria-describedby={erros.titulo ? 'aviso-titulo-erro' : undefined}
-        className={erros.titulo ? 'campo-erro' : undefined}
-      />
-      {erros.titulo && (
-        <p className="avisos-erro-campo" id="aviso-titulo-erro">
-          {erros.titulo}
-        </p>
-      )}
-      <label htmlFor="aviso-texto">Texto do aviso</label>
-      <textarea
-        id="aviso-texto"
-        value={texto}
-        onChange={(e) => mudarTexto(e.target.value)}
-        maxLength={LIMITE_TEXTO}
-        aria-invalid={!!erros.texto}
-        aria-describedby={`aviso-texto-ajuda${erros.texto ? ' aviso-texto-erro' : ''}`}
-        className={erros.texto ? 'campo-erro' : undefined}
-      />
-      <p className="ajuda" id="aviso-texto-ajuda">
-        Deixe uma linha em branco para começar outro parágrafo. Endereços que começam com https://
-        viram link.
-      </p>
-      {erros.texto && (
-        <p className="avisos-erro-campo" id="aviso-texto-erro">
-          {erros.texto}
-        </p>
-      )}
-    </>
-  )
+/** O resumo do mural como a API vai fazer: primeiro parágrafo, sem marcas, até 200 letras. */
+function resumoDe(texto: string): string {
+  const primeiro = texto.trim().split(/\n[ \t]*\n/)[0] ?? ''
+  const linha = semMarcas(primeiro).replace(/\s+/g, ' ').trim()
+  return linha.length <= 200 ? linha : linha.slice(0, 199).trimEnd() + '…'
 }
 
 // --- H-12 · Novo aviso ------------------------------------------------------------------------
@@ -111,8 +72,7 @@ export function NovoAviso() {
   const navegar = useNavigate()
   const { eu } = useSessao()
   const [destinos, recarregarDestinos] = useCarga(listarDestinos, [])
-  const [titulo, setTitulo] = useState('')
-  const [texto, setTexto] = useState('')
+  const [rascunho, setRascunho] = useState<Rascunho>(RASCUNHO_VAZIO)
   const [blocos, setBlocos] = useState<number[]>([])
   const [fixado, setFixado] = useState(false)
   const [erros, setErros] = useState<Erros>({})
@@ -132,26 +92,26 @@ export function NovoAviso() {
   }, [previa])
 
   // Mexeu em qualquer coisa, a prévia some e o botão volta a "Ver prévia" (protótipo).
-  function mudou<T>(trocar: (v: T) => void) {
-    return (v: T) => {
-      trocar(v)
-      setPrevia(false)
-    }
+  function mudar(mudanca: Partial<Rascunho>) {
+    setRascunho((atual) => ({ ...atual, ...mudanca }))
+    setErros((atuais) => semErrosDe(atuais, mudanca))
+    setPrevia(false)
   }
-  const escolherBloco = mudou((numero: number) =>
+  function escolherBloco(numero: number) {
     setBlocos((atuais) =>
       atuais.includes(numero)
         ? atuais.filter((b) => b !== numero)
         : [...atuais, numero].sort((a, b) => a - b),
-    ),
-  )
+    )
+    setPrevia(false)
+  }
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
-    const encontrados = conferir(titulo, texto)
+    const encontrados = conferir(rascunho)
     setErros(encontrados)
     if (Object.keys(encontrados).length > 0) {
-      setGeral(Object.values(encontrados)[0] ?? '')
+      setGeral(mensagemGeral(encontrados))
       return
     }
     setGeral('')
@@ -161,7 +121,7 @@ export function NovoAviso() {
     }
     setEnviando(true)
     try {
-      await publicarAviso({ titulo, texto, para_todos: paraTodos, blocos, fixado })
+      await publicarAviso({ ...corpoDe(rascunho), para_todos: paraTodos, blocos, fixado })
       navegar('/avisos', { state: { recado: 'Aviso publicado.' } })
     } catch (e) {
       const { geral: mensagem, campos } = errosDaApi(e)
@@ -173,15 +133,11 @@ export function NovoAviso() {
     }
   }
 
+  const eventoNaPrevia = eventoDe(rascunho)
   const comoVaiFicar: AvisoResumo = {
     id: 0,
-    titulo: titulo.trim(),
-    resumo:
-      texto
-        .trim()
-        .split(/\n[ \t]*\n/)[0]
-        ?.replace(/\s+/g, ' ')
-        .slice(0, 200) ?? '',
+    titulo: rascunho.titulo.trim(),
+    resumo: resumoDe(rascunho.texto),
     publicado_em: new Date().toISOString(),
     publicado_por: eu?.papeis.includes('comissao') ? 'Comissão' : 'Administração do Portal',
     editado_em: null,
@@ -191,6 +147,8 @@ export function NovoAviso() {
     arquivado_em: null,
     lido: false,
     corrigido_desde_a_leitura: false,
+    categoria: rascunho.categoria,
+    evento_quando: eventoNaPrevia?.quando ?? null,
   }
   const unidades = alcance.situacao === 'pronta' ? alcance.dados.unidades : null
 
@@ -198,13 +156,7 @@ export function NovoAviso() {
     <Tela titulo="Novo aviso" voltar="/avisos">
       <form onSubmit={enviar} noValidate>
         {geral && <ErroGeral mensagem={geral} alvo={caixaDeErro} />}
-        <CamposDoTexto
-          titulo={titulo}
-          texto={texto}
-          erros={erros}
-          mudarTitulo={mudou(setTitulo)}
-          mudarTexto={mudou(setTexto)}
-        />
+        <CamposDoAviso rascunho={rascunho} erros={erros} mudar={mudar} />
         <p className="avisos-rotulo" id="aviso-destino">
           Para quem
         </p>
@@ -221,7 +173,10 @@ export function NovoAviso() {
               type="button"
               className="chip"
               aria-pressed={paraTodos}
-              onClick={mudou(() => setBlocos([]))}
+              onClick={() => {
+                setBlocos([])
+                setPrevia(false)
+              }}
             >
               Todos os blocos
             </button>
@@ -247,7 +202,10 @@ export function NovoAviso() {
           <input
             type="checkbox"
             checked={fixado}
-            onChange={(e) => mudou(setFixado)(e.target.checked)}
+            onChange={(e) => {
+              setFixado(e.target.checked)
+              setPrevia(false)
+            }}
           />
           Fixar no topo do mural
         </label>
@@ -272,13 +230,18 @@ export function NovoAviso() {
             {fixado ? (
               <AvisoFixado aviso={comoVaiFicar} previa />
             ) : (
-              <div className="folha">
-                <ItemAviso aviso={comoVaiFicar} previa />
-              </div>
+              <ItemAviso aviso={comoVaiFicar} previa />
             )}
             <p className="secao">E assim, quando alguém abrir</p>
-            <h2>{comoVaiFicar.titulo}</h2>
-            <TextoDoAviso texto={texto} />
+            <div className={`aviso-aberto cat-${comoVaiFicar.categoria}`}>
+              <h2>{comoVaiFicar.titulo}</h2>
+              <CorpoDoAviso
+                aviso={comoVaiFicar}
+                evento={eventoNaPrevia}
+                texto={rascunho.texto}
+                nivel={3}
+              />
+            </div>
           </div>
         )}
         <button className="botao avisos-enviar" type="submit" disabled={enviando}>
@@ -319,8 +282,7 @@ function Corrigir({ id }: { id: number }) {
 
 function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
   const navegar = useNavigate()
-  const [titulo, setTitulo] = useState(aviso.titulo)
-  const [texto, setTexto] = useState(aviso.texto)
+  const [rascunho, setRascunho] = useState<Rascunho>(() => rascunhoDe(aviso))
   const [erros, setErros] = useState<Erros>({})
   const [geral, setGeral] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -332,16 +294,16 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
-    const encontrados = conferir(titulo, texto)
+    const encontrados = conferir(rascunho)
     setErros(encontrados)
     if (Object.keys(encontrados).length > 0) {
-      setGeral(Object.values(encontrados)[0] ?? '')
+      setGeral(mensagemGeral(encontrados))
       return
     }
     setEnviando(true)
     setGeral('')
     try {
-      await corrigirAviso(aviso.id, { titulo, texto })
+      await corrigirAviso(aviso.id, corpoDe(rascunho))
       navegar(`/avisos/${aviso.id}`, { replace: true, state: { recado: 'Aviso corrigido.' } })
     } catch (e) {
       const { geral: mensagem, campos } = errosDaApi(e)
@@ -361,12 +323,13 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
         </p>
       </div>
       {geral && <ErroGeral mensagem={geral} alvo={caixaDeErro} />}
-      <CamposDoTexto
-        titulo={titulo}
-        texto={texto}
+      <CamposDoAviso
+        rascunho={rascunho}
         erros={erros}
-        mudarTitulo={setTitulo}
-        mudarTexto={setTexto}
+        mudar={(mudanca) => {
+          setRascunho((atual) => ({ ...atual, ...mudanca }))
+          setErros((atuais) => semErrosDe(atuais, mudanca))
+        }}
       />
       <button className="botao avisos-enviar" type="submit" disabled={enviando}>
         {enviando ? 'Salvando…' : 'Salvar correção'}

@@ -10,8 +10,14 @@ import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
 import { abrirAviso, arquivarAviso, marcarLido, mudarFixado } from './api'
 import { comoErroDaApi, useCarga, useIdDoAviso } from './carregar'
-import { Carregando, FalhaAoCarregar, TextoDoAviso } from './componentes'
-import { assinatura, destinoEmTexto } from './formatos'
+import {
+  Carregando,
+  CorpoDoAviso,
+  FalhaAoCarregar,
+  QuadroEvento,
+  RotuloCategoria,
+  TextoDoAviso,
+} from './componentes'
 import type { AvisoCompleto } from './tipos'
 import './avisos.css'
 
@@ -50,11 +56,22 @@ function AvisoAberto({ id }: { id: number }) {
 function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCompleto) => void }) {
   const { eu } = useSessao()
   return (
-    <article className="aviso-aberto">
-      <p className="suave">
-        {aviso.fixado && 'Fixado. '}Publicado {assinatura(aviso.publicado_por)} em{' '}
-        {formatarData(aviso.publicado_em)}, para {destinoEmTexto(aviso)}.
-      </p>
+    <article className={`aviso-aberto cat-${aviso.categoria}`}>
+      <CorpoDoAviso
+        aviso={aviso}
+        evento={aviso.evento}
+        texto={aviso.texto}
+        avisos={<Situacao aviso={aviso} />}
+      />
+      {eu?.gestao && <ParaAGestao aviso={aviso} trocar={trocar} />}
+    </article>
+  )
+}
+
+/** Arquivado e "Corrigido em… / Ver como era antes", entre o cabeçalho e o texto. */
+function Situacao({ aviso }: { aviso: AvisoCompleto }) {
+  return (
+    <>
       {aviso.arquivado_em && (
         <div className="aviso-caixa atencao">
           <Icone nome="arquivar" />
@@ -76,21 +93,21 @@ function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCo
                   : 'Ver como era antes'}
               </summary>
               {aviso.versoes_anteriores.map((v) => (
-                <section key={v.versao} className="avisos-versao">
+                <section key={v.versao} className={`avisos-versao cat-${v.categoria}`}>
                   <p className="suave">
                     {v.versao === 1 ? 'Publicado' : 'Corrigido'} em {formatarData(v.criada_em)}:
                   </p>
+                  <RotuloCategoria categoria={v.categoria} />
                   <h2 className="avisos-versao-titulo">{v.titulo}</h2>
-                  <TextoDoAviso texto={v.texto} />
+                  {v.evento && <QuadroEvento evento={v.evento} />}
+                  <TextoDoAviso texto={v.texto} nivel={3} />
                 </section>
               ))}
             </details>
           </div>
         </div>
       )}
-      <TextoDoAviso texto={aviso.texto} />
-      {eu?.gestao && <ParaAGestao aviso={aviso} trocar={trocar} />}
-    </article>
+    </>
   )
 }
 

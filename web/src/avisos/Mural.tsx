@@ -81,7 +81,7 @@ export function Mural({ arquivados = false }: { arquivados?: boolean }) {
       ) : !itens ? (
         <Carregando />
       ) : lista.length > 0 ? (
-        <div className="folha">
+        <div className="avisos-lista">
           {lista.map((aviso) => (
             <ItemAviso key={aviso.id} aviso={aviso} arquivados={arquivados} />
           ))}

@@ -80,11 +80,17 @@ de teste do backup reprova (head ≠ produção).
 
 ### 3.4 Telas
 
-- **Mural (modelo A):** faixa lateral de 5px na cor da categoria; bloco de data (publicação) com
-  fundo suave da categoria; rótulo "ÍCONE CATEGORIA" em maiúsculas pequenas acima do título; evento
-  ganha uma linha com ícone de calendário "Sáb, 11/10 · 9h" (fuso America/Recife) e, se a data já
-  passou, "Já aconteceu" no lugar do horário; selos "Novo" e "Corrigido" continuam.
-- **Aviso aberto:** cabeçalho com bloco de data + categoria + h1 + "quem publicou · para quem";
+- **Mural (modelo A):** faixa lateral de 5px na cor da categoria; bloco de data com fundo suave
+  da categoria; rótulo "ÍCONE CATEGORIA" em maiúsculas pequenas acima do título; selos "Novo" e
+  "Corrigido" continuam. **Bloco de data (decisão do Erick, 06/10, depois da revisão de UX):** no
+  aviso que é evento, o bloco mostra o dia do **evento** (fuso America/Recife; o ano entra no
+  bloco quando não é o ano corrente); nos outros, o da publicação. O evento ganha uma linha com
+  ícone de calendário que não repete a data: "Sáb, 9h · publicado 6/10" e, se já passou, "Já
+  aconteceu · publicado 6/10". O leitor de tela ouve o que o bloco é: "Evento em 11 de outubro" ou
+  "Publicado em 6 de outubro". A ordem do mural continua pela publicação (fixados primeiro). O
+  fixado não tem bloco: a linha do evento dele é "Sáb, 11/10 · 9h".
+- **Aviso aberto:** cabeçalho com bloco de data (mesma regra: evento → dia do evento) + categoria
+  + h1 + "quem publicou · para quem" (a frase "Publicado pela … em …" continua com a publicação);
   quadro Quando/Onde (cartão branco, ícones de calendário e local) quando houver evento; texto
   pelo renderizador; o "Corrigido em… / Ver como era antes" continua, e a versão antiga também é
   renderizada formatada, com categoria e evento dela.
