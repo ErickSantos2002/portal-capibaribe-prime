@@ -30,6 +30,30 @@ describe('política de privacidade', () => {
     expect(texto).toContain('Apagar meus dados')
   })
 
+  it('quem vê os contatos: o apartamento, a Comissão e a administração (A6)', async () => {
+    apiFalsa({})
+    abrir('/privacidade')
+    const quemVe = await screen.findByRole('heading', { name: 'Quem vê' })
+    const texto = quemVe.nextElementSibling?.textContent ?? ''
+    expect(texto).toContain('pela Comissão e pela administração do Portal')
+  })
+
+  it('diz quem é o responsável, como pedir e onde os dados ficam (A7)', async () => {
+    apiFalsa({})
+    abrir('/privacidade')
+    await screen.findByRole('heading', { name: 'Quem cuida dos dados' })
+    const texto = document.querySelector('main')?.textContent ?? ''
+    expect(texto).toContain(
+      'Erick Santos, morador que mantém o Portal, em nome da Comissão dos compradores do Capibaribe Prime',
+    )
+    expect(texto).toContain('grupo de WhatsApp dos compradores')
+    expect(texto).toMatch(/Neon/)
+    expect(texto).toMatch(/Vercel/)
+    expect(texto).toContain('São Paulo')
+    // Repositório público: nada que identifique o apartamento do responsável.
+    expect(texto).not.toMatch(/\bBloco \d|\bapto\b|\b[1-5]\d{3}\b|CPF d/i)
+  })
+
   it('sem sessão, voltar leva à entrada', async () => {
     apiFalsa({})
     abrir('/privacidade')

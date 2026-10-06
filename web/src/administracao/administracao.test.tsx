@@ -22,6 +22,14 @@ const ADMIN: Eu = {
   precisa_trocar_senha: false,
 }
 
+const COMISSAO: Eu = {
+  unidade: ref('2304'),
+  papeis: ['comissao'],
+  gestao: true,
+  admin: false,
+  precisa_trocar_senha: false,
+}
+
 function json(status: number, corpo: unknown) {
   return new Response(JSON.stringify(corpo), {
     status,
@@ -156,12 +164,30 @@ describe('painel de ativação (H-07)', () => {
 
     expect(await screen.findByText('Maria (fictícia)')).toBeTruthy()
     expect(screen.getByText('(81) 9 0000-0002')).toBeTruthy()
+    // axe (heading-order): o bloco é h2, o responsável de cada linha é h3.
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Bloco 1: 2 de 3 (67%)' }),
+    ).toBeTruthy()
     expect(screen.getByText('entrou em 2 de novembro')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Ainda não' }))
     await waitFor(() => expect(screen.queryByText('Maria (fictícia)')).toBeNull())
     expect(screen.getAllByText('Ainda não entrou')).toHaveLength(2)
     expect(chamadas.map((c) => c.caminho)).toContain('/api/admin/unidades?situacao=nao_ativadas')
+  })
+
+  it('o admin tem o link do histórico', async () => {
+    api({ 'GET /api/admin/unidades': () => json(200, PAINEL) })
+    abrir('/unidades')
+    expect(await screen.findByRole('link', { name: 'Histórico de ações' })).toBeTruthy()
+  })
+
+  it('a Comissão vê o painel com os contatos, sem o link do histórico', async () => {
+    api({ 'GET /api/admin/unidades': () => json(200, PAINEL) }, COMISSAO)
+    abrir('/unidades')
+    fireEvent.click(await screen.findByRole('button', { name: 'Lista com contatos' }))
+    expect(await screen.findByText('(81) 9 0000-0002')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Histórico de ações' })).toBeNull()
   })
 
   it('erro da API aparece com o botão de tentar de novo', async () => {
@@ -265,6 +291,26 @@ describe('ficha da unidade e reset (H-08)', () => {
     ).toContain('Esta é a única unidade administradora.')
   })
 
+  it('a Comissão lê a ficha com os contatos, sem as ações do admin', async () => {
+    api(
+      {
+        'GET /api/admin/unidades/1203': () =>
+          json(200, ficha('1203', { email: 'maria@exemplo.com' })),
+      },
+      COMISSAO,
+    )
+    abrir('/unidades/1203')
+
+    expect(await screen.findByText('Maria (fictícia)')).toBeTruthy()
+    expect(screen.getByRole('link', { name: '(81) 9 1234-5678' })).toBeTruthy()
+    expect(screen.getByText('maria@exemplo.com')).toBeTruthy()
+    const botoes = screen.queryAllByRole('button').map((b) => b.textContent).join(' | ')
+    expect(botoes).not.toMatch(/senha inicial|papel/i)
+    expect(screen.queryByRole('heading', { name: 'Voltar para a senha inicial' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Papel de gestão' })).toBeNull()
+    expect(screen.getByText(/Só a administração do Portal volta/)).toBeTruthy()
+  })
+
   it('unidade que não existe', async () => {
     api({
       'GET /api/admin/unidades/9999': () =>
@@ -295,16 +341,38 @@ describe('papéis (H-09)', () => {
     })
   }
 
-  it('dar e tirar o papel de Comissão é direto, com recado', async () => {
+  it('dar o papel de Comissão pede confirmação, dizendo que ele passa a ver os contatos', async () => {
     comPapeis('2304', [])
     abrir('/unidades/2304')
     fireEvent.click(await screen.findByRole('button', { name: 'Dar papel de Comissão' }))
+    const pergunta = screen.getByRole('heading', {
+      name: 'Dar papel de Comissão ao Bloco 2, 304?',
+    })
+    expect(document.activeElement).toBe(pergunta)
+    expect(
+      screen.getByText('Ele passa a ver o celular e o e-mail de todas as unidades.'),
+    ).toBeTruthy()
+    expect(chamadas.some((c) => c.metodo === 'PUT')).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(chamadas.some((c) => c.metodo === 'PUT')).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dar papel de Comissão' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sim, dar o papel' }))
     expect(await screen.findByText('Agora o Bloco 2, 304 é da Comissão.')).toBeTruthy()
     expect(screen.getByRole('img', { name: 'Bloco 2, apartamento 304' }).className).toContain(
       'gestao',
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Tirar papel de Comissão' }))
+    expect(
+      screen.getByRole('heading', { name: 'Tirar o papel de Comissão do Bloco 2, 304?' }),
+    ).toBeTruthy()
+    expect(
+      screen.getByText('Ele deixa de ver o painel de unidades e os contatos na hora.'),
+    ).toBeTruthy()
+    expect(chamadas.some((c) => c.metodo === 'DELETE')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Sim, tirar o papel' }))
     expect(
       await screen.findByText('Papel de Comissão retirado. As opções somem na hora.'),
     ).toBeTruthy()

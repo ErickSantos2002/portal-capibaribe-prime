@@ -276,7 +276,8 @@ precisa_trocar_senha: bool }`. É o que a casca do front usa para decidir rotas 
 
 ### 4.3 Épico B · Administração (`app/rotas/administracao.py`)
 
-Todas com `exige_admin` (dúvida 9).
+`GET /api/admin/unidades` e `GET /api/admin/unidades/{login}` com `exige_gestao` (a Comissão
+vê os contatos, só para ler: dúvida 9, revista em 06/10/2026); as outras com `exige_admin`.
 
 | Rota | Corpo / parâmetros | Resposta | Erros |
 |---|---|---|---|

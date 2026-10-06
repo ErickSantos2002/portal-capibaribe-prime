@@ -275,6 +275,17 @@ describe('aviso aberto', () => {
     expect(screen.queryByText(/apagar|excluir/i)).toBeNull()
   })
 
+  it('a seção de gestão se chama "Para a gestão" (o admin não é Comissão)', async () => {
+    api(eu(['admin']), (url) =>
+      url.pathname === '/api/avisos/5'
+        ? json(200, completo(5, { leitura: { lidos: 1, total: 320 } }))
+        : undefined,
+    )
+    abrir('/avisos/5')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Para a gestão' })).toBeTruthy()
+    expect(screen.queryByText('Para a Comissão')).toBeNull()
+  })
+
   it('arquivar pede confirmação e depois mostra o aviso arquivado', async () => {
     const fetch = api(eu(['comissao']), (url, init) => {
       if (url.pathname === '/api/avisos/5')

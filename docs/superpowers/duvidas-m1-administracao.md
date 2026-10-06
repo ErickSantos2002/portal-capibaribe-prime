@@ -43,6 +43,7 @@ só o Erick decide; o resto é técnico e pode ser revisto na revisão do marco.
 - **Por quê:** H-08 pede confirmação para o reset; administrador dá acesso a contatos e ao poder
   de resetar e tirar papéis de qualquer um, então também é ação de risco. Comissão se desfaz com um
   toque e fica no histórico. **[Erick]** se quiser confirmação também na Comissão, é uma linha.
+- **Decidido (06/10/2026):** Comissão também confirma (`duvidas-m1.md`, item 46).
 
 ## 6. Dar o papel de administrador pela tela
 - **Dúvida:** H-09 fala só de Comissão; o contrato já aceita `admin` em `PUT …/papeis/{papel}`.

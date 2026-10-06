@@ -1,4 +1,5 @@
-// Itens do menu (abas no celular, menu lateral no computador). "Unidades" só para o admin.
+// Itens do menu (abas no celular, menu lateral no computador). "Unidades" para a gestão
+// (Comissão e administração), que vê os contatos das unidades.
 import type { Eu } from '../api/tipos'
 import type { NomeDoIcone } from './Icone'
 
@@ -13,6 +14,6 @@ export function itensDoMenu(eu: Eu): Item[] {
     { para: '/avisos', icone: 'avisos', texto: 'Avisos' },
     { para: '/minha-unidade', icone: 'casa', texto: 'Minha unidade' },
   ]
-  if (eu.admin) itens.push({ para: '/unidades', icone: 'painel', texto: 'Unidades' })
+  if (eu.gestao) itens.push({ para: '/unidades', icone: 'painel', texto: 'Unidades' })
   return itens
 }

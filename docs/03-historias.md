@@ -128,6 +128,9 @@ tomada.
   responsável e celular.
 - No topo: total e percentual de unidades ativadas, geral e por bloco.
 - Filtros: só ativadas, só não ativadas, só com papel de gestão.
+- A Comissão também vê o painel e a ficha de cada unidade, com os contatos, **só para ler**:
+  voltar para a senha inicial, dar ou tirar papéis e o histórico continuam do administrador
+  (decisão de 06/10/2026, tabela de permissões em `02-requisitos.md`).
 
 ### H-08 · Resetar uma unidade — RF-07
 **Como** Erick, **quero** devolver uma unidade ao estado inicial em um clique **para** resolver
@@ -149,6 +152,8 @@ eles publiquem sem ter um segundo login.
 - **Quando** retiro o papel, **então** essas opções somem imediatamente, mesmo com ela logada.
 - O papel de **administrador** não pode ser retirado da última unidade que o tem (o Portal não
   pode ficar sem administrador).
+- Dar ou tirar o papel pede confirmação dizendo o que acontece (ao dar: passa a publicar e a
+  ver o celular e o e-mail de todas as unidades).
 - Toda concessão e retirada fica no histórico (H-11).
 
 ### H-10 · Corrigir blocos e unidades — RF-01, RF-02

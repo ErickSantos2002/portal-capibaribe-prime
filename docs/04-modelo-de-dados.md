@@ -283,8 +283,9 @@ Inventário completo da E1. Se um dado não está aqui, o sistema não guarda.
 | E-mail | `unidade.email` | Recuperar senha e receber avisos (opcional) | A própria unidade e a gestão | Idem |
 | Descrição do aparelho | `sessao.aparelho` | A unidade reconhecer e desconectar aparelhos | A própria unidade | Ao encerrar a sessão |
 | Endereço de push | `inscricao_push` | Entregar notificação | Ninguém (uso técnico) | Ao encerrar a sessão |
+| Código do IP (HMAC, não o IP) | `entrada_tentativa.ip_hash` (revisão do M1, migração 0003) | Bloquear quem tenta adivinhar a senha de uma unidade | Ninguém (uso técnico) | 15 minutos depois da última tentativa ou do fim do bloqueio |
 
-**Não guardamos:** CPF, RG, contrato, renda, endereço IP no banco, localização, nem o conteúdo de
+**Não guardamos:** CPF, RG, contrato, renda, endereço IP no banco (só o código acima), localização, nem o conteúdo de
 votos trocados. A unidade e o login (`1101`) não são dado pessoal sozinhos, porque identificam um
 apartamento e não uma pessoa. Viram dado pessoal junto com o nome do responsável, por isso o nome
 só aparece para a própria unidade e para a gestão.

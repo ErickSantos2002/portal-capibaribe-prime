@@ -12,14 +12,15 @@
 
 O administrador do Portal (hoje, só o Erick) consegue: medir a adesão e perceber conta tomada
 (painel), devolver uma unidade ao estado inicial (reset), dar e retirar os papéis de Comissão e de
-administrador, e ler o histórico de ações. Tudo só para o admin (dúvida 9 do M1), conferido no
-servidor (RNF-13).
+administrador, e ler o histórico de ações. A Comissão (toda a gestão) lê o painel e a ficha, com
+os contatos; o resto é só do admin (dúvida 9 do M1, revista pelo Erick em 06/10/2026). Tudo
+conferido no servidor (RNF-13).
 
 ## 2. API (`app/rotas/administracao.py` → `app/servicos/administracao.py`)
 
 A rota só traduz HTTP; a regra mora no serviço, que não faz commit (quem chama decide, como no
-resto do projeto). Todas as rotas com `Admin` (`exige_admin`) e o roteador com
-`exige_cabecalho_portal`.
+resto do projeto). `GET /api/admin/unidades` e `GET /api/admin/unidades/{login}` com `Gestao`
+(`exige_gestao`); as outras com `Admin` (`exige_admin`). O roteador tem `exige_cabecalho_portal`.
 
 | Rota | Comportamento |
 |---|---|
@@ -59,6 +60,8 @@ Seguem o protótipo (`telaAdmin`, `telaUnidade`, `telaHistorico`), com as classe
 `estilo.css` (`resumo`, `grade`, `legenda`, `ficha`, `folha`, `item`, `chips`, `aviso-caixa`).
 CSS novo só em `administracao.css`, sem `style=` (CSP).
 
+- **Comissão:** vê "Unidades" no menu, o painel e a ficha, sem o link do histórico e sem as
+  ações (no lugar delas, uma caixa diz que só a administração faz isso).
 - **`/unidades` (H-07):** resumo (já entraram · ainda não · adesão %), filtros em chips (Todas,
   Já entraram, Ainda não, Com papel), e por bloco: "Bloco N: X de Y (Z%)". Com "Todas", a grade
   do protótipo (8 colunas, do 7º andar ao térreo; já entrou = verde; papel = faixa amarela). Com
@@ -68,7 +71,7 @@ CSS novo só em `administracao.css`, sem `style=` (CSP).
   responsável, celular, e-mail, papel, aparelhos conectados, bloqueio). Resetar: botão perigo →
   caixa de confirmação no lugar (padrão do protótipo), listando o que vai acontecer, com
   "Sim, resetar" e "Cancelar". Papéis: "Dar papel de Comissão" / "Tirar papel de Comissão" e o
-  mesmo para administrador (retirar admin também confirma). Unidade não ativada: explica que só
+  mesmo para administrador; todos confirmam (Comissão desde 06/10/2026). Unidade não ativada: explica que só
   dá papel depois do primeiro acesso. Erros da API numa caixa de erro; sucesso por `useRecado`.
   Se o admin mexeu na própria unidade (reset ou retirou o próprio admin), a sessão é relida
   (`recarregar`) e as guardas levam para onde couber.
