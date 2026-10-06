@@ -59,7 +59,7 @@ recusa requisições acima de 4,5 MB, e um anexo pode ter 10 MB.
 | Arquivos | Cloudflare R2, bucket privado | 10 GB grátis, sem custo de download | 0004 |
 | Login | Senha própria (Argon2id) + sessão em cookie | Decisão de conta por unidade com `mudar123` | 0005 |
 | Notificação | Web Push (VAPID) + e-mail pelo Gmail | Push é grátis e nativo do PWA; e-mail é complemento | 0006 |
-| Backup | GitHub Actions: `pg_dump` diário para o R2 | O Neon grátis só guarda 6 h de histórico | 0007 |
+| Backup | GitHub Actions: `pg_dump` diário, cifrado, para um bucket R2 só de backups | O Neon grátis só guarda 6 h de histórico | 0007, 0009 |
 | Domínio | `*.vercel.app`, sem domínio próprio | Decisão de custo zero (02/10/2026) | 0008 |
 
 ## 3. Organização do repositório

@@ -1,0 +1,131 @@
+# Backup diário do banco de produção, com restauração testada todo mês (ADR-0007, ADR-0009).
+#
+# - Todo dia 03:00 em Recife (06:00 UTC): pg_dump pelo papel `backup` (só leitura) → age → bucket
+#   privado `portal-capibaribe-backups` no R2 → retenção 30 diários + 12 mensais.
+# - Dia 2 de cada mês (e à mão, com "restaurar"): restaura o backup que acabou de ser feito num
+#   Postgres 17 descartável e confere 5 blocos, 320 unidades, tabelas, gatilhos, permissões e a
+#   migração (igual ao head do repositório).
+# - Falhou? O GitHub manda e-mail para quem tem o workflow (padrão das Actions).
+#
+# Nenhum script liga `set -x`; os segredos chegam só por variável de ambiente e o GitHub mascara
+# o valor deles no log.
+name: Backup
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      restaurar:
+        description: "Depois do backup, restaurar num banco temporário e conferir"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Um backup por vez; um segundo disparo espera o primeiro terminar (nunca cancela no meio).
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: pg_dump → age → R2
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      objeto: ${{ steps.backup.outputs.objeto }}
+      restaurar: ${{ steps.dia.outputs.restaurar }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Postgres 17 (cliente, repositório oficial PGDG) e age
+        run: scripts/backup/instalar-ferramentas.sh
+      - name: Dia em Recife e se hoje tem restauração
+        id: dia
+        env:
+          RESTAURAR_A_MAO: ${{ github.event_name == 'workflow_dispatch' && inputs.restaurar }}
+        run: |
+          dia="$(TZ=America/Recife date +%d)"
+          if [[ "$RESTAURAR_A_MAO" == "true" || ( "$GITHUB_EVENT_NAME" == "schedule" && "$dia" == "02" ) ]]; then
+            echo "restaurar=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "restaurar=false" >>"$GITHUB_OUTPUT"
+          fi
+      - name: Backup
+        id: backup
+        env:
+          PG_BIN: /usr/lib/postgresql/17/bin
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          objeto="$(scripts/backup/fazer-backup.sh)"
+          echo "objeto=$objeto" >>"$GITHUB_OUTPUT"
+
+  restauracao:
+    name: Restauração de teste (Postgres 17 temporário)
+    needs: backup
+    if: needs.backup.outputs.restaurar == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PG_BIN: /usr/lib/postgresql/17/bin
+      # Superusuário do container descartável (só existe durante o job).
+      ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      DESTINO_URL: postgresql://postgres:postgres@127.0.0.1:5432/restaurado
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          working-directory: api
+          enable-cache: true
+      - name: Postgres 17 (cliente, repositório oficial PGDG) e age
+        run: scripts/backup/instalar-ferramentas.sh
+      - name: Migração mais nova do repositório (head do Alembic)
+        id: head
+        working-directory: api
+        run: echo "head=$(uv run --frozen alembic heads | awk '{print $1}')" >>"$GITHUB_OUTPUT"
+      # Os papéis donos dos objetos no dump precisam existir no servidor (sem login: ninguém
+      # entra com eles aqui). neon_superuser: o Neon pode citá-lo em permissões do banco.
+      - name: Papéis de produção e banco vazio
+        run: |
+          "$PG_BIN/psql" --no-psqlrc -v ON_ERROR_STOP=1 --dbname="$ADMIN_URL" <<'SQL'
+          create role dono nologin;
+          create role app nologin;
+          create role neon_superuser nologin;
+          create database restaurado;
+          SQL
+      - name: Restaurar e verificar
+        env:
+          OBJETO: ${{ needs.backup.outputs.objeto }}
+          HEAD: ${{ steps.head.outputs.head }}
+          BACKUP_AGE_KEY: ${{ secrets.BACKUP_AGE_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          [[ -n "$HEAD" ]] || { echo "não consegui ler o head do Alembic"; exit 1; }
+          scripts/backup/restaurar.sh --destino "$DESTINO_URL" --objeto "$OBJETO" --head "$HEAD"
+          {
+            echo "### Restauração de teste ok"
+            echo "- backup: \`$OBJETO\`"
+            echo "- 5 blocos, 320 unidades, tabelas, gatilhos e permissões conferidos"
+            echo "- migração do backup igual ao head do repositório: \`$HEAD\`"
+          } >>"$GITHUB_STEP_SUMMARY"
