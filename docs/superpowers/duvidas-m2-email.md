@@ -38,11 +38,12 @@ resto é decisão técnica que pode ser revista na revisão do marco.
   lista a deixaria pior. Quase todo leitor de e-mail mostra a parte HTML.
 
 ## 5. O que conta como falha de um destino e o que interrompe o canal
-- **Decisão:** destinatário recusado (`SMTPRecipientsRefused`) e mensagem recusada
-  (`SMTPDataError`) contam como falha daquele destino e o envio segue. Qualquer outro erro
-  (conexão caiu, tempo esgotado, senha de app errada, remetente recusado) interrompe o canal.
-- **Por quê:** o Gmail avisa a cota diária estourada recusando o remetente (`550 5.4.5`);
-  continuar seria bater na mesma parede 300 vezes. A peça comum já marca `interrompido` com as
+- **Decisão (corrigida na revisão, item 16):** destinatário recusado (`SMTPRecipientsRefused`)
+  e mensagem recusada comum (`SMTPDataError`, ex.: 552 5.3.4) contam como falha daquele destino
+  e o envio segue. `SMTPDataError` com código 421 ou 5.4.5 / 4.7.x no texto, remetente recusado
+  e qualquer outro erro (conexão caiu, tempo esgotado, senha de app errada) interrompem o canal.
+- **Por quê:** o Gmail avisa a cota diária estourada recusando o remetente ou a mensagem
+  (`550 5.4.5`); continuar seria bater na mesma parede 300 vezes. A peça comum já marca `interrompido` com as
   contagens até ali e loga só o tipo do erro.
 
 ## 6. Uma conexão por lote, tempo limite de 20 s
@@ -112,3 +113,49 @@ resto é decisão técnica que pode ser revista na revisão do marco.
 - "Esqueceu a senha? Na tela de entrar, toque em “Esqueci minha senha”: se o apartamento tiver
   e-mail cadastrado, chega um link para criar uma senha nova. E quem cadastrou e-mail passa a
   receber os avisos também por lá."
+
+## 16. Revisão independente (código e UX): o que mudou
+Duas revisões sem contexto; cada correção com teste que falhava antes.
+- **Cota do Gmail na mensagem interrompe** (código 1): `SMTPDataError` com código 421 ou com
+  5.4.5 / 4.7.x no texto (cota do dia, limite de envio) e `SMTPSenderRefused` interrompem o
+  canal; mensagem recusada comum (ex.: 552 5.3.4) continua sendo falha só daquele destino. O
+  item 5 acima fica corrigido por este.
+- **Dois links da mesma unidade ao mesmo tempo** (código 2): `_token_que_vale(travar=True)`
+  trava o token **e a unidade** (`for update of token_recuperacao, unidade`); teste de corrida
+  com dois links e com o mesmo link.
+- **Reserva presa por 24 h** (código 3): resolvido **sem tocar em `notificacoes.py`**. O
+  `ENVIADOR` do e-mail, ao levantar, baixa `resultado.reservados` para o que foi tentado (a
+  mensagem que estava saindo fica contada); a peça comum já grava `resultado.contagens()` no
+  `interrompido`, então a sobra volta à cota. No "esqueci a senha", se nem conectou
+  (`email.NadaSaiu`), o token é apagado (devolve a cota e um dos 3 pedidos da hora); se caiu
+  durante o envio, o link fica (pode ter chegado).
+- **Limite por IP do pedido** (código 4): fica com o coordenador (regra no firewall da Vercel
+  para `/api/acesso/recuperacao`, como na dúvida 8 do contrato). Nada no código.
+- **Apartamento que não existe** (UX 5): a tela de pedir usa a planta do protótipo
+  (`/^[1-5][0-7]0[1-8]$/`, `UNIDADE_OK`). **[coordenador]** A tela de entrar (`Entrar.tsx`, do
+  épico A do M1) usa uma regra mais solta (`/^[1-9][0-7][0-9]{2}$/`, a mesma da API) e responde
+  "Bloco, apartamento ou senha incorretos" para os dois casos; não mexi nela.
+- **Pedido feito** (UX 6): "Pedido feito para o Bloco N, apartamento NNN. O e-mail chega em
+  alguns minutos, de Portal Capibaribe Prime (<conta>), com o assunto “…”. Se não aparecer,
+  olhe também em Spam ou Lixo eletrônico. O link vale por 1 hora."; o foco vai para a caixa.
+  **Mudança de contrato no épico:** `RecuperacaoPedida` ganhou `remetente` (a
+  `PORTAL_SMTP_USUARIO` da configuração, ou nulo com o e-mail desligado; nunca fixo no código) e
+  `assunto`, iguais para qualquer login (a rota continua sem abrir o banco). **[coordenador]**
+  Por isso a asserção de texto exato de `test_pedido_responde_igual_e_deixa_tudo_para_depois`
+  (`test_m2_rotas.py`, comum) virou "respostas iguais entre si e `mensagem` = `MSG_PEDIDO`".
+  Palavra única: "enviar" ("Enviar link", "enviamos", "Enviado pelo Portal" no e-mail), a mesma
+  da frase de H-04.
+- **E-mail de recuperação** (UX 7): "Olá!", "Você (ou alguém da sua família) pediu “Esqueci
+  minha senha”…", e, depois do botão, "O link abre o Portal do condomínio, em <host de
+  PORTAL_URL_BASE>. O Portal nunca pede sua senha por e-mail nem por WhatsApp.".
+- **Link já usado** (UX 8): com o aparelho entrado, "Você já está no Portal. Para trocar a senha
+  de novo, vá em Minha unidade." + "Ir para os avisos". Sem sessão, a mensagem do 410 ganhou
+  "Se você já criou a senha nova, é só entrar com ela." (mudança de texto do contrato, no
+  épico).
+- **Menores** (UX 9): assunto do aviso = o título, com "Urgente: " na frente se for urgente
+  (antes "Aviso do Portal: <título>", do contrato); "Publicado pela Comissão em 07/10, às 21h23"
+  (assinatura do mural, `ASSINATURAS` de `servicos/avisos.py`, UTC−3 fixo de Recife: sem horário
+  de verão desde 2019 e sem depender do tzdata da função); prévia escondida no topo do HTML (o
+  resumo do aviso); `color-scheme` e `supported-color-schemes` claros; "a senha que a Comissão
+  mandou no grupo" no lugar de "a senha inicial"; recado depois de salvar com "Avise a família
+  da senha nova."

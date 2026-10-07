@@ -9,6 +9,11 @@
 | **Plano** | `docs/superpowers/plans/m2-email.md` |
 | **Dúvidas** | `docs/superpowers/duvidas-m2-email.md` |
 
+> **Revisão independente (código e UX):** o que mudou depois da primeira versão (assunto do
+> aviso, textos das telas e do e-mail, `remetente` e `assunto` na resposta do pedido, cota do
+> Gmail na mensagem, trava da unidade, reserva devolvida) está em `duvidas-m2-email.md`, item
+> 16, e vale sobre o texto abaixo.
+
 ## 1. Objetivo
 
 Ligar o canal de e-mail que o contrato deixou marcado: a cópia do aviso por e-mail para as
@@ -55,7 +60,7 @@ as mensagens.
    - `resultado.salvar()` a cada `SALVAR_A_CADA` tentativas.
 4. Não faz commit (contrato, seção 5).
 
-**Conteúdo** (assunto "Aviso do Portal: <título>"):
+**Conteúdo** (assunto: o título; "Urgente: " na frente se urgente):
 
 | Parte | Texto puro | HTML |
 |---|---|---|
@@ -114,7 +119,7 @@ A rota faz o commit e grava o cookie.
 - **`/esqueci-a-senha`** (`EsqueciASenha.tsx`, só sem sessão, como `/entrar`): título "Esqueci
   minha senha" com seta de voltar para `/entrar`; a frase do protótipo; bloco em 5 botões e
   apartamento, **o mesmo formato e as mesmas regras da tela de entrar** (`montarLogin`,
-  `limparApartamento`, colar `1203` marca o bloco); "Mandar link". Erros de formulário antes de
+  `limparApartamento`, colar `1203` marca o bloco); "Enviar link". Erros de formulário antes de
   mandar: sem bloco, sem apartamento, apartamento impossível ("Esse apartamento não existe.
   Confira o bloco e o número da porta.", do protótipo). Depois do 202, a caixa de status com a
   mensagem da API (H-04, sempre a mesma), o parágrafo para quem não tem e-mail (grupo do
