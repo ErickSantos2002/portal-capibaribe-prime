@@ -281,7 +281,7 @@ def test_publicar_para_o_bloco_1_manda_so_para_o_bloco_1(logar, engine_app, emai
         para_todos=False,
         blocos=[1],
     )
-    # H-13: só as unidades do Bloco 1 com e-mail; nem o Bloco 2, nem quem publicou.
+    # H-13: só as unidades do Bloco 1 com e-mail; o Bloco 2 não (quem publicou é do Bloco 2).
     assert sorted(m["To"] for m in email_ligado.mensagens) == [
         "u1101@example.com",
         "u1203@example.com",

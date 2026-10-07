@@ -31,7 +31,8 @@ Os canais moram em arquivos próprios, um por épico, com a interface `Enviador`
 - `app/servicos/email.py` → `ENVIADOR` (épico B, cópia do aviso por e-mail).
 
 Quem recebe é regra comum (`destinos_push`, `destinos_email`): as unidades ativas do destino do
-aviso (todos ou os blocos dele), menos a unidade que publicou (ela já conta como quem leu).
+aviso (todos ou os blocos dele), **inclusive a unidade que publicou** e os outros aparelhos dela
+(resposta do Erick ao item 4 de `duvidas-m2.md`: a notificação confirma que o aviso saiu).
 """
 
 import logging
@@ -380,8 +381,8 @@ class DestinoEmail:
 
 
 def _unidades_do_destino(aviso: AvisoParaNotificar) -> Select[tuple[int]]:
-    """Unidades ativas que o aviso alcança, menos quem publicou."""
-    consulta = select(Unidade.id).where(Unidade.ativa, Unidade.id != aviso.publicado_por)
+    """Unidades ativas que o aviso alcança, inclusive a de quem publicou."""
+    consulta = select(Unidade.id).where(Unidade.ativa)
     if not aviso.para_todos:
         consulta = consulta.where(
             Unidade.bloco_id.in_(
