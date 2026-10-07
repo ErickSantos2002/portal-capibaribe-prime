@@ -1,0 +1,17 @@
+Assunto: Portal Capibaribe Prime: criar senha nova
+De: Portal Capibaribe Prime <portal@example.com>
+Para: morador@example.com
+
+Olá!
+
+Pediram um link para criar uma senha nova no Portal Capibaribe Prime para o Bloco 1, apartamento 203.
+
+Para criar a senha nova, abra este link:
+https://portal-capibaribe-prime.vercel.app/redefinir-senha#token=EXEMPLO-de-token
+
+O link vale por 1 hora e só uma vez.
+
+Se não foi você, apague este e-mail; sua senha continua a mesma.
+
+--
+Mandado pelo Portal Capibaribe Prime porque alguém pediu “Esqueci minha senha” para este apartamento.

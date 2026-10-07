@@ -118,8 +118,8 @@ A rota faz o commit e grava o cookie.
   mandar: sem bloco, sem apartamento, apartamento impossível ("Esse apartamento não existe.
   Confira o bloco e o número da porta.", do protótipo). Depois do 202, a caixa de status com a
   mensagem da API (H-04, sempre a mesma), o parágrafo para quem não tem e-mail (grupo do
-  WhatsApp, a administração volta a senha para a inicial), "Voltar para a entrada" e "Pedir de
-  novo".
+  WhatsApp, a administração volta a senha para a inicial) e "Voltar para a entrada". Antes de
+  pedir, a mesma dica para quem não tem e-mail aparece embaixo do botão (dúvidas, item 11).
 - **`/redefinir-senha`** (`RedefinirSenha.tsx`, pública): lê `#token=` uma vez, apaga o `#` da
   barra (`history.replaceState`) e chama `conferir`. Estados: conferindo; link inválido (caixa
   com a mensagem da API, botão "Pedir outro link" → `/esqueci-a-senha`, e "Voltar para a
