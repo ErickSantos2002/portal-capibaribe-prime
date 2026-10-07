@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | v0.5 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.6 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 no ar como versão 1.2.0 (06/10/2026), falta o teste em aparelho; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | Acompanhar a adesão e corrigir o que o grupo apontar; depois M2 (notificações) |
+| **Próximo passo** | Versão 1.3.0 com as respostas do Erick (`superpowers/duvidas-m2.md`, fim); teste do M2 em Android e iPhone reais; fechar o M2 |
 
 ---
 

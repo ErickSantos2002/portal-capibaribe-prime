@@ -188,3 +188,21 @@ Um revisor sem contexto conferiu a branch; corrigido com teste que falhava antes
   unidades ativadas, poucas com e-mail) não pedem. O épico B mede no portão quanto tempo leva
   cada e-mail; se `pulados` aparecer por tempo, a saída é mandar em 2 ou 3 conexões SMTP em
   paralelo (dentro do mesmo prazo) ou a tabela de entregas.
+
+## Respostas do Erick (06/10/2026, depois da 1.2.0 no ar)
+
+| Dúvida | Resposta | O que muda |
+|---|---|---|
+| Nome embaixo do ícone (`duvidas-m2-push.md` item 10) | **"Capibaribe"** | Nada: já está assim |
+| Item 4 · quem publica não recebe | **Recebe também**, e os outros aparelhos da unidade dele também | A fazer: tirar a exclusão de quem publicou dos destinos de push e e-mail |
+| Item 6 · correção notifica de novo? | **Não notifica** | Nada: já está assim. Correção importante vira aviso novo |
+| Item 7 · como parar de receber e-mail | **Opção em Minha unidade**, "Receber os avisos por e-mail", ligada por padrão; o e-mail continua cadastrado para o "esqueci a senha" | A fazer: migração 0006 (coluna em `unidade`), controle na tela, destinos pulam quem desligou, rodapé do e-mail aponta para Minha unidade (substitui o item 3 de `duvidas-m2-email.md`) |
+| Item 8 · limite por IP do "esqueci a senha" | Resolvido pelo coordenador | A regra de limite do firewall (20 por IP a cada 10 min) passou a cobrir também `POST /api/acesso/recuperacao` (ADR-0005) |
+| Item 18 · Gmail, senha de app e VAPID | Feito | Conta `capibaribeprime@gmail.com` criada pelo Erick; variáveis na Vercel; e-mail real de recuperação chegou na caixa de entrada (não no spam) |
+
+As duas mudanças "a fazer" saem juntas na **versão 1.3.0** (novidade visível, então minor), num
+agente só (branch `m2/ajustes`). A migração 0006 roda no Neon **antes** do push.
+
+**Ainda falta para fechar o M2:** o teste em aparelho de verdade, que é o critério do marco
+(`07-roadmap.md`): um aviso para o Bloco 1 chega num Android e num iPhone com o Portal instalado,
+e não chega no Bloco 2. Está em espera por decisão do Erick, até ter alguém com iPhone para testar.
