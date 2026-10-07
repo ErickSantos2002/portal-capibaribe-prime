@@ -121,10 +121,14 @@ Ao ativar: o pedido de permissão sai **do toque** (exigência do iPhone); recus
 só fechou. Erro da API (409 limite, 503 desligado, sem conexão): a mensagem da API numa
 `CaixaDeErro`, e a inscrição local é desfeita para não ficar meio ligada.
 
-**Sincronização ao abrir o Portal** (`registrarServiceWorker`): se a permissão já foi dada e o
-navegador tem inscrição, confere `GET /api/notificacoes`; se a sessão desta vez não tem
-inscrição (entrou de novo, trocou a senha) ou a chave do servidor mudou, inscreve de novo sem
-perguntar nada. Sem permissão ou sem inscrição local, não faz nenhuma requisição.
+**Sincronização** (mural, Minha unidade e oferta): se a permissão já foi dada, o navegador
+tem inscrição e foi esta unidade que ativou neste navegador, confere `GET /api/notificacoes`;
+se a sessão desta vez não tem inscrição (entrou de novo, trocou a senha) ou a chave do
+servidor mudou, inscreve de novo sem perguntar nada. Sair do Portal desfaz a inscrição do
+navegador.
+
+**Faixa no mural** (revisão): "Falta um passo: ative as notificações para saber dos avisos na
+hora." com "Ativar" e "Agora não" (30 dias), só no estado `inativa`.
 
 ### 3.4 Cache
 

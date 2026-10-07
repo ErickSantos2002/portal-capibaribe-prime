@@ -17,17 +17,12 @@ atenção no merge.
 - **No merge:** o épico B também vai mexer no `it` do épico B do `m2contrato.test.ts`. Conflito
   pequeno e previsível: ficar com a versão do A para o primeiro `it` e a do B para o segundo.
 
-## 2. Oferta "uma vez por aparelho" e o segundo celular da casa **[Erick]**
+## 2. Oferta "uma vez por aparelho" e o segundo celular da casa (resolvido na revisão)
 - **Dúvida:** H-05 diz "depois do primeiro acesso, o Portal oferece uma vez". O primeiro acesso
-  acontece uma vez por **apartamento**; o celular do cônjuge entra pela tela de entrar e nunca
-  passa por ele.
-- **Decisão:** a oferta aparece depois do primeiro acesso, marcada no `localStorage` do
-  aparelho (`portal-oferta-avisos`). O segundo celular acha tudo em Minha unidade
-  (seção "Notificações" e o link "Como instalar o Portal na tela inicial").
-- **Por quê:** mostrar a oferta depois de qualquer entrada exigiria mexer em `Entrar.tsx`
-  (comum, do M1). Se o portão do M2 mostrar que o segundo celular não acha, a saída é uma faixa
-  "Receba os avisos neste celular" no mural, para quem ainda não ativou (precisa do
-  coordenador).
+  acontece uma vez por **apartamento**; o celular do cônjuge e o iPhone que acabou de instalar
+  (o app instalado não divide o login com o Safari) nunca passam por ele.
+- **Decisão:** a oferta continua depois do primeiro acesso, e o mural ganhou a faixa "Falta um
+  passo" (item 13), que alcança os dois casos.
 
 ## 3. Botão "Ativar notificações" leve, e "Ir para o mural" cheio
 - **Decisão:** como no protótipo (`#instalar`): o botão cheio da oferta é "Ir para o mural";
@@ -58,11 +53,16 @@ atenção no merge.
   continua precisando de internet, como hoje. O teste `web/testes/pwa.test.ts` falha se alguém
   puser `fetch` ou `caches.` no `sw.js`.
 
-## 7. Reinscrição sozinha (sem perguntar)
-- **Decisão:** ao abrir o Portal, se a permissão já foi dada e o navegador tem inscrição, o
-  Portal confere a API e, se a sessão desta vez não tem inscrição (entrou de novo, trocou a
-  senha, foi desconectado e entrou de novo) ou a chave mudou, inscreve de novo. O
+## 7. Reinscrição sozinha (sem perguntar), só para a unidade que ativou
+- **Decisão:** ao abrir o mural (ou Minha unidade, ou a oferta), se a permissão já foi dada, o
+  navegador tem inscrição **e foi esta unidade que ativou neste navegador** (`localStorage`
+  `portal-push-unidade`), o Portal confere a API e, se a sessão desta vez não tem inscrição
+  (entrou de novo, trocou a senha) ou a chave mudou, inscreve de novo. O
   `pushsubscriptionchange` do service worker faz o mesmo quando o navegador troca a inscrição.
+- **Revisão:** antes, a unidade B que entrasse no navegador onde a A ativou herdava as
+  notificações. Agora sair do Portal desfaz a inscrição do navegador (`SessaoProvider`, mudança
+  mínima num arquivo comum **[coordenador]**) e só a unidade dona é reinscrita. Sem
+  `localStorage`, ninguém é reinscrito sozinho (o seguro).
 - **Por quê:** trocar a senha encerra as sessões e leva as inscrições junto (contrato 2.1); sem
   isso, o celular do casal pararia de receber em silêncio depois de uma troca de senha. Quem
   desativou não é reinscrito: "Desativar" desfaz a inscrição do navegador também. Custo: um
@@ -106,3 +106,33 @@ para o Bloco 2, conferir `/api/avisos/{id}/envios`.
 ## 12. Nada de banco, versão ou novidades
 - Nenhuma migração nova (a 0005 já tinha tudo), nenhuma mudança em `web/package.json` ou
   `novidades.ts` (o coordenador faz a 1.2.0 no merge).
+
+## 13. Faixa "Falta um passo" no mural (revisão de UX) **[coordenador]**
+- **Decisão:** componente `FaixaNotificacoes`, encaixado no topo do mural (`Mural.tsx`, uma
+  linha, arquivo comum). Aparece só quando dá para ativar de verdade: push ligado no servidor,
+  aparelho que recebe (no iPhone, aberto pelo ícone), permissão não negada e este aparelho sem
+  inscrição. "Ativar" pede a permissão direto do toque; "Agora não" esconde por **30 dias**
+  neste aparelho (`localStorage` `portal-faixa-avisos-ate`).
+- **Por quê 30 dias:** o convite tem de voltar um dia (quem disse "agora não" pode mudar de
+  ideia, e o mural é onde a pessoa está), mas raramente o bastante para não virar cobrança.
+  Também aparece no Android sem instalar (o push funciona no navegador), não só instalado.
+
+## 14. Revisão de código: o que mudou
+- **SSRF** (bloqueava): o endpoint é validado pelo mesmo parser do envio (urllib3) e pelo
+  `urlsplit`, e só aceita caracteres de URL, sem `\`, espaço, `%`, `@` ou porta no host. O
+  envio revalida cada endpoint antes do POST. Host em maiúsculas continua aceito (o teste de
+  contrato `maiusculas` já aceitava, e os dois parsers baixam para minúsculas); recusadas as
+  variantes de ataque em maiúsculas.
+- **Prazo por destino:** conferido antes de cada POST, com tempo limite `(5, 5)`; o pior caso
+  passa do prazo comum em ~10 s (240 + 10 < 300).
+- **Trava das inscrições mortas:** em vez de commitar por lote (o contrato diz que `enviar` não
+  faz commit em `db`), as mortas são apagadas num DELETE só, no fim do envio: a trava dura só
+  até o commit de quem chama, logo depois. Fica aberta a transação de leitura do
+  `destinos_push` durante o envio (sem trava de linha).
+- **Teste com o pywebpush de verdade** em modo curl, em `tmp_path` (o modo curl grava
+  `encrypted.data` na pasta atual; o arquivo que tinha ficado em `api/` foi apagado).
+
+## 15. Admin fictício do `dados_ficticios`
+- Existe: em local e teste, a **primeira unidade sorteada** e ativada pelo comando vira admin
+  (e as duas seguintes, Comissão). Não é a 1101 (essa é a do `conftest.py` dos testes). Na
+  conferência visual deste épico, foi a 1-002.
