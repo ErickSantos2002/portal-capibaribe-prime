@@ -87,6 +87,21 @@ def test_push_exige_cabecalho_portal(logar, metodo, caminho, corpo):
         "https://xfcm.googleapis.com/x",
         "https://[::1]/x",
         "nao é url",
+        # Revisão do épico A: o requests (urllib3) lê a barra invertida diferente do urlsplit
+        # e conectava em 169.254.169.254.
+        "https://169.254.169.254\\.fcm.googleapis.com/latest",
+        "https://169.254.169.254%5C.fcm.googleapis.com/latest",
+        "https://169.254.169.254%5c.fcm.googleapis.com/latest",
+        "https://fcm.googleapis.com\\@169.254.169.254/x",
+        "https://169.254.169.254@fcm.googleapis.com/x",
+        "https://fcm.googleapis.com/fcm send/x",
+        "https://fcm.googleapis.com /x",
+        "https://169.254.169.254\\.FCM.GOOGLEAPIS.COM/latest",
+        "HTTPS://fcm.googleapis.com/fcm/send/x",
+        "https://fcm.googleapis.com./fcm/send/x",
+        "https://fcm.googleapis.com/fcm/send/x\\y",
+        "https://fcm.googleapis.com/fcm/send/\n",
+        "https://fcm.googleapis.com/fcm/send/é",
     ],
 )
 def test_servico_de_push_desconhecido_recusado(endpoint):
