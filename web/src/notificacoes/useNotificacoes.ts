@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ErroDaApi } from '../api/cliente'
 import { useRecado } from '../casca/contextoRecado'
+import { useSessao } from '../casca/contextoSessao'
 import { lerEstadoDasNotificacoes } from './api'
 import { situacaoDoAparelho, type SituacaoDoAparelho } from './aparelho'
 import { ativar, desativar, mostrarExemplo, sincronizar } from './inscricao'
@@ -26,24 +27,29 @@ export interface Problema {
   vez: number
 }
 
-const MSG_INESPERADA = 'Não deu para mudar as notificações agora. Tente de novo daqui a pouco.'
+// Erro que não vem da API: o navegador recusou a inscrição (aba anônima, serviço de push fora,
+// service worker que não ficou pronto). Tentar de novo não resolve; outro navegador, sim.
+const MSG_NAVEGADOR =
+  'Este navegador não deixou ligar as notificações. Se estiver numa aba anônima, abra o Portal ' +
+  'numa aba normal ou no Chrome. Os avisos continuam no mural.'
 
 function mensagemDe(falha: unknown): string {
-  return falha instanceof ErroDaApi ? falha.mensagem : MSG_INESPERADA
+  return falha instanceof ErroDaApi ? falha.mensagem : MSG_NAVEGADOR
 }
 
-async function lerSituacao(): Promise<Estado> {
+async function lerSituacao(login: string): Promise<Estado> {
   const api = await lerEstadoDasNotificacoes()
   if (!api.disponivel || !api.chave_publica) return { situacao: 'desligado', chave: null }
   const aparelho = situacaoDoAparelho()
   if (aparelho !== 'pronta') return { situacao: aparelho, chave: api.chave_publica }
   // Quem já tinha ativado e entrou de novo volta a receber sem perguntar nada.
-  const ativa = await sincronizar(api)
+  const ativa = await sincronizar(login, api)
   return { situacao: ativa ? 'ativa' : 'inativa', chave: api.chave_publica }
 }
 
 export function useNotificacoes() {
   const recado = useRecado()
+  const login = useSessao().eu?.unidade.login ?? ''
   const [estado, setEstado] = useState<Estado>({ situacao: 'carregando', chave: null })
   const [problema, setProblema] = useState<Problema | null>(null)
   const [dica, setDica] = useState<string | null>(null)
@@ -53,18 +59,18 @@ export function useNotificacoes() {
 
   const atualizar = useCallback(async () => {
     try {
-      const lido = await lerSituacao()
+      const lido = await lerSituacao(login)
       setEstado(lido)
       setFalhaAoLer(null)
     } catch (falha) {
       setEstado({ situacao: 'erro', chave: null })
       setFalhaAoLer(mensagemDe(falha))
     }
-  }, [])
+  }, [login])
 
   useEffect(() => {
     let ativo = true
-    lerSituacao().then(
+    lerSituacao(login).then(
       (lido) => ativo && setEstado(lido),
       (falha: unknown) => {
         if (!ativo) return
@@ -81,7 +87,7 @@ export function useNotificacoes() {
       ativo = false
       document.removeEventListener('visibilitychange', aoVoltar)
     }
-  }, [atualizar])
+  }, [atualizar, login])
 
   const falhar = (falha: unknown) =>
     setProblema((anterior) => ({ mensagem: mensagemDe(falha), vez: (anterior?.vez ?? 0) + 1 }))
@@ -89,7 +95,7 @@ export function useNotificacoes() {
   /** Ligar no `onClick` direto: o pedido de permissão sai antes de qualquer espera. */
   function aoAtivar() {
     if (!estado.chave) return
-    const pedido = ativar(estado.chave)
+    const pedido = ativar(estado.chave, login)
     setOcupado(true)
     setProblema(null)
     setDica(null)

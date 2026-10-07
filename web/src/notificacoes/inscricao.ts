@@ -5,6 +5,26 @@ import { inscreverEsteAparelho, lerEstadoDasNotificacoes, removerEsteAparelho } 
 import type { EstadoNotificacoes, InscricaoPush } from './tipos'
 
 const ESPERA_DO_SERVICE_WORKER_MS = 10_000
+/** Qual unidade ativou as notificações neste navegador (`localStorage`). A inscrição do
+ *  navegador sobrevive à saída; sem isto, a próxima unidade a entrar herdaria os avisos. */
+export const CHAVE_DONO = 'portal-push-unidade'
+
+function lerDono(): string | null {
+  try {
+    return localStorage.getItem(CHAVE_DONO)
+  } catch {
+    return null
+  }
+}
+
+function gravarDono(login: string | null): void {
+  try {
+    if (login) localStorage.setItem(CHAVE_DONO, login)
+    else localStorage.removeItem(CHAVE_DONO)
+  } catch {
+    // Sem localStorage: o Portal não reinscreve sozinho (seguro; a pessoa ativa de novo).
+  }
+}
 
 export type ResultadoDeAtivar = 'ativa' | 'recusada' | 'bloqueada'
 
@@ -65,7 +85,7 @@ async function inscreverNoNavegador(chave: string): Promise<PushSubscription> {
  * mostra o pedido se ele sair do toque). Erro da API desfaz a inscrição do navegador e sobe
  * (`ErroDaApi`), para não ficar meio ligada.
  */
-export async function ativar(chave: string): Promise<ResultadoDeAtivar> {
+export async function ativar(chave: string, login: string): Promise<ResultadoDeAtivar> {
   const permissao = await Notification.requestPermission()
   if (permissao === 'denied') return 'bloqueada'
   if (permissao !== 'granted') return 'recusada'
@@ -76,6 +96,7 @@ export async function ativar(chave: string): Promise<ResultadoDeAtivar> {
     await inscricao.unsubscribe().catch(() => false)
     throw erro
   }
+  gravarDono(login)
   return 'ativa'
 }
 
@@ -102,18 +123,33 @@ export async function mostrarExemplo(): Promise<void> {
 export async function desativar(): Promise<void> {
   const atual = await inscricaoLocal().catch(() => null)
   await atual?.unsubscribe().catch(() => false)
+  gravarDono(null)
   await removerEsteAparelho()
 }
 
+/** Ao sair do Portal neste aparelho: desfaz a inscrição do navegador (a da API já saiu com a
+ *  sessão). Quem entrar depois começa do zero. Nunca levanta. */
+export async function esquecerEsteAparelho(): Promise<void> {
+  gravarDono(null)
+  try {
+    if (!('serviceWorker' in navigator)) return
+    const atual = await inscricaoLocal()
+    await atual?.unsubscribe()
+  } catch {
+    // Sem service worker ou sem inscrição: nada a desfazer.
+  }
+}
+
 /**
- * Ao abrir o Portal: quem já ativou continua recebendo depois de entrar de novo ou trocar a
- * senha (a inscrição na API some com a sessão; a do navegador continua). Só faz requisição se
- * a permissão já foi dada e o navegador tem inscrição. Nunca levanta. Devolve se este aparelho
- * está recebendo.
+ * Quem já ativou continua recebendo depois de entrar de novo ou trocar a senha (a inscrição na
+ * API some com a sessão; a do navegador continua). **Só a unidade que ativou** neste navegador
+ * (`CHAVE_DONO`): outra unidade não herda. Só faz requisição se a permissão já foi dada e o
+ * navegador tem inscrição. Nunca levanta. Devolve se este aparelho está recebendo.
  */
-export async function sincronizar(estado?: EstadoNotificacoes): Promise<boolean> {
+export async function sincronizar(login: string, estado?: EstadoNotificacoes): Promise<boolean> {
   try {
     if (typeof Notification !== 'function' || Notification.permission !== 'granted') return false
+    if (lerDono() !== login) return false
     if (!('serviceWorker' in navigator)) return false
     const local = await inscricaoLocal()
     if (!local) return false

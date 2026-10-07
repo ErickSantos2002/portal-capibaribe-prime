@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { useSessao } from '../casca/contextoSessao'
 import { Icone } from '../casca/Icone'
 import { Tela } from '../casca/Tela'
+import { FaixaNotificacoes } from '../notificacoes/FaixaNotificacoes'
 import { listarAvisos } from './api'
 import { useCarga } from './carregar'
 import { AvisoFixado, Carregando, FalhaAoCarregar, ItemAviso } from './componentes'
@@ -57,6 +58,8 @@ export function Mural({ arquivados = false }: { arquivados?: boolean }) {
           <p>Avisos que saíram do mural. Continuam guardados como foram publicados.</p>
         </div>
       )}
+      {/* M2 (épico A): "Falta um passo: ative as notificações", só quando dá para ativar. */}
+      {!arquivados && <FaixaNotificacoes />}
       {destacados.map((aviso) => (
         <AvisoFixado key={aviso.id} aviso={aviso} />
       ))}

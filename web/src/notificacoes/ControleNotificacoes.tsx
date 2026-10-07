@@ -46,7 +46,8 @@ export function ControleNotificacoes({ n }: { n: Notificacoes }) {
     case 'precisa_instalar':
       return (
         <Explicacao>
-          No iPhone, primeiro coloque o Portal na tela inicial e abra por lá. Depois ative aqui.
+          No iPhone, as notificações só funcionam com o Portal na tela inicial. Instale e abra pelo
+          ícone novo: lá dentro, o Portal mostra o botão para ativar.
         </Explicacao>
       )
     case 'ios_antigo':
@@ -59,8 +60,8 @@ export function ControleNotificacoes({ n }: { n: Notificacoes }) {
     case 'sem_suporte':
       return (
         <Explicacao>
-          Este navegador não recebe notificações. No Android, use o Chrome. Os avisos continuam
-          no mural.
+          Este navegador não recebe notificações. Abra o Portal no Chrome, no Edge ou no Firefox.
+          Os avisos continuam no mural.
         </Explicacao>
       )
     case 'bloqueada':
@@ -72,6 +73,9 @@ export function ControleNotificacoes({ n }: { n: Notificacoes }) {
               <strong>As notificações estão bloqueadas neste aparelho.</strong>
             </p>
             <p>{comoLiberar()}</p>
+            <button type="button" className="botao leve" onClick={() => void n.atualizar()}>
+              Já liberei
+            </button>
           </div>
         </div>
       )

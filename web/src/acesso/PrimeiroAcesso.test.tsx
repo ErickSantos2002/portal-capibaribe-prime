@@ -90,7 +90,7 @@ describe('primeiro acesso', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar e entrar' }))
     await waitFor(() => expect(roteador.state.location.pathname).toBe('/receber-avisos'))
     await screen.findByRole('heading', { name: 'Receber os avisos' })
-    expect(screen.getByRole('status').textContent).toBe('Pronto! O apartamento está ativado.')
+    expect(screen.getByText('Pronto, o apartamento está ativado.')).toBeTruthy()
     expect(chamadas.find((c) => c.caminho === '/api/acesso/primeiro-acesso')?.corpo).toEqual({
       senha_nova: 'casa-nova-2027',
       senha_nova_repetida: 'casa-nova-2027',

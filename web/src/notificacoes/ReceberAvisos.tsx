@@ -20,7 +20,10 @@ import './notificacoes.css'
 
 export function ReceberAvisos() {
   const local = useLocation()
-  const deMinhaUnidade = (local.state as { de?: unknown } | null)?.de === 'minha-unidade'
+  const estado = local.state as { de?: unknown; ativado?: unknown } | null
+  const deMinhaUnidade = estado?.de === 'minha-unidade'
+  // Vindo do primeiro acesso: o "ativado" entra no texto (o recado flutuante cobria a pergunta).
+  const ativado = estado?.ativado === true
   const n = useNotificacoes()
   // Uma vez por aparelho: daqui em diante, o primeiro acesso (se houver de novo) vai ao mural.
   useEffect(() => marcarOfertaVista(), [])
@@ -28,6 +31,12 @@ export function ReceberAvisos() {
 
   return (
     <Tela titulo="Receber os avisos" voltar={deMinhaUnidade ? '/minha-unidade' : undefined}>
+      {ativado && (
+        <p className="notif-situacao ligada notif-ativado">
+          <Icone nome="certo" />
+          <span>Pronto, o apartamento está ativado.</span>
+        </p>
+      )}
       <h2>Quer ser avisado na hora?</h2>
       <p>
         Dois passos, uma vez só. Dá para fazer depois em <b>Minha unidade</b>.
@@ -36,7 +45,7 @@ export function ReceberAvisos() {
       <section className="folha notif-cartao" aria-labelledby="notif-instalar">
         <h3 id="notif-instalar" className="com-icone">
           <Icone nome={celular ? 'celular' : 'monitor'} />
-          Coloque o Portal na tela inicial
+          {celular ? 'Coloque o Portal na tela inicial' : 'Coloque o Portal no computador'}
         </h3>
         <p className="ajuda">Ele abre como um aplicativo, direto pelo ícone.</p>
         <Instalar />
@@ -96,14 +105,25 @@ function Instalar() {
   if (plataforma() === 'iphone') {
     return (
       <>
-        <ol className="notif-passos">
+        {/* `role="list"`: o Safari tira a semântica de lista com `list-style: none`. */}
+        <ol className="notif-passos" role="list">
           <li>
-            Toque em <b>Compartilhar</b> (o quadrado com a seta para cima).
+            Toque em <b>Compartilhar</b> (o quadrado com a seta para cima). Se não aparecer, toque
+            antes nos três pontinhos <b>•••</b>.
           </li>
           <li>
-            Escolha <b>Adicionar à Tela de Início</b>.
+            Role a lista e toque em <b>Adicionar à Tela de Início</b>.
           </li>
-          <li>Abra o Portal pelo ícone novo, Capibaribe.</li>
+          <li>
+            Toque em <b>Adicionar</b>, no canto de cima.
+          </li>
+          <li>
+            Abra o Portal pelo ícone novo, Capibaribe. Se pedir, entre de novo com bloco,
+            apartamento e senha.
+          </li>
+          <li>
+            Lá dentro, toque em <b>Ativar notificações</b>.
+          </li>
         </ol>
         <p className="aviso-caixa atencao notif-iphone">
           No iPhone, as notificações só chegam se o Portal for aberto pelo ícone.
@@ -117,16 +137,16 @@ function Instalar() {
   if (plataforma() === 'android') {
     return (
       <p className="notif-dica">
-        No menu ⋮ do navegador, toque em <b>Instalar aplicativo</b> ou{' '}
-        <b>Adicionar à tela inicial</b>.
+        Toque nos três pontinhos ⋮ do navegador (no Samsung, nas três linhas ☰, embaixo) e
+        escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.
         {resultado === 'recusou' && ' Ou deixe para depois: tudo funciona pelo navegador.'}
       </p>
     )
   }
   return (
     <p className="notif-dica">
-      No Chrome ou no Edge, o Portal vira uma janela própria: use o botão de instalar na barra de
-      endereço. No Firefox não dá para instalar, mas tudo funciona pelo navegador.
+      No Chrome ou no Edge, o Portal vira uma janela própria: clique no ícone de tela com seta, no
+      fim da barra de endereço. No Firefox não dá para instalar, mas tudo funciona pelo navegador.
     </p>
   )
 }

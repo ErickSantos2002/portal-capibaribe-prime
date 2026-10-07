@@ -114,3 +114,50 @@
 .notif-instalar .texto-link {
   gap: 8px;
 }
+
+/* "Pronto, o apartamento está ativado." no topo da oferta, vindo do primeiro acesso. */
+.notif-ativado {
+  margin-bottom: 10px;
+}
+
+/* Faixa do mural: convite discreto, na cor do ipê (atenção, não erro), acima dos fixados. */
+.notif-faixa {
+  margin: 0 0 20px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--ipe);
+  border-left-width: 6px;
+  border-radius: var(--r-medio);
+  background: var(--ipe-suave);
+}
+
+.notif-faixa.ligada {
+  border-color: var(--mata);
+  background: var(--mata-suave);
+}
+
+.notif-faixa .notif-situacao {
+  margin: 0;
+}
+
+.notif-faixa-texto {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-weight: 700;
+}
+
+.notif-faixa-texto svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.notif-faixa-acoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Lado a lado não somam margem (o `.botao + .botao` do estilo comum é para empilhados). */
+.notif-faixa-acoes .botao + .botao {
+  margin-top: 0;
+}

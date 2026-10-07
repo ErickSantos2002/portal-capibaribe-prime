@@ -91,15 +91,13 @@ export function aparelhoFalso({
   })
   if (push) {
     vi.stubGlobal('PushManager', function PushManager() {})
-    vi.stubGlobal(
-      'Notification',
-      Object.assign(function Notification() {}, {
-        get permission() {
-          return estadoPermissao.valor
-        },
-        requestPermission: pedirPermissao,
-      }),
-    )
+    // `defineProperty`, não `Object.assign`: o assign leria o getter uma vez só, e a permissão
+    // não mudaria depois (ex.: a pessoa liberou nos Ajustes).
+    const Notificacao = Object.defineProperties(function Notification() {}, {
+      permission: { get: () => estadoPermissao.valor },
+      requestPermission: { value: pedirPermissao },
+    })
+    vi.stubGlobal('Notification', Notificacao)
   } else {
     vi.stubGlobal('PushManager', undefined)
     vi.stubGlobal('Notification', undefined)

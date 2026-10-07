@@ -50,12 +50,12 @@ export function situacaoDoAparelho(): SituacaoDoAparelho {
 /** O caminho para liberar as notificações bloqueadas, no aparelho desta pessoa. */
 export function comoLiberar(): string {
   if (plataforma() === 'iphone') {
-    return 'No iPhone, abra Ajustes › Notificações › Capibaribe e ligue Permitir Notificações. Depois, volte aqui.'
+    return 'No iPhone, abra Ajustes › Notificações › Capibaribe e ligue Permitir Notificações.'
   }
   if (plataforma() === 'android' && instalado()) {
-    return 'No Android, toque e segure o ícone Capibaribe › Informações do app › Notificações › Permitir. Depois, volte aqui.'
+    return 'No Android, toque e segure o ícone Capibaribe › Informações do app › Notificações › Permitir.'
   }
-  return 'Toque no cadeado ao lado do endereço do site › Permissões (ou Configurações do site) › Notificações › Permitir. Depois, recarregue a página.'
+  return 'Toque no ícone à esquerda do endereço do site (um cadeado ou dois tracinhos) › Notificações › Permitir.'
 }
 
 // --- pedido de instalação (Chrome, Edge, Samsung Internet) -------------------------------------
