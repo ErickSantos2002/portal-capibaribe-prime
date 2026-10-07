@@ -1,6 +1,6 @@
 /* Épico B do M2 · Esqueci a senha. Só tokens da casca (var(--…)); nenhum style= no JSX (CSP). */
 
-/* Na tela de entrar, logo abaixo do botão "Entrar" (o lugar do <details> do M1). */
+/* Na tela de entrar, logo abaixo do botão "Entrar" (no lugar do <details> do M1). */
 .recuperacao-link {
   margin: 12px 0 0;
 }

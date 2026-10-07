@@ -338,9 +338,9 @@ def mensagem_de_recuperacao(
         f"Criar senha nova</h1>"
         f'<p style="{p}">{html.escape(pedido)}</p>'
         f'<p style="{p}"><strong>{html.escape(validade)}</strong></p>'
+        f'<p style="{p}">{html.escape(nao_foi)}</p>'
     )
-    rodape = f"{nao_foi} {RODAPE_DA_RECUPERACAO}"
-    html_ = _pagina("Criar senha nova", miolo, "Criar senha nova", endereco, rodape)
+    html_ = _pagina("Criar senha nova", miolo, "Criar senha nova", endereco, RODAPE_DA_RECUPERACAO)
     return _mensagem(config, para, "Portal Capibaribe Prime: criar senha nova", texto, html_)
 
 

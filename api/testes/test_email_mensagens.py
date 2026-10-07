@@ -117,6 +117,7 @@ def test_mensagem_de_recuperacao():
     assert f'href="{link}"' in html
     assert ">Criar senha nova</a>" in html
     assert "1 hora" in html
+    assert "Se não foi você, apague este e-mail" in html
 
 
 def test_senha_de_app_nao_aparece_na_configuracao():

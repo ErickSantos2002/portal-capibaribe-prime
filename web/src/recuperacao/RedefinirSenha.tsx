@@ -124,7 +124,7 @@ export function RedefinirSenha() {
             <Icone nome="relogio" />
             <p>{estado.mensagem}</p>
           </div>
-          <p>O link do e-mail vale por 1 hora e só uma vez. Peça outro: chega em instantes.</p>
+          <p>O link do e-mail vale por 1 hora e só uma vez.</p>
           <Link className="botao" to="/esqueci-a-senha">
             Pedir outro link
           </Link>
