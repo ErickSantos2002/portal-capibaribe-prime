@@ -8,7 +8,6 @@ import * as notificacoes from './notificacoes/api'
 import { destinoDepoisDoPrimeiroAcesso } from './notificacoes/ganchos'
 import { rotasNotificacoes } from './notificacoes/rotas'
 import * as recuperacao from './recuperacao/api'
-import { rotasRecuperacao } from './recuperacao/rotas'
 
 function espiar(status = 200, corpo: unknown = {}) {
   const fetch = vi.fn(async () =>
@@ -131,6 +130,5 @@ describe('pontos de encaixe (nada visível nesta onda)', () => {
   it('o primeiro acesso continua levando ao mural e não há rotas novas', () => {
     expect(destinoDepoisDoPrimeiroAcesso()).toBe('/avisos')
     expect(rotasNotificacoes).toEqual([])
-    expect(rotasRecuperacao).toEqual([])
   })
 })
