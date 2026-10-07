@@ -1,0 +1,163 @@
+/* Épico A do M2 · "Receber os avisos" e a seção "Notificações" de Minha unidade.
+   Só tokens do estilo.css (arquivo comum, que os épicos não editam). */
+
+/* Cada passo é uma folha com respiro, como no protótipo (`#instalar`). */
+.notif-cartao {
+  margin-top: 16px;
+  padding: 18px 16px;
+}
+
+.notif-cartao h3 {
+  font-weight: 700;
+}
+
+.notif-cartao > .ajuda {
+  margin: 4px 0 14px;
+}
+
+.notif-cartao > :last-child {
+  margin-bottom: 0;
+}
+
+/* Explicação sozinha no cartão (Minha unidade): sem o respiro de cima da caixa. */
+.notif-cartao > .aviso-caixa:first-child {
+  margin-top: 0;
+}
+
+.notif-secao .notif-cartao {
+  margin-top: 0;
+}
+
+/* A frase da situação: o que está valendo neste aparelho, antes do botão que muda. */
+.notif-situacao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  color: var(--tinta-suave);
+  font-weight: 700;
+}
+
+.notif-situacao svg {
+  flex: none;
+}
+
+.notif-situacao.ligada {
+  color: var(--mata);
+}
+
+/* Foco de leitor de tela depois de ativar ou desativar: sem moldura (não é controle). */
+.notif-situacao:focus,
+.notif-cartao .aviso-caixa:focus {
+  outline: none;
+}
+
+.notif-dica {
+  margin: 12px 0 0;
+}
+
+/* Passo a passo do iPhone: a ordem importa, então são números de verdade. */
+.notif-passos {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  counter-reset: passo;
+}
+
+.notif-passos li {
+  position: relative;
+  min-height: 36px;
+  padding: 4px 0 10px 48px;
+  counter-increment: passo;
+}
+
+.notif-passos li::before {
+  content: counter(passo);
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--mata-suave);
+  color: var(--mata-forte);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Linha que liga os números: a sequência se lê de relance. */
+.notif-passos li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 38px;
+  bottom: 2px;
+  left: 16px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--linha);
+}
+
+.notif-iphone {
+  margin-bottom: 0;
+}
+
+.notif-mural {
+  margin-top: 24px;
+}
+
+.notif-instalar {
+  margin: 4px 0 0;
+}
+
+.notif-instalar .texto-link {
+  gap: 8px;
+}
+
+/* "Pronto, o apartamento está ativado." no topo da oferta, vindo do primeiro acesso. */
+.notif-ativado {
+  margin-bottom: 10px;
+}
+
+/* Faixa do mural: convite discreto, na cor do ipê (atenção, não erro), acima dos fixados. */
+.notif-faixa {
+  margin: 0 0 20px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--ipe);
+  border-left-width: 6px;
+  border-radius: var(--r-medio);
+  background: var(--ipe-suave);
+}
+
+.notif-faixa.ligada {
+  border-color: var(--mata);
+  background: var(--mata-suave);
+}
+
+.notif-faixa .notif-situacao {
+  margin: 0;
+}
+
+.notif-faixa-texto {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-weight: 700;
+}
+
+.notif-faixa-texto svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.notif-faixa-acoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Lado a lado não somam margem (o `.botao + .botao` do estilo comum é para empilhados). */
+.notif-faixa-acoes .botao + .botao {
+  margin-top: 0;
+}

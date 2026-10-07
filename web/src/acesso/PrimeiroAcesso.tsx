@@ -64,9 +64,15 @@ export function PrimeiroAcesso() {
       // recado se perde.
       startTransition(() => {
         definir(novo)
-        navegar(destinoDepoisDoPrimeiroAcesso(), {
+        // M2: a oferta "Receber os avisos" diz que ativou no próprio texto (o recado flutuante
+        // cobria a pergunta dela); o mural continua com o recado.
+        const destino = destinoDepoisDoPrimeiroAcesso()
+        navegar(destino, {
           replace: true,
-          state: { recado: 'Pronto! O apartamento está ativado.' },
+          state:
+            destino === '/avisos'
+              ? { recado: 'Pronto! O apartamento está ativado.' }
+              : { ativado: true },
         })
       })
     } catch (falha) {

@@ -8,10 +8,13 @@
     <!-- Ainda em construção: fora dos buscadores. -->
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#1f5e3b" />
-    <!-- A espiral do Capibaribe Prime (gerada por scripts/dev/gerar-icones.py). O manifest do
-         PWA (com icon-192/512) fica para o M2. -->
+    <!-- A espiral do Capibaribe Prime (gerada por scripts/dev/gerar-icones.py). -->
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- PWA (M2, H-05): instalar na tela inicial. No iPhone (iOS 16.4+), o push só chega com o
+         Portal instalado; o nome embaixo do ícone vem desta meta. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="Capibaribe" />
     <!-- Tema escolhido aplicado antes do React (arquivo próprio: a CSP proíbe script embutido). -->
     <script src="/tema.js"></script>
   </head>

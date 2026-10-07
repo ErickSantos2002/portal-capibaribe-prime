@@ -8,6 +8,7 @@ import re
 from urllib.parse import urlsplit
 
 from pydantic import field_validator
+from urllib3.util import parse_url
 
 from app.esquemas.avisos import Categoria
 from app.esquemas.comum import Entrada, Saida
@@ -28,18 +29,36 @@ _P256DH = re.compile(r"^[A-Za-z0-9_-]{87}=?$")
 _AUTH = re.compile(r"^[A-Za-z0-9_-]{22}(==)?$")
 
 
+# Só o que um serviço de push manda de verdade: https, host só com letras, números, ponto e
+# hífen, e caminho com caracteres visíveis de URL, **sem barra invertida**. Revisão do épico
+# A: o `urlsplit` e o urllib3 (que o `requests` usa no envio) leem `\\` de jeitos diferentes,
+# e `https://169.254.169.254\\.fcm.googleapis.com/` conectava no 169.254.169.254. Sem porta,
+# sem usuário, sem `%`, espaço ou `@` no host.
+_FORMATO_ENDPOINT = re.compile(r"https://[A-Za-z0-9.-]+(/[!-\[\]-~]*)?")
+
+
 def servico_de_push_conhecido(endpoint: str) -> bool:
+    """O endpoint é de um serviço de push da lista, lido **pelo mesmo parser do envio**
+    (urllib3) e pelo `urlsplit`; os dois precisam concordar."""
+    if not _FORMATO_ENDPOINT.fullmatch(endpoint):
+        return False
     try:
         partes = urlsplit(endpoint)
         porta = partes.port
+        envio = parse_url(endpoint)
     except ValueError:
         return False
-    host = (partes.hostname or "").lower()
+    host = partes.hostname or ""
     return (
         partes.scheme == "https"
         and porta is None
         and partes.username is None
         and partes.password is None
+        and envio.scheme == "https"
+        and envio.host == host
+        and envio.port is None
+        and envio.auth is None
+        and not host.endswith(".")
         and any(host == s or host.endswith("." + s) for s in SERVICOS_DE_PUSH)
     )
 

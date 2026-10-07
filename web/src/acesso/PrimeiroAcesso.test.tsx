@@ -78,7 +78,8 @@ describe('primeiro acesso', () => {
     )
   })
 
-  it('concluído, manda os dados e cai no mural', async () => {
+  // M2 (H-05): na primeira vez deste aparelho, a oferta "Receber os avisos"; depois, o mural.
+  it('concluído, manda os dados e cai na oferta de receber os avisos', async () => {
     const chamadas = apiFalsa({
       ...RESTRITA,
       'POST /api/acesso/primeiro-acesso': json(200, eu([], false, '1101')),
@@ -87,8 +88,9 @@ describe('primeiro acesso', () => {
     await screen.findByRole('heading', { name: 'Primeiro acesso' })
     preencher(BOM)
     fireEvent.click(screen.getByRole('button', { name: 'Salvar e entrar' }))
-    await waitFor(() => expect(roteador.state.location.pathname).toBe('/avisos'))
-    expect(screen.getByRole('status').textContent).toBe('Pronto! O apartamento está ativado.')
+    await waitFor(() => expect(roteador.state.location.pathname).toBe('/receber-avisos'))
+    await screen.findByRole('heading', { name: 'Receber os avisos' })
+    expect(screen.getByText('Pronto, o apartamento está ativado.')).toBeTruthy()
     expect(chamadas.find((c) => c.caminho === '/api/acesso/primeiro-acesso')?.corpo).toEqual({
       senha_nova: 'casa-nova-2027',
       senha_nova_repetida: 'casa-nova-2027',

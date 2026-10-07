@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, ErroDaApi } from '../api/cliente'
 import type { Eu } from '../api/tipos'
+import { esquecerEsteAparelho } from '../notificacoes/inscricao'
 import { ContextoSessao, type EstadoSessao, type ValorSessao } from './contextoSessao'
 
 async function buscarEu(): Promise<EstadoSessao> {
@@ -37,6 +38,9 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     } catch (erro) {
       if (!(erro instanceof ErroDaApi && erro.status === 401)) throw erro
     }
+    // M2 (épico A): a inscrição de push do navegador sai junto, senão a próxima unidade a
+    // entrar neste navegador herdaria as notificações.
+    void esquecerEsteAparelho()
     setEstado({ situacao: 'pronta', eu: null })
   }, [])
 

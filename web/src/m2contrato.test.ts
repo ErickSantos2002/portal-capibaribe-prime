@@ -127,10 +127,14 @@ describe('histórico do M2 em frases (H-11)', () => {
   })
 })
 
-describe('pontos de encaixe (nada visível nesta onda)', () => {
-  it('o primeiro acesso continua levando ao mural e não há rotas novas', () => {
-    expect(destinoDepoisDoPrimeiroAcesso()).toBe('/avisos')
-    expect(rotasNotificacoes).toEqual([])
+describe('pontos de encaixe', () => {
+  it('épico A: o primeiro acesso leva à oferta "Receber os avisos" (uma vez por aparelho)', () => {
+    localStorage.clear()
+    expect(destinoDepoisDoPrimeiroAcesso()).toBe('/receber-avisos')
+    expect(JSON.stringify(rotasNotificacoes)).toContain('"path":"receber-avisos"')
+  })
+
+  it('épico B: ainda sem rotas', () => {
     expect(rotasRecuperacao).toEqual([])
   })
 })
