@@ -85,7 +85,7 @@ export function ControleNotificacoes({ n }: { n: Notificacoes }) {
             ref={guardar}
             tabIndex={-1}
           >
-            <Icone nome={ligada ? 'certo' : 'sino'} />
+            {ligada && <Icone nome="certo" />}
             <span>{ligada ? 'Ligadas neste aparelho.' : 'Desligadas neste aparelho.'}</span>
           </p>
           {n.problema && (
@@ -103,7 +103,9 @@ export function ControleNotificacoes({ n }: { n: Notificacoes }) {
               {n.ocupado ? 'Desativando…' : 'Desativar neste aparelho'}
             </button>
           ) : (
-            <button type="button" className="botao" disabled={n.ocupado} onClick={n.aoAtivar}>
+            // Leve, como no protótipo: na oferta, o botão cheio é "Ir para o mural" (recusar
+            // não atrapalha nada); em Minha unidade, igual aos outros botões da tela.
+            <button type="button" className="botao leve" disabled={n.ocupado} onClick={n.aoAtivar}>
               <Icone nome="sino" /> {n.ocupado ? 'Ativando…' : 'Ativar notificações'}
             </button>
           )}

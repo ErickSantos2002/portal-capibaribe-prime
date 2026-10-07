@@ -19,6 +19,11 @@
   margin-bottom: 0;
 }
 
+/* Explicação sozinha no cartão (Minha unidade): sem o respiro de cima da caixa. */
+.notif-cartao > .aviso-caixa:first-child {
+  margin-top: 0;
+}
+
 .notif-secao .notif-cartao {
   margin-top: 0;
 }
