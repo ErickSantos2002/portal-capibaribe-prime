@@ -17,6 +17,17 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.2.0',
+    data: '2026-10-06',
+    nome: 'Avisos no celular',
+    itens: [
+      'Avisos no celular: ative em Minha unidade e cada aviso novo do seu bloco chega como notificação, com o título. Tocar abre o aviso.',
+      'O Portal pode ficar na tela inicial do celular, como um aplicativo. No iPhone, as notificações só chegam com o Portal instalado e aberto pelo ícone.',
+      'Quem cadastrou e-mail também recebe os avisos por lá.',
+      'Esqueceu a senha? Na tela de entrar, toque em "Esqueci minha senha": se o apartamento tiver e-mail cadastrado, chega um link para criar uma senha nova.',
+    ],
+  },
+  {
     versao: '1.1.1',
     data: '2026-10-06',
     itens: ['No computador, o logo do residencial também aparece no alto do menu lateral.'],

@@ -22,6 +22,9 @@ de autenticação pronto tem esse modelo, e todos pedem e-mail, que aqui é opci
 - **Limite por IP:** a única regra de limite do firewall da Vercel (plano Hobby) fica no
   `POST /api/acesso/entrar`: **20 requisições por IP a cada 10 minutos**. Bloqueio por unidade
   (5 erros, 15 min) fica no banco.
+  Desde o M2 (06/10/2026) a mesma regra cobre também o `POST /api/acesso/recuperacao` ("esqueci
+  a senha"), protegendo a cota diária do Gmail: as duas rotas dividem o contador de 20, porque o
+  Hobby só permite uma regra de limite.
 - **Recuperação:** link por e-mail com token de uso único, válido por 1 hora; sem e-mail, o
   administrador reseta.
 

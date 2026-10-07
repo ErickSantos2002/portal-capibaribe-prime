@@ -1,0 +1,17 @@
+/* Épico B do M2 · Esqueci a senha. Só tokens da casca (var(--…)); nenhum style= no JSX (CSP). */
+
+/* Na tela de entrar, logo abaixo do botão "Entrar" (no lugar do <details> do M1). */
+.recuperacao-link {
+  margin: 12px 0 0;
+}
+
+/* Dica para quem não tem e-mail, antes de pedir: separada do formulário. */
+.recuperacao-sem-email {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--linha);
+}
+
+.recuperacao-para {
+  margin: 12px 0 4px;
+}

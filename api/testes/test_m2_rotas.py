@@ -254,9 +254,10 @@ def test_pedido_responde_igual_e_deixa_tudo_para_depois(cliente, engine_app, ped
         cliente.post("/api/acesso/recuperacao", json={"login": login}, headers=CABECALHO_PORTAL)
         for login in ("1203", "1101", "6101")
     ]
-    assert {(r.status_code, r.text) for r in respostas} == {
-        (202, '{"mensagem":"' + MSG_PEDIDO + '"}')
-    }
+    # Épico B: a resposta ganhou `remetente` e `assunto` (iguais para todos os logins).
+    assert len({(r.status_code, r.text) for r in respostas}) == 1
+    assert respostas[0].status_code == 202
+    assert respostas[0].json()["mensagem"] == MSG_PEDIDO
     assert pedidos == ["1203", "1101", "6101"]
 
 
