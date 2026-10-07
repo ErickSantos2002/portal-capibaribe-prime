@@ -17,7 +17,8 @@ import '../acesso/acesso.css'
 import './recuperacao.css'
 
 const PREFIXO = 'rs'
-const RECADO_SENHA_NOVA = 'Senha nova criada. Os outros aparelhos foram desconectados.'
+const RECADO_SENHA_NOVA =
+  'Senha nova criada. Os outros aparelhos foram desconectados. Avise a família da senha nova.'
 const MSG_SEM_TOKEN = 'Este link está incompleto. Peça outro em "Esqueci minha senha".'
 
 type Estado =
@@ -40,7 +41,7 @@ interface Erro {
 export function RedefinirSenha() {
   const local = useLocation()
   const navegar = useNavigate()
-  const { definir } = useSessao()
+  const { eu, definir } = useSessao()
   // Lido uma vez: logo depois o `#` sai da barra.
   const [token] = useState(() => tokenDoEndereco(local.hash))
   const [estado, setEstado] = useState<Estado>(
@@ -118,7 +119,21 @@ export function RedefinirSenha() {
         </p>
       )}
 
-      {estado.situacao === 'invalido' && (
+      {estado.situacao === 'invalido' && eu && (
+        // Link já usado com o aparelho entrado (quase sempre: acabou de criar a senha e voltou
+        // ao link). "Pedir outro link" cairia no mural sem explicar nada.
+        <>
+          <div className="aviso-caixa info" role="status">
+            <Icone nome="info" />
+            <p>Você já está no Portal. Para trocar a senha de novo, vá em Minha unidade.</p>
+          </div>
+          <Link className="botao" to="/avisos">
+            Ir para os avisos
+          </Link>
+        </>
+      )}
+
+      {estado.situacao === 'invalido' && !eu && (
         <>
           <div className="aviso-caixa atencao" role="alert">
             <Icone nome="relogio" />
