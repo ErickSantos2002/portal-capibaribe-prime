@@ -27,6 +27,11 @@ class ServidorFalso:
     cair_na: int | None = None
     # Recusa o login (senha de app errada).
     recusar_login: bool = False
+    # Mensagem recusada depois do DATA, por endereço: {para: (código, texto)}. O Gmail usa isto
+    # tanto para "mensagem grande demais" (só aquela) quanto para "cota do dia estourada".
+    recusar_mensagem: dict[str, tuple[int, bytes]] = field(default_factory=dict)
+    # Remetente recusado (MAIL FROM) a partir da mensagem número N.
+    recusar_remetente_na: int | None = None
     # Chamado a cada mensagem aceita (para os testes mexerem no relógio, por exemplo).
     ao_mandar: list = field(default_factory=list)
 
@@ -72,6 +77,13 @@ class ConexaoFalsa:
             raise smtplib.SMTPServerDisconnected("Connection unexpectedly closed")
         if para in self.servidor.recusar:
             raise smtplib.SMTPRecipientsRefused({para: (550, b"5.1.1 No such user")})
+        na = self.servidor.recusar_remetente_na
+        if na is not None and self.servidor.enviadas() >= na:
+            raise smtplib.SMTPSenderRefused(
+                550, b"5.4.5 Daily user sending limit exceeded.", "portal@example.com"
+            )
+        if para in self.servidor.recusar_mensagem:
+            raise smtplib.SMTPDataError(*self.servidor.recusar_mensagem[para])
         self.mensagens.append(mensagem)
         for chamar in self.servidor.ao_mandar:
             chamar(mensagem)

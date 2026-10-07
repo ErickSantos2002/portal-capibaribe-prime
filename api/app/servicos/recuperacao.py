@@ -30,7 +30,7 @@ from datetime import timedelta
 from email.message import EmailMessage
 
 import psycopg
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
@@ -59,16 +59,23 @@ def processar_pedido(login: str, fabrica: Callable[[], Session] | None = None) -
         abrir = fabrica or fabrica_de_sessoes()
         pronto = _registrar_pedido(abrir, login)
         if pronto is not None:
-            config, mensagem = pronto
-            email.enviar_uma(config, mensagem)
+            config, mensagem, token_hash = pronto
+            try:
+                email.enviar_uma(config, mensagem)
+            except email.NadaSaiu:
+                # Nem conectou (senha de app errada, Gmail fora): o link nunca chegou a ninguém.
+                # Apagá-lo devolve a cota do dia e um dos 3 pedidos da hora.
+                _apagar_token(abrir, token_hash)
+                raise
     except Exception as erro:  # noqa: BLE001 - depois da resposta ninguém veria a exceção
-        log.error("pedido de recuperação não terminou (%s)", type(erro).__name__)
+        causa = erro.__cause__ if isinstance(erro, email.NadaSaiu) and erro.__cause__ else erro
+        log.error("pedido de recuperação não terminou (%s)", type(causa).__name__)
 
 
 def _registrar_pedido(
     abrir: Callable[[], Session], login: str
-) -> tuple[ConfigEmail, EmailMessage] | None:
-    """Passos 1 a 6 menos o envio. Devolve o e-mail a mandar, se houver."""
+) -> tuple[ConfigEmail, EmailMessage, str] | None:
+    """Passos 1 a 6 menos o envio. Devolve o e-mail a mandar e o hash do token, se houver."""
     with abrir() as db:
         unidade = db.scalars(
             select(Unidade).where(Unidade.login == login, Unidade.ativa.is_(True))
@@ -108,7 +115,15 @@ def _registrar_pedido(
             ref = UnidadeRef.de_login(unidade.login)
             mensagem = email.mensagem_de_recuperacao(ref, token, unidade.email, config)
         db.commit()
-    return (config, mensagem) if mensagem is not None and config is not None else None
+    if mensagem is None or config is None or token is None:
+        return None
+    return config, mensagem, hash_do_token(token)
+
+
+def _apagar_token(abrir: Callable[[], Session], token_hash: str) -> None:
+    with abrir() as db:
+        db.execute(delete(TokenRecuperacao).where(TokenRecuperacao.token_hash == token_hash))
+        db.commit()
 
 
 def _gravar_token(db: Session, unidade_id: int, token: str) -> str | None:

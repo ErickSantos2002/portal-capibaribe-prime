@@ -387,17 +387,41 @@ def conexao_smtp(config: ConfigEmail) -> Iterator[smtplib.SMTP]:
         _fechar(conexao)
 
 
+class NadaSaiu(Exception):
+    """A conexão (ou o login) falhou antes de mandar qualquer coisa. A causa fica em
+    `__cause__`; a mensagem desta exceção é só o tipo dela (nunca endereço nem senha)."""
+
+
 def enviar_uma(config: ConfigEmail, mensagem: EmailMessage) -> None:
-    """Manda uma mensagem só (o link de recuperação), na própria conexão."""
-    with conexao_smtp(config) as conexao:
+    """Manda uma mensagem só (o link de recuperação), na própria conexão. Se nem conectou,
+    levanta `NadaSaiu`: quem chama sabe que a mensagem certamente não saiu."""
+    try:
+        conexao = _conectar(config)
+    except Exception as erro:
+        raise NadaSaiu(type(erro).__name__) from erro
+    try:
         conexao.send_message(mensagem)
+    finally:
+        _fechar(conexao)
 
 
 # --- cópia do aviso (H-13; spec do épico B, seção 2.2) ----------------------------------------
 
-# Recusa que é só daquele destino: conta como falha e segue para o próximo. Qualquer outro erro
-# (conexão caiu, remetente recusado, que é como o Gmail avisa a cota estourada) interrompe.
-_FALHA_DE_UM_DESTINO = (smtplib.SMTPRecipientsRefused, smtplib.SMTPDataError)
+# Recusa do Gmail que vale para a conta inteira (cota do dia, limite de envio): 421 em qualquer
+# fase, ou o código estendido 5.4.5 / 4.7.x no texto da resposta.
+_RECUSA_DA_CONTA = re.compile(rb"(?<![0-9.])(5\.4\.5|4\.7\.[0-9]{1,3})(?![0-9.])")
+
+
+def falha_so_deste_destino(erro: Exception) -> bool:
+    """Recusa que é só daquele destino (endereço que não existe, mensagem recusada): conta como
+    falha e o envio segue. Cota estourada, remetente recusado, conexão que caiu: interrompe
+    (continuar seria bater na mesma parede centenas de vezes)."""
+    if isinstance(erro, smtplib.SMTPRecipientsRefused):
+        return True
+    if isinstance(erro, smtplib.SMTPDataError):
+        resposta = erro.smtp_error if isinstance(erro.smtp_error, bytes) else b""
+        return erro.smtp_code != 421 and not _RECUSA_DA_CONTA.search(resposta)
+    return False
 
 
 class EnviadorEmail:
@@ -420,18 +444,28 @@ class EnviadorEmail:
         resultado.pulados += len(destinos) - cabem
         if cabem == 0:
             return
-        with conexao_smtp(config) as conexao:
-            for feitos, destino in enumerate(destinos[:cabem]):
-                if resultado.tempo_esgotado():
-                    resultado.pulados += cabem - feitos
-                    break
-                try:
-                    conexao.send_message(mensagem_do_aviso(aviso, destino.email, config))
-                    resultado.entregues += 1
-                except _FALHA_DE_UM_DESTINO:
-                    resultado.falhas += 1
-                if (feitos + 1) % SALVAR_A_CADA == 0:
-                    resultado.salvar()
+        tentadas = 0
+        try:
+            with conexao_smtp(config) as conexao:
+                for feitos, destino in enumerate(destinos[:cabem]):
+                    if resultado.tempo_esgotado():
+                        resultado.pulados += cabem - feitos
+                        break
+                    tentadas += 1
+                    try:
+                        conexao.send_message(mensagem_do_aviso(aviso, destino.email, config))
+                        resultado.entregues += 1
+                    except smtplib.SMTPException as erro:
+                        if not falha_so_deste_destino(erro):
+                            raise
+                        resultado.falhas += 1
+                    if (feitos + 1) % SALVAR_A_CADA == 0:
+                        resultado.salvar()
+        except BaseException:
+            # O que nem chegou a ser tentado volta para a cota (senha de app errada não prende
+            # a cota por 24 h). A mensagem que estava saindo pode ter saído: fica reservada.
+            resultado.reservados -= cabem - tentadas
+            raise
 
 
 ENVIADOR = EnviadorEmail()

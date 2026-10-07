@@ -6,10 +6,12 @@ e conferir o que o SMTP falso recebeu e o que ficou em `notificacao_envio`.
 
 # ruff: noqa: F811 - as fixtures do SMTP falso vêm de test_email_apoio
 import logging
+import smtplib
 import ssl
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app.servicos import email, notificacoes
 from app.servicos.notificacoes import AvisoParaNotificar, DestinoEmail, Resultado
@@ -146,6 +148,63 @@ def test_recusa_de_um_destinatario_conta_falha_e_segue(email_ligado, destinos):
     assert len(email_ligado.conexoes) == 1
 
 
+def test_mensagem_recusada_comum_e_falha_so_daquela(email_ligado, destinos):
+    lista = destinos(3)
+    email_ligado.recusar_mensagem = {lista[0].email: (552, b"5.3.4 Message size exceeds limit")}
+    resultado = _resultado()
+    email.ENVIADOR.enviar(None, AVISO, resultado)
+    assert (resultado.entregues, resultado.falhas) == (2, 1)
+
+
+@pytest.mark.parametrize(
+    "recusa",
+    [
+        (550, b"5.4.5 Daily user sending quota exceeded."),
+        (421, b"4.7.0 Try again later, closing connection."),
+        (451, b"4.7.1 Temporary rate limit"),
+    ],
+    ids=["cota-do-dia", "421", "4.7.x"],
+)
+def test_cota_ou_limite_do_gmail_na_mensagem_interrompe(email_ligado, destinos, recusa):
+    # Continuar seria bater na mesma parede centenas de vezes (revisão do épico B, item 1).
+    lista = destinos(5)
+    email_ligado.recusar_mensagem = {d.email: recusa for d in lista[1:]}
+    resultado = _resultado()
+    with pytest.raises(smtplib.SMTPDataError):
+        email.ENVIADOR.enviar(None, AVISO, resultado)
+    assert (resultado.entregues, resultado.falhas) == (1, 0)
+    assert email_ligado.enviadas() == 2
+
+
+def test_remetente_recusado_interrompe(email_ligado, destinos):
+    destinos(5)
+    email_ligado.recusar_remetente_na = 3
+    resultado = _resultado()
+    with pytest.raises(smtplib.SMTPSenderRefused):
+        email.ENVIADOR.enviar(None, AVISO, resultado)
+    assert (resultado.entregues, resultado.falhas) == (2, 0)
+    assert email_ligado.enviadas() == 3
+
+
+def test_interrompido_devolve_a_reserva_do_que_nem_foi_tentado(email_ligado, destinos):
+    # Revisão, item 3: só a mensagem que estava saindo (pode ter saído) fica na reserva.
+    destinos(10)
+    email_ligado.cair_na = 4
+    resultado = _resultado()
+    with pytest.raises(smtplib.SMTPServerDisconnected):
+        email.ENVIADOR.enviar(None, AVISO, resultado)
+    assert (resultado.entregues, resultado.reservados) == (3, 4)
+
+
+def test_senha_de_app_errada_devolve_a_reserva_inteira(email_ligado, destinos):
+    destinos(10)
+    email_ligado.recusar_login = True
+    resultado = _resultado()
+    with pytest.raises(smtplib.SMTPAuthenticationError):
+        email.ENVIADOR.enviar(None, AVISO, resultado)
+    assert resultado.reservados == 0
+
+
 def test_queda_da_conexao_interrompe_com_as_contagens_ate_ali(email_ligado, destinos):
     destinos(5)
     email_ligado.cair_na = 3
@@ -264,6 +323,10 @@ def test_senha_de_app_errada_interrompe_e_o_log_nao_mostra_dado(
     envio = _envio_email(engine_app, aviso["id"])
     assert envio["situacao"] == "interrompido"
     assert envio["entregues"] == 0
+    # Nada saiu: a reserva volta e a cota do dia fica livre (revisão, item 3).
+    assert envio["reservados"] == 0
+    with Session(engine_app) as db:
+        assert notificacoes.emails_nas_ultimas_24h(db) == 0
     assert "SMTPAuthenticationError" in caplog.text
     for dado in (SENHA_APP, "u1203@example.com", USUARIO):
         assert dado not in caplog.text

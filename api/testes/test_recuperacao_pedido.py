@@ -189,9 +189,21 @@ def test_falha_no_smtp_nao_levanta_e_o_log_nao_tem_dado(engine_app, fabrica, ema
     with caplog.at_level(logging.DEBUG):
         processar_pedido(COMUM, fabrica)
     assert "SMTPAuthenticationError" in caplog.text
-    hash_ = _tokens(engine_app, COMUM)[0]["token_hash"]
-    for dado in (COMUM, EMAIL, SENHA_APP, hash_):
+    for dado in (COMUM, EMAIL, SENHA_APP, "token"):
         assert dado not in caplog.text
+    # Nada saiu: o link nunca chegou a ninguém, então some (não gasta a cota do dia nem um
+    # dos 3 pedidos da hora; revisão do épico B, item 3).
+    assert _tokens(engine_app, COMUM) == []
+    with fabrica() as db:
+        assert notificacoes.emails_nas_ultimas_24h(db) == 0
+
+
+def test_queda_no_meio_do_envio_mantem_o_link(engine_app, fabrica, email_ligado):
+    # A mensagem pode ter saído: o link fica valendo (e contando na cota).
+    _com_email(engine_app, COMUM)
+    email_ligado.cair_na = 1
+    processar_pedido(COMUM, fabrica)
+    assert len(_tokens(engine_app, COMUM)) == 1
 
 
 def test_erro_no_banco_nao_levanta(caplog):
