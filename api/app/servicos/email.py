@@ -206,7 +206,7 @@ RODAPE_DO_AVISO = (
     "apague o e-mail em Minha unidade. Sem e-mail, o “esqueci a senha” também deixa de funcionar."
 )
 RODAPE_DA_RECUPERACAO = (
-    "Mandado pelo Portal Capibaribe Prime porque alguém pediu “Esqueci minha senha” para este "
+    "Enviado pelo Portal Capibaribe Prime porque alguém pediu “Esqueci minha senha” para este "
     "apartamento."
 )
 _FONTE = "'Atkinson Hyperlegible',Arial,Helvetica,sans-serif"
