@@ -18,6 +18,9 @@ apartamento. Abre a própria sessão e:
 6. commit (solta a trava) e, só então, o e-mail com o link (token em texto só na memória).
 
 Nada aqui levanta para fora: erro vira log só com o tipo (nem login, nem e-mail, nem token).
+
+`conferir(db, token)` e `redefinir(db, dados, user_agent)`: o link do e-mail. Token desconhecido,
+usado, vencido ou de senha já trocada dão a mesma resposta (410 `link_invalido`).
 """
 
 import logging
@@ -27,16 +30,19 @@ from datetime import timedelta
 from email.message import EmailMessage
 
 import psycopg
-from sqlalchemy import insert, select
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.banco import fabrica_de_sessoes
 from app.configuracao import ConfigEmail, config_email
-from app.esquemas.comum import UnidadeRef
+from app.erros_api import ErroApi
+from app.esquemas.comum import Eu, UnidadeRef
+from app.esquemas.recuperacao import RedefinirSenha
 from app.modelos import TokenRecuperacao, Unidade
-from app.seguranca.sessoes import hash_do_token
-from app.servicos import email
+from app.seguranca.sessoes import hash_do_token, trocar_senha_e_sessao
+from app.servicos import email, tentativas
+from app.servicos.acesso import eu_da_unidade
 from app.servicos.historico import Acao, registrado_recentemente, registrar
 from app.servicos.notificacoes import reservar_email_recuperacao
 
@@ -115,10 +121,81 @@ def _gravar_token(db: Session, unidade_id: int, token: str) -> str | None:
                 )
             )
     except DBAPIError as erro:
-        restricao = erro.orig.diag.constraint_name if isinstance(erro.orig, psycopg.Error) else None
+        restricao = _restricao(erro)
         if restricao in _LIMITES:
             return "limite"
         if restricao == "token_recuperacao_sem_email":
             return "sem_email"
         raise
     return None
+
+
+def _restricao(erro: DBAPIError) -> str | None:
+    """Nome da restrição (CHECK ou trigger com `constraint =`) que o banco recusou."""
+    return erro.orig.diag.constraint_name if isinstance(erro.orig, psycopg.Error) else None
+
+
+# --- conferir e usar o link (contrato, 4.3) ----------------------------------------------------
+
+MSG_LINK_INVALIDO = 'Este link venceu ou já foi usado. Peça outro em "Esqueci minha senha".'
+_RECUSAS_DO_TOKEN = {"token_recuperacao_usado", "token_recuperacao_vencido"}
+
+
+def link_invalido() -> ErroApi:
+    """A mesma resposta para token desconhecido, usado, vencido ou de senha já trocada."""
+    return ErroApi(410, "link_invalido", MSG_LINK_INVALIDO)
+
+
+def _token_que_vale(db: Session, token: str, travar: bool = False) -> tuple[int, Unidade]:
+    """O id do token e a unidade dele, se o link ainda vale (as mesmas regras do banco: não
+    usado, dentro da hora, pedido depois da última troca de senha, unidade ativa e ativada)."""
+    consulta = (
+        select(TokenRecuperacao.id, Unidade)
+        .join(Unidade, Unidade.id == TokenRecuperacao.unidade_id)
+        .where(
+            TokenRecuperacao.token_hash == hash_do_token(token),
+            TokenRecuperacao.usado_em.is_(None),
+            TokenRecuperacao.expira_em > func.now(),
+            TokenRecuperacao.criado_em >= Unidade.senha_trocada_em,
+            Unidade.ativa.is_(True),
+            Unidade.ativada_em.is_not(None),
+        )
+    )
+    if travar:
+        # Dois "salvar" ao mesmo tempo com o mesmo link: o segundo espera e não acha mais.
+        consulta = consulta.with_for_update(of=TokenRecuperacao)
+    achado = db.execute(consulta).one_or_none()
+    if achado is None:
+        raise link_invalido()
+    return achado[0], achado[1]
+
+
+def conferir(db: Session, token: str) -> UnidadeRef:
+    """O link vale? Devolve a placa da unidade. Não gasta o link."""
+    _, unidade = _token_que_vale(db, token)
+    return UnidadeRef.de_login(unidade.login)
+
+
+def redefinir(db: Session, dados: RedefinirSenha, user_agent: str | None) -> tuple[Eu, str]:
+    """Usa o link: marca o token como usado **antes** de gravar a senha (o banco considera
+    vencido todo link pedido antes da troca, então usar um mata os outros), grava a senha nova,
+    desconecta todos os aparelhos e abre uma sessão para quem redefiniu. Devolve o `Eu` e o
+    token da sessão nova. Não faz commit."""
+    token_id, unidade = _token_que_vale(db, dados.token, travar=True)
+    try:
+        with db.begin_nested():
+            db.execute(
+                update(TokenRecuperacao)
+                .where(TokenRecuperacao.id == token_id)
+                .values(usado_em=func.now())
+            )
+    except DBAPIError as erro:
+        if _restricao(erro) in _RECUSAS_DO_TOKEN:
+            raise link_invalido() from None
+        raise
+    sessao = trocar_senha_e_sessao(db, unidade.id, dados.senha_nova, user_agent)
+    tentativas.esquecer_login(db, unidade.login)
+    registrar(
+        db, Acao.senha_redefinida, unidade_id=unidade.id, entidade="unidade", entidade_id=unidade.id
+    )
+    return eu_da_unidade(db, unidade), sessao
