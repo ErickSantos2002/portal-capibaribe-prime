@@ -177,8 +177,10 @@ def _token_que_vale(db: Session, token: str, travar: bool = False) -> tuple[int,
         )
     )
     if travar:
-        # Dois "salvar" ao mesmo tempo com o mesmo link: o segundo espera e não acha mais.
-        consulta = consulta.with_for_update(of=TokenRecuperacao)
+        # Trava o token **e a unidade**: dois "salvar" ao mesmo tempo, com o mesmo link ou com
+        # dois links da mesma unidade, ficam em fila; o segundo relê a unidade com a senha já
+        # trocada e não acha mais link que valha (revisão do épico B, item 2).
+        consulta = consulta.with_for_update(of=[TokenRecuperacao, Unidade])
     achado = db.execute(consulta).one_or_none()
     if achado is None:
         raise link_invalido()
