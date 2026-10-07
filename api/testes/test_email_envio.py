@@ -6,6 +6,7 @@ e conferir o que o SMTP falso recebeu e o que ficou em `notificacao_envio`.
 
 # ruff: noqa: F811 - as fixtures do SMTP falso vêm de test_email_apoio
 import logging
+import re
 import smtplib
 import ssl
 
@@ -49,6 +50,9 @@ def destinos(monkeypatch):
     def definir(quantos: int) -> list[DestinoEmail]:
         lista = _destinos(quantos)
         monkeypatch.setattr(email, "destinos_email", lambda db, aviso: lista)
+        monkeypatch.setattr(
+            email, "publicacao_do_aviso", lambda db, aviso_id: "Publicado pela Comissão"
+        )
         return lista
 
     return definir
@@ -285,9 +289,10 @@ def test_publicar_para_o_bloco_1_manda_so_para_o_bloco_1(logar, engine_app, emai
     ]
     assert len(email_ligado.conexoes) == 1
     mensagem = email_ligado.mensagens[0]
-    assert mensagem["Subject"] == "Aviso do Portal: Falta d'água"
+    assert mensagem["Subject"] == "Falta d'água"
     corpo = mensagem.get_body(("plain",)).get_content()
     assert f"https://portal.example.com/avisos/{aviso['id']}" in corpo
+    assert re.search(r"Publicado pela Comissão em [0-9]{2}/[0-9]{2}, às [0-9]{1,2}h[0-9]{2}", corpo)
     assert _envio_email(engine_app, aviso["id"]) == {
         "situacao": "concluido",
         "destinos": 3,
