@@ -11,6 +11,10 @@ export interface PedirRecuperacao {
 /** Resposta 202, a mesma para qualquer apartamento (H-04: não revela se há e-mail). */
 export interface RecuperacaoPedida {
   mensagem: string
+  /** A conta do Portal que manda o e-mail (da configuração); nulo com o e-mail desligado. */
+  remetente: string | null
+  /** O assunto do e-mail do link, para a pessoa achar na caixa. */
+  assunto: string
 }
 
 /** `POST /api/acesso/recuperacao/conferir`: o token do link do e-mail. */

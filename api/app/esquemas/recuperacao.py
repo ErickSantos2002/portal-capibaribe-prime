@@ -30,9 +30,16 @@ class PedirRecuperacao(Entrada):
 
 
 class RecuperacaoPedida(Saida):
-    """Resposta 202, idêntica para qualquer login válido (H-04)."""
+    """Resposta 202, idêntica para qualquer login válido (H-04).
+
+    `remetente` e `assunto` (épico B, revisão de UX): a tela diz de quem e com que assunto o
+    e-mail chega, para a pessoa achar na caixa (ou no Spam). Vêm da configuração, iguais para
+    todos os logins; sem e-mail configurado, `remetente` é nulo e a tela omite o endereço.
+    """
 
     mensagem: str
+    remetente: str | None
+    assunto: str
 
 
 class LinkDeRecuperacao(Entrada):

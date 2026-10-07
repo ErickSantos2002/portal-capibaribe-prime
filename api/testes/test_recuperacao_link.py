@@ -18,7 +18,10 @@ pytestmark = pytest.mark.usefixtures("predio")
 CONFERIR = "/api/acesso/recuperacao/conferir"
 REDEFINIR = "/api/acesso/recuperacao/redefinir"
 SENHA = "uma-senha-nova-boa"
-MSG_INVALIDO = 'Este link venceu ou já foi usado. Peça outro em "Esqueci minha senha".'
+MSG_INVALIDO = (
+    'Este link venceu ou já foi usado. Peça outro em "Esqueci minha senha". '
+    "Se você já criou a senha nova, é só entrar com ela."
+)
 
 
 def _hash(token: str) -> str:

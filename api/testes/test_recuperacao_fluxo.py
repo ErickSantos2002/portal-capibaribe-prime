@@ -69,10 +69,34 @@ def test_resposta_igual_com_e_sem_email(cliente, engine_app, email_ligado, com_e
         for login in (COMUM, COMISSAO, "5799")
     }
     vistas = {(r.status_code, r.text, r.headers.get("content-length")) for r in respostas.values()}
-    assert vistas == {
-        (202, '{"mensagem":"' + MSG_PEDIDO + '"}', str(len(respostas[COMUM].content)))
-    }
+    assert len(vistas) == 1
+    assert respostas[COMUM].status_code == 202
+    assert respostas[COMUM].json()["mensagem"] == MSG_PEDIDO
     assert len(email_ligado.mensagens) == (1 if com_email else 0)
+
+
+@pytest.mark.parametrize("ligado", [True, False])
+def test_resposta_diz_de_onde_vem_o_email(cliente, monkeypatch, smtp, ligado):
+    # Revisão de UX, item 6: a tela diz o remetente e o assunto, vindos da configuração (nunca
+    # fixos no código). Sem e-mail configurado, o endereço fica de fora.
+    from app import configuracao
+
+    monkeypatch.setenv("PORTAL_SMTP_USUARIO", "capibaribeprime@example.com")
+    monkeypatch.setenv("PORTAL_SMTP_SENHA_APP", "senha-falsa")
+    if ligado:
+        monkeypatch.setenv("PORTAL_URL_BASE", URL_BASE)
+    else:
+        monkeypatch.delenv("PORTAL_URL_BASE", raising=False)
+    configuracao.limpar_cache()
+    try:
+        corpo = _post(cliente, "/api/acesso/recuperacao", {"login": COMUM}).json()
+    finally:
+        configuracao.limpar_cache()
+    assert corpo == {
+        "mensagem": MSG_PEDIDO,
+        "remetente": "capibaribeprime@example.com" if ligado else None,
+        "assunto": "Portal Capibaribe Prime: criar senha nova",
+    }
 
 
 def test_o_pedido_so_agenda_e_nada_roda_dentro_da_requisicao(monkeypatch):

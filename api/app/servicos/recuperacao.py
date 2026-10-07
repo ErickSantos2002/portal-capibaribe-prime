@@ -152,7 +152,10 @@ def _restricao(erro: DBAPIError) -> str | None:
 
 # --- conferir e usar o link (contrato, 4.3) ----------------------------------------------------
 
-MSG_LINK_INVALIDO = 'Este link venceu ou já foi usado. Peça outro em "Esqueci minha senha".'
+MSG_LINK_INVALIDO = (
+    'Este link venceu ou já foi usado. Peça outro em "Esqueci minha senha". '
+    "Se você já criou a senha nova, é só entrar com ela."
+)
 _RECUSAS_DO_TOKEN = {"token_recuperacao_usado", "token_recuperacao_vencido"}
 
 

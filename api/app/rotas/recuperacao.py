@@ -20,6 +20,7 @@ o token aqui faria o tempo de resposta revelar quem tem e-mail. Não acrescentar
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 
+from app.configuracao import config_email
 from app.esquemas.comum import Eu
 from app.esquemas.recuperacao import (
     MSG_PEDIDO,
@@ -33,6 +34,7 @@ from app.seguranca.dependencias import Banco, exige_cabecalho_portal
 from app.seguranca.sessoes import gravar_cookie
 from app.servicos import recuperacao as servico
 from app.servicos import segundo_plano
+from app.servicos.email import ASSUNTO_DA_RECUPERACAO
 
 rotas = APIRouter(prefix="/api/acesso/recuperacao", dependencies=[Depends(exige_cabecalho_portal)])
 
@@ -40,7 +42,13 @@ rotas = APIRouter(prefix="/api/acesso/recuperacao", dependencies=[Depends(exige_
 @rotas.post("", status_code=202)
 def pedir(dados: PedirRecuperacao, tarefas: BackgroundTasks) -> RecuperacaoPedida:
     segundo_plano.agendar(tarefas, servico.processar_pedido, dados.login)
-    return RecuperacaoPedida(mensagem=MSG_PEDIDO)
+    # Só a configuração (variáveis de ambiente), nunca o banco: igual para qualquer login.
+    config = config_email()
+    return RecuperacaoPedida(
+        mensagem=MSG_PEDIDO,
+        remetente=config.usuario if config else None,
+        assunto=ASSUNTO_DA_RECUPERACAO,
+    )
 
 
 @rotas.post("/conferir")
