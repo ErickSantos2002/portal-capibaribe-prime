@@ -17,14 +17,14 @@ from enum import Enum
 
 import pywebpush
 from py_vapid import Vapid
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, exists, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.configuracao import config_push
 from app.erros_api import ErroApi
-from app.esquemas.push import EstadoNotificacoes, PushAviso
+from app.esquemas.push import EstadoNotificacoes, PushAviso, servico_de_push_conhecido
 from app.esquemas.push import InscricaoPush as DadosInscricao
 from app.modelos import Canal, InscricaoPush
 from app.servicos.notificacoes import (
@@ -44,7 +44,9 @@ MSG_SEM_SESSAO = "Entre de novo com o bloco, o apartamento e a senha."
 # Aviso de três dias atrás ainda interessa a quem estava com o celular desligado; depois disso
 # o serviço de push pode descartar (o mural continua lá).
 TTL_SEGUNDOS = 3 * 24 * 60 * 60
-TEMPO_LIMITE_SEGUNDOS = 10
+# (conectar, esperar a resposta): no pior caso um POST leva ~10 s. O prazo é conferido antes
+# de cada POST, então a função passa do prazo comum em no máximo isso (240 s + 10 s < 300 s).
+TEMPO_LIMITE_SEGUNDOS = (5, 5)
 # Cada POST espera a rede; 10 ao mesmo tempo dão conta de 320 apartamentos em poucos segundos.
 THREADS = 10
 
@@ -117,13 +119,25 @@ class Saida(Enum):
     entregue = "entregue"
     removida = "removida"  # 404 ou 410: o serviço diz que a inscrição não existe mais
     falha = "falha"  # outro status, rede, tempo esgotado: tenta de novo no próximo aviso
+    pulado = "pulado"  # passou do prazo da função antes de mandar
 
 
 def _mandar(
-    destino: DestinoPush, corpo: str, chave: Vapid, contato: str, urgencia: str, topico: str
+    destino: DestinoPush,
+    corpo: str,
+    chave: Vapid,
+    contato: str,
+    urgencia: str,
+    topico: str,
+    resultado: Resultado,
 ) -> Saida:
     """Um POST. Roda numa thread: não toca no banco e não loga o endpoint (identifica o
-    aparelho)."""
+    aparelho). Só lê `resultado.tempo_esgotado()` (só o relógio)."""
+    if resultado.tempo_esgotado():
+        return Saida.pulado
+    # Defesa em profundidade (SSRF): linha antiga ou gravada por fora da API não passa.
+    if not servico_de_push_conhecido(destino.endpoint):
+        return Saida.falha
     try:
         pywebpush.webpush(
             subscription_info={
@@ -173,35 +187,46 @@ class EnviadorPush:
         urgencia = "high" if aviso.categoria == "urgente" else "normal"
         topico = f"aviso-{aviso.aviso_id}"
         lote = max(1, SALVAR_A_CADA)
+        mortas: list[DestinoPush] = []
         with ThreadPoolExecutor(max_workers=min(THREADS, len(destinos))) as fios:
             for inicio in range(0, len(destinos), lote):
                 if resultado.tempo_esgotado():
-                    resultado.pulados = len(destinos) - inicio
+                    resultado.pulados += len(destinos) - inicio
                     break
                 parte = destinos[inicio : inicio + lote]
                 saidas = list(
                     fios.map(
-                        lambda d: _mandar(d, corpo, chave, config.contato, urgencia, topico),
+                        lambda d: _mandar(
+                            d, corpo, chave, config.contato, urgencia, topico, resultado
+                        ),
                         parte,
                     )
                 )
-                # Daqui para baixo, só a thread principal: contar e apagar as mortas.
-                for destino, saida in zip(parte, saidas, strict=True):
+                # Daqui para baixo, só a thread principal: contar.
+                for saida in saidas:
                     if saida is Saida.entregue:
                         resultado.entregues += 1
-                        continue
-                    resultado.falhas += 1
-                    if saida is Saida.removida:
-                        resultado.removidas += 1
-                        # Pela sessão **e** pelo endpoint: se o aparelho reativou no meio
-                        # (endpoint novo), a inscrição nova fica.
-                        db.execute(
-                            delete(InscricaoPush).where(
-                                InscricaoPush.sessao_id == destino.sessao_id,
-                                InscricaoPush.endpoint == destino.endpoint,
-                            )
-                        )
+                    elif saida is Saida.pulado:
+                        resultado.pulados += 1
+                    else:
+                        resultado.falhas += 1
+                        resultado.removidas += saida is Saida.removida
+                mortas += [d for d, s in zip(parte, saidas, strict=True) if s is Saida.removida]
                 resultado.salvar()
+                if Saida.pulado in saidas:
+                    resultado.pulados += len(destinos) - inicio - len(parte)
+                    break
+        # As mortas saem no fim, de uma vez: apagar a cada lote seguraria a trava dessas linhas
+        # até o commit de quem chama (o envio inteiro). Pela sessão **e** pelo endpoint: se o
+        # aparelho reativou no meio (endpoint novo), a inscrição nova fica.
+        if mortas:
+            db.execute(
+                delete(InscricaoPush).where(
+                    tuple_(InscricaoPush.sessao_id, InscricaoPush.endpoint).in_(
+                        [(d.sessao_id, d.endpoint) for d in mortas]
+                    )
+                )
+            )
         log.info(
             "push do aviso %s: %s destinos, %s entregues, %s falhas (%s removidas), %s pulados",
             aviso.aviso_id,

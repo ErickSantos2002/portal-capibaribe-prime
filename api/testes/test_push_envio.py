@@ -5,14 +5,18 @@ verdade**. O falso imita o de verdade: devolve a resposta até 202 e levanta
 `WebPushException` com a resposta acima disso.
 """
 
+import base64
 import json
 import logging
+import os
+import re
 import threading
 import time
 from dataclasses import dataclass, field
 from itertools import count
 
 import pytest
+import pywebpush
 import requests
 from py_vapid import Vapid
 from pywebpush import WebPushException
@@ -196,7 +200,8 @@ def test_ttl_urgencia_topico_e_tempo_limite(engine_app, fabrica, falso, vapid):
     enviar(fabrica, aviso(engine_app, categoria="urgente"))
     normal, urgente = falso.chamadas
     assert normal["ttl"] == 3 * 24 * 60 * 60
-    assert normal["timeout"] == 10
+    # Conectar e esperar a resposta, 5 s cada: um serviço lento não come o prazo da função.
+    assert normal["timeout"] == (5, 5)
     assert normal["headers"] == {"Urgency": "normal", "Topic": "aviso-42"}
     assert urgente["headers"] == {"Urgency": "high", "Topic": "aviso-42"}
 
@@ -300,8 +305,16 @@ def test_tempo_esgotado_conta_o_resto_como_pulados(engine_app, fabrica, falso, v
     for n in range(5):
         inscrito(engine_app, COMUM, f"{FCM}/ok-{n}")
     resultado = Resultado()
-    lotes = iter([False, True])
-    monkeypatch.setattr(resultado, "tempo_esgotado", lambda: next(lotes, True))
+    # Antes do 1º lote e dos 2 destinos dele: no prazo. Antes do 2º lote: esgotado.
+    trava = threading.Lock()
+    vezes = {"n": 0}
+
+    def esgotado() -> bool:
+        with trava:
+            vezes["n"] += 1
+            return vezes["n"] > 3
+
+    monkeypatch.setattr(resultado, "tempo_esgotado", esgotado)
     enviar(fabrica, aviso(engine_app), resultado)
     assert len(falso.chamadas) == 2
     assert resultado.contagens() | {"reservados": 0} == {
@@ -395,3 +408,120 @@ def test_processar_com_o_enviador_de_verdade(engine_app, fabrica, falso, vapid):
         ).one()
     assert (situacao, entregues) == ("concluido", 1)
     assert json.loads(falso.chamadas[0]["data"])["titulo"] == "Falta de água"
+
+
+# --- revisão do épico A ------------------------------------------------------------------------
+
+
+def test_endpoint_fora_da_lista_ja_no_banco_nao_recebe_post(engine_app, fabrica, falso, vapid):
+    # Defesa em profundidade (SSRF): o banco só exige `https://`; uma linha antiga ou gravada
+    # por fora da API não pode fazer a função chamar outro endereço.
+    inscrito(engine_app, COMUM, "https://169.254.169.254\\.fcm.googleapis.com/latest")
+    inscrito(engine_app, COMUM, f"{FCM}/ok-1")
+    resultado = enviar(fabrica, aviso(engine_app))
+    assert [c["subscription_info"]["endpoint"] for c in falso.chamadas] == [f"{FCM}/ok-1"]
+    assert (resultado.destinos, resultado.entregues, resultado.falhas) == (2, 1, 1)
+
+
+def test_prazo_conferido_a_cada_destino(engine_app, fabrica, falso, vapid, monkeypatch):
+    # Um lote inteiro (25 destinos, até 10 s cada) passaria do fim da função: o prazo vale
+    # para cada POST, não só entre os lotes.
+    for n in range(5):
+        inscrito(engine_app, COMUM, f"{FCM}/ok-{n}")
+    resultado = Resultado()
+    trava = threading.Lock()
+    vezes = {"n": 0}
+
+    def esgotado() -> bool:
+        with trava:
+            vezes["n"] += 1
+            return vezes["n"] > 3  # 1 antes do lote, 2 destinos; o resto já passou do prazo
+
+    monkeypatch.setattr(resultado, "tempo_esgotado", esgotado)
+    enviar(fabrica, aviso(engine_app), resultado)
+    assert len(falso.chamadas) == 2
+    assert (resultado.entregues, resultado.pulados, resultado.destinos) == (2, 3, 5)
+
+
+def test_inscricao_morta_nao_fica_travada_durante_o_envio(
+    engine_app, fabrica, falso, vapid, monkeypatch
+):
+    # As inscrições mortas são apagadas no fim, de uma vez: durante o envio (que pode levar
+    # minutos), ninguém espera trava delas (ex.: o morador desativando naquele aparelho).
+    monkeypatch.setattr(push, "SALVAR_A_CADA", 1)
+    morta = inscrito(engine_app, ADMIN, f"{FCM}/410-a")  # sessão menor: vai no 1º lote
+    inscrito(engine_app, COMUM, f"{FCM}/ok-b")
+    original = falso.__call__
+    apagou: list[int] = []
+
+    def no_segundo_lote(subscription_info, **kwargs):
+        if subscription_info["endpoint"].endswith("ok-b"):
+            with engine_app.begin() as con:
+                con.execute(text("set local lock_timeout = '1s'"))
+                apagou.append(
+                    con.execute(
+                        text("delete from inscricao_push where sessao_id = :s"), {"s": morta}
+                    ).rowcount
+                )
+        return original(subscription_info, **kwargs)
+
+    monkeypatch.setattr(push.pywebpush, "webpush", no_segundo_lote)
+    resultado = enviar(fabrica, aviso(engine_app))
+    assert apagou == [1]
+    assert (resultado.entregues, resultado.removidas) == (1, 1)
+
+
+def _chaves_do_navegador() -> tuple[str, str]:
+    """Um par P-256 e um segredo de verdade, como o navegador manda (base64url sem `=`)."""
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    chave = ec.generate_private_key(ec.SECP256R1())
+    publica = chave.public_key().public_bytes(
+        serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
+    )
+    b64 = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=").decode()  # noqa: E731
+    return b64(publica), b64(os.urandom(16))
+
+
+def test_pywebpush_de_verdade_monta_os_cabecalhos(
+    engine_app, fabrica, vapid, monkeypatch, tmp_path
+):
+    # O `webpush` de verdade, em modo curl (monta e cifra tudo, sem rede). O modo curl grava
+    # `encrypted.data` na pasta atual: roda em `tmp_path` para não sujar o repositório.
+    monkeypatch.chdir(tmp_path)
+    p256dh, auth = _chaves_do_navegador()
+    with Session(engine_app) as db:
+        for login, endpoint in [(COMUM, f"{FCM}/real"), (ADMIN, f"{APPLE}/real")]:
+            unidade_id = db.scalar(select(Unidade.id).where(Unidade.login == login))
+            sessao = Sessao(unidade_id=unidade_id, token_hash=f"{next(_numero):064x}", aparelho="x")
+            db.add(sessao)
+            db.flush()
+            db.add(
+                InscricaoPush(
+                    sessao_id=sessao.id, endpoint=endpoint, chave_p256dh=p256dh, chave_auth=auth
+                )
+            )
+        db.commit()
+    verdadeiro = pywebpush.webpush
+    comandos: dict[str, str] = {}
+
+    def em_curl(subscription_info, **kwargs):
+        comandos[subscription_info["endpoint"]] = verdadeiro(subscription_info, curl=True, **kwargs)
+
+    monkeypatch.setattr(push.pywebpush, "webpush", em_curl)
+    resultado = enviar(fabrica, aviso(engine_app, categoria="urgente"))
+    assert resultado.entregues == 2
+    for endpoint, aud in [(f"{FCM}/real", "https://fcm.googleapis.com"), (f"{APPLE}/real", APPLE)]:
+        comando = comandos[endpoint]
+        cabecalhos = dict(re.findall(r'-H "([a-z-]+): ([^"]*)"', comando))
+        assert cabecalhos["ttl"] == str(3 * 24 * 60 * 60)
+        assert cabecalhos["urgency"] == "high"
+        assert cabecalhos["topic"] == "aviso-42"
+        assert cabecalhos["content-encoding"] == "aes128gcm"
+        jwt = re.search(r"vapid t=([^,]+)", cabecalhos["authorization"]).group(1)
+        corpo = jwt.split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(corpo + "=" * (-len(corpo) % 4)))
+        assert claims["aud"] == aud
+        assert claims["sub"] == "mailto:portal@example.com"
+    assert (tmp_path / "encrypted.data").exists()
