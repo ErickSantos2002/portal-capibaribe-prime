@@ -21,7 +21,7 @@ export const NOVIDADES: Novidade[] = [
     data: '2026-10-07',
     itens: [
       'Não quer mais os avisos no seu e-mail? Em Minha unidade, desmarque "Receber os avisos por e-mail". O e-mail continua guardado para o "Esqueci minha senha".',
-      'Quem publica um aviso agora também recebe a notificação e o e-mail dele, em todos os celulares do apartamento. Assim dá para conferir que o aviso saiu.',
+      'Quem publica um aviso agora também recebe a notificação (nos aparelhos com notificação ativada) e o e-mail, se estiver ligado. Assim dá para conferir que o aviso saiu.',
     ],
   },
   {
