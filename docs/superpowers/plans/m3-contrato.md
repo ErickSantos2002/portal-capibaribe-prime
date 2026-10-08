@@ -60,7 +60,7 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
 `api/testes/test_m3_banco.py`, `api/testes/test_permissoes.py`,
 `scripts/backup/verificacoes.sql`.
 
-- [ ] Testes falhando: tabelas novas existem após upgrade e somem no downgrade para 0006 sem
+- [x] Testes falhando: tabelas novas existem após upgrade e somem no downgrade para 0006 sem
   deixar função; funções de trigger com `search_path` fixo; arquivo: chave hexadecimal única,
   nome sem barra nem controle, só os 4 tipos, 10 MB no aviso e 20 MB no documento, datas do
   banco, confirmado não muda nem é apagado, pendente pode ser corrigido e apagado, 50 por dia
@@ -71,9 +71,9 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
   não, só na transação da versão; `app` não apaga documento, versão nem anexo, não muda
   título/acesso; as verificações do backup conhecem as tabelas novas;
   `test_modelos_iguais_ao_banco_migrado` e o teste de CHECKs continuam verdes.
-- [ ] Implementar a migração (SQL à mão) e os modelos `Arquivo`, `Documento`,
+- [x] Implementar a migração (SQL à mão) e os modelos `Arquivo`, `Documento`,
   `DocumentoVersao`, `AvisoAnexo` (+ constantes de tipos, limites, categorias e níveis).
-- [ ] Commit.
+- [x] Commit.
 
 ### Tarefa 2: Configuração e dependências
 
@@ -81,11 +81,11 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
 `api/.env.example`, `api/pyproject.toml` e `api/uv.lock` (+ `boto3`; `moto` no grupo dev),
 `api/testes/test_m3_configuracao.py`.
 
-- [ ] Testes falhando: sem variáveis, desligado sem aviso; pela metade, desligado com aviso que
+- [x] Testes falhando: sem variáveis, desligado sem aviso; pela metade, desligado com aviso que
   não mostra a chave; endpoint só `https://` ou máquina local; bucket com "backup" no nome
   desliga; nome de bucket fora do padrão S3 desliga; segredo fora do `repr`; região padrão
   `auto`.
-- [ ] Implementar; commit.
+- [x] Implementar; commit.
 
 ### Tarefa 3: Camada de armazenamento
 
@@ -96,7 +96,7 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
 `ArmazenamentoFalso` (`receber`, `objetos`), `obter_armazenamento`, `VALIDADE_ENVIO`,
 `VALIDADE_LEITURA`, `nome_para_baixar`.
 
-- [ ] Testes falhando (contra o `moto` e contra o falso, os mesmos casos): URL de envio é PUT
+- [x] Testes falhando (contra o `moto` e contra o falso, os mesmos casos): URL de envio é PUT
   em `envios/<chave>` com o Content-Type assinado e 10 minutos; URL de leitura é GET em
   `arquivos/<chave>`, 5 minutos, com tipo e `Content-Disposition` forçados (inline/attachment,
   nome UTF-8 e reserva ASCII, extensão acrescentada); tamanho do envio (None se não chegou);
@@ -104,7 +104,7 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
   de `arquivos/` existente falha no falso (trava); descartar só mexe em `envios/`; chave fora do
   formato é recusada antes de qualquer chamada; `obter_armazenamento` devolve `None` sem
   configuração.
-- [ ] Implementar; commit.
+- [x] Implementar; commit.
 
 ### Tarefa 4: Envio de arquivo (rotas comuns prontas)
 
@@ -117,14 +117,14 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
 **Produz:** `tipo_pelo_conteudo`, `pedir_envio`, `confirmar_envio`, `arquivo_utilizavel`,
 `link_do_arquivo`, `niveis_que_ve`; `POST /api/arquivos`, `POST /api/arquivos/{id}/confirmar`.
 
-- [ ] Testes falhando: assinaturas dos 4 tipos e recusa do resto (MZ, ZIP, HTML, SVG, vazio,
+- [x] Testes falhando: assinaturas dos 4 tipos e recusa do resto (MZ, ZIP, HTML, SVG, vazio,
   curto); pedir cria pendente e devolve PUT com Content-Type, 503 sem armazenamento, 422 para
   tipo, tamanho e nome, unidade comum 403, sem X-Portal 403; confirmar publica e devolve o
   tamanho real; `.exe` como `.pdf` → 422, envio e linha apagados, histórico sem nome; maior que o
   limite de verdade → 422 e apagado; PNG declarado JPEG → aceito como PNG; não chegou → 409 e
   continua pendente; de outra unidade → 404; confirmar de novo → mesmo resultado; pendente
   velho é apagado no pedido seguinte; 51º do dia → 409; `arquivo_utilizavel` e `niveis_que_ve`.
-- [ ] Implementar; commit.
+- [x] Implementar; commit.
 
 ### Tarefa 5: Contrato das rotas dos épicos (501) e campos novos dos avisos
 
@@ -137,13 +137,13 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
 `api/testes/test_cache.py`, `api/testes/test_contrato.py`, `web/src/documentos/tipos.ts`,
 `web/src/avisos/tipos.ts` (+ objetos de teste do front que montam avisos).
 
-- [ ] Testes falhando: rotas do M3 declaradas; gestão recusa comum, restrita e sem sessão;
+- [x] Testes falhando: rotas do M3 declaradas; gestão recusa comum, restrita e sem sessão;
   leitura recusa restrita e sem sessão; públicas não exigem sessão; CSRF; validação dos corpos
   (título, categoria, data, acesso, avisar com gestão); 501 em cada rota do épico; aviso com
   anexos → 501, sem anexos igual ao M1; aviso aberto traz `anexos: []`,
   `quantidade_anexos: 0` e o `documento` que o gerou só para quem pode ver e se não arquivado;
   `gravar_publicacao` não faz commit; contrato TS igual.
-- [ ] Implementar; commit.
+- [x] Implementar; commit.
 
 ### Tarefa 6: Front comum, encaixes e CSP
 
@@ -171,3 +171,26 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
   arquivo, CSP, backup dos arquivos, ADR-0011); roadmap (estado do M3); README (variáveis);
   dúvidas com os itens **[Erick]** e o passo a passo do R2 e do B2.
 - [ ] Suíte inteira e `pre-commit run --all-files`; commit.
+
+---
+
+## Estado (07/10/2026, parada por desligamento do computador)
+
+Feito e commitado (Tarefas 1 a 5): ADR-0011, spec, migração 0007 e modelos, configuração,
+armazenamento, envio de arquivo pronto, rotas dos épicos em 501, campos novos dos avisos e
+tipos TS de arquivos, documentos e avisos. Último commit da Tarefa 5 rodou só os testes das
+áreas mudadas (192 API + 145 front); a suíte inteira passou no commit da Tarefa 4 (1251 API,
+403 vitest, 12 node).
+
+Para retomar:
+1. Subir o Postgres próprio: `docker run -d --name portal-pg-m3-contrato -e POSTGRES_PASSWORD=teste
+   -p 127.0.0.1:55473:5432 postgres:17` e rodar a suíte inteira com
+   `PORTAL_TESTE_ADMIN_URL=postgresql://postgres:teste@127.0.0.1:55473/postgres
+   PORTAL_TESTE_BANCO=portal_teste_m3_contrato uv run --frozen pytest` (confirmar a Tarefa 5).
+2. Tarefa 6 inteira (front comum `web/src/arquivos/{api,limites,comprimir,enviar}.ts` + teste,
+   `web/src/documentos/{api.ts,rotas.tsx,menu.ts,LinkDocumentosPublicos.tsx,DocumentoDoAviso.tsx}`,
+   encaixes em `rotas.tsx`, `casca/menu.ts`, `acesso/Entrar.tsx`, `avisos/AvisoAberto.tsx`,
+   resto do `m3contrato.test.ts`, CSP no `vercel.json` + `web/testes/cabecalhos.test.ts`).
+3. Tarefa 7 inteira (docs 04/05/07, README, `docs/superpowers/duvidas-m3.md` com os itens
+   [Erick]: bucket `portal-capibaribe-arquivos`, chave só dele, CORS, trava em `arquivos/`,
+   ciclo de vida de 1 dia em `envios/`, conta e bucket no B2, segredos do workflow).
