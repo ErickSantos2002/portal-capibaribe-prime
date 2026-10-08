@@ -227,8 +227,8 @@ Plano: `docs/superpowers/plans/m2-ajustes.md`. Prints: `docs/superpowers/prints/
 Decisões tomadas sem perguntar (podem ser revistas):
 
 1. **"Apagar meus dados" volta a opção para ligada.** O apartamento recomeça do zero (senha
-   inicial, primeiro acesso de novo); quem fizer o novo primeiro acesso começa com o padrão. O
-   "resetar senha" da administração **não** mexe na opção (é o mesmo morador).
+   inicial, primeiro acesso de novo); quem fizer o novo primeiro acesso começa com o padrão.
+   (O reset da administração também volta; ver as correções da revisão, abaixo.)
 2. **Sem e-mail cadastrado, a caixa não aparece:** no lugar dela, "Para receber os avisos por
    e-mail, cadastre um e-mail em “Mudar meus dados”.". A API aceita mudar a opção mesmo sem
    e-mail (é só a preferência); se a pessoa cadastrar e-mail depois, vale o que estiver lá.
@@ -243,3 +243,27 @@ Decisões tomadas sem perguntar (podem ser revistas):
 6. **Exemplos do épico B:** `prints/m2-email/exemplo-email-aviso.{txt,html}` refeitos com o
    rodapé novo; o print `06-email-aviso.png` ficou com o rodapé antigo (é registro do épico B).
 7. **`07-roadmap.md` não foi mexido:** o status "1.3.0 no ar" é do coordenador, depois do deploy.
+
+### Correções das duas revisões independentes (ainda 1.3.0)
+
+1. **Reset da administração** (`resetar` em `app/servicos/administracao.py`) volta a opção para
+   ligada, como o "Apagar meus dados" (teste em `test_administracao_reset.py`).
+2. **A ajuda da caixa diz "Vale para o apartamento inteiro, em qualquer aparelho."**: ao lado do
+   "neste aparelho" do push, evita que alguém desmarque e o familiar dono do e-mail pare de
+   receber sem saber.
+3. **Novidade da 1.3.0** não promete mais "todos os celulares do apartamento": "Quem publica um
+   aviso agora também recebe a notificação (nos aparelhos com notificação ativada) e o e-mail, se
+   estiver ligado.".
+4. **Foco:** `aria-disabled` no lugar de `disabled` enquanto salva (o toque repetido é ignorado
+   no código). Com `disabled`, o foco ia para o body ao salvar; conferido no navegador que fica
+   na caixa.
+5. **Rodapé do e-mail do aviso:** "…desmarque “Receber os avisos por e-mail” em Minha unidade, no
+   Portal: <url_base>/minha-unidade. O e-mail continua valendo para o “Esqueci minha senha”." No
+   HTML, "Minha unidade" é o link (`rodape_do_aviso` em `app/servicos/email.py`). Exemplos
+   `prints/m2-email/exemplo-email-aviso.{txt,html}` refeitos. Sem sessão, o link cai na tela de
+   entrar, como o link do aviso.
+6. **Hífen que não quebra** (U+2011) em "e‑mail" no rótulo e na ajuda da caixa.
+7. **"Salvando…"** na ajuda enquanto salva.
+
+Prints refeitos em `prints/m2-ajustes/`. Não mexido, por decisão da revisão: tempo e posição do
+recado global (ele cobre o topo da seção por alguns segundos) e o tratamento de 401.

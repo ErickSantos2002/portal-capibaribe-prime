@@ -69,7 +69,7 @@ as mensagens.
 | Título | o título | `<h1>` |
 | Texto | o texto do aviso **como foi escrito** (as marcas `##`, `-`, `1.`, `>` e `**` são legíveis em texto puro) | o Markdown restrito do Portal convertido (2.4) |
 | Link | "Abrir no Portal: <url_base>/avisos/<id>" | botão "Abrir no Portal" + o endereço escrito embaixo |
-| Rodapé | "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, desmarque “Receber os avisos por e-mail” em Minha unidade." | o mesmo, em letra menor |
+| Rodapé | "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, desmarque “Receber os avisos por e-mail” em Minha unidade, no Portal: <url_base>/minha-unidade. O e-mail continua valendo para o “Esqueci minha senha”." | o mesmo, em letra menor, com "Minha unidade" em link no lugar do endereço |
 
 **Ajustes do M2 (1.3.0):** parar de receber passou a ser a opção "Receber os avisos por e-mail"
 de Minha unidade (resposta do Erick à dúvida 7 do contrato). O e-mail continua cadastrado e o

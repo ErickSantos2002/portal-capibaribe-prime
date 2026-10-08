@@ -261,7 +261,9 @@ mandar um formulário de troca de senha.
   Assunto "Aviso do Portal: <título>"; texto puro com o texto do aviso, o link
   `url_base + aviso.caminho` e o rodapé "Você recebe porque cadastrou este e-mail no Portal
   Capibaribe Prime. Para não receber mais, desmarque “Receber os avisos por e-mail” em Minha
-  unidade." (ajustes do M2, 1.3.0; até a 1.2.0 mandava apagar o e-mail). Remetente
+  unidade, no Portal: <url_base>/minha-unidade. O e-mail continua valendo para o “Esqueci minha
+  senha”." (ajustes do M2, 1.3.0; no HTML, "Minha unidade" é link; até a 1.2.0 mandava apagar
+  o e-mail). Remetente
   "Portal Capibaribe Prime <conta do Portal>".
 - Telas (protótipo `#esqueci`): "Esqueci minha senha" (`/esqueci-a-senha`, só sem sessão):
   bloco e apartamento, "Mandar link", e a caixa com a mensagem de H-04 mais "Sem e-mail
