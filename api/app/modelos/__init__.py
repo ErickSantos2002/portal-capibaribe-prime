@@ -5,8 +5,10 @@ ORM não descreve). Estes modelos espelham as colunas para a API ler e gravar.
 """
 
 from app.modelos.acesso import Bloco, EntradaTentativa, Papel, Sessao, Unidade, UnidadePapel
-from app.modelos.avisos import Aviso, AvisoBloco, AvisoLeitura, AvisoVersao
+from app.modelos.arquivos import Arquivo
+from app.modelos.avisos import Aviso, AvisoAnexo, AvisoBloco, AvisoLeitura, AvisoVersao
 from app.modelos.base import Base
+from app.modelos.documentos import Documento, DocumentoVersao
 from app.modelos.notificacoes import (
     Canal,
     InscricaoPush,
@@ -17,13 +19,17 @@ from app.modelos.notificacoes import (
 from app.modelos.registro import Erro, Historico
 
 __all__ = [
+    "Arquivo",
     "Aviso",
+    "AvisoAnexo",
     "AvisoBloco",
     "AvisoLeitura",
     "AvisoVersao",
     "Base",
     "Bloco",
     "Canal",
+    "Documento",
+    "DocumentoVersao",
     "EntradaTentativa",
     "Erro",
     "Historico",
