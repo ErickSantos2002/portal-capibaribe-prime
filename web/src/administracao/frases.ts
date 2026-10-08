@@ -99,6 +99,21 @@ export function oQueFez(item: ItemHistorico): string {
         : `não mandou link de senha nova ${alvo(item, 'a')}: ${motivoSemLink(item)}`
     case 'senha_redefinida':
       return 'criou senha nova pelo link do e-mail'
+    // M3 (spec do M3, seções 4 e 5.2). O nome do arquivo nunca vai para o histórico.
+    case 'arquivo_recusado':
+      return item.detalhes.motivo === 'tamanho'
+        ? 'tentou enviar um arquivo maior que o limite (recusado)'
+        : 'tentou enviar um arquivo que não era PDF nem foto (recusado)'
+    case 'documento_publicado':
+      return 'publicou um documento'
+    case 'documento_versao_enviada': {
+      const versao = item.detalhes.versao
+      return typeof versao === 'number'
+        ? `enviou a versão ${versao} de um documento`
+        : 'enviou uma versão nova de um documento'
+    }
+    case 'documento_arquivado':
+      return 'arquivou um documento'
     case 'carga_inicial':
       return 'criou os blocos e as unidades'
     case 'dados_ficticios':

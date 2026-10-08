@@ -12,6 +12,8 @@ from pydantic import BaseModel, ConfigDict
 from app.modelos import Canal, Papel, SituacaoEnvio
 
 __all__ = [
+    "DIRECAO",
+    "INVISIVEIS",
     "MSG_CONTROLE",
     "CampoInvalido",
     "Canal",
@@ -25,6 +27,7 @@ __all__ = [
     "Saida",
     "UnidadeRef",
     "sem_controle",
+    "sem_invisiveis",
 ]
 
 MSG_CONTROLE = "Tem um caractere invisível no texto. Apague e escreva de novo."
@@ -38,6 +41,19 @@ def sem_controle(texto: str, *, permitidos: str = "") -> str:
     for caractere in texto:
         if unicodedata.category(caractere) == "Cc" and caractere not in permitidos:
             raise ValueError(MSG_CONTROLE)
+    return texto
+
+
+# Revisão de código do M1, achado 6: caracteres de direção (que invertem o que se lê, ex.: um
+# link "gpj.exe") e de largura zero (campo que parece vazio). O ZWJ (U+200D) fica: os emojis de
+# família e de profissão usam. Desde o M3 aqui (avisos e nome de arquivo usam).
+DIRECAO = frozenset("‪‫‬‭‮⁦⁧⁨⁩")
+INVISIVEIS = DIRECAO | frozenset("​‌‎‏⁠﻿")
+
+
+def sem_invisiveis(texto: str, proibidos: frozenset[str] = INVISIVEIS) -> str:
+    if any(c in proibidos for c in texto):
+        raise ValueError(MSG_CONTROLE)
     return texto
 
 

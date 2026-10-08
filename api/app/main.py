@@ -10,6 +10,7 @@ from app.erros_api import instalar_tratadores
 from app.rotas import (
     acesso,
     administracao,
+    arquivos,
     avisos,
     diagnostico,
     envios,
@@ -46,3 +47,5 @@ app.include_router(avisos.rotas)
 app.include_router(envios.rotas)
 app.include_router(push.rotas)
 app.include_router(recuperacao.rotas)
+# M3 (spec do M3, seção 5): o envio de arquivo é comum.
+app.include_router(arquivos.rotas)

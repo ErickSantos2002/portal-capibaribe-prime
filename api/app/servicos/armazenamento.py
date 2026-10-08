@@ -21,8 +21,10 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import cache
-from typing import Protocol
+from typing import Annotated, Protocol
 from urllib.parse import quote
+
+from fastapi import Depends
 
 from app.configuracao import ConfigArquivos, config_arquivos
 
@@ -259,3 +261,7 @@ def obter_armazenamento() -> Armazenamento | None:
     503 `arquivos_desligados`). Os testes trocam pelo `ArmazenamentoFalso`."""
     config = config_arquivos()
     return None if config is None else _s3_para(config)
+
+
+# Parâmetro de rota: `bucket: Armazenado` (None = arquivos desligados; `arquivos.exigir` dá 503).
+Armazenado = Annotated[Armazenamento | None, Depends(obter_armazenamento)]
