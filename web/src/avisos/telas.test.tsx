@@ -33,6 +33,7 @@ function resumo(id: number, extra: Partial<AvisoResumo> = {}): AvisoResumo {
     corrigido_desde_a_leitura: false,
     categoria: 'geral',
     evento_quando: null,
+    quantidade_anexos: 0,
     ...extra,
   }
 }
@@ -44,6 +45,8 @@ function completo(id: number, extra: Partial<AvisoCompleto> = {}): AvisoCompleto
     evento: null,
     versoes_anteriores: [],
     leitura: null,
+    anexos: [],
+    documento: null,
     ...extra,
   }
 }
@@ -244,6 +247,7 @@ describe('aviso aberto', () => {
                   criada_em: '2026-11-03T12:00:00Z',
                   categoria: 'geral',
                   evento: null,
+                  anexos: [],
                 },
               ],
             }),
@@ -774,6 +778,7 @@ describe('aviso aberto: cabeçalho, quadro do evento e texto formatado', () => {
           criada_em: '2026-11-03T12:00:00Z',
           categoria: 'reuniao',
           evento: { quando: FUTURO, onde: 'Salão' },
+          anexos: [],
         },
       ],
     })

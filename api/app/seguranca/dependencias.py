@@ -85,6 +85,19 @@ def sessao_qualquer(request: Request, response: Response, db: Banco) -> Logado:
     )
 
 
+def sessao_opcional(request: Request, response: Response, db: Banco) -> Logado | None:
+    """Para as rotas que também atendem quem não entrou (documentos públicos, M3): a sessão,
+    se houver uma válida, ou `None`. A sessão restrita do primeiro acesso volta como está
+    (`precisa_trocar_senha`); quem decide o que ela vê é a rota (`niveis_que_ve` a trata como
+    quem não entrou)."""
+    if request.cookies.get(NOME_COOKIE) is None:
+        return None
+    try:
+        return sessao_qualquer(request, response, db)
+    except ErroApi:
+        return None
+
+
 def unidade_logada(logado: Annotated[Logado, Depends(sessao_qualquer)]) -> Logado:
     """Sessão completa: o primeiro acesso já foi concluído (ADR-0005, sessão restrita)."""
     if logado.precisa_trocar_senha:
@@ -122,6 +135,7 @@ def exige_cabecalho_portal(request: Request) -> None:
 
 
 SessaoQualquer = Annotated[Logado, Depends(sessao_qualquer)]
+SessaoOpcional = Annotated[Logado | None, Depends(sessao_opcional)]
 UnidadeLogada = Annotated[Logado, Depends(unidade_logada)]
 Gestao = Annotated[Logado, Depends(exige_gestao)]
 Admin = Annotated[Logado, Depends(exige_admin)]

@@ -3,6 +3,7 @@
 // O texto do aviso tem as marcas do Markdown restrito: quem interpreta é `formatacao.ts`, que
 // nunca transforma texto em HTML.
 import type { DataHora, UnidadeRef } from '../api/tipos'
+import type { ArquivoEnviado } from '../arquivos/tipos'
 
 /** Do que o aviso trata. `geral` é o padrão. */
 export type Categoria = 'geral' | 'obra' | 'reuniao' | 'financeiro' | 'urgente'
@@ -18,6 +19,9 @@ export interface CorrigirAviso {
   texto: string
   categoria?: Categoria
   evento?: Evento | null
+  /** M3: ids dos anexos (`enviarArquivo(…, 'aviso')`), na ordem. Na correção, omitido repete
+   *  os da versão em vigor e `[]` tira todos; ao publicar, omitido é sem anexo. */
+  anexos?: number[] | null
 }
 
 export interface NovoAviso extends CorrigirAviso {
@@ -48,6 +52,8 @@ export interface AvisoResumo {
   categoria: Categoria
   /** Para a linha do evento no mural; nulo se não é evento. */
   evento_quando: DataHora | null
+  /** M3: quantos anexos a versão em vigor tem (o clipe no mural). */
+  quantidade_anexos: number
 }
 
 export interface VersaoAviso {
@@ -57,6 +63,8 @@ export interface VersaoAviso {
   criada_em: DataHora
   categoria: Categoria
   evento: Evento | null
+  /** M3: os anexos daquela versão. */
+  anexos: ArquivoEnviado[]
 }
 
 export interface ContagemLeitura {
@@ -70,6 +78,16 @@ export interface AvisoCompleto extends AvisoResumo {
   versoes_anteriores: VersaoAviso[]
   /** Só para a gestão. */
   leitura: ContagemLeitura | null
+  /** M3: os anexos da versão em vigor, na ordem. */
+  anexos: ArquivoEnviado[]
+  /** M3 (RF-33): o documento que gerou este aviso, se a unidade pode vê-lo. */
+  documento: DocumentoDoAviso | null
+}
+
+/** O botão "Abrir o documento" do aviso automático (RF-33). */
+export interface DocumentoDoAviso {
+  id: number
+  titulo: string
 }
 
 export interface ListaAvisos {

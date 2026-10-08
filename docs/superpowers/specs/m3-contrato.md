@@ -289,7 +289,7 @@ Campos novos (já no contrato; preenchidos pelo épico B, menos `documento`):
 | Esquema | Campo | Nesta onda |
 |---|---|---|
 | `CorrigirAviso` | `anexos: list[int] \| None = None` — os anexos da versão nova, na ordem; **omitido = repete os da versão em vigor**; `[]` tira todos | só `None`/`[]`; com ids: 501 |
-| `NovoAviso` | `anexos: list[int] = []` | só `[]`; com ids: 501 |
+| `NovoAviso` | herda `anexos`: omitido, nulo ou `[]` é sem anexo | só sem anexo; com ids: 501 |
 | `AvisoResumo` | `quantidade_anexos: int` (o clipe no mural) | `0` |
 | `AvisoCompleto` | `anexos: list[ArquivoEnviado]` (da versão em vigor, na ordem) | `[]` |
 | `VersaoAviso` | `anexos: list[ArquivoEnviado]` | `[]` |

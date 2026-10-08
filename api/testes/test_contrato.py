@@ -19,7 +19,16 @@ from typing import Annotated, Any, Literal, Union
 import pytest
 from pydantic import BaseModel
 
-from app.esquemas import acesso, administracao, arquivos, avisos, comum, push, recuperacao
+from app.esquemas import (
+    acesso,
+    administracao,
+    arquivos,
+    avisos,
+    comum,
+    documentos,
+    push,
+    recuperacao,
+)
 from app.modelos import Canal, Papel, SituacaoEnvio
 
 WEB = Path(__file__).resolve().parents[2] / "web" / "src"
@@ -31,12 +40,13 @@ ARQUIVOS_TS = {
     # M2: épico A (push) e épico B (recuperação).
     push: WEB / "notificacoes" / "tipos.ts",
     recuperacao: WEB / "recuperacao" / "tipos.ts",
-    # M3: comum (envio de arquivo).
+    # M3: comum (envio de arquivo) e épico A (documentos; os anexos do épico B estão em avisos).
     arquivos: WEB / "arquivos" / "tipos.ts",
+    documentos: WEB / "documentos" / "tipos.ts",
 }
 BASES = {comum.Entrada, comum.Saida}
 # Apelidos de tipo do front que valem o tipo básico.
-APELIDOS_TS = {"DataHora": "string"}
+APELIDOS_TS = {"DataHora": "string", "Data": "string"}
 
 _INTERFACE = re.compile(r"export interface (\w+)(?: extends ([\w, ]+))? \{(.*?)\n\}", re.S)
 _APELIDO = re.compile(r"export type (\w+) = ([A-Z]\w*)\s*$", re.M)

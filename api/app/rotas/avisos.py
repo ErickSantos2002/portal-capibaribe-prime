@@ -15,6 +15,11 @@ Rotas (atenção à ordem: as fixas antes de `/{aviso_id}`):
 - `POST /api/avisos/{aviso_id}/arquivar`  → `AvisoCompleto` (`Gestao`)
 - `PUT  /api/avisos/{aviso_id}/fixado`    → `AvisoCompleto` (`Gestao`)
 - `GET  /api/avisos/{aviso_id}/leitura`   → `Leitura` (`Gestao`)
+- `GET  /api/avisos/{aviso_id}/anexos/{arquivo_id}/link?baixar=` → `LinkDoArquivo`
+  (`UnidadeLogada`; M3, épico B: ainda 501)
+
+M3 (épico B; spec do M3, seção 5.3): publicar e corrigir **com** anexos ainda respondem 501;
+sem anexos (`[]`, ou omitido), tudo igual ao M1.
 
 GET nunca altera nada: com `SameSite=Lax`, uma navegação vinda de outro site leva o cookie e
 escaparia da exigência de `X-Portal`. Por isso a leitura (H-16) é um POST à parte.
@@ -27,6 +32,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
+from app.erros_api import em_construcao
+from app.esquemas.arquivos import LinkDoArquivo
 from app.esquemas.avisos import (
     Alcance,
     AvisoCompleto,
@@ -42,6 +49,7 @@ from app.esquemas.avisos import (
 from app.seguranca.dependencias import Banco, Gestao, UnidadeLogada, exige_cabecalho_portal
 from app.servicos import avisos as servico
 from app.servicos import notificacoes
+from app.servicos.armazenamento import Armazenado
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(prefix="/api/avisos", dependencies=[Depends(exige_cabecalho_portal)])
@@ -76,6 +84,8 @@ def destinos(_: Gestao, db: Banco) -> Destinos:
 def publicar(
     dados: NovoAviso, logado: Gestao, db: Banco, tarefas: BackgroundTasks
 ) -> AvisoCompleto:
+    if dados.anexos:
+        raise em_construcao()
     aviso_id = servico.publicar(db, logado, dados)
     # H-13 (M2): push e e-mail saem depois da resposta (spec do M2, seção 5).
     notificacoes.agendar(tarefas, aviso_id)
@@ -94,6 +104,8 @@ def marcar_lido(aviso_id: int, logado: UnidadeLogada, db: Banco) -> None:
 
 @rotas.put("/{aviso_id}")
 def corrigir(aviso_id: int, dados: CorrigirAviso, logado: Gestao, db: Banco) -> AvisoCompleto:
+    if dados.anexos:
+        raise em_construcao()
     servico.corrigir(db, logado, aviso_id, dados)
     return servico.abrir(db, logado, aviso_id)
 
@@ -114,3 +126,17 @@ def mudar_fixado(aviso_id: int, dados: MudarFixado, logado: Gestao, db: Banco) -
 @rotas.get("/{aviso_id}/leitura")
 def leitura(aviso_id: int, logado: Gestao, db: Banco) -> Leitura:
     return servico.leitura(db, logado, aviso_id)
+
+
+@rotas.get("/{aviso_id}/anexos/{arquivo_id}/link")
+def link_do_anexo(
+    aviso_id: int,
+    arquivo_id: int,
+    logado: UnidadeLogada,
+    db: Banco,
+    bucket: Armazenado,
+    baixar: bool = False,
+) -> LinkDoArquivo:
+    # M3, épico B: o aviso visível para a unidade e o arquivo anexo de alguma versão dele; senão
+    # 404 `aviso_nao_encontrado`. Depois, `arquivos.link_do_arquivo`.
+    raise em_construcao()

@@ -28,17 +28,19 @@ from app.esquemas.avisos import (
     ContagemLeitura,
     CorrigirAviso,
     DestinoBloco,
+    DocumentoDoAviso,
     Evento,
     Leitura,
     NovoAviso,
     VersaoAviso,
 )
 from app.esquemas.comum import UnidadeRef
-from app.modelos import Bloco, Papel, Unidade
+from app.modelos import Bloco, Documento, Papel, Unidade
 from app.modelos.avisos import Aviso, AvisoBloco, AvisoLeitura, AvisoVersao
 from app.seguranca.dependencias import Logado
 from app.servicos import notificacoes
 from app.servicos.historico import Acao, registrar
+from app.servicos.visibilidade import niveis_que_ve
 
 # Com que papel o aviso é assinado, quando a unidade tem mais de um (contrato, seção 4.4).
 ORDEM_DA_ASSINATURA = (Papel.comissao, Papel.admin, Papel.sindico, Papel.conselho)
@@ -214,6 +216,8 @@ def _resumo(m: _Montado) -> dict:
         "corrigido_desde_a_leitura": m.corrigido_desde_a_leitura,
         "categoria": m.atual.categoria,
         "evento_quando": m.atual.evento_quando,
+        # M3: o épico B conta os anexos da versão em vigor.
+        "quantidade_anexos": 0,
     }
 
 
@@ -295,11 +299,29 @@ def abrir(db: Session, logado: Logado, aviso_id: int) -> AvisoCompleto:
                 criada_em=v.criada_em,
                 categoria=Categoria(v.categoria),
                 evento=_evento(v),
+                # M3: o épico B lê os anexos de cada versão.
+                anexos=[],
             )
             for v in m.versoes[1:]
         ],
         leitura=_contagem(db, aviso) if logado.gestao else None,
+        # M3: o épico B lê os anexos da versão em vigor.
+        anexos=[],
+        documento=_documento_do_aviso(db, logado, aviso.id),
     )
+
+
+def _documento_do_aviso(db: Session, logado: Logado, aviso_id: int) -> DocumentoDoAviso | None:
+    """O documento que gerou este aviso (RF-33; spec do M3, seção 5.3), se a unidade pode vê-lo
+    e ele não está arquivado. Senão o aviso aparece sem o botão."""
+    linha = db.execute(
+        select(Documento.id, Documento.titulo).where(
+            Documento.aviso_id == aviso_id,
+            Documento.arquivado_em.is_(None),
+            Documento.acesso.in_(niveis_que_ve(logado)),
+        )
+    ).one_or_none()
+    return None if linha is None else DocumentoDoAviso(id=linha.id, titulo=linha.titulo)
 
 
 def _gravar_leitura(db: Session, aviso_id: int, unidade_id: int) -> None:
@@ -372,6 +394,15 @@ def _categoria_e_evento(dados: CorrigirAviso) -> dict:
 
 def publicar(db: Session, logado: Logado, dados: NovoAviso) -> int:
     """Publica (H-12) e devolve o id. Quem publica já conta como quem leu."""
+    aviso_id = gravar_publicacao(db, logado, dados)
+    db.commit()
+    return aviso_id
+
+
+def gravar_publicacao(db: Session, logado: Logado, dados: NovoAviso) -> int:
+    """Tudo do `publicar`, menos o commit: quem chama fecha a transação. O épico A do M3 usa
+    para o aviso automático nascer junto com o documento (RF-33), ou nenhum dos dois. Quem chama
+    agenda as notificações depois do commit (`notificacoes.agendar`)."""
     blocos = [] if dados.para_todos else _ids_dos_blocos(db, dados.blocos)
     assinatura = next(p for p in ORDEM_DA_ASSINATURA if p in logado.papeis)
     aviso = Aviso(
@@ -410,7 +441,7 @@ def publicar(db: Session, logado: Logado, dados: NovoAviso) -> int:
     )
     # H-13 (M2): o pedido de notificar entra na mesma transação; a rota agenda o envio.
     notificacoes.registrar_publicacao(db, aviso.id)
-    db.commit()
+    db.flush()
     return aviso.id
 
 

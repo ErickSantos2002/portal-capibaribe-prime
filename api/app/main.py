@@ -13,6 +13,7 @@ from app.rotas import (
     arquivos,
     avisos,
     diagnostico,
+    documentos,
     envios,
     push,
     recuperacao,
@@ -47,5 +48,7 @@ app.include_router(avisos.rotas)
 app.include_router(envios.rotas)
 app.include_router(push.rotas)
 app.include_router(recuperacao.rotas)
-# M3 (spec do M3, seção 5): o envio de arquivo é comum.
+# M3 (spec do M3, seção 5): o envio de arquivo é comum; documentos é do épico A (os anexos, do
+# épico B, ficam no roteador de avisos).
 app.include_router(arquivos.rotas)
+app.include_router(documentos.rotas)

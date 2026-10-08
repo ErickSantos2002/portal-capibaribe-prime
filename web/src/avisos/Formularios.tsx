@@ -149,6 +149,7 @@ export function NovoAviso() {
     corrigido_desde_a_leitura: false,
     categoria: rascunho.categoria,
     evento_quando: eventoNaPrevia?.quando ?? null,
+    quantidade_anexos: 0,
   }
   const unidades = alcance.situacao === 'pronta' ? alcance.dados.unidades : null
 
