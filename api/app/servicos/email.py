@@ -201,12 +201,15 @@ _CATEGORIAS = {
     "financeiro": ("Financeiro", "#1f5e3b", "#e3eee6"),
     "urgente": ("Urgente", "#a3322a", "#f8e4e1"),
 }
-# Ajustes do M2: parar de receber é desmarcar a opção de Minha unidade; o e-mail continua
-# cadastrado para o "esqueci a senha" (substitui o item 3 de duvidas-m2-email.md).
-RODAPE_DO_AVISO = (
+# Ajustes do M2: parar de receber é desmarcar a opção de Minha unidade (rota `/minha-unidade`
+# do front); o e-mail continua cadastrado para o "esqueci a senha" (substitui o item 3 de
+# duvidas-m2-email.md). `rodape_do_aviso` monta o texto puro e o HTML, com o link.
+CAMINHO_MINHA_UNIDADE = "/minha-unidade"
+_RODAPE_ANTES = (
     "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, "
-    "desmarque “Receber os avisos por e-mail” em Minha unidade."
+    "desmarque “Receber os avisos por e-mail” em"
 )
+_RODAPE_DEPOIS = "O e-mail continua valendo para o “Esqueci minha senha”."
 RODAPE_DA_RECUPERACAO = (
     "Enviado pelo Portal Capibaribe Prime porque alguém pediu “Esqueci minha senha” para este "
     "apartamento."
@@ -279,6 +282,7 @@ def _pagina(
     endereco: str,
     rodape: str,
     depois: str = "",
+    rodape_html: str | None = None,
 ) -> str:
     """Moldura do e-mail em HTML: tabela de 600 px, estilos inline, só cores dos tokens.
 
@@ -286,6 +290,7 @@ def _pagina(
     - `color-scheme: light`: o Portal é claro de propósito; o modo escuro do leitor de e-mail
       não inverte as cores (o verde do botão e o rótulo da categoria continuam legíveis).
     - `depois`: parágrafos depois do botão (o aviso contra golpe, no link de recuperação).
+    - `rodape_html`: rodapé já em HTML (escapado por quem monta), quando ele leva link.
     """
     e, m = html.escape, _MOLDURA
     tabela = 'role="presentation" width="100%" cellpadding="0" cellspacing="0"'
@@ -311,7 +316,7 @@ def _pagina(
 <a href="{e(endereco)}" style="{_E["a"]}">{e(endereco)}</a></p>
 {depois}
 </td></tr>
-<tr><td style="{m["rodape"]}">{e(rodape)}</td></tr>
+<tr><td style="{m["rodape"]}">{rodape_html if rodape_html is not None else e(rodape)}</td></tr>
 </table>
 </td></tr>
 </table>
@@ -346,6 +351,19 @@ def assunto_do_aviso(aviso: AvisoParaNotificar) -> str:
     return f"Urgente: {aviso.titulo}" if aviso.categoria == "urgente" else aviso.titulo
 
 
+def rodape_do_aviso(url_base: str) -> tuple[str, str]:
+    """O rodapé do aviso: (texto puro com o endereço escrito, HTML com "Minha unidade" em link)."""
+    endereco = url_base + CAMINHO_MINHA_UNIDADE
+    texto = f"{_RODAPE_ANTES} Minha unidade, no Portal: {endereco}. {_RODAPE_DEPOIS}"
+    e = html.escape
+    html_ = (
+        f'{e(_RODAPE_ANTES)} <a href="{e(endereco)}" '
+        f'style="color:{_COR_MATA};text-decoration:underline">Minha unidade</a>, '
+        f"no Portal. {e(_RODAPE_DEPOIS)}"
+    )
+    return texto, html_
+
+
 def mensagem_do_aviso(
     aviso: AvisoParaNotificar, para: str, config: ConfigEmail, publicacao: str
 ) -> EmailMessage:
@@ -353,9 +371,10 @@ def mensagem_do_aviso(
     nome, cor, fundo = _CATEGORIAS.get(aviso.categoria, _CATEGORIAS["geral"])
     endereco = config.url_base + aviso.caminho
     destino = destino_em_texto(aviso)
+    rodape, rodape_html = rodape_do_aviso(config.url_base)
     texto = (
         f"{aviso.titulo}\n{nome} · {destino}\n{publicacao}\n\n{aviso.texto}\n\n"
-        f"Abrir no Portal: {endereco}\n\n--\n{RODAPE_DO_AVISO}\n"
+        f"Abrir no Portal: {endereco}\n\n--\n{rodape}\n"
     )
     miolo = (
         f'<p style="margin:0 0 10px;font-size:15px;color:#4a5a50">'
@@ -368,7 +387,13 @@ def mensagem_do_aviso(
         f"{html_do_texto(aviso.texto)}"
     )
     html_ = _pagina(
-        aviso.titulo, resumir(aviso.texto), miolo, "Abrir no Portal", endereco, RODAPE_DO_AVISO
+        aviso.titulo,
+        resumir(aviso.texto),
+        miolo,
+        "Abrir no Portal",
+        endereco,
+        rodape,
+        rodape_html=rodape_html,
     )
     return _mensagem(config, para, assunto_do_aviso(aviso), texto, html_)
 

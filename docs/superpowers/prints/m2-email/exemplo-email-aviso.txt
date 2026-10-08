@@ -26,4 +26,4 @@ Mais detalhes em https://example.com/vistoria.
 Abrir no Portal: https://portal-capibaribe-prime.vercel.app/avisos/42
 
 --
-Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, desmarque “Receber os avisos por e-mail” em Minha unidade.
+Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, desmarque “Receber os avisos por e-mail” em Minha unidade, no Portal: https://portal-capibaribe-prime.vercel.app/minha-unidade. O e-mail continua valendo para o “Esqueci minha senha”.

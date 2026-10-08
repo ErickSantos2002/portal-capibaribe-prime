@@ -69,9 +69,12 @@ def test_texto_puro_do_aviso(aviso):
     assert "Abrir no Portal: https://portal.example.com/avisos/7" in texto
     # Ajustes do M2: parar de receber é a opção de Minha unidade, não apagar o e-mail (que
     # desligaria também o "esqueci a senha").
+    # Revisão dos ajustes, item 5: o endereço de Minha unidade e que o e-mail continua valendo.
     assert (
         "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber "
-        "mais, desmarque “Receber os avisos por e-mail” em Minha unidade."
+        "mais, desmarque “Receber os avisos por e-mail” em Minha unidade, no Portal: "
+        "https://portal.example.com/minha-unidade. O e-mail continua valendo para o “Esqueci "
+        "minha senha”."
     ) in " ".join(texto.split())
     assert "apague o e-mail" not in texto
 
@@ -85,7 +88,17 @@ def test_html_do_aviso(aviso):
     assert 'href="https://portal.example.com/avisos/7"' in html
     assert ">Abrir no Portal</a>" in html
     assert "Urgente" in html and "Para o Bloco 1" in html
-    assert "desmarque “Receber os avisos por e-mail” em Minha unidade" in html
+    rodape = re.search(r"<tr><td[^>]*>(Você recebe porque.*?)</td></tr>", html, re.S)
+    assert rodape, "rodapé não encontrado"
+    assert rodape[1].startswith(
+        "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber "
+        "mais, desmarque “Receber os avisos por e-mail” em "
+        '<a href="https://portal.example.com/minha-unidade"'
+    )
+    assert (
+        ">Minha unidade</a>, no Portal. O e-mail continua valendo para o “Esqueci minha "
+        in (rodape[1])
+    )
     assert "apague o e-mail" not in html
     assert PUBLICACAO in html
     # Leitor de e-mail no modo escuro: a página é clara de propósito, sem inversão de cor.
