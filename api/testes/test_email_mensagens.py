@@ -67,10 +67,13 @@ def test_texto_puro_do_aviso(aviso):
     # Em texto puro, o aviso vai como foi escrito: as marcas são legíveis.
     assert "A **água** volta às 18h.\n\n- Encha os baldes" in texto
     assert "Abrir no Portal: https://portal.example.com/avisos/7" in texto
+    # Ajustes do M2: parar de receber é a opção de Minha unidade, não apagar o e-mail (que
+    # desligaria também o "esqueci a senha").
     assert (
         "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber "
-        "mais, apague o e-mail em Minha unidade."
+        "mais, desmarque “Receber os avisos por e-mail” em Minha unidade."
     ) in " ".join(texto.split())
+    assert "apague o e-mail" not in texto
 
 
 def test_html_do_aviso(aviso):
@@ -82,7 +85,8 @@ def test_html_do_aviso(aviso):
     assert 'href="https://portal.example.com/avisos/7"' in html
     assert ">Abrir no Portal</a>" in html
     assert "Urgente" in html and "Para o Bloco 1" in html
-    assert "apague o e-mail em Minha unidade" in html
+    assert "desmarque “Receber os avisos por e-mail” em Minha unidade" in html
+    assert "apague o e-mail" not in html
     assert PUBLICACAO in html
     # Leitor de e-mail no modo escuro: a página é clara de propósito, sem inversão de cor.
     assert '<meta name="color-scheme" content="light">' in html

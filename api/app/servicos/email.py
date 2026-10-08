@@ -201,9 +201,11 @@ _CATEGORIAS = {
     "financeiro": ("Financeiro", "#1f5e3b", "#e3eee6"),
     "urgente": ("Urgente", "#a3322a", "#f8e4e1"),
 }
+# Ajustes do M2: parar de receber é desmarcar a opção de Minha unidade; o e-mail continua
+# cadastrado para o "esqueci a senha" (substitui o item 3 de duvidas-m2-email.md).
 RODAPE_DO_AVISO = (
     "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, "
-    "apague o e-mail em Minha unidade. Sem e-mail, o “esqueci a senha” também deixa de funcionar."
+    "desmarque “Receber os avisos por e-mail” em Minha unidade."
 )
 RODAPE_DA_RECUPERACAO = (
     "Enviado pelo Portal Capibaribe Prime porque alguém pediu “Esqueci minha senha” para este "
