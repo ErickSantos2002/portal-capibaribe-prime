@@ -260,7 +260,8 @@ mandar um formulário de troca de senha.
   interrompe o canal.
   Assunto "Aviso do Portal: <título>"; texto puro com o texto do aviso, o link
   `url_base + aviso.caminho` e o rodapé "Você recebe porque cadastrou este e-mail no Portal
-  Capibaribe Prime. Para não receber mais, apague o e-mail em Minha unidade.". Remetente
+  Capibaribe Prime. Para não receber mais, desmarque “Receber os avisos por e-mail” em Minha
+  unidade." (ajustes do M2, 1.3.0; até a 1.2.0 mandava apagar o e-mail). Remetente
   "Portal Capibaribe Prime <conta do Portal>".
 - Telas (protótipo `#esqueci`): "Esqueci minha senha" (`/esqueci-a-senha`, só sem sessão):
   bloco e apartamento, "Mandar link", e a caixa com a mensagem de H-04 mais "Sem e-mail
@@ -279,6 +280,16 @@ mandar um formulário de troca de senha.
 antes do M2. `EnvioDoAviso`: `canal`, `situacao`, `destinos`, `entregues`, `falhas`,
 `removidas`, `pulados`, `criado_em`, `concluido_em`. Nenhuma tela usa ainda (dúvida 9); serve
 para conferir o portão do M2 e para uma tela futura ("chegou a N aparelhos").
+
+### 4.5 Ajustes do M2 · "Receber os avisos por e-mail" (`app/rotas/acesso.py`, 1.3.0)
+
+| Rota | Quem | Corpo | Resposta | Erros |
+|---|---|---|---|---|
+| `PUT /api/minha-unidade/avisos-por-email` | `UnidadeLogada` + `X-Portal: 1` | `AvisosPorEmail` `{ "receber": bool }` (booleano estrito) | 200 `MinhaUnidade` | 422, 401, 403 |
+
+`MinhaUnidade` (GET e respostas de Minha unidade) ganhou `receber_avisos_email: bool`. Desligar
+não apaga o e-mail; "Apagar meus dados" volta a opção para ligada. Plano:
+`docs/superpowers/plans/m2-ajustes.md`.
 
 ## 5. Notificar a publicação, sem atrasar a publicação
 
@@ -303,11 +314,14 @@ Decisão completa e alternativas: [ADR-0010](../../adr/0010-envio-em-segundo-pla
    (`RuntimeError`, `SMTPServerDisconnected`…), nunca a mensagem (a de um erro de SMTP pode
    trazer o e-mail de alguém).
 4. **Quem recebe** (regra comum, `destinos_push` e `destinos_email`): unidades **ativas** do
-   destino (todos, ou os blocos de `aviso_bloco`), **menos a unidade que publicou** (ela já
-   conta como quem leu; dúvida 4). Push: só sessões que valem (não encerradas, usadas nos
+   destino (todos, ou os blocos de `aviso_bloco`), **inclusive a unidade que publicou** e os
+   outros aparelhos dela (ajustes do M2, 1.3.0: resposta do Erick à dúvida 4; até a 1.2.0 ela
+   ficava de fora). Push: só sessões que valem (não encerradas, usadas nos
    últimos 180 dias, abertas depois da última troca de senha) de unidades com o primeiro acesso
    feito; os dois celulares do casal são duas sessões e os dois recebem (H-05). E-mail: unidades
-   já ativadas com e-mail, uma vez cada.
+   já ativadas com e-mail e com "Receber os avisos por e-mail" ligada (coluna
+   `unidade.receber_avisos_email`, migração 0006), uma vez cada. A recuperação de senha não
+   olha essa opção.
 5. **Cota do Gmail** (~500 destinatários por dia na conta grátis): `LIMITE_EMAILS_24H = 450`
    numa janela móvel de 24 h; `RESERVA_RECUPERACAO = 50` fica só para o "esqueci a senha"
    (`cota_email_avisos` e `cota_email_recuperacao`). Hoje são ~320 unidades no máximo: um aviso

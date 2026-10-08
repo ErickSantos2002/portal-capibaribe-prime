@@ -69,11 +69,13 @@ as mensagens.
 | Título | o título | `<h1>` |
 | Texto | o texto do aviso **como foi escrito** (as marcas `##`, `-`, `1.`, `>` e `**` são legíveis em texto puro) | o Markdown restrito do Portal convertido (2.4) |
 | Link | "Abrir no Portal: <url_base>/avisos/<id>" | botão "Abrir no Portal" + o endereço escrito embaixo |
-| Rodapé | "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, apague o e-mail em Minha unidade." | o mesmo, em letra menor |
+| Rodapé | "Você recebe porque cadastrou este e-mail no Portal Capibaribe Prime. Para não receber mais, desmarque “Receber os avisos por e-mail” em Minha unidade." | o mesmo, em letra menor |
 
-O rodapé do contrato, mais a consequência que a dúvida 7 do contrato registra: apagar o e-mail
-também desliga o "esqueci a senha" (dita no rodapé: "Sem e-mail, o "esqueci a senha" também deixa
-de funcionar."), para ninguém descobrir isso na hora de recuperar a senha.
+**Ajustes do M2 (1.3.0):** parar de receber passou a ser a opção "Receber os avisos por e-mail"
+de Minha unidade (resposta do Erick à dúvida 7 do contrato). O e-mail continua cadastrado e o
+"esqueci a senha" continua funcionando, então saiu o alerta "Sem e-mail, o “esqueci a senha”
+também deixa de funcionar." que a 1.2.0 tinha (item 3 de `duvidas-m2-email.md`). Os destinos
+pulam quem desligou (`destinos_email`).
 
 ### 2.3 E-mail de recuperação (H-04)
 

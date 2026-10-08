@@ -41,24 +41,24 @@ unidade. Saem juntas na **versão 1.3.0** (novidade visível: minor).
 
 ## Tarefas
 
-- [ ] **1. Quem publica também recebe.** Testes: `test_push_para_todos_menos_quem_publicou` vira
+- [x] **1. Quem publica também recebe.** Testes: `test_push_para_todos_menos_quem_publicou` vira
   "quem publicou também recebe, nos dois aparelhos"; teste novo de e-mail para quem publicou.
   Depois: tirar a exclusão; docstrings.
-- [ ] **2. Migração 0006 + modelo.** Testes: coluna existe, NOT NULL, padrão `true` para as
+- [x] **2. Migração 0006 + modelo.** Testes: coluna existe, NOT NULL, padrão `true` para as
   unidades que já existiam e para INSERT novo pelo ORM; downgrade volta à 0005; modelos iguais
   ao banco (`test_modelos.py`, já existente). Depois: `0006_receber_avisos_email.py` e o modelo.
-- [ ] **3. API da opção.** Testes: GET traz `receber_avisos_email: true`; PUT liga/desliga e
+- [x] **3. API da opção.** Testes: GET traz `receber_avisos_email: true`; PUT liga/desliga e
   devolve a unidade; PUT sem `X-Portal` → 403 (`test_acesso_csrf.py`); sem sessão → 401; corpo
   sem booleano → 422; apagar dados volta para `true`. Esquemas e `tipos.ts` (`test_contrato.py`).
-- [ ] **4. Destinos e rodapé.** Testes: `destinos_email` pula quem desligou; push continua
+- [x] **4. Destinos e rodapé.** Testes: `destinos_email` pula quem desligou; push continua
   chegando para quem desligou o e-mail; recuperação de senha funciona com a opção desligada;
   rodapé novo no texto e no HTML.
-- [ ] **5. Tela.** Testes (Vitest): a caixa aparece marcada, desmarcar chama a API e mostra o
+- [x] **5. Tela.** Testes (Vitest): a caixa aparece marcada, desmarcar chama a API e mostra o
   recado; sem e-mail, a frase de cadastrar; erro da API aparece. Depois: componente, CSS.
-- [ ] **6. Versão 1.3.0 + novidades** no mesmo commit da tela.
-- [ ] **7. Docs:** `m2-contrato.md` (2, 5), `m2-email.md` (2.2), `m2-push.md` se citar,
+- [x] **6. Versão 1.3.0 + novidades** no mesmo commit da tela.
+- [x] **7. Docs:** `m2-contrato.md` (2, 5), `m2-email.md` (2.2), `m2-push.md` se citar,
   `04-modelo-de-dados.md` (coluna nova), comentário do `verificacoes.sql`, registro no fim de
   `duvidas-m2.md`.
-- [ ] **8. Conferência visual** (uvicorn + vite preview + Playwright): 1 ou 2 prints em
+- [x] **8. Conferência visual** (uvicorn + vite preview + Playwright): 1 ou 2 prints em
   `docs/superpowers/prints/m2-ajustes/`.
-- [ ] **9. Suíte inteira** (pytest, vitest, eslint, tsc, ruff, pre-commit) antes de cada commit.
+- [x] **9. Suíte inteira** (pytest, vitest, eslint, tsc, ruff, pre-commit) antes de cada commit.
