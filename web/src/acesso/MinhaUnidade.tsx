@@ -26,6 +26,7 @@ import {
   salvarDados,
   trocarSenha,
 } from './api'
+import { AvisosPorEmail } from './AvisosPorEmail'
 import { CaixaDeErro } from './CaixaDeErro'
 import { Campo } from './Campo'
 import {
@@ -259,7 +260,9 @@ export function MinhaUnidade() {
             </p>
           )}
 
-          <SecaoNotificacoes />
+          <SecaoNotificacoes>
+            <AvisosPorEmail dados={dados} aoMudar={setDados} />
+          </SecaoNotificacoes>
 
           <h2 className="secao">Aparelhos conectados</h2>
           {caixa('aparelhos')}

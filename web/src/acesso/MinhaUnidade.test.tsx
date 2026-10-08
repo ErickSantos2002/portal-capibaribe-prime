@@ -118,6 +118,74 @@ describe('minha unidade · editar dados', () => {
   })
 })
 
+describe('minha unidade · avisos por e-mail (ajustes do M2)', () => {
+  const COM_EMAIL = { email: 'casa@exemplo.com' }
+
+  it('vem marcada, diz para onde vão e que o e-mail continua para recuperar a senha', async () => {
+    await abrirMinhaUnidade({ 'GET /api/minha-unidade': json(200, dados(COM_EMAIL)) })
+    const caixa = screen.getByRole('checkbox', { name: 'Receber os avisos por e-mail' })
+    expect((caixa as HTMLInputElement).checked).toBe(true)
+    const ajuda = document.getElementById(caixa.getAttribute('aria-describedby') ?? '')
+    expect(ajuda?.textContent).toContain('casa@exemplo.com')
+    expect(ajuda?.textContent).toContain('Esqueci minha senha')
+  })
+
+  it('desmarcar salva na hora e avisa', async () => {
+    const { chamadas } = await abrirMinhaUnidade({
+      'GET /api/minha-unidade': json(200, dados(COM_EMAIL)),
+      'PUT /api/minha-unidade/avisos-por-email': json(
+        200,
+        dados({ ...COM_EMAIL, receber_avisos_email: false }),
+      ),
+    })
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Receber os avisos por e-mail' }))
+    await waitFor(() =>
+      expect(chamadas.find((c) => c.metodo === 'PUT')).toEqual({
+        metodo: 'PUT',
+        caminho: '/api/minha-unidade/avisos-por-email',
+        corpo: { receber: false },
+      }),
+    )
+    expect(await screen.findByText('Pronto: os avisos não chegam mais por e-mail.')).toBeTruthy()
+    const caixa = screen.getByRole('checkbox', { name: 'Receber os avisos por e-mail' })
+    expect((caixa as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('marcar de novo volta a receber', async () => {
+    const { chamadas } = await abrirMinhaUnidade({
+      'GET /api/minha-unidade': json(200, dados({ ...COM_EMAIL, receber_avisos_email: false })),
+      'PUT /api/minha-unidade/avisos-por-email': json(200, dados(COM_EMAIL)),
+    })
+    const caixa = screen.getByRole('checkbox', { name: 'Receber os avisos por e-mail' })
+    expect((caixa as HTMLInputElement).checked).toBe(false)
+    fireEvent.click(caixa)
+    expect(await screen.findByText('Pronto: os avisos voltam a chegar por e-mail.')).toBeTruthy()
+    expect(chamadas.find((c) => c.metodo === 'PUT')?.corpo).toEqual({ receber: true })
+  })
+
+  it('se der erro, avisa e a caixa volta como estava', async () => {
+    await abrirMinhaUnidade({
+      'GET /api/minha-unidade': json(200, dados(COM_EMAIL)),
+      'PUT /api/minha-unidade/avisos-por-email': json(500, {
+        codigo: 'erro_interno',
+        mensagem: 'Algo deu errado do nosso lado. Tente de novo daqui a pouco.',
+      }),
+    })
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Receber os avisos por e-mail' }))
+    expect((await screen.findByRole('alert')).textContent).toContain('Tente de novo')
+    const caixa = screen.getByRole('checkbox', { name: 'Receber os avisos por e-mail' })
+    expect((caixa as HTMLInputElement).checked).toBe(true)
+  })
+
+  it('sem e-mail cadastrado, explica como cadastrar e não mostra a caixa', async () => {
+    await abrirMinhaUnidade()
+    expect(screen.queryByRole('checkbox', { name: 'Receber os avisos por e-mail' })).toBeNull()
+    expect(
+      screen.getByText(/Para receber os avisos por e-mail, cadastre um e-mail em “Mudar meus dados”/),
+    ).toBeTruthy()
+  })
+})
+
 describe('minha unidade · trocar a senha', () => {
   it('pede a atual e a nova duas vezes', async () => {
     const { chamadas } = await abrirMinhaUnidade({

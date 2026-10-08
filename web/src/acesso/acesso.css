@@ -157,3 +157,9 @@
 .acesso-aparelho h3 {
   margin: 0;
 }
+
+/* Ajustes do M2 · "Receber os avisos por e-mail": segundo cartão da seção Notificações, logo
+   abaixo do deste aparelho. */
+.notif-secao .notif-cartao + .notif-cartao {
+  margin-top: 12px;
+}
