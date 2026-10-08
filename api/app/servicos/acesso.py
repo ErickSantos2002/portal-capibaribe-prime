@@ -156,6 +156,7 @@ def ver_minha_unidade(db: Session, logado: Logado) -> MinhaUnidade:
         responsavel_nome=unidade.responsavel_nome,
         celular=unidade.celular,
         email=unidade.email,
+        receber_avisos_email=unidade.receber_avisos_email,
         papeis=papeis_em_vigor(db, unidade.id),
         ativada_em=unidade.ativada_em,
         aparelhos=_aparelhos(db, logado),
@@ -167,6 +168,13 @@ def salvar_dados(db: Session, logado: Logado, dados: DadosDaUnidade) -> None:
     unidade.responsavel_nome = dados.responsavel_nome
     unidade.celular = dados.celular
     unidade.email = dados.email
+    db.flush()
+
+
+def mudar_avisos_por_email(db: Session, logado: Logado, receber: bool) -> None:
+    """Liga ou desliga a cópia dos avisos por e-mail (ajustes do M2). O e-mail fica."""
+    unidade = db.get_one(Unidade, logado.unidade_id)
+    unidade.receber_avisos_email = receber
     db.flush()
 
 
@@ -229,6 +237,8 @@ def apagar_dados(db: Session, logado: Logado, senha: str, ip_hash: str) -> None:
     unidade.responsavel_nome = None
     unidade.celular = None
     unidade.email = None
+    # O apartamento recomeça do zero: o próximo responsável decide de novo (ajustes do M2).
+    unidade.receber_avisos_email = True
     unidade.ativada_em = None
     unidade.precisa_trocar_senha = True
     unidade.senha_hash = gerar_hash(SENHA_INICIAL)

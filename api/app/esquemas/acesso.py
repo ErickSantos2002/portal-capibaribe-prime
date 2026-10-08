@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, Field, ValidationInfo, field_validator
+from pydantic import AfterValidator, Field, StrictBool, ValidationInfo, field_validator
 
 from app.esquemas.comum import Entrada, ErroResposta, Papel, Saida, UnidadeRef, sem_controle
 from app.seguranca.senhas import SENHA_INICIAL
@@ -143,6 +143,13 @@ class TrocarSenha(Entrada):
         return senha_nova
 
 
+class AvisosPorEmail(Entrada):
+    """`PUT /api/minha-unidade/avisos-por-email` (ajustes do M2): liga ou desliga a cópia dos
+    avisos por e-mail. O e-mail continua cadastrado."""
+
+    receber: StrictBool
+
+
 class ApagarDados(Entrada):
     """`POST /api/minha-unidade/apagar-dados`: `{"confirmo": true, "senha": "..."}` (H-06).
 
@@ -188,6 +195,8 @@ class MinhaUnidade(Saida):
     responsavel_nome: str | None
     celular: str | None
     email: str | None
+    # Ajustes do M2: "Receber os avisos por e-mail" (ligada por padrão).
+    receber_avisos_email: bool
     papeis: list[Papel]
     ativada_em: datetime | None
     aparelhos: list[Aparelho]

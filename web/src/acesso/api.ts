@@ -3,6 +3,7 @@ import { api } from '../api/cliente'
 import type { Eu } from '../api/tipos'
 import type {
   ApagarDados,
+  AvisosPorEmail,
   DadosDaUnidade,
   Entrar,
   MinhaUnidade,
@@ -19,6 +20,9 @@ export const buscarMinhaUnidade = () => api.get<MinhaUnidade>('/api/minha-unidad
 
 export const salvarDados = (dados: DadosDaUnidade) =>
   api.put<MinhaUnidade>('/api/minha-unidade/dados', dados)
+
+export const mudarAvisosPorEmail = (receber: boolean) =>
+  api.put<MinhaUnidade>('/api/minha-unidade/avisos-por-email', { receber } satisfies AvisosPorEmail)
 
 export const trocarSenha = (dados: TrocarSenha) => api.put<void>('/api/minha-unidade/senha', dados)
 

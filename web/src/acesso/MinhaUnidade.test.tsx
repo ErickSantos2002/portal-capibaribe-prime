@@ -10,6 +10,7 @@ function dados(mudar: Partial<MinhaUnidade> = {}): MinhaUnidade {
     responsavel_nome: 'Rafael',
     celular: '81912345678',
     email: null,
+    receber_avisos_email: true,
     papeis: [],
     ativada_em: '2026-10-01T12:00:00Z',
     aparelhos: [

@@ -418,13 +418,15 @@ def destinos_push(db: Session, aviso: AvisoParaNotificar) -> list[DestinoPush]:
 
 
 def destinos_email(db: Session, aviso: AvisoParaNotificar) -> list[DestinoEmail]:
-    """As unidades do destino que já entraram e informaram e-mail, uma vez cada."""
+    """As unidades do destino que já entraram, informaram e-mail e não desligaram "Receber os
+    avisos por e-mail" (ajustes do M2), uma vez cada."""
     linhas = db.execute(
         select(Unidade.id, Unidade.login, Unidade.email)
         .where(
             Unidade.id.in_(_unidades_do_destino(aviso)),
             Unidade.ativada_em.is_not(None),
             Unidade.email.is_not(None),
+            Unidade.receber_avisos_email,
         )
         .order_by(Unidade.login)
     ).all()

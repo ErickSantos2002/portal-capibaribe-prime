@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Request, Response
 
 from app.esquemas.acesso import (
     ApagarDados,
+    AvisosPorEmail,
     DadosDaUnidade,
     Entrar,
     MinhaUnidade,
@@ -76,6 +77,15 @@ def salvar_dados(
     dados: DadosDaUnidade, logado: UnidadeLogada, resposta: Response, db: Banco
 ) -> MinhaUnidade:
     acesso.salvar_dados(db, logado, dados)
+    db.commit()
+    return acesso.ver_minha_unidade(db, logado)
+
+
+@rotas.put("/api/minha-unidade/avisos-por-email")
+def mudar_avisos_por_email(
+    dados: AvisosPorEmail, logado: UnidadeLogada, resposta: Response, db: Banco
+) -> MinhaUnidade:
+    acesso.mudar_avisos_por_email(db, logado, dados.receber)
     db.commit()
     return acesso.ver_minha_unidade(db, logado)
 

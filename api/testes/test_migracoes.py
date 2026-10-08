@@ -240,3 +240,31 @@ def test_funcoes_de_trigger_da_0005_com_search_path_fixo(banco_vazio):
     assert set(funcoes) >= FUNCOES_DA_0005
     for nome in FUNCOES_DA_0005:
         assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome
+
+
+def test_0006_unidades_existentes_continuam_recebendo_por_email(banco_vazio):
+    # Produção da 1.2.0: quem já cadastrou e-mail continua recebendo depois da 0006.
+    rodar_alembic(banco_vazio, "upgrade", "0005")
+    with psycopg.connect(banco_vazio, autocommit=True) as con:
+        con.execute("insert into bloco (numero, nome) values (1, 'Bloco 1')")
+        con.execute(
+            "insert into unidade (bloco_id, numero, andar, senha_hash)"
+            " select id, n, 1, 'h' from bloco, (values ('101'), ('102')) as v(n)"
+        )
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    with psycopg.connect(banco_vazio) as con:
+        valores = con.execute("select receber_avisos_email from unidade").fetchall()
+        coluna = con.execute(
+            "select is_nullable, column_default from information_schema.columns"
+            " where table_name = 'unidade' and column_name = 'receber_avisos_email'"
+        ).fetchone()
+    assert valores == [(True,), (True,)]
+    assert coluna == ("NO", "true")
+
+
+def test_downgrade_da_0006_volta_a_0005(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    rodar_alembic(banco_vazio, "downgrade", "0005")
+    assert "receber_avisos_email" not in _colunas(banco_vazio, "unidade")
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert "receber_avisos_email" in _colunas(banco_vazio, "unidade")

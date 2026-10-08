@@ -86,6 +86,10 @@ class Unidade(Base):
     responsavel_nome: Mapped[str | None]
     celular: Mapped[str | None]
     email: Mapped[str | None]
+    # Migração 0006 (ajustes do M2): cópia dos avisos por e-mail, ligada por padrão. Desligar
+    # não apaga o e-mail (o "esqueci a senha" continua). O padrão é do banco: no INSERT, não
+    # mandar o atributo (None explícito desligaria o DEFAULT e bateria no NOT NULL).
+    receber_avisos_email: Mapped[bool] = mapped_column(server_default="true")
     # Data do banco da última troca de senha (migração 0002). Sessão criada antes não vale.
     senha_trocada_em: Mapped[datetime] = mapped_column(
         server_default=func.now(), server_onupdate=FetchedValue()
