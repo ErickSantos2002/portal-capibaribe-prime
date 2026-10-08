@@ -16,6 +16,7 @@ ALTERAM = {
     ("POST", "/api/acesso/primeiro-acesso"),
     ("PUT", "/api/minha-unidade/dados"),
     ("PUT", "/api/minha-unidade/senha"),
+    ("PUT", "/api/minha-unidade/avisos-por-email"),
     ("DELETE", "/api/minha-unidade/aparelhos/{sessao_id}"),
     ("POST", "/api/minha-unidade/apagar-dados"),
 }

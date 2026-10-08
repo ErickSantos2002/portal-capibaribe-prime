@@ -87,6 +87,7 @@ erDiagram
 | `responsavel_nome` | text | **dado pessoal** · obrigatório após ativar |
 | `celular` | text | **dado pessoal** · obrigatório após ativar |
 | `email` | text | **dado pessoal** · opcional |
+| `receber_avisos_email` | boolean | padrão `true` (migração 0006). `false` = não manda cópia dos avisos por e-mail; o e-mail continua valendo para o "esqueci a senha". "Apagar meus dados" volta para `true`. |
 | `tentativas_falhas` | smallint | zera no login certo (H-03) |
 | `bloqueada_ate` | timestamptz | nulo = livre |
 

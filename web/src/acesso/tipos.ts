@@ -26,6 +26,11 @@ export interface TrocarSenha {
   senha_nova_repetida: string
 }
 
+/** PUT /api/minha-unidade/avisos-por-email (ajustes do M2). O e-mail continua cadastrado. */
+export interface AvisosPorEmail {
+  receber: boolean
+}
+
 export interface ApagarDados {
   // A API recusa qualquer valor diferente de true (422).
   confirmo: boolean
@@ -48,6 +53,8 @@ export interface MinhaUnidade {
   responsavel_nome: string | null
   celular: string | null
   email: string | null
+  /** Ajustes do M2: "Receber os avisos por e-mail", ligada por padrão. */
+  receber_avisos_email: boolean
   papeis: Papel[]
   ativada_em: DataHora | null
   aparelhos: Aparelho[]

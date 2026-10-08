@@ -31,7 +31,8 @@ Os canais moram em arquivos próprios, um por épico, com a interface `Enviador`
 - `app/servicos/email.py` → `ENVIADOR` (épico B, cópia do aviso por e-mail).
 
 Quem recebe é regra comum (`destinos_push`, `destinos_email`): as unidades ativas do destino do
-aviso (todos ou os blocos dele), menos a unidade que publicou (ela já conta como quem leu).
+aviso (todos ou os blocos dele), **inclusive a unidade que publicou** e os outros aparelhos dela
+(resposta do Erick ao item 4 de `duvidas-m2.md`: a notificação confirma que o aviso saiu).
 """
 
 import logging
@@ -380,8 +381,8 @@ class DestinoEmail:
 
 
 def _unidades_do_destino(aviso: AvisoParaNotificar) -> Select[tuple[int]]:
-    """Unidades ativas que o aviso alcança, menos quem publicou."""
-    consulta = select(Unidade.id).where(Unidade.ativa, Unidade.id != aviso.publicado_por)
+    """Unidades ativas que o aviso alcança, inclusive a de quem publicou."""
+    consulta = select(Unidade.id).where(Unidade.ativa)
     if not aviso.para_todos:
         consulta = consulta.where(
             Unidade.bloco_id.in_(
@@ -417,13 +418,15 @@ def destinos_push(db: Session, aviso: AvisoParaNotificar) -> list[DestinoPush]:
 
 
 def destinos_email(db: Session, aviso: AvisoParaNotificar) -> list[DestinoEmail]:
-    """As unidades do destino que já entraram e informaram e-mail, uma vez cada."""
+    """As unidades do destino que já entraram, informaram e-mail e não desligaram "Receber os
+    avisos por e-mail" (ajustes do M2), uma vez cada."""
     linhas = db.execute(
         select(Unidade.id, Unidade.login, Unidade.email)
         .where(
             Unidade.id.in_(_unidades_do_destino(aviso)),
             Unidade.ativada_em.is_not(None),
             Unidade.email.is_not(None),
+            Unidade.receber_avisos_email,
         )
         .order_by(Unidade.login)
     ).all()

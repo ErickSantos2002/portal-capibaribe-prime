@@ -215,6 +215,8 @@ def resetar(db: Session, login: str, admin_id: int) -> None:
         unidade.responsavel_nome = None
         unidade.celular = None
         unidade.email = None
+        # Ajustes do M2: o apartamento recomeça com o padrão, como no "Apagar meus dados".
+        unidade.receber_avisos_email = True
         tentativas.esquecer_login(db, unidade.login)
         db.flush()
     except IntegrityError as erro:

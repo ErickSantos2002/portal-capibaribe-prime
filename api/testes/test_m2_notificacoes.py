@@ -266,13 +266,15 @@ def test_push_so_para_os_aparelhos_do_bloco_de_destino(engine_app, fabrica):
     assert (destinos[0].chave_p256dh, destinos[0].chave_auth) == (P256DH, AUTH)
 
 
-def test_push_para_todos_menos_quem_publicou(engine_app, fabrica):
-    _sessao_inscrita(engine_app, ADMIN, 1)
+def test_push_tambem_para_quem_publicou_em_todos_os_aparelhos(engine_app, fabrica):
+    # Resposta do Erick ao item 4 de duvidas-m2.md: quem publica recebe também, e os outros
+    # aparelhos da unidade dele (o cônjuge) também.
+    publicou = [_sessao_inscrita(engine_app, ADMIN, 1), _sessao_inscrita(engine_app, ADMIN, 3)]
     comissao = _sessao_inscrita(engine_app, COMISSAO, 2)
     aviso_id = _aviso_no_banco(engine_app, fabrica, por=ADMIN)
     with fabrica() as db:
         destinos = notificacoes.destinos_push(db, notificacoes.carregar_aviso(db, aviso_id))
-    assert [d.sessao_id for d in destinos] == [comissao]
+    assert [d.sessao_id for d in destinos] == sorted([*publicou, comissao])
 
 
 def test_push_so_para_sessao_que_ainda_vale(engine_app, fabrica):
@@ -319,6 +321,15 @@ def test_email_so_para_unidades_do_destino_com_email(engine_app, fabrica):
         destinos = notificacoes.destinos_email(db, notificacoes.carregar_aviso(db, aviso_id))
     # 1101 (Bloco 1) não tem e-mail; 4203 ainda não entrou; 2304 é de outro bloco.
     assert [(d.login, d.email) for d in destinos] == [(COMUM, "comum@example.com")]
+
+
+def test_email_tambem_para_quem_publicou(engine_app, fabrica):
+    _email(engine_app, COMISSAO, "comissao@example.com")
+    _email(engine_app, COMUM, "comum@example.com")
+    aviso_id = _aviso_no_banco(engine_app, fabrica, por=COMISSAO)
+    with fabrica() as db:
+        destinos = notificacoes.destinos_email(db, notificacoes.carregar_aviso(db, aviso_id))
+    assert sorted(d.login for d in destinos) == sorted([COMISSAO, COMUM])
 
 
 # --- cota do Gmail ---------------------------------------------------------------------------

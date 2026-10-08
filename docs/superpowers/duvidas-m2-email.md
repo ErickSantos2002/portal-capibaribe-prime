@@ -29,6 +29,9 @@ resto é decisão técnica que pode ser revista na revisão do marco.
 - **Por quê:** a Dona Socorro que apaga o e-mail para parar as cópias não pode descobrir isso só
   no dia em que esquecer a senha. Se o Erick achar comprido, é uma constante
   (`RODAPE_DO_AVISO` em `app/servicos/email.py`).
+- **Substituído na 1.3.0 (ajustes do M2):** o rodapé agora diz "Para não receber mais, desmarque
+  “Receber os avisos por e-mail” em Minha unidade.", e o alerta sobre o "esqueci a senha" saiu
+  (desmarcar não apaga o e-mail). Ver o fim de `duvidas-m2.md`.
 
 ## 4. O texto puro do e-mail leva o aviso como foi escrito
 - **Decisão:** na parte de texto puro vão as marcas (`## `, `- `, `1. `, `> `, `**`), sem

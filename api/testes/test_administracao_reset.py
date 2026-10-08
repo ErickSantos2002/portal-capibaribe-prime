@@ -211,3 +211,15 @@ def test_resetar_duas_vezes_funciona(admin, engine_app):
     assert _resetar(admin, COMUM).status_code == 200
     assert _resetar(admin, COMUM).status_code == 200
     assert contar(engine_app, "select count(*) from historico where acao = 'unidade_resetada'") == 2
+
+
+def test_resetar_volta_a_opcao_de_email_para_ligada(admin, engine_app):
+    """Ajustes do M2: como no "Apagar meus dados", o apartamento recomeça com o padrão."""
+    with engine_app.begin() as con:
+        con.execute(
+            text("update unidade set receber_avisos_email = false where login = :l"), {"l": COMUM}
+        )
+
+    assert _resetar(admin, COMUM).status_code == 200
+
+    assert _unidade(engine_app, COMUM)["receber_avisos_email"] is True

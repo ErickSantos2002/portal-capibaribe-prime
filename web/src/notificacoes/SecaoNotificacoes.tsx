@@ -1,6 +1,7 @@
 // Épico A do M2 · seção "Notificações" de Minha unidade: ativar e desativar neste aparelho, e o
 // caminho para instalar (H-05; spec m2-push.md, seção 3.2). Desativar nos outros aparelhos é
 // "Desconectar", logo abaixo: a inscrição vai junto com a sessão.
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Icone } from '../casca/Icone'
 import { instalado } from './aparelho'
@@ -8,7 +9,9 @@ import { ControleNotificacoes } from './ControleNotificacoes'
 import { useNotificacoes } from './useNotificacoes'
 import './notificacoes.css'
 
-export function SecaoNotificacoes() {
+/** `children`: o que vem depois deste aparelho, como "Receber os avisos por e-mail" (ajustes do
+ * M2), que é da unidade inteira e mora em Minha unidade. */
+export function SecaoNotificacoes({ children }: { children?: ReactNode }) {
   const n = useNotificacoes()
   return (
     <section className="notif-secao" aria-labelledby="notif-titulo">
@@ -20,6 +23,7 @@ export function SecaoNotificacoes() {
           <ControleNotificacoes n={n} />
         </div>
       )}
+      {children}
       {!instalado() && (
       <p className="notif-instalar">
         <Link className="texto-link com-icone" to="/receber-avisos" state={{ de: 'minha-unidade' }}>

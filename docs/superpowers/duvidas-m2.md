@@ -206,3 +206,64 @@ agente só (branch `m2/ajustes`). A migração 0006 roda no Neon **antes** do pu
 **Ainda falta para fechar o M2:** o teste em aparelho de verdade, que é o critério do marco
 (`07-roadmap.md`): um aviso para o Bloco 1 chega num Android e num iPhone com o Portal instalado,
 e não chega no Bloco 2. Está em espera por decisão do Erick, até ter alguém com iPhone para testar.
+
+## Ajustes do M2 · o que foi feito (versão 1.3.0, branch `m2/ajustes`)
+
+Plano: `docs/superpowers/plans/m2-ajustes.md`. Prints: `docs/superpowers/prints/m2-ajustes/`.
+
+- **Item 4 · quem publica recebe.** Saiu o `Unidade.id != publicado_por` de
+  `_unidades_do_destino` (`app/servicos/notificacoes.py`): a unidade que publicou recebe o push
+  em todos os aparelhos inscritos e a cópia por e-mail. Correção de aviso continua sem notificar.
+- **Item 7 · "Receber os avisos por e-mail".** Migração **0006**
+  (`0006_receber_avisos_por_email.py`, revisão `"0006"`): `unidade.receber_avisos_email boolean
+  not null default true`; as unidades que já existem ficam ligadas. `GET /api/minha-unidade`
+  traz `receber_avisos_email`; `PUT /api/minha-unidade/avisos-por-email` com `{"receber": bool}`
+  muda (exige `X-Portal: 1`). `destinos_email` pula quem desligou; a recuperação de senha não
+  olha a opção. Na tela, uma caixa de marcar dentro de "Notificações", que salva na hora.
+- **Rodapé do e-mail do aviso:** "Para não receber mais, desmarque “Receber os avisos por e-mail”
+  em Minha unidade." (substitui o item 3 de `duvidas-m2-email.md`).
+- **A 0006 roda no Neon antes do push** (coordenador): `alembic upgrade head` como `dono`.
+
+Decisões tomadas sem perguntar (podem ser revistas):
+
+1. **"Apagar meus dados" volta a opção para ligada.** O apartamento recomeça do zero (senha
+   inicial, primeiro acesso de novo); quem fizer o novo primeiro acesso começa com o padrão.
+   (O reset da administração também volta; ver as correções da revisão, abaixo.)
+2. **Sem e-mail cadastrado, a caixa não aparece:** no lugar dela, "Para receber os avisos por
+   e-mail, cadastre um e-mail em “Mudar meus dados”.". A API aceita mudar a opção mesmo sem
+   e-mail (é só a preferência); se a pessoa cadastrar e-mail depois, vale o que estiver lá.
+3. **Caixa de marcar, não botão:** é o nome que o Erick deu ("Receber os avisos por e-mail") e o
+   estilo `.opcao` já existe com alvo grande (60 px). Salva na hora, sem botão "Salvar", como o
+   "Ativar notificações" ao lado; o recado confirma ("Pronto: os avisos não chegam mais por
+   e-mail."). Se der erro, a caixa volta como estava e o erro aparece em cima dela.
+4. **Lugar na tela:** dentro da seção "Notificações", logo abaixo do cartão deste aparelho
+   (`SecaoNotificacoes` ganhou `children`). Sem VAPID configurado (local), só o cartão do e-mail
+   aparece na seção.
+5. **Mudar a opção não entra no histórico:** como "Mudar meus dados", que também não entra.
+6. **Exemplos do épico B:** `prints/m2-email/exemplo-email-aviso.{txt,html}` refeitos com o
+   rodapé novo; o print `06-email-aviso.png` ficou com o rodapé antigo (é registro do épico B).
+7. **`07-roadmap.md` não foi mexido:** o status "1.3.0 no ar" é do coordenador, depois do deploy.
+
+### Correções das duas revisões independentes (ainda 1.3.0)
+
+1. **Reset da administração** (`resetar` em `app/servicos/administracao.py`) volta a opção para
+   ligada, como o "Apagar meus dados" (teste em `test_administracao_reset.py`).
+2. **A ajuda da caixa diz "Vale para o apartamento inteiro, em qualquer aparelho."**: ao lado do
+   "neste aparelho" do push, evita que alguém desmarque e o familiar dono do e-mail pare de
+   receber sem saber.
+3. **Novidade da 1.3.0** não promete mais "todos os celulares do apartamento": "Quem publica um
+   aviso agora também recebe a notificação (nos aparelhos com notificação ativada) e o e-mail, se
+   estiver ligado.".
+4. **Foco:** `aria-disabled` no lugar de `disabled` enquanto salva (o toque repetido é ignorado
+   no código). Com `disabled`, o foco ia para o body ao salvar; conferido no navegador que fica
+   na caixa.
+5. **Rodapé do e-mail do aviso:** "…desmarque “Receber os avisos por e-mail” em Minha unidade, no
+   Portal: <url_base>/minha-unidade. O e-mail continua valendo para o “Esqueci minha senha”." No
+   HTML, "Minha unidade" é o link (`rodape_do_aviso` em `app/servicos/email.py`). Exemplos
+   `prints/m2-email/exemplo-email-aviso.{txt,html}` refeitos. Sem sessão, o link cai na tela de
+   entrar, como o link do aviso.
+6. **Hífen que não quebra** (U+2011) em "e‑mail" no rótulo e na ajuda da caixa.
+7. **"Salvando…"** na ajuda enquanto salva.
+
+Prints refeitos em `prints/m2-ajustes/`. Não mexido, por decisão da revisão: tempo e posição do
+recado global (ele cobre o topo da seção por alguns segundos) e o tratamento de 401.

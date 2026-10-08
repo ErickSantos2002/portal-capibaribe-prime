@@ -11,7 +11,8 @@ select set_config('verificacao.head', :'head', false) \gset
 
 do $$
 declare
-    -- Tabelas do modelo até a migração 0005. Migração nova que cria tabela: acrescentar aqui
+    -- Tabelas do modelo até a migração 0006 (a 0006 só acrescentou uma coluna em `unidade`;
+    -- aqui se conferem tabelas, não colunas). Migração nova que cria tabela: acrescentar aqui
     -- (o teste api/testes/test_m2_backup.py confere contra o banco migrado).
     esperadas constant text[] := array[
         'bloco', 'unidade', 'unidade_papel', 'sessao', 'historico', 'erro',
