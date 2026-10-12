@@ -17,10 +17,11 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
 ## 2. Texto do aviso automático
 - **Decisão:** título "Documento novo: <título>" (cortado em 120 letras com "…"), categoria
   Geral, para todos, sem fixar; texto: "Um documento novo foi publicado no Portal: “<título>”."
-  e "Para ver, abra este aviso no Portal e toque em “Abrir o documento”. Ele também fica
-  guardado em Documentos."
-- **Por quê:** o mesmo texto vai no e-mail (M2), onde não existe "o botão aqui embaixo"; a frase
-  funciona nos dois lugares.
+  e "Ele fica guardado em Documentos, no menu do Portal, e o botão “Abrir o documento” deste
+  aviso leva direto a ele."
+- **Por quê:** o mesmo texto vai no e-mail (M2), que leva ao aviso, e no aviso aberto, que já tem
+  o botão logo abaixo. A primeira versão ("abra este aviso no Portal e toque…") ficou estranha
+  na conferência visual, para quem já estava com o aviso aberto.
 
 ## 3. Arquivar de novo não é erro
 - **Decisão:** arquivar um documento já arquivado devolve 200 com o documento como está, sem
@@ -62,3 +63,27 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
   `web/src/m3contrato.test.ts` foi trocado por "encaixes do épico A mostram o que devem" (o
   arquivo não está na lista de comuns do contrato; é o equivalente no front de apagar a seção
   do épico em `test_m3_em_construcao.py`). Os outros blocos ficaram como estavam.
+
+## 9. Conferência visual (390 px e 1280 px, morador e gestão)
+- **Como:** banco `portal_dev_m3_documentos`, S3 falso (`moto_server`, com CORS), API na 8181,
+  Vite na 5191, Playwright. Unidades e PDFs fictícios. Prints em
+  `docs/superpowers/prints/m3-documentos/`.
+- **Conferido de ponta a ponta:** públicos sem entrar (abre em aba nova com o link assinado);
+  lista do morador sem o documento da gestão; `/documentos/<id da ata>` direto como morador →
+  "Não achamos este documento" e o link da API → 404; documento aberto com versões anteriores;
+  "Baixar" salva o arquivo e a tela fica no Portal; aviso automático com o botão; gestão
+  publicando (envio do arquivo pelo navegador até o S3 falso), enviando nova versão e
+  arquivando; documentos arquivados; tema escuro.
+- **Corrigido pelo que se viu:** texto do aviso automático (item 2); "1 KB" quebrando a linha
+  (espaço que não quebra entre número e unidade); "Quem vê" sumiu do documento arquivado (só a
+  gestão vê, a caixa de cima já diz); botão "Trocar o arquivo" (o texto longo quebrava no
+  celular); linhas da versão anterior separadas (sem o "·").
+- **Não conferido:** celular de verdade (Android e iPhone), em especial o "Abrir o documento" no
+  Safari do iPhone (a aba aberta antes do pedido, item 6) e o PDF abrindo no visualizador do
+  aparelho. **[Erick]** testar no aparelho junto com o teste do M2, depois do R2 de verdade.
+
+## 10. O texto "Avisar os apartamentos" fala em notificação
+- **Decisão:** "Sai um aviso no mural, com o botão para abrir o documento, e ele chega no
+  celular de quem ativou as notificações." O aviso automático entra no mesmo envio de push e
+  e-mail de qualquer aviso (M2); quem marca a caixa precisa saber que vai tocar no celular de
+  muita gente.

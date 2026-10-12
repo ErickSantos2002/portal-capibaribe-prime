@@ -63,23 +63,21 @@
   padding: 22px 20px 20px;
   border: 1px solid var(--linha);
   border-radius: var(--r-medio) 0 var(--r-medio) var(--r-medio);
-  background:
-    linear-gradient(225deg, var(--papel) 0 26px, transparent 26px) top right / 38px 38px
-      no-repeat,
-    var(--folha);
-  box-shadow: var(--sombra);
+  background: var(--folha);
+  /* O canto de cima, à direita, é cortado (com a borda junto); a dobra entra no lugar. */
+  clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 34px, 100% 100%, 0 100%);
 }
 
-/* O canto dobrado: um triângulo ipê embaixo do recorte. */
+/* O canto dobrado: a parte de trás da folha, em ipê, virada para dentro. */
 .doc-folha::after {
   content: '';
   position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 38px;
-  height: 38px;
+  top: 0;
+  right: 0;
+  width: 34px;
+  height: 34px;
   background: linear-gradient(225deg, transparent 0 50%, var(--ipe) 50%);
-  border-bottom-left-radius: 6px;
+  border-bottom-left-radius: 5px;
 }
 
 .doc-assunto {

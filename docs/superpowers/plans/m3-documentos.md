@@ -27,23 +27,23 @@
 ## Tarefas
 
 - [x] **1. Spec, plano e dúvidas** (este arquivo, o spec e `duvidas-m3-documentos.md`).
-- [ ] **2. Leitura (API):** `servicos/documentos.py` (`listar`, `publicos`, `abrir`,
+- [x] **2. Leitura (API):** `servicos/documentos.py` (`listar`, `publicos`, `abrir`,
   `link`); rotas; testes de quem vê o quê, ordem, versões anteriores, arquivados, link com e
   sem bucket, 404 iguais (`test_documentos_leitura.py`); apagar o épico A de
   `test_m3_em_construcao.py` e de `EM_CONSTRUCAO` (`test_cache.py`).
-- [ ] **3. Gestão (API):** `publicar` (com e sem aviso; arquivo de outra unidade, pendente, de
+- [x] **3. Gestão (API):** `publicar` (com e sem aviso; arquivo de outra unidade, pendente, de
   aviso, já usado; aviso automático e `agendar` só quando avisou; tudo ou nada), `nova_versao`
   (sequência, arquivado, histórico), `arquivar` (idempotente)
   (`test_documentos_gestao.py`).
-- [ ] **4. Front, leitura:** `menu.ts`, `rotas.tsx`, `carregar.ts`, `formatos.ts`
+- [x] **4. Front, leitura:** `menu.ts`, `rotas.tsx`, `carregar.ts`, `formatos.ts`
   (assuntos, níveis, tamanho, busca), `Lista.tsx`, `DocumentoAberto.tsx`, `abrir.ts` (aba
   antes do pedido), `Publicos.tsx`, `LinkDocumentosPublicos.tsx`, `DocumentoDoAviso.tsx`,
   `documentos.css`; testes (`documentos.test.tsx`, `formatos.test.ts`); trocar o bloco "ainda
   não mostram nada" do `m3contrato.test.ts`.
-- [ ] **5. Front, gestão:** `NovoDocumento.tsx`, `NovaVersao.tsx`, arquivar no documento
+- [x] **5. Front, gestão:** `Formularios.tsx` (novo e nova versão), `EscolherArquivo.tsx`, arquivar no documento
   aberto; testes (envio + publicar, reaproveitar o arquivo enviado, erros por campo, sem
   "avisar" para a gestão).
-- [ ] **6. Conferência visual:** banco `portal_dev_m3_documentos`, S3 falso (`moto_server`),
+- [x] **6. Conferência visual:** banco `portal_dev_m3_documentos`, S3 falso (`moto_server`),
   uvicorn na 8181, Vite na 5191; Playwright a 390 px e 1280 px como morador e como gestão;
   prints em `docs/superpowers/prints/m3-documentos/`.
-- [ ] **7. Fechamento:** suíte inteira, dúvidas, relatório.
+- [x] **7. Fechamento:** suíte inteira, dúvidas, relatório.

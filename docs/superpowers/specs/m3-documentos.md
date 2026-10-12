@@ -45,8 +45,8 @@ link direto para a conta comum, nem para quem não entrou (critério do roadmap)
 2. Se `avisar_unidades`: `avisos.gravar_publicacao` com `NovoAviso(titulo="Documento novo:
    <título>", texto=..., categoria=geral, para_todos=True)`. O título do aviso é cortado em 120
    letras com "…" (o do documento já tem até 120). O texto não depende de onde é lido (mural ou
-   e-mail): "Um documento novo foi publicado no Portal: “<título>”." + "Para ver, abra este
-   aviso no Portal e toque em “Abrir o documento”. Ele também fica guardado em Documentos."
+   e-mail): "Um documento novo foi publicado no Portal: “<título>”." + "Ele fica guardado em
+   Documentos, no menu do Portal, e o botão “Abrir o documento” deste aviso leva direto a ele."
 3. `documento` (com `aviso_id`) e `documento_versao` 1; histórico `documento_publicado`
    `{"versao": 1, "acesso", "categoria", "avisou"}`; **um commit só**: documento e aviso nascem
    juntos ou nenhum dos dois.

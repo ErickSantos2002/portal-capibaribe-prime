@@ -268,7 +268,7 @@ export function NovoDocumento() {
             </label>
             <p className="ajuda" id="doc-avisar-ajuda">
               {avisar
-                ? 'Sai um aviso no mural, com o botão para abrir o documento, e a notificação para quem ligou.'
+                ? 'Sai um aviso no mural, com o botão para abrir o documento, e ele chega no celular de quem ativou as notificações.'
                 : 'O documento fica só em Documentos, sem aviso no mural.'}
             </p>
           </div>

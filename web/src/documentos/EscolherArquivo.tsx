@@ -45,7 +45,7 @@ export function EscolherArquivo({ id, arquivo, erro, escolher }: Props) {
           }}
         />
         <IconeDoc nome="clipe" />
-        {arquivo ? 'Escolher outro arquivo (PDF ou foto)' : 'Escolher PDF ou foto'}
+        {arquivo ? 'Trocar o arquivo' : 'Escolher PDF ou foto'}
       </label>
       {erro && (
         <p className="doc-erro-campo" id={idDoErro}>

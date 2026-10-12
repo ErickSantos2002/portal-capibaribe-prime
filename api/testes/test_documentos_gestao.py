@@ -81,7 +81,11 @@ def test_avisar_as_unidades_publica_o_aviso_junto(logar, armazenamento, engine_a
     assert aviso["para_todos"] is True
     assert aviso["fixado"] is False
     assert "“Regimento interno”" in aviso["texto"]
-    assert "Abrir o documento" in aviso["texto"]
+    # Serve aberto no Portal e na cópia por e-mail: não manda "abrir este aviso" a quem já abriu.
+    assert aviso["texto"].endswith(
+        "Ele fica guardado em Documentos, no menu do Portal, e o botão “Abrir o documento”"
+        " deste aviso leva direto a ele."
+    )
     assert aviso["documento"] == {"id": documento["id"], "titulo": "Regimento interno"}
     assert historico(engine_app, "documento_publicado")[0]["detalhes"]["avisou"] is True
     # O pedido de notificação entra na mesma transação (M2).

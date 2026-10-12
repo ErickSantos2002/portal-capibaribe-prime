@@ -111,9 +111,9 @@ const MB = 1024 * KB
 
 /** "340 KB", "2,4 MB": como a pessoa vê no celular. */
 export function tamanhoEmTexto(bytes: number): string {
-  if (bytes < MB) return `${Math.max(1, Math.round(bytes / KB))} KB`
+  if (bytes < MB) return `${Math.max(1, Math.round(bytes / KB))}\u00a0KB`
   const mb = Math.round((bytes / MB) * 10) / 10
-  return `${mb.toLocaleString('pt-BR')} MB`
+  return `${mb.toLocaleString('pt-BR')}\u00a0MB`
 }
 
 export function tipoEmTexto(tipo: TipoArquivo): string {

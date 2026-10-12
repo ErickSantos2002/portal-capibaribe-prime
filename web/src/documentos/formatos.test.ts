@@ -78,11 +78,11 @@ describe('textos', () => {
     expect(dataDoDocumento('2023-12-31')).toBe('31 de dezembro de 2023')
   })
 
-  it('tamanho do arquivo como se fala', () => {
-    expect(tamanhoEmTexto(212)).toBe('1 KB')
-    expect(tamanhoEmTexto(340 * 1024)).toBe('340 KB')
-    expect(tamanhoEmTexto(2.4 * 1024 * 1024)).toBe('2,4 MB')
-    expect(tamanhoEmTexto(20 * 1024 * 1024)).toBe('20 MB')
+  it('tamanho do arquivo como se fala, sem quebrar o número da unidade', () => {
+    expect(tamanhoEmTexto(212)).toBe('1\u00a0KB')
+    expect(tamanhoEmTexto(340 * 1024)).toBe('340\u00a0KB')
+    expect(tamanhoEmTexto(2.4 * 1024 * 1024)).toBe('2,4\u00a0MB')
+    expect(tamanhoEmTexto(20 * 1024 * 1024)).toBe('20\u00a0MB')
   })
 
   it('tipo do arquivo', () => {

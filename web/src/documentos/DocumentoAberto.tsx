@@ -114,10 +114,13 @@ function Conteudo({ documento, trocar }: { documento: Documento; trocar: (d: Doc
         </div>
       </div>
       {arquivo.erro && <CaixaDeErro>{arquivo.erro}</CaixaDeErro>}
-      <p className="doc-quem">
-        <Icone nome={documento.acesso === 'gestao' ? 'cadeado' : 'olho'} tamanho={20} />
-        <span>Quem vê: {nivelDe(documento.acesso).quemVe}.</span>
-      </p>
+      {/* Arquivado, só a gestão vê (a caixa de cima já diz): o nível não vale mais. */}
+      {!documento.arquivado_em && (
+        <p className="doc-quem">
+          <Icone nome={documento.acesso === 'gestao' ? 'cadeado' : 'olho'} tamanho={20} />
+          <span>Quem vê: {nivelDe(documento.acesso).quemVe}.</span>
+        </p>
+      )}
 
       {documento.versoes_anteriores.length > 0 && (
         <section className="doc-versoes" aria-labelledby="versoes-anteriores">
@@ -130,9 +133,9 @@ function Conteudo({ documento, trocar }: { documento: Documento; trocar: (d: Doc
               <li key={v.versao} className="doc-versao-item">
                 <span>
                   <b>Versão {v.versao}</b>
+                  <span className="suave">enviada em {diaPorExtenso(v.enviada_em)}</span>
                   <span className="suave">
-                    enviada em {diaPorExtenso(v.enviada_em)} · {tipoEmTexto(v.arquivo.tipo)},{' '}
-                    {tamanhoEmTexto(v.arquivo.tamanho_bytes)}
+                    {tipoEmTexto(v.arquivo.tipo)}, {tamanhoEmTexto(v.arquivo.tamanho_bytes)}
                   </span>
                 </span>
                 <button

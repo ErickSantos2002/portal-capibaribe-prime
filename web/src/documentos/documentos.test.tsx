@@ -280,8 +280,11 @@ describe('documento aberto', () => {
     expect(nova.getAttribute('href')).toBe('/documentos/1/nova-versao')
     fireEvent.click(screen.getByRole('button', { name: 'Arquivar' }))
     expect(chamadas.some((c) => c.metodo === 'POST')).toBe(false)
+    expect(screen.getByText(/Quem vê: os apartamentos/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /Arquivar de vez/ }))
     expect(await screen.findByText(/Arquivado em 21 de outubro/)).toBeTruthy()
+    // Arquivado, só a gestão vê: a linha de "Quem vê" do nível não vale mais.
+    expect(screen.queryByText(/Quem vê:/)).toBeNull()
     expect(screen.queryByRole('link', { name: /Enviar nova versão/ })).toBeNull()
   })
 })

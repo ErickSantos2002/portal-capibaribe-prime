@@ -223,13 +223,13 @@ def _titulo_do_aviso(titulo: str) -> str:
 
 
 def _aviso_automatico(titulo: str) -> NovoAviso:
-    """RF-33. O mesmo texto serve no mural e no e-mail (onde não há "o botão aqui embaixo")."""
+    """RF-33. O mesmo texto serve no aviso aberto e na cópia por e-mail (que leva ao aviso)."""
     return NovoAviso(
         titulo=_titulo_do_aviso(titulo),
         texto=(
             f"Um documento novo foi publicado no Portal: “{titulo}”.\n\n"
-            "Para ver, abra este aviso no Portal e toque em “Abrir o documento”. Ele também"
-            " fica guardado em Documentos."
+            "Ele fica guardado em Documentos, no menu do Portal, e o botão “Abrir o documento”"
+            " deste aviso leva direto a ele."
         ),
         para_todos=True,
     )
