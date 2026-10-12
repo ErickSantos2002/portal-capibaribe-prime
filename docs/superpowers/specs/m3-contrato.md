@@ -60,7 +60,8 @@ na 0004), não `enum` do Postgres: acrescentar um valor depois é trocar um `CHE
   nulo, e nenhuma coluna muda depois. O objeto em `arquivos/` está travado no bucket
   (ADR-0011); a linha que aponta para ele também.
 - **Até 50 arquivos por unidade a cada 24 horas** (`arquivo_limite_dia`), contando os que ainda
-  existem; o trigger trava a unidade (`for no key update`), então envios simultâneos contam uns
+  existem e os recusados do mesmo período (`arquivo_recusado` no `historico`: a linha do
+  recusado é apagada, a recusa fica); o trigger trava a unidade (`for no key update`), então envios simultâneos contam uns
   com os outros. Só a gestão envia, e 50 cobre um dia de trabalho folgado.
 
 ### 2.2 `documento` (H-17, H-18)

@@ -3,7 +3,7 @@
 
 Regras que o banco garante e que este modelo não repete: datas carimbadas pelo banco; pendente
 pode ter `tipo` e `tamanho_bytes` corrigidos e ser apagado; confirmado não muda nem é apagado;
-até 50 por unidade a cada 24 horas.
+até 50 por unidade a cada 24 horas (contando os recusados, pelo histórico).
 """
 
 from datetime import datetime

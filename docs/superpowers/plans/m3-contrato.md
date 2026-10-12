@@ -64,7 +64,7 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
   deixar função; funções de trigger com `search_path` fixo; arquivo: chave hexadecimal única,
   nome sem barra nem controle, só os 4 tipos, 10 MB no aviso e 20 MB no documento, datas do
   banco, confirmado não muda nem é apagado, pendente pode ser corrigido e apagado, 50 por dia
-  por unidade; documento: categorias, níveis, data na faixa, completo no commit (versão 1),
+  por unidade (contando os recusados do histórico); documento: categorias, níveis, data na faixa, completo no commit (versão 1),
   arquivado não volta, aviso automático só de documento visível às unidades; versão em
   sequência, arquivo confirmado e de finalidade documento, único, não arquivado; anexo:
   confirmado, de finalidade aviso, até 5, mesmo aviso pode repetir na correção, outro aviso

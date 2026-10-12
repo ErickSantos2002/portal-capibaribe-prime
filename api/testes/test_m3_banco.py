@@ -294,6 +294,44 @@ def test_ate_50_arquivos_por_unidade_por_dia(engine_app, ids):
         _arquivo(con, ids["u"])
 
 
+def _recusas(con, unidade: int, n: int) -> None:
+    for _ in range(n):
+        con.execute(
+            text(
+                "insert into historico (unidade_id, acao, entidade, detalhes)"
+                " values (:u, 'arquivo_recusado', 'arquivo', '{}')"
+            ),
+            {"u": unidade},
+        )
+
+
+def test_recusados_do_dia_contam_no_limite(engine_app, ids):
+    # O recusado some da tabela, mas fica no histórico: 60 recusas seguidas não liberam o 61º.
+    with engine_app.begin() as con:
+        _recusas(con, ids["u"], 30)
+        for _ in range(20):
+            _arquivo(con, ids["u"], confirmar=False)
+    assert _recusado(engine_app, lambda con: _arquivo(con, ids["u"])) == "arquivo_limite_dia"
+
+
+def test_recusas_de_outra_unidade_ou_de_ontem_nao_contam(engine_app, engine_superusuario, ids):
+    with engine_app.begin() as con:
+        outra = criar_unidade(con, criar_bloco(con, 2), "201")
+        _recusas(con, outra, 50)
+        _recusas(con, ids["u"], 50)
+    with engine_superusuario.begin() as con:
+        con.execute(text("set local session_replication_role = replica"))
+        con.execute(
+            text(
+                "update historico set ocorrido_em = now() - interval '25 hours'"
+                " where unidade_id = :u"
+            ),
+            {"u": ids["u"]},
+        )
+    with engine_app.begin() as con:
+        _arquivo(con, ids["u"])
+
+
 # --- documento ---------------------------------------------------------------------------------
 
 

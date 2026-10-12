@@ -205,6 +205,19 @@ def test_ate_50_por_dia(logar, armazenamento, engine_app, predio):
     assert _pedir(logar(COMISSAO)).status_code == 201
 
 
+def test_recusados_tambem_contam_no_limite_do_dia(logar, armazenamento):
+    # Cada recusa apaga a linha; sem contar o histórico, o ciclo pedir → enviar lixo → recusa
+    # não teria fim.
+    admin = logar(ADMIN)
+    for _ in range(50):
+        envio = _pedido(admin, tamanho_bytes=len(EXE))
+        armazenamento.receber(_chave(envio), EXE)
+        assert _confirmar(admin, envio["arquivo_id"]).status_code == 422
+    resposta = _pedir(admin)
+    assert resposta.status_code == 409
+    assert resposta.json()["codigo"] == "muitos_arquivos"
+
+
 def test_pendente_velho_sai_no_pedido_seguinte(
     logar, armazenamento, engine_app, engine_superusuario
 ):

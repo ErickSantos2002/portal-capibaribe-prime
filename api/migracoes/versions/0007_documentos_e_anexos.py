@@ -94,9 +94,15 @@ begin
         new.confirmado_em := null;
         -- Trava a unidade: envios ao mesmo tempo contam uns com os outros.
         perform 1 from public.unidade u where u.id = new.enviado_por for no key update;
+        -- Contam os que existem e os recusados (a linha do recusado é apagada, mas a recusa
+        -- fica no histórico): senão pedir, mandar lixo e ser recusado não teria fim.
         if (select count(*) from public.arquivo a
              where a.enviado_por = new.enviado_por
-               and a.enviado_em > now() - interval '24 hours') >= 50 then
+               and a.enviado_em > now() - interval '24 hours')
+           + (select count(*) from public.historico h
+               where h.acao = 'arquivo_recusado'
+                 and h.unidade_id = new.enviado_por
+                 and h.ocorrido_em > now() - interval '24 hours') >= 50 then
             raise exception 'No máximo 50 arquivos por apartamento a cada 24 horas.'
                 using errcode = 'check_violation', constraint = 'arquivo_limite_dia';
         end if;

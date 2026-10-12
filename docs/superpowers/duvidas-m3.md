@@ -47,7 +47,10 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
 
 ## 4. Só a gestão envia arquivo, até 50 por dia por unidade
 - **Decisão:** `POST /api/arquivos` é só da gestão (Comissão e administração); a unidade comum
-  recebe 403. No banco, até 50 arquivos por unidade a cada 24 horas.
+  recebe 403. No banco, até 50 arquivos por unidade a cada 24 horas, contando os recusados
+  (a linha do recusado é apagada, então o trigger soma os `arquivo_recusado` do `historico` do
+  mesmo período; sem isso, 60 recusas seguidas ainda deixavam pedir o 61º). Corrigido na
+  própria 0007, que ainda não foi aplicada em lugar nenhum (só nesta branch).
 - **Por quê:** na E1 só a gestão publica avisos e documentos. 50 cobre um dia de trabalho
   folgado (uma ata com 5 fotos é 6 envios) e segura um bug ou uma conta tomada que tentasse
   encher o bucket de 10 GB.

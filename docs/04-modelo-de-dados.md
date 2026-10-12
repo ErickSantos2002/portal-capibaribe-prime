@@ -157,7 +157,8 @@ Comissão e quando. Restrição: **um papel em vigor por tipo por unidade** (ín
 - **Confirmado não muda nem é apagado** (trigger `arquivo_confirmado`), como o objeto travado
   no bucket.
 - **Até 50 arquivos por unidade a cada 24 horas** (trigger `arquivo_limite_dia`, que trava a
-  unidade para envios simultâneos contarem uns com os outros).
+  unidade para envios simultâneos contarem uns com os outros), contando os que existem e os
+  recusados (`arquivo_recusado` no `historico`), cuja linha é apagada.
 
 Migração 0007 (M3). Detalhes de cada regra: `docs/superpowers/specs/m3-contrato.md`, seção 2.
 
