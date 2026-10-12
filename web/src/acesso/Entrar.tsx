@@ -6,6 +6,7 @@ import { ErroDaApi, MENSAGEM_SEM_CONEXAO } from '../api/cliente'
 import { useSessao } from '../casca/contextoSessao'
 import { formatarHora } from '../casca/formatar'
 import { Tela } from '../casca/Tela'
+import { LinkDocumentosPublicos } from '../documentos/LinkDocumentosPublicos'
 import { Logo } from '../marca/Logo'
 import { LinkEsqueci } from '../recuperacao/LinkEsqueci'
 import { BotaoVersao } from '../sobre/BotaoVersao'
@@ -153,6 +154,8 @@ export function Entrar() {
         </button>
       </form>
       <LinkEsqueci />
+      {/* M3, épico A: "Ver documentos públicos" (H-18). */}
+      <LinkDocumentosPublicos />
       <p className="centro">
         <Link className="texto-link" to="/privacidade">
           Como o Portal usa seus dados (política de privacidade)
