@@ -18,7 +18,6 @@ EM_CONSTRUCAO: set[str] = {
     "/api/documentos/publicos",
     "/api/documentos/{documento_id}",
     "/api/documentos/{documento_id}/versoes/{versao}/link",
-    "/api/avisos/{aviso_id}/anexos/{arquivo_id}/link",
 }
 # Rotas que dependem de um documento ou arquivo que este teste não cria: depois do épico, 404
 # (ou 503, sem bucket) também vale. O que este teste confere é o `no-store`.

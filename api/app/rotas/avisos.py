@@ -16,10 +16,10 @@ Rotas (atenção à ordem: as fixas antes de `/{aviso_id}`):
 - `PUT  /api/avisos/{aviso_id}/fixado`    → `AvisoCompleto` (`Gestao`)
 - `GET  /api/avisos/{aviso_id}/leitura`   → `Leitura` (`Gestao`)
 - `GET  /api/avisos/{aviso_id}/anexos/{arquivo_id}/link?baixar=` → `LinkDoArquivo`
-  (`UnidadeLogada`; M3, épico B: ainda 501)
+  (`UnidadeLogada`; M3, épico B)
 
-M3 (épico B; spec do M3, seção 5.3): publicar e corrigir **com** anexos ainda respondem 501;
-sem anexos (`[]`, ou omitido), tudo igual ao M1.
+M3 (épico B; spec do M3, seção 5.3, e `m3-anexos.md`): publicar e corrigir aceitam `anexos`
+(até 5 arquivos enviados por `POST /api/arquivos`); sem anexos, tudo igual ao M1.
 
 GET nunca altera nada: com `SameSite=Lax`, uma navegação vinda de outro site leva o cookie e
 escaparia da exigência de `X-Portal`. Por isso a leitura (H-16) é um POST à parte.
@@ -32,7 +32,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
-from app.erros_api import em_construcao
 from app.esquemas.arquivos import LinkDoArquivo
 from app.esquemas.avisos import (
     Alcance,
@@ -84,8 +83,6 @@ def destinos(_: Gestao, db: Banco) -> Destinos:
 def publicar(
     dados: NovoAviso, logado: Gestao, db: Banco, tarefas: BackgroundTasks
 ) -> AvisoCompleto:
-    if dados.anexos:
-        raise em_construcao()
     aviso_id = servico.publicar(db, logado, dados)
     # H-13 (M2): push e e-mail saem depois da resposta (spec do M2, seção 5).
     notificacoes.agendar(tarefas, aviso_id)
@@ -104,8 +101,6 @@ def marcar_lido(aviso_id: int, logado: UnidadeLogada, db: Banco) -> None:
 
 @rotas.put("/{aviso_id}")
 def corrigir(aviso_id: int, dados: CorrigirAviso, logado: Gestao, db: Banco) -> AvisoCompleto:
-    if dados.anexos:
-        raise em_construcao()
     servico.corrigir(db, logado, aviso_id, dados)
     return servico.abrir(db, logado, aviso_id)
 
@@ -138,5 +133,5 @@ def link_do_anexo(
     baixar: bool = False,
 ) -> LinkDoArquivo:
     # M3, épico B: o aviso visível para a unidade e o arquivo anexo de alguma versão dele; senão
-    # 404 `aviso_nao_encontrado`. Depois, `arquivos.link_do_arquivo`.
-    raise em_construcao()
+    # 404 `aviso_nao_encontrado`. Sem bucket, 503 depois dessas conferências.
+    return servico.link_do_anexo(db, logado, aviso_id, arquivo_id, bucket, baixar=baixar)
