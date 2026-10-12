@@ -39,6 +39,21 @@ exigir_variaveis() {
 
 # Bucket de backups (s3.py, boto3 pela versão fixada no próprio arquivo).
 s3() { uv run --quiet --script "$PASTA_BACKUP/s3.py" "$@"; }
+# Proteção dos arquivos (arquivos.py; dependências travadas em arquivos.py.lock).
+arquivos_py() { uv run --quiet --frozen --script "$PASTA_BACKUP/arquivos.py" "$@"; }
+
+# A chave privada do age, como em restaurar.sh: BACKUP_AGE_KEY_FILE (caminho) ou BACKUP_AGE_KEY
+# (o conteúdo, segredo do GitHub), que vira um arquivo 600 na pasta temporária dada.
+chave_privada_em() {
+  if [[ -n "${BACKUP_AGE_KEY_FILE:-}" ]]; then
+    echo "$BACKUP_AGE_KEY_FILE"
+  elif [[ -n "${BACKUP_AGE_KEY:-}" ]]; then
+    (umask 077 && printf '%s\n' "$BACKUP_AGE_KEY" >"$1/chave.age")
+    echo "$1/chave.age"
+  else
+    falhar "defina BACKUP_AGE_KEY_FILE (caminho) ou BACKUP_AGE_KEY (conteúdo da chave privada)"
+  fi
+}
 
 # Data de hoje no fuso do condomínio (o agendamento das 06:00 UTC é 03:00 em Recife).
 hoje_recife() { TZ=America/Recife date +%F; }

@@ -2,6 +2,9 @@
 # Teste do ciclo inteiro do backup, sem tocar no R2 nem no Neon:
 #   banco de teste (migração + carga) → papel backup → fazer-backup.sh → S3 falso (moto)
 #   → retenção com datas simuladas → restaurar.sh → verificações; e os casos que TÊM de falhar.
+#   Também a proteção dos arquivos (ADR-0011): cópia cifrada do bucket de arquivos para um
+#   segundo S3 falso (o papel do Backblaze B2), conferência na restauração e restauração dos
+#   arquivos para um bucket novo.
 #
 # Uso (da raiz do repositório):
 #   scripts/backup/testes/testar-ciclo.sh
@@ -37,9 +40,10 @@ URL_DESTINO_ADMIN="$(url "$usuario_admin" "$senha_admin" "$DESTINO")"
 URL_ORIGEM_ADMIN="$(url "$usuario_admin" "$senha_admin" "$ORIGEM")"
 
 temp="$(mktemp -d)"
-moto_pid=""
+moto_pid="" moto_b2_pid=""
 encerrar() {
   [[ -n "$moto_pid" ]] && kill "$moto_pid" 2>/dev/null
+  [[ -n "$moto_b2_pid" ]] && kill "$moto_b2_pid" 2>/dev/null
   rm -rf "$temp"
 }
 trap encerrar EXIT
@@ -124,25 +128,49 @@ esperar_falha "papel backup não escreve (transação só leitura)" "read-only t
 esperar_falha "papel backup não escreve (sem permissão)" "permission denied" \
   psql_backup -c "set default_transaction_read_only = off" -c "update bloco set nome = nome"
 
-# --- 3. S3 falso (moto) e chave age só do teste ---------------------------------------------
-porta_s3="$(uv run --quiet --no-project python -c \
-  'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
-uv run --quiet --no-project --python 3.12 --with 'moto[server]==5.2.3' \
-  moto_server -H 127.0.0.1 -p "$porta_s3" >"$temp/moto.log" 2>&1 &
+# --- 3. Dois S3 falsos (moto) e chave age só do teste ---------------------------------------
+# Um faz o papel da Cloudflare (bucket de backups, bucket de arquivos e o bucket novo de um
+# desastre); o outro, o do Backblaze B2 (a cópia dos arquivos).
+porta_livre() {
+  uv run --quiet --no-project python -c \
+    'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'
+}
+subir_moto() { # porta log
+  uv run --quiet --no-project --python 3.12 --with 'moto[server]==5.2.3' \
+    moto_server -H 127.0.0.1 -p "$1" >"$2" 2>&1 &
+}
+esperar_moto() {
+  for _ in $(seq 1 60); do
+    curl -sf "$1" >/dev/null 2>&1 && return 0
+    sleep 0.5
+  done
+  reprovar "o S3 falso em $1 não subiu"
+}
+porta_s3="$(porta_livre)"
+subir_moto "$porta_s3" "$temp/moto.log"
 moto_pid=$!
+porta_b2="$(porta_livre)"
+subir_moto "$porta_b2" "$temp/moto-b2.log"
+moto_b2_pid=$!
 export R2_ENDPOINT="http://127.0.0.1:$porta_s3" R2_ACCESS_KEY_ID=teste \
   R2_SECRET_ACCESS_KEY=teste R2_BUCKET=portal-capibaribe-backups R2_REGIAO=us-east-1
-for _ in $(seq 1 60); do
-  curl -sf "$R2_ENDPOINT" >/dev/null 2>&1 && break
-  sleep 0.5
-done
+B2_ENDPOINT="http://127.0.0.1:$porta_b2"
+esperar_moto "$R2_ENDPOINT"
+esperar_moto "$B2_ENDPOINT"
 uv run --quiet --script "$pasta/s3.py" listar diarios >/dev/null 2>&1 || true
-uv run --quiet --no-project --python 3.12 --with boto3==1.43.108 python - <<'PY'
-import os, boto3
-boto3.client("s3", endpoint_url=os.environ["R2_ENDPOINT"], region_name="us-east-1",
-             aws_access_key_id="teste", aws_secret_access_key="teste"
-             ).create_bucket(Bucket=os.environ["R2_BUCKET"])
-PY
+# Ajudante do teste: mexe nos S3 falsos por fora dos scripts (preparar e conferir).
+s3t() { uv run --quiet --frozen --script "$pasta/testes/s3_teste.py" "$@"; }
+s3t "$R2_ENDPOINT" "$R2_BUCKET" criar
+BUCKET_ARQUIVOS=portal-capibaribe-arquivos BUCKET_COPIA=portal-capibaribe-copia-arquivos
+s3t "$R2_ENDPOINT" "$BUCKET_ARQUIVOS" criar
+s3t "$B2_ENDPOINT" "$BUCKET_COPIA" criar
+arq() { s3t "$R2_ENDPOINT" "$BUCKET_ARQUIVOS" "$@"; }
+b2() { s3t "$B2_ENDPOINT" "$BUCKET_COPIA" "$@"; }
+# As variáveis do workflow para o bucket de arquivos (chave só de leitura) e para a cópia (B2).
+VARS_ARQUIVOS=(ARQUIVOS_R2_ENDPOINT="$R2_ENDPOINT" ARQUIVOS_R2_ACCESS_KEY_ID=teste
+  ARQUIVOS_R2_SECRET_ACCESS_KEY=teste ARQUIVOS_R2_BUCKET="$BUCKET_ARQUIVOS" ARQUIVOS_R2_REGIAO=us-east-1)
+VARS_COPIA=(COPIA_S3_ENDPOINT="$B2_ENDPOINT" COPIA_S3_ACCESS_KEY_ID=teste
+  COPIA_S3_SECRET_ACCESS_KEY=teste COPIA_S3_BUCKET="$BUCKET_COPIA" COPIA_S3_REGIAO=us-east-1)
 age-keygen -o "$temp/chave-teste.age" 2>/dev/null
 age-keygen -y "$temp/chave-teste.age" >"$temp/destinatario-teste.age"
 age-keygen -o "$temp/chave-errada.age" 2>/dev/null
@@ -186,11 +214,114 @@ s3 baixar "$objeto" "$temp/baixado"
 ! grep -qa PGDMP "$temp/baixado" || reprovar "o objeto tem cabeçalho de dump em claro"
 ok "o objeto no bucket está cifrado com age (sem PGDMP em claro)"
 
+# --- 4b. Cópia dos arquivos (ADR-0011): sem configuração, avisa e não falha ----------------
+resumo="$temp/resumo.md"
+: >"$resumo"
+GITHUB_STEP_SUMMARY="$resumo" GITHUB_ACTIONS=true "$pasta/copiar-arquivos.sh" >"$temp/saida.txt" 2>&1 || {
+  cat "$temp/saida.txt" >&2
+  reprovar "sem configuração, a cópia dos arquivos não pode falhar o backup"
+}
+grep -q "::warning::.*cópia dos arquivos não configurada" "$temp/saida.txt" ||
+  reprovar "sem configuração, a cópia deveria emitir um aviso do GitHub"
+grep -q "COPIA_S3_BUCKET" "$temp/saida.txt" || reprovar "o aviso deveria citar as variáveis que faltam"
+grep -q "cópia dos arquivos não configurada" "$resumo" || reprovar "o aviso deveria ir para o resumo do job"
+ok "cópia dos arquivos sem configuração: avisa (log e resumo) e sai com 0"
+
+# Configuração pela metade: o mesmo aviso, com os nomes, e nunca um valor.
+env ARQUIVOS_R2_ENDPOINT="$R2_ENDPOINT" ARQUIVOS_R2_ACCESS_KEY_ID=id-que-nao-aparece \
+  ARQUIVOS_R2_SECRET_ACCESS_KEY=segredo-que-nao-aparece ARQUIVOS_R2_BUCKET="$BUCKET_ARQUIVOS" \
+  COPIA_S3_SECRET_ACCESS_KEY=outro-segredo-que-nao-aparece \
+  "$pasta/copiar-arquivos.sh" >"$temp/saida.txt" 2>&1 || reprovar "configuração pela metade não pode falhar o backup"
+grep -q "COPIA_S3_ENDPOINT" "$temp/saida.txt" || reprovar "o aviso deveria citar COPIA_S3_ENDPOINT"
+grep -q "que-nao-aparece" "$temp/saida.txt" && reprovar "a saída mostrou o valor de uma variável"
+ok "configuração pela metade: avisa com os nomes, sem mostrar valor"
+
+# Os arquivos publicados: um de cada tipo (o PDF passa de 8 MB: envio em partes), mais o que
+# a cópia tem de ignorar (o envio ainda não conferido e uma chave fora do padrão da API).
+nova_chave() { head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
+mkdir "$temp/originais"
+TIPOS=(application/pdf image/jpeg image/png image/webp)
+CHAVES=()
+{ printf '%%PDF-1.7\n'; head -c 9000000 /dev/urandom; } >"$temp/originais/0"
+{ printf '\xff\xd8\xff\xe0'; head -c 3000 /dev/urandom; } >"$temp/originais/1"
+{ printf '\x89PNG\r\n\x1a\n'; head -c 2000 /dev/urandom; } >"$temp/originais/2"
+{ printf 'RIFF\x10\x00\x00\x00WEBPVP8 '; head -c 1000 /dev/urandom; } >"$temp/originais/3"
+for i in 0 1 2 3; do
+  CHAVES+=("$(nova_chave)")
+  arq gravar "$temp/originais/$i" "arquivos/${CHAVES[$i]}" "${TIPOS[$i]}"
+done
+arq gravar "$temp/originais/0" "envios/$(nova_chave)" application/pdf
+arq gravar "$temp/originais/0" "arquivos/leia-me.txt" text/plain
+
+# No banco: os quatro confirmados (como a API faz: insere pendente e confirma) e um pendente.
+valores=""
+for i in 0 1 2 3; do
+  valores+="${valores:+,}('${CHAVES[$i]}', 'teste-$i', '${TIPOS[$i]}', 'documento', $(stat -c %s "$temp/originais/$i"), (select min(id) from unidade))"
+done
+admin --dbname="$URL_ORIGEM_ADMIN" >/dev/null <<SQL
+insert into arquivo (chave, nome_original, tipo, finalidade, tamanho_bytes, enviado_por)
+values $valores,
+       ('$(nova_chave)', 'pendente', 'application/pdf', 'documento', 10, (select min(id) from unidade));
+update arquivo set confirmado_em = now() where nome_original like 'teste-%';
+SQL
+
 # Dia que não é 1: só diário.
 BACKUP_DATA=2026-10-02 "$pasta/fazer-backup.sh" >/dev/null
 s3 listar mensais | grep -q "2026-10-02" && reprovar "dia 2 não deveria virar mensal"
 [[ "$(contar diarios)" == 30 ]] || reprovar "a retenção deveria manter 30 diários"
 ok "dia 2 gera só o diário, e a retenção segue em 30"
+
+# --- 4c. Cópia dos arquivos configurada -------------------------------------------------------
+copiar() { env "${VARS_ARQUIVOS[@]}" "${VARS_COPIA[@]}" "$pasta/copiar-arquivos.sh" "$@"; }
+: >"$resumo"
+GITHUB_STEP_SUMMARY="$resumo" copiar >"$temp/saida.txt" 2>&1 || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a cópia dos arquivos falhou"
+}
+grep -q "copiados agora: 4 · já na cópia: 0 · ignorados (fora do padrão): 1" "$temp/saida.txt" || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a cópia deveria contar 4 copiados, 0 já estavam e 1 ignorado"
+}
+grep -q "copiados agora: 4" "$resumo" || reprovar "a cópia deveria escrever no resumo do job"
+b2 listar arquivos/ | awk '{print $1}' | sort >"$temp/na-copia.txt"
+printf 'arquivos/%s.age\n' "${CHAVES[@]}" | sort >"$temp/esperado.txt"
+diff -u "$temp/esperado.txt" "$temp/na-copia.txt" >&2 ||
+  reprovar "a cópia deveria ter exatamente os 4 publicados (sem envios/ nem a chave fora do padrão)"
+ok "cópia: os 4 publicados foram para arquivos/<chave>.age; envios/ e chave fora do padrão, não"
+for i in 0 1 2 3; do
+  b2 ler "arquivos/${CHAVES[$i]}.age" "$temp/copia.age"
+  [[ "$(head -c 21 "$temp/copia.age")" == "age-encryption.org/v1" ]] || reprovar "a cópia $i não está cifrada"
+  age --decrypt --identity "$temp/chave-teste.age" --output "$temp/decifrado" "$temp/copia.age"
+  cmp -s "$temp/decifrado" "$temp/originais/$i" || reprovar "a cópia $i não decifra para o original"
+done
+rm -f "$temp/decifrado" "$temp/copia.age"
+ok "cópia: cada objeto é age e decifra para os mesmos bytes do original"
+
+b2 listar arquivos/ >"$temp/antes.txt"
+copiar >"$temp/saida.txt" 2>&1 || reprovar "a segunda rodada da cópia falhou"
+grep -q "copiados agora: 0 · já na cópia: 4" "$temp/saida.txt" ||
+  reprovar "a segunda rodada não deveria copiar nada"
+grep -q "baixando" "$temp/saida.txt" && reprovar "a segunda rodada baixou um arquivo já copiado"
+b2 listar arquivos/ >"$temp/depois.txt"
+cmp -s "$temp/antes.txt" "$temp/depois.txt" || reprovar "a segunda rodada mexeu na cópia"
+ok "cópia é incremental: a segunda rodada não baixa nem reenvia nada"
+
+if grep -nE 'delete_object|delete_objects|copy_object|DeleteObject|put_bucket' "$pasta/arquivos.py" >&2; then
+  reprovar "arquivos.py não pode apagar, copiar por cima nem mexer na configuração de bucket"
+fi
+ok "arquivos.py não tem nenhuma chamada que apague ou sobrescreva"
+
+# Um arquivo que não se cifra (destinatário inválido): falha, avisa a chave, e não envia nada.
+CHAVE_NOVA="$(nova_chave)"
+arq gravar "$temp/originais/2" "arquivos/$CHAVE_NOVA" image/png
+echo "age1invalido" >"$temp/destinatario-invalido.age"
+esperar_falha "arquivo que não se cifra faz a cópia falhar, com a chave" "$CHAVE_NOVA" \
+  env BACKUP_DESTINATARIOS="$temp/destinatario-invalido.age" "${VARS_ARQUIVOS[@]}" "${VARS_COPIA[@]}" \
+  "$pasta/copiar-arquivos.sh"
+b2 listar arquivos/ | grep -q "$CHAVE_NOVA" && reprovar "um arquivo que falhou chegou à cópia"
+copiar >"$temp/saida.txt" 2>&1 || reprovar "a cópia não se recuperou na rodada seguinte"
+grep -q "copiados agora: 1 · já na cópia: 4" "$temp/saida.txt" || reprovar "a rodada seguinte deveria copiar o que faltou"
+ok "falha num arquivo não suja a cópia, e a rodada seguinte completa"
 
 # --- 5. Restauração do mais recente num banco vazio -----------------------------------------
 novo_destino() {
