@@ -44,7 +44,8 @@ Duas camadas, cada uma contra um grupo de riscos.
   R2 recusa apagar ou sobrescrever qualquer objeto ali, venha a ordem de onde vier (bug, chave
   vazada da API, script). Só quem entra no painel com a conta do dono consegue tirar a regra.
 - **Regra de ciclo de vida** na pasta `envios/`: o R2 apaga sozinho o que ficar lá mais de 1
-  dia (envio abandonado no meio, ou arquivo recusado cuja remoção falhou).
+  dia (envio abandonado no meio, ou arquivo recusado cuja remoção falhou). O R2 apaga
+  "tipicamente em até 24 horas" depois de vencer, então uma sobra pode durar uns 2 dias.
 - **A API nunca apaga fora de `envios/`**: a camada de armazenamento recusa (teste), e o
   armazenamento falso dos testes imita a trava.
 
@@ -58,9 +59,10 @@ Cobre o risco 1 inteiro e boa parte do 2.
   do **Backblaze B2** (plano grátis de 10 GB, API compatível com S3, o mesmo `boto3` do
   `s3.py`).
 - **Incremental e só de inclusão:** como nada em `arquivos/` muda, basta copiar o que falta.
-  A chave do B2 é criada **sem a permissão `deleteFiles`**: nem o workflow consegue apagar a
-  cópia; e o bucket guarda todas as versões (padrão do B2), então reenviar um nome não perde o
-  anterior.
+  A chave do B2 é criada **sem a permissão `deleteFiles`**: nem o workflow consegue apagar
+  uma versão da cópia. Ela ainda consegue **esconder** um arquivo (o "hide" do B2, que é uma
+  versão nova marcando o nome como oculto), mas o bucket guarda todas as versões (padrão do
+  B2), então o escondido continua recuperável, e reenviar um nome não perde o anterior.
 - **Testado todo mês:** a restauração de teste do dia 2 (ADR-0009) passa a conferir que todo
   arquivo confirmado no banco restaurado tem a cópia `arquivos/<chave>.age` no B2, e decifra
   um deles escolhido ao acaso, conferindo a assinatura do conteúdo (os mesmos bytes mágicos da

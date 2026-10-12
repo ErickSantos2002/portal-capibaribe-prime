@@ -78,18 +78,32 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
   quer que o Portal consiga. O volume é pequeno. Se um dia for preciso apagar (LGPD), é o
   caminho manual da ADR-0011.
 
-## 8. CSP com curinga `https://*.r2.cloudflarestorage.com`
-- **Dúvida:** o endereço exato do bucket tem o número da conta da Cloudflare.
-- **Decisão:** o curinga, só em `connect-src` e `img-src` (o teste de cabeçalhos garante que é
-  o único endereço de terceiros e que não aparece em outra diretiva).
-- **Por quê:** o repositório é público; o número da conta não precisa estar nele. O máximo que
-  o curinga libera é um script injetado falar com algum bucket R2, o que ele já conseguiria
-  navegando para lá. A CSP continua bloqueando script e estilo de fora.
+## 8. CSP com curinga `https://*.r2.cloudflarestorage.com` **[Erick]**
+- **Dúvida:** o endereço exato do bucket tem o ID da conta da Cloudflare
+  (`<ACCOUNT_ID>.r2.cloudflarestorage.com`), e o repositório é público.
+- **Decisão (provisória, mantida):** o curinga, só em `connect-src` e `img-src` (o teste de
+  cabeçalhos garante que é o único endereço de terceiros e que não aparece em outra diretiva).
+- **A troca, nos dois sentidos:**
+  - **Curinga:** libera o navegador a falar com **qualquer** conta R2. Isso só importa se
+    alguém já conseguiu rodar script no Portal (XSS, que a própria CSP dificulta: script só do
+    próprio Portal); aí o script poderia mandar dados para um bucket R2 do atacante. Mas um
+    script injetado já consegue tirar dados navegando para outro endereço, o que a CSP não
+    bloqueia; o curinga quase não abre caminho novo.
+  - **Host exato:** fecha esse caminho, mas põe o ID da conta da Cloudflare no repositório
+    público. A Cloudflare não trata esse ID como segredo (ele aparece em URLs e no painel), mas
+    é mais um dado da conta exposto para sempre no histórico do git.
+- **Recomendação:** manter o curinga. Se preferir o host exato, é trocar o endereço em
+  `vercel.json` e no teste `web/testes/cabecalhos.test.ts`.
+- **Confirmar:** qual dos dois.
+- **Nota:** abrir o PDF numa aba nova funciona com a CSP de hoje. **Embutir** o PDF na página
+  (num `<iframe>` ou `<object>`) exigiria liberar o R2 também em `frame-src`/`object-src`;
+  ninguém pediu isso, e o épico B mostra o PDF como botão.
 
 ## 9. Foto pequena vai com os metadados do celular **[Erick]**
 - **Dúvida:** a compressão (seção 4 da spec) regrava em WEBP só a foto com o lado maior acima
-  de 1920 px (ou a menor que passa do limite do destino, desde a revisão do contrato). Regravar descarta os metadados (EXIF), inclusive a localização do GPS; a foto
-  menor vai como saiu do celular.
+  de 1920 px (ou a menor que passa do limite do destino, desde a revisão do contrato).
+  Regravar descarta os metadados (EXIF), inclusive a localização do GPS; a foto menor e leve
+  vai como saiu do celular.
 - **Decisão:** mantida como na spec. A maioria das fotos de celular passa de 1920 px e é
   regravada; print de tela e foto já reduzida pelo WhatsApp normalmente não têm GPS.
 - **Por quê:** regravar toda foto pequena também troca o formato e pode aumentar o arquivo
@@ -150,21 +164,35 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
 
 ## Passo a passo do Erick (antes do primeiro documento real) **[Erick]**
 
-Nada disto foi feito pelos agentes (spec, seção 11). Ordem sugerida; cada passo pode ser
-conferido antes do próximo. As chaves vão **só** para a Vercel e o GitHub, nunca para o
-repositório nem para o chat.
+Nada disto foi feito pelos agentes (spec, seção 11). Ordem sugerida; cada passo diz onde
+conferir antes do próximo. Caminhos de tela conferidos na documentação oficial em 12/10/2026
+(o painel muda de vez em quando: se um nome não bater, procure o mais parecido e anote).
+
+**As chaves vão só para a Vercel e o GitHub**, nunca para o repositório, o chat ou um arquivo
+de texto. **Clipboard:** o `cliphist` grava em disco tudo o que é copiado. No fim de tudo
+(seção G): apagar do histórico as entradas das chaves (⊞+SHIFT+V, selecionar e apagar) ou
+`cliphist wipe`, e fechar o terminal onde alguma chave apareceu.
 
 ### A. Cloudflare R2: o bucket de arquivos
-1. **Criar o bucket** `portal-capibaribe-arquivos` (R2 → Create bucket), privado (sem domínio
-   público, sem `r2.dev`). Nunca usar o `portal-capibaribe-backups` para isso: a API desliga os
-   arquivos se o nome tiver "backup".
-2. **Chave da API** (R2 → Manage API tokens → Create API token): permissão **Object Read &
-   Write**, aplicada **só** ao bucket `portal-capibaribe-arquivos`. Guardar o Access Key ID, o
-   Secret Access Key e o endpoint `https://<conta>.r2.cloudflarestorage.com`.
-3. **Chave só de leitura** para o workflow de backup (mesma tela): **Object Read only**, só no
-   bucket `portal-capibaribe-arquivos`. É a que copia os arquivos para o B2 (épico C).
-4. **CORS** (bucket → Settings → CORS Policy → Add CORS policy, aba JSON). Só o `PUT` do envio
-   precisa: a foto no `<img>` e o PDF numa aba nova não pedem CORS.
+1. **Criar o bucket** (R2 → Create bucket): nome `portal-capibaribe-arquivos`; Location
+   **Automatic** (sem jurisdição); Default storage class **Standard** (o Infrequent Access não
+   tem plano grátis e cobra leitura e cópia). Privado: sem domínio público e sem `r2.dev`. Nunca
+   usar o `portal-capibaribe-backups` para isso: a API desliga os arquivos se o nome tiver
+   "backup".
+2. **Chave da API** (R2 → Overview → Account Details → API Tokens → **Manage** → Create
+   **Account API token**): permissão **Object Read & Write**, aplicada **só** ao bucket
+   `portal-capibaribe-arquivos`; TTL **Forever**; filtro de IP **vazio** (os IPs da Vercel e do
+   GitHub Actions mudam). Na tela final, copiar o **Access Key ID**, a **Secret Access Key**
+   (aparece **uma vez só**: se perder, crie outra chave) e o endpoint
+   `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`. Copie o endpoint **desta** tela: o da
+   página do bucket vem com `/portal-capibaribe-arquivos` no fim (a API aceita assim também,
+   mas o workflow de backup não foi testado com ele).
+3. **Chave só de leitura** para o workflow de backup (mesmo caminho, outro Account API token):
+   **Object Read only**, só no bucket `portal-capibaribe-arquivos`, TTL Forever, sem filtro de
+   IP. É a que copia os arquivos para o B2 (épico C).
+4. **CORS** (bucket → aba **Settings** → CORS Policy → Add CORS policy, aba JSON) e **Save**.
+   Só o `PUT` do envio precisa: a foto no `<img>` e o PDF numa aba nova não pedem CORS. Pode
+   levar até 30 segundos para valer. Conferir: a política aparece na aba Settings do bucket.
    ```json
    [
      {
@@ -175,55 +203,109 @@ repositório nem para o chat.
      }
    ]
    ```
-5. **Ciclo de vida** (bucket → Settings → Object Lifecycle Rules → Add rule): prefixo
-   `envios/`, apagar depois de **1 dia**. Ou pela linha de comando:
-   `npx wrangler r2 bucket lifecycle add portal-capibaribe-arquivos envios-1-dia envios/ --expire-days 1`
-6. **Trava** (bucket → Settings → Bucket lock rules → Add rule): prefixo `arquivos/`,
-   retenção **indefinida**. Se o painel não oferecer "indefinida":
-   `npx wrangler r2 bucket lock add portal-capibaribe-arquivos arquivos-para-sempre arquivos/ --retention-indefinite`.
-   A regra **não pode** cobrir `envios/` (aí nem o recusado seria apagado). Depois dela, nem o
-   painel apaga o que está em `arquivos/` sem antes tirar a regra.
-7. **Conferir** com um envio de teste depois do deploy do M3: o arquivo aparece em
-   `arquivos/<chave>` e nada fica em `envios/`; um `.exe` renomeado para `.pdf` é recusado e
-   não sobra nada em `envios/`.
+5. **Ciclo de vida** (bucket → aba **Settings** → Object Lifecycle Rules → Add rule): prefixo
+   `envios/`, apagar depois de **1 dia**, e **Save changes**. O R2 apaga "tipicamente em até
+   24 horas" depois de vencer, então uma sobra em `envios/` pode durar uns 2 dias (é normal).
+   Conferir: a regra aparece na aba Settings do bucket.
+6. **Trava** (bucket → aba **Settings** → Bucket lock rules → Add rule): prefixo `arquivos/`,
+   retenção **Indefinite**, e **Save changes**. A regra **não pode** cobrir `envios/` (aí nem
+   o recusado seria apagado). Depois dela, nem o painel apaga o que está em `arquivos/` sem
+   antes tirar a regra. Conferir: a regra aparece na aba Settings do bucket.
+
+Alternativa pela linha de comando (só se preferir; o painel basta). Primeiro
+`npx wrangler login` (abre o navegador). Para criar:
+`npx wrangler r2 bucket lifecycle add portal-capibaribe-arquivos envios-1-dia envios/ --expire-days 1`
+e `npx wrangler r2 bucket lock add portal-capibaribe-arquivos arquivos-para-sempre arquivos/ --retention-indefinite`.
+Para conferir (vale também depois do painel):
+`npx wrangler r2 bucket lock list portal-capibaribe-arquivos` e
+`npx wrangler r2 bucket lifecycle list portal-capibaribe-arquivos`.
 
 ### B. Backblaze B2: a cópia cifrada
 1. **Criar a conta** em `backblaze.com/sign-up/cloud-storage`, com o e-mail do Portal.
-   **Se pedir cartão, parar** (item 1: plano B).
-2. **Criar o bucket** privado, por exemplo `portal-capibaribe-copia-arquivos` (o nome do B2 é
-   global; se estiver ocupado, acrescente um sufixo). Manter o padrão "Keep all versions".
-   Anotar o endpoint S3 mostrado na página do bucket (`https://s3.<região>.backblazeb2.com`).
+   **Se pedir cartão, parar** (item 1: plano B). A **região** escolhida no cadastro (ex.: US
+   East) é **fixa para sempre**: anote qual foi.
+   - **1b. Tetos de gasto** (Caps & Alerts → **Edit Caps**): **US$ 0** em todos os limites
+     diários (armazenamento, download, transações). Conferir que **nenhum** diz "No Cap": sem
+     teto, o uso acima do grátis é cobrado sem limite.
+2. **Criar o bucket** (Buckets → Create a Bucket): por exemplo
+   `portal-capibaribe-copia-arquivos` (o nome do B2 é global; se estiver ocupado, acrescente um
+   sufixo). Files in Bucket: **Private**. Object Lock: **Disable** (uma vez ligado não desliga;
+   dá para ligar depois). Depois de criado, Lifecycle Settings: **Keep all versions** (o
+   padrão). Anotar o endpoint S3 que a página do bucket mostra: vem **sem** `https://`
+   (`s3.<região>.backblazeb2.com`); o valor a guardar é `https://s3.<região>.backblazeb2.com`.
 3. **Chave sem poder de apagar.** A tela de chaves do site só oferece "Read and Write", "Read
    Only" e "Write Only", e não deixa tirar só o `deleteFiles`. Por isso, pela linha de comando
-   oficial (`uv tool run --from b2 b2`, autenticando com a chave mestra só nesta hora):
-   ```sh
-   b2 account authorize            # pede o keyID e a chave mestra (não salvar em arquivo)
-   b2 key create --bucket portal-capibaribe-copia-arquivos copia-arquivos-portal \
-     listBuckets,listFiles,readFiles,writeFiles
-   ```
-   Guardar o `keyID` e a `applicationKey` que o comando imprime (aparecem uma vez só). Conferir
-   que `deleteFiles` **não** está na lista. Por fim, `b2 account clear`: a CLI guarda a chave
-   mestra em disco depois do `authorize`.
+   oficial, com a chave mestra só nesta hora:
+   1. Gerar a chave mestra (Application Keys → Master Application Key → **Generate New Master
+      Application Key**). Ela aparece **uma vez só**, e gerar outra invalida a anterior. Não
+      guardar: só copiar para o passo seguinte.
+   2. No terminal (o `b2` sozinho não existe no PATH; o `uvx` baixa a CLI oficial na hora):
+      ```sh
+      uvx --python 3.12 --from b2 b2 account authorize
+      ```
+      Ele **pergunta** o keyID e a chave mestra. Não passe as chaves como argumento do
+      comando: iriam para o histórico do fish.
+   3. Criar a chave do workflow:
+      ```sh
+      uvx --python 3.12 --from b2 b2 key create --bucket portal-capibaribe-copia-arquivos \
+        copia-arquivos-portal listBuckets,listFiles,readFiles,writeFiles
+      ```
+      Guardar o `keyID` e a `applicationKey` que o comando imprime (aparecem uma vez só).
+      Conferir que `deleteFiles` **não** está na lista.
+   4. `uvx --python 3.12 --from b2 b2 account clear`: a CLI guarda a chave mestra em disco
+      depois do `authorize`.
 
-### C. GitHub: segredos do workflow `Backup` (épico C)
-Em Settings → Secrets and variables → Actions:
+   Sem `deleteFiles`, a chave ainda consegue **esconder** um arquivo (o "hide" do B2), mas não
+   apagar versões; com "Keep all versions", o escondido continua recuperável.
+
+### C. GitHub: segredos do workflow `Backup` (épico C) · **só depois do merge do épico C**
+O workflow ainda não lê estes segredos; criar antes não quebra nada, mas também não testa nada.
+Caminho: repositório → Settings → Secrets and variables → Actions → aba **Secrets** → **New
+repository secret** (de repositório, não de environment). Depois, conferir os nomes na lista
+(o valor não aparece mais).
 
 | Segredo | Valor |
 |---|---|
-| `ARQUIVOS_R2_ENDPOINT` | o endpoint do R2 (A.2) |
+| `ARQUIVOS_R2_ENDPOINT` | o endpoint do R2 (A.2): o mesmo valor do `R2_ENDPOINT` que já existe |
 | `ARQUIVOS_R2_ACCESS_KEY_ID`, `ARQUIVOS_R2_SECRET_ACCESS_KEY` | a chave **só de leitura** (A.3) |
 | `ARQUIVOS_R2_BUCKET` | `portal-capibaribe-arquivos` |
-| `COPIA_S3_ENDPOINT` | o endpoint S3 do B2 (B.2) |
+| `COPIA_S3_ENDPOINT` | o endpoint S3 do B2, com `https://` (B.2) |
 | `COPIA_S3_ACCESS_KEY_ID`, `COPIA_S3_SECRET_ACCESS_KEY` | a chave do B2 sem `deleteFiles` (B.3) |
 | `COPIA_S3_BUCKET` | o bucket do B2 (B.2) |
 
 Sem os `COPIA_S3_*`, o passo da cópia avisa e não derruba o backup do banco.
 
-### D. Vercel: variáveis da API (só Production, como sensíveis)
-`PORTAL_ARQUIVOS_ENDPOINT`, `PORTAL_ARQUIVOS_BUCKET` (`portal-capibaribe-arquivos`),
-`PORTAL_ARQUIVOS_CHAVE_ID`, `PORTAL_ARQUIVOS_CHAVE_SECRETA` (a chave de A.2). A prévia fica sem
-elas (arquivos desligados), como ficou sem SMTP no M2.
+### D. Vercel: variáveis da API (só Production)
+Project → Settings → Environment Variables. Marcar **só Production** (a prévia fica sem elas,
+arquivos desligados, como ficou sem SMTP no M2). **Confira a grafia antes de salvar**: o nome
+de uma variável Secret não se edita depois.
+
+| Variável | Valor | Type |
+|---|---|---|
+| `PORTAL_ARQUIVOS_ENDPOINT` | o endpoint do R2 (A.2) | Config ou Secret |
+| `PORTAL_ARQUIVOS_BUCKET` | `portal-capibaribe-arquivos` | Config ou Secret |
+| `PORTAL_ARQUIVOS_CHAVE_ID` | o Access Key ID de A.2 | **Secret** |
+| `PORTAL_ARQUIVOS_CHAVE_SECRETA` | a Secret Access Key de A.2 | **Secret** |
+
+`PORTAL_ARQUIVOS_REGIAO`: **não criar** (o padrão `auto` é o certo para o R2). Variável nova só
+vale depois de um **redeploy** de produção (Deployments → o último de produção → Redeploy). Para
+conferir: nos logs da Vercel, **não** pode aparecer "arquivos desligados" depois do redeploy
+(se aparecer, a mensagem diz qual variável está faltando ou inválida, sem mostrar o valor).
 
 ### E. No fechamento do marco (coordenador)
-Migração 0007 no Neon (produção e `previa`), deploy, o envio de teste de A.7 e um backup manual
+Migração 0007 no Neon (produção e `previa`), deploy, e um backup manual
 (`gh workflow run backup.yml -f restaurar=true`) conferindo a cópia no B2.
+
+### F. Envio de teste (depois do E: deploy e migração feitos)
+- **O arquivo de teste fica para sempre:** em `arquivos/` ele está travado, vai para a cópia no
+  B2 e cria uma linha no banco de produção. Use um **PDF inofensivo, pensado para ficar** (por
+  exemplo, um "Teste do envio de arquivos" de uma página), nada pessoal.
+- Conferir: o arquivo aparece em `arquivos/<chave>` e nada fica em `envios/` (ou some em até
+  uns 2 dias, pelo ciclo de vida).
+- Um `.exe` renomeado para `.pdf` é **recusado**: não chega a `arquivos/`, e o que foi para
+  `envios/` é apagado (ou some pelo ciclo de vida).
+
+### G. No fim: limpar o rastro das chaves
+- Apagar do histórico do clipboard as entradas com chaves (⊞+SHIFT+V) ou `cliphist wipe`.
+- Fechar o terminal onde alguma chave apareceu.
+- Não salvar nenhuma chave em arquivo de texto (o lugar delas é a Vercel e o GitHub).

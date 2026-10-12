@@ -190,6 +190,25 @@ Na retomada de 12/10:
   passo do Erick para R2, B2, GitHub e Vercel). A spec perdeu o campo `metodo` do
   `EnvioAutorizado`, que o código nunca teve (dúvida 11).
 
-Próximo passo (coordenador): revisão do contrato, respostas do Erick aos itens **[Erick]** de
-`duvidas-m3.md` (3, 5, 9 e o passo a passo) e a onda dos três épicos, cada um na própria
-worktree a partir desta branch, com o próprio banco de teste.
+Correções da revisão do contrato (12/10, duas revisões independentes, um commit por achado,
+cada um com teste de regressão que falhava antes):
+- URL de envio assina o `Content-Length` (o falso recusa PUT de outro tamanho).
+- Publicação presa ao ETag do HEAD (`If-Match` na leitura, `CopySourceIfMatch` na cópia);
+  conteúdo trocado no meio ou tamanho diferente do declarado → 409, pendente (dúvida 13). A
+  interface trocou `tamanho_do_envio` por `envio_recebido` (tamanho + ETag).
+- Publicar é idempotente (mesmo ETag já publicado conta como publicado), apagar o envio é
+  faxina depois do commit, e erros do boto3 viram `FalhaNoArmazenamento` (503
+  `armazenamento_indisponivel`) ou 409, nunca 500.
+- O limite de 50 por dia conta os `arquivo_recusado` do histórico (trigger da própria 0007, que
+  ainda não foi aplicada em lugar nenhum: não está na `main` nem no Neon).
+- Endpoint do R2 com `/<bucket>` no fim é aceito (dúvida 14).
+- Front: foto pequena acima do limite do destino é regravada (fundo branco no JPEG); PUT com
+  tempo limite (`prazoDoEnvio`).
+- Docs: dúvida 8 (CSP) virou **[Erick]**; passo a passo do Erick revisado contra a
+  documentação oficial (envio de teste movido para depois do deploy, tetos do B2, segredos do
+  GitHub só depois do épico C, clipboard); ADR-0011 diz que a chave do B2 ainda esconde
+  arquivo (recuperável).
+
+Próximo passo (coordenador): respostas do Erick aos itens **[Erick]** de `duvidas-m3.md` (3, 5,
+8, 9 e o passo a passo) e a onda dos três épicos, cada um na própria worktree a partir desta
+branch, com o próprio banco de teste.
