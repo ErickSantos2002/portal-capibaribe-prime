@@ -174,3 +174,22 @@ def test_o_teste_enxerga_os_esquemas():
         frozenset({"CampoInvalido[]", "null"}),
         True,
     )
+
+
+def test_limites_do_envio_iguais_na_tela_e_na_api():
+    # M3 (spec, seção 4): a tela confere tipo e tamanho antes de mandar, com os mesmos números e
+    # as mesmas mensagens da API (`web/src/arquivos/limites.ts`).
+    from app.modelos.arquivos import LIMITE_POR_FINALIDADE, MB, TIPOS_ACEITOS
+
+    texto = (WEB / "arquivos" / "limites.ts").read_text(encoding="utf-8")
+    lista = re.search(r"TIPOS_ACEITOS: readonly TipoArquivo\[\] = \[(.*?)\]", texto, re.S)
+    assert lista, "limites.ts sem TIPOS_ACEITOS"
+    assert tuple(re.findall(r"'([^']+)'", lista.group(1))) == TIPOS_ACEITOS
+    limites = re.search(r"LIMITES[^=]*= \{ aviso: (\d+) \* MB, documento: (\d+) \* MB \}", texto)
+    assert limites, "limites.ts sem LIMITES"
+    assert {"aviso": int(limites[1]) * MB, "documento": int(limites[2]) * MB} == (
+        LIMITE_POR_FINALIDADE
+    )
+    assert f"'{arquivos.MSG_TIPO}'" in texto
+    assert "O arquivo pode ter até ${LIMITES[finalidade] / MB} MB." in texto
+    assert arquivos.mensagem_do_limite("aviso") == "O arquivo pode ter até 10 MB."
