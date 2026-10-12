@@ -298,6 +298,46 @@ def test_maior_que_o_limite_de_verdade_e_recusado(logar, armazenamento, engine_a
     assert _recusas(engine_app)[0]["detalhes"]["motivo"] == "tamanho"
 
 
+def test_conteudo_trocado_durante_a_conferencia_nao_e_publicado(
+    logar, armazenamento, engine_app, monkeypatch
+):
+    # Um 2º PUT na mesma URL (mesmo tamanho, outro conteúdo) entre ler o começo e publicar.
+    admin = logar(ADMIN)
+    envio = _pedido(admin)
+    chave = _chave(envio)
+    armazenamento.receber(chave, PDF)
+    ler = armazenamento.inicio_do_envio
+    exe_do_mesmo_tamanho = EXE[: len(PDF)].ljust(len(PDF), b"0")
+
+    def ler_e_trocar(*args, **kwargs):
+        inicio = ler(*args, **kwargs)
+        armazenamento.receber(chave, exe_do_mesmo_tamanho)
+        return inicio
+
+    monkeypatch.setattr(armazenamento, "inicio_do_envio", ler_e_trocar)
+    resposta = _confirmar(admin, envio["arquivo_id"])
+    assert resposta.status_code == 409
+    assert resposta.json()["codigo"] == "arquivo_nao_chegou"
+    assert f"arquivos/{chave}" not in armazenamento.objetos
+    assert _linha(engine_app, envio["arquivo_id"])[2] is None
+    # Confirmar de novo confere o conteúdo que está lá agora: o .exe é recusado.
+    monkeypatch.setattr(armazenamento, "inicio_do_envio", ler)
+    assert _confirmar(admin, envio["arquivo_id"]).json()["codigo"] == "arquivo_recusado"
+    assert armazenamento.objetos == {}
+
+
+def test_objeto_de_outro_tamanho_que_o_declarado_nao_e_publicado(logar, armazenamento, engine_app):
+    admin = logar(ADMIN)
+    envio = _pedido(admin, tamanho_bytes=len(PDF))
+    # Só por fora da URL assinada (o R2 recusaria este PUT).
+    armazenamento.gravar_por_fora(_chave(envio), PDF + b"a mais")
+    resposta = _confirmar(admin, envio["arquivo_id"])
+    assert resposta.status_code == 409
+    assert resposta.json()["codigo"] == "arquivo_nao_chegou"
+    assert f"arquivos/{_chave(envio)}" not in armazenamento.objetos
+    assert _linha(engine_app, envio["arquivo_id"])[2] is None
+
+
 def test_foto_png_com_nome_de_jpeg_vale_como_png(logar, armazenamento, engine_app):
     admin = logar(ADMIN)
     envio = _pedido(

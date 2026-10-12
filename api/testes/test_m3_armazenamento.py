@@ -5,6 +5,7 @@ processo, no endereço de um R2 fictício) e contra o `ArmazenamentoFalso` dos t
 Nenhum teste fala com o R2 de verdade.
 """
 
+import hashlib
 import os
 from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -23,6 +24,7 @@ from app.servicos import armazenamento  # noqa: E402
 from app.servicos.armazenamento import (  # noqa: E402
     ArmazenamentoFalso,
     ArmazenamentoS3,
+    EnvioMudou,
     EnvioRecusado,
     ObjetoAusente,
     ObjetoTravado,
@@ -81,39 +83,54 @@ def _perto(momento: datetime, depois: timedelta) -> bool:
 # --- o que vale para os dois -------------------------------------------------------------------
 
 
+def _etag(arm, chave: str = CHAVE) -> str:
+    return arm.envio_recebido(chave).etag
+
+
 def test_envio_que_nao_chegou_nao_tem_tamanho(arm):
-    assert arm.tamanho_do_envio(CHAVE) is None
+    assert arm.envio_recebido(CHAVE) is None
     with pytest.raises(ObjetoAusente):
-        arm.inicio_do_envio(CHAVE)
+        arm.inicio_do_envio(CHAVE, etag='"qualquer"')
 
 
-def test_tamanho_e_inicio_do_envio(arm):
+def test_tamanho_etag_e_inicio_do_envio(arm):
     _receber(arm, CHAVE, PDF)
-    assert arm.tamanho_do_envio(CHAVE) == len(PDF)
-    assert arm.inicio_do_envio(CHAVE, 5) == b"%PDF-"
-    assert arm.inicio_do_envio(CHAVE) == PDF[:16]
+    recebido = arm.envio_recebido(CHAVE)
+    assert recebido.tamanho == len(PDF)
+    assert recebido.etag == f'"{hashlib.md5(PDF).hexdigest()}"'
+    assert arm.inicio_do_envio(CHAVE, 5, etag=recebido.etag) == b"%PDF-"
+    assert arm.inicio_do_envio(CHAVE, etag=recebido.etag) == PDF[:16]
 
 
 def test_inicio_de_arquivo_menor_que_o_pedido(arm):
     _receber(arm, CHAVE, b"%P")
-    assert arm.inicio_do_envio(CHAVE) == b"%P"
+    assert arm.inicio_do_envio(CHAVE, etag=_etag(arm)) == b"%P"
+
+
+def test_inicio_do_envio_que_mudou_falha(arm):
+    # Outro PUT na mesma URL depois do HEAD: o começo lido seria de outro conteúdo.
+    _receber(arm, CHAVE, PDF)
+    etag = _etag(arm)
+    _receber(arm, CHAVE, b"MZ" + PDF[2:])
+    with pytest.raises(EnvioMudou):
+        arm.inicio_do_envio(CHAVE, etag=etag)
 
 
 def test_publicar_copia_com_o_tipo_conferido_e_apaga_o_envio(arm):
     _receber(arm, CHAVE, PDF, "image/jpeg")
-    arm.publicar(CHAVE, "application/pdf")
+    arm.publicar(CHAVE, "application/pdf", etag=_etag(arm))
     assert _publicado(arm, CHAVE) == (PDF, "application/pdf")
-    assert arm.tamanho_do_envio(CHAVE) is None
+    assert arm.envio_recebido(CHAVE) is None
 
 
 def test_descartar_so_mexe_no_envio(arm):
     outra = "f" * 32
     _receber(arm, outra, PDF)
-    arm.publicar(outra, "application/pdf")
+    arm.publicar(outra, "application/pdf", etag=_etag(arm, outra))
     _receber(arm, CHAVE, PDF)
     arm.descartar_envio(CHAVE)
     arm.descartar_envio(CHAVE)  # de novo: nada acontece
-    assert arm.tamanho_do_envio(CHAVE) is None
+    assert arm.envio_recebido(CHAVE) is None
     assert _publicado(arm, outra) == (PDF, "application/pdf")
 
 
@@ -124,9 +141,9 @@ def test_chave_fora_do_formato_nunca_vira_caminho(arm, chave):
     for chamada in (
         lambda: arm.url_de_envio(chave, "application/pdf", 1),
         lambda: arm.url_de_leitura(chave, tipo="application/pdf", nome="a.pdf", baixar=False),
-        lambda: arm.tamanho_do_envio(chave),
-        lambda: arm.inicio_do_envio(chave),
-        lambda: arm.publicar(chave, "application/pdf"),
+        lambda: arm.envio_recebido(chave),
+        lambda: arm.inicio_do_envio(chave, etag='"x"'),
+        lambda: arm.publicar(chave, "application/pdf", etag='"x"'),
         lambda: arm.descartar_envio(chave),
     ):
         with pytest.raises(ValueError, match="chave"):
@@ -139,7 +156,7 @@ def test_nao_existe_jeito_de_apagar_o_publicado():
     assert publicos == {
         "url_de_envio",
         "url_de_leitura",
-        "tamanho_do_envio",
+        "envio_recebido",
         "inicio_do_envio",
         "publicar",
         "descartar_envio",
@@ -197,8 +214,20 @@ def test_url_de_leitura_forca_tipo_e_nome(s3):
 
 
 def test_publicar_no_s3_de_verdade_falha_alto_se_o_envio_sumiu(s3):
-    with pytest.raises(Exception):  # noqa: B017 - o erro do boto3 sobe (vira 500 registrado)
-        s3.publicar(CHAVE, "application/pdf")
+    with pytest.raises(Exception):  # noqa: B017 - o erro do boto3 sobe
+        s3.publicar(CHAVE, "application/pdf", etag='"x"')
+
+
+def test_publicar_no_s3_copia_so_se_o_envio_ainda_e_o_conferido(s3):
+    # O moto ignora o CopySourceIfMatch; o R2 o respeita. Aqui, o pedido leva a condição.
+    pedidos = []
+    s3.cliente.meta.events.register(
+        "before-parameter-build.s3.CopyObject", lambda params, **_: pedidos.append(dict(params))
+    )
+    _receber(s3, CHAVE, PDF)
+    etag = _etag(s3)
+    s3.publicar(CHAVE, "application/pdf", etag=etag)
+    assert pedidos[0]["CopySourceIfMatch"] == etag
 
 
 # --- falso -------------------------------------------------------------------------------------
@@ -207,11 +236,21 @@ def test_publicar_no_s3_de_verdade_falha_alto_se_o_envio_sumiu(s3):
 def test_falso_imita_a_trava_de_arquivos():
     falso = ArmazenamentoFalso()
     falso.receber(CHAVE, PDF)
-    falso.publicar(CHAVE, "application/pdf")
+    falso.publicar(CHAVE, "application/pdf", etag=_etag(falso))
     falso.receber(CHAVE, b"outra coisa")
     with pytest.raises(ObjetoTravado):
-        falso.publicar(CHAVE, "application/pdf")
+        falso.publicar(CHAVE, "application/pdf", etag=_etag(falso))
     assert falso.objetos[f"arquivos/{CHAVE}"] == (PDF, "application/pdf")
+
+
+def test_falso_nao_publica_envio_que_mudou():
+    falso = ArmazenamentoFalso()
+    falso.receber(CHAVE, PDF)
+    etag = _etag(falso)
+    falso.receber(CHAVE, b"MZ" + PDF[2:])
+    with pytest.raises(EnvioMudou):
+        falso.publicar(CHAVE, "application/pdf", etag=etag)
+    assert f"arquivos/{CHAVE}" not in falso.objetos
 
 
 def test_falso_recusa_put_de_tamanho_diferente_do_assinado():
@@ -222,7 +261,7 @@ def test_falso_recusa_put_de_tamanho_diferente_do_assinado():
         falso.receber(CHAVE, PDF + b"a mais")
     assert falso.objetos == {}
     falso.receber(CHAVE, PDF)
-    assert falso.tamanho_do_envio(CHAVE) == len(PDF)
+    assert falso.envio_recebido(CHAVE).tamanho == len(PDF)
 
 
 def test_falso_monta_urls_reconheciveis():

@@ -16,6 +16,7 @@ uma URL assinada, curta, e confere depois. Duas pastas no bucket:
 `obter_armazenamento` (dependência FastAPI): `None` quando os arquivos estão desligados.
 """
 
+import hashlib
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -48,6 +49,11 @@ class ObjetoAusente(Exception):
     """O envio não está no bucket (o navegador não mandou, ou já foi apagado)."""
 
 
+class EnvioMudou(Exception):
+    """O envio não é mais o que foi conferido (ETag diferente): outro PUT na mesma URL trocou o
+    conteúdo entre o HEAD e a leitura, ou entre a leitura e a publicação."""
+
+
 class EnvioRecusado(Exception):
     """O bucket recusou o PUT: fora do que a URL assinada permite (ex.: outro tamanho)."""
 
@@ -62,16 +68,26 @@ class UrlAssinada:
     expira_em: datetime
 
 
+@dataclass(frozen=True)
+class EnvioRecebido:
+    """O que o HEAD do envio diz: o tamanho real e o ETag, a identidade **deste** conteúdo. A
+    leitura do começo e a publicação exigem o mesmo ETag, então o que é publicado é exatamente
+    o que foi conferido."""
+
+    tamanho: int
+    etag: str
+
+
 class Armazenamento(Protocol):
     def url_de_envio(self, chave: str, tipo: str, tamanho: int) -> UrlAssinada: ...
 
     def url_de_leitura(self, chave: str, *, tipo: str, nome: str, baixar: bool) -> UrlAssinada: ...
 
-    def tamanho_do_envio(self, chave: str) -> int | None: ...
+    def envio_recebido(self, chave: str) -> EnvioRecebido | None: ...
 
-    def inicio_do_envio(self, chave: str, n: int = 16) -> bytes: ...
+    def inicio_do_envio(self, chave: str, n: int = 16, *, etag: str) -> bytes: ...
 
-    def publicar(self, chave: str, tipo: str) -> None: ...
+    def publicar(self, chave: str, tipo: str, *, etag: str) -> None: ...
 
     def descartar_envio(self, chave: str) -> None: ...
 
@@ -111,6 +127,20 @@ def disposicao(nome: str, tipo: str, *, baixar: bool) -> str:
 
 def _agora() -> datetime:
     return datetime.now(UTC)
+
+
+_NAO_EXISTE = {"404", "NoSuchKey", "NotFound"}
+_CONDICAO_FALHOU = {"412", "PreconditionFailed"}
+
+
+def _codigo(erro: Exception) -> str | None:
+    """O código de erro de um `ClientError` do boto3."""
+    return getattr(erro, "response", {}).get("Error", {}).get("Code")
+
+
+def _etag_de(conteudo: bytes) -> str:
+    """O ETag de um objeto enviado de uma vez só: o MD5 do conteúdo, entre aspas (S3 e R2)."""
+    return f'"{hashlib.md5(conteudo).hexdigest()}"'  # noqa: S324 - identidade, não segurança
 
 
 class ArmazenamentoS3:
@@ -174,7 +204,7 @@ class ArmazenamentoS3:
         )
         return UrlAssinada(url=url, expira_em=_agora() + VALIDADE_LEITURA)
 
-    def tamanho_do_envio(self, chave: str) -> int | None:
+    def envio_recebido(self, chave: str) -> EnvioRecebido | None:
         from botocore.exceptions import ClientError
 
         try:
@@ -182,30 +212,45 @@ class ArmazenamentoS3:
                 Bucket=self._bucket, Key=PASTA_ENVIOS + _conferir(chave)
             )
         except ClientError as erro:
-            if erro.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
+            if _codigo(erro) in _NAO_EXISTE:
                 return None
             raise
-        return int(resposta["ContentLength"])
+        return EnvioRecebido(tamanho=int(resposta["ContentLength"]), etag=resposta["ETag"])
 
-    def inicio_do_envio(self, chave: str, n: int = 16) -> bytes:
+    def inicio_do_envio(self, chave: str, n: int = 16, *, etag: str) -> bytes:
+        from botocore.exceptions import ClientError
+
         caminho = PASTA_ENVIOS + _conferir(chave)
         try:
             resposta = self.cliente.get_object(
-                Bucket=self._bucket, Key=caminho, Range=f"bytes=0-{n - 1}"
+                Bucket=self._bucket, Key=caminho, Range=f"bytes=0-{n - 1}", IfMatch=etag
             )
-        except self.cliente.exceptions.NoSuchKey as erro:
-            raise ObjetoAusente(caminho) from erro
+        except ClientError as erro:
+            if _codigo(erro) in _NAO_EXISTE:
+                raise ObjetoAusente(caminho) from erro
+            if _codigo(erro) in _CONDICAO_FALHOU:
+                raise EnvioMudou(caminho) from erro
+            raise
         return resposta["Body"].read(n)
 
-    def publicar(self, chave: str, tipo: str) -> None:
+    def publicar(self, chave: str, tipo: str, *, etag: str) -> None:
+        from botocore.exceptions import ClientError
+
         _conferir(chave)
-        self.cliente.copy_object(
-            Bucket=self._bucket,
-            Key=PASTA_ARQUIVOS + chave,
-            CopySource={"Bucket": self._bucket, "Key": PASTA_ENVIOS + chave},
-            ContentType=tipo,
-            MetadataDirective="REPLACE",
-        )
+        try:
+            # Só copia se o envio ainda é o conferido (o R2 respeita o CopySourceIfMatch).
+            self.cliente.copy_object(
+                Bucket=self._bucket,
+                Key=PASTA_ARQUIVOS + chave,
+                CopySource={"Bucket": self._bucket, "Key": PASTA_ENVIOS + chave},
+                CopySourceIfMatch=etag,
+                ContentType=tipo,
+                MetadataDirective="REPLACE",
+            )
+        except ClientError as erro:
+            if _codigo(erro) in _CONDICAO_FALHOU:
+                raise EnvioMudou(PASTA_ENVIOS + chave) from erro
+            raise
         self.descartar_envio(chave)
 
     def descartar_envio(self, chave: str) -> None:
@@ -246,24 +291,31 @@ class ArmazenamentoFalso:
         url = f"{self.BASE}/{PASTA_ARQUIVOS}{_conferir(chave)}?{consulta}"
         return UrlAssinada(url=url, expira_em=_agora() + VALIDADE_LEITURA)
 
-    def tamanho_do_envio(self, chave: str) -> int | None:
+    def envio_recebido(self, chave: str) -> EnvioRecebido | None:
         objeto = self.objetos.get(PASTA_ENVIOS + _conferir(chave))
-        return None if objeto is None else len(objeto[0])
+        if objeto is None:
+            return None
+        return EnvioRecebido(tamanho=len(objeto[0]), etag=_etag_de(objeto[0]))
 
-    def inicio_do_envio(self, chave: str, n: int = 16) -> bytes:
+    def _envio(self, chave: str, etag: str) -> bytes:
         caminho = PASTA_ENVIOS + _conferir(chave)
         if caminho not in self.objetos:
             raise ObjetoAusente(caminho)
-        return self.objetos[caminho][0][:n]
+        conteudo = self.objetos[caminho][0]
+        if _etag_de(conteudo) != etag:
+            raise EnvioMudou(caminho)
+        return conteudo
 
-    def publicar(self, chave: str, tipo: str) -> None:
-        origem = PASTA_ENVIOS + _conferir(chave)
+    def inicio_do_envio(self, chave: str, n: int = 16, *, etag: str) -> bytes:
+        return self._envio(chave, etag)[:n]
+
+    def publicar(self, chave: str, tipo: str, *, etag: str) -> None:
+        conteudo = self._envio(chave, etag)
         destino = PASTA_ARQUIVOS + chave
         if destino in self.objetos:
             raise ObjetoTravado(destino)
-        conteudo, _ = self.objetos[origem]
         self.objetos[destino] = (conteudo, tipo)
-        del self.objetos[origem]
+        del self.objetos[PASTA_ENVIOS + chave]
 
     def descartar_envio(self, chave: str) -> None:
         self.objetos.pop(PASTA_ENVIOS + _conferir(chave), None)

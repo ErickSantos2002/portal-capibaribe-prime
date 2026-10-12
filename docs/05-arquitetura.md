@@ -148,10 +148,11 @@ seção 4):
    `envios/<chave>`, válida por 10 minutos.
 3. A tela envia direto ao R2 (sem cookie, com o `Content-Type` e o tamanho assinados: o R2
    recusa outro tamanho).
-4. `POST /api/arquivos/{id}/confirmar`: a API lê o tamanho e os primeiros bytes do objeto. Não
-   é PDF nem foto, ou passou do limite: apaga o envio e a linha, registra no histórico e
-   responde 422. Senão, copia para `arquivos/<chave>` (travado), apaga o envio e marca
-   `confirmado_em`.
+4. `POST /api/arquivos/{id}/confirmar`: a API lê o tamanho, o ETag e os primeiros bytes do
+   objeto. Não é PDF nem foto, ou passou do limite: apaga o envio e a linha, registra no
+   histórico e responde 422. Senão, copia para `arquivos/<chave>` (travado) **só se o ETag
+   ainda é o conferido**, apaga o envio e marca `confirmado_em`. Conteúdo trocado no meio, ou
+   tamanho diferente do declarado: 409, continua pendente.
 5. A tela envia o aviso (`POST /api/avisos`) com os ids dos anexos. A API confere que cada
    arquivo foi confirmado pela própria unidade, grava aviso + versão 1 + anexos numa transação
    e registra no histórico.

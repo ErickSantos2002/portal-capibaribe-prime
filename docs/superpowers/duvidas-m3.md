@@ -117,6 +117,19 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
   (a Tarefa 5 tinha rodado só os testes das áreas mudadas). Corrigido na retomada, com a suíte
   inteira verde.
 
+## 13. Conteúdo trocado no meio da conferência: 409, não 422
+- **Dúvida (revisão do contrato):** entre o HEAD, a leitura dos 16 bytes e a cópia, um 2º PUT
+  na mesma URL (válida por 10 minutos) trocava o conteúdo publicado: um `.exe` de 25 MB saía
+  como o PDF de 209 bytes conferido.
+- **Decisão:** o ETag do HEAD vai como `If-Match` na leitura e como `CopySourceIfMatch` na
+  cópia. ETag diferente responde 409 `arquivo_nao_chegou` ("envie de novo") e o arquivo
+  continua pendente, sem apagar o envio nem registrar recusa. Tamanho real diferente do
+  declarado (com o `Content-Length` na assinatura, só por fora da URL) recebe o mesmo 409.
+- **Por quê:** não dá para saber o que estava certo, só que o objeto mudou; a próxima
+  confirmação confere tudo de novo, atomicamente, contra o que estiver lá (um `.exe` aí é
+  recusado normalmente). Quem usa a tela nunca faz dois PUTs; não vale um motivo novo no
+  histórico nem uma frase nova para algo que só um ataque provoca.
+
 ---
 
 ## Passo a passo do Erick (antes do primeiro documento real) **[Erick]**

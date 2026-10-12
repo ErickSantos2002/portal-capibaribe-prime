@@ -132,15 +132,22 @@ class UrlAssinada:
     url: str
     expira_em: datetime
 
+@dataclass(frozen=True)
+class EnvioRecebido:
+    tamanho: int   # o real
+    etag: str      # a identidade deste conteúdo
+
 class Armazenamento(Protocol):
     def url_de_envio(self, chave: str, tipo: str, tamanho: int) -> UrlAssinada: ...
         # PUT em envios/<chave>, assinado com o Content-Type e o Content-Length, 10 minutos
     def url_de_leitura(self, chave: str, *, tipo: str, nome: str, baixar: bool) -> UrlAssinada: ...
         # GET em arquivos/<chave>, vale 5 minutos; força Content-Type e Content-Disposition
-    def tamanho_do_envio(self, chave: str) -> int | None: ...   # HEAD; None = não chegou
-    def inicio_do_envio(self, chave: str, n: int = 16) -> bytes: ...  # GET com Range
-    def publicar(self, chave: str, tipo: str) -> None: ...
-        # copia envios/<chave> → arquivos/<chave> (com o tipo conferido) e apaga o envio
+    def envio_recebido(self, chave: str) -> EnvioRecebido | None: ...  # HEAD; None = não chegou
+    def inicio_do_envio(self, chave: str, n: int = 16, *, etag: str) -> bytes: ...
+        # GET com Range e If-Match; ETag diferente → EnvioMudou
+    def publicar(self, chave: str, tipo: str, *, etag: str) -> None: ...
+        # copia envios/<chave> → arquivos/<chave> (com o tipo conferido) só se o envio ainda
+        # tem este ETag (CopySourceIfMatch; senão EnvioMudou), e apaga o envio
     def descartar_envio(self, chave: str) -> None: ...          # apaga envios/<chave>
 ```
 
@@ -151,6 +158,12 @@ class Armazenamento(Protocol):
   falha) e tem `receber(chave, conteudo, tipo)` para o teste fazer o papel do navegador
   (recusa, como o R2, o PUT de tamanho diferente do assinado) e `gravar_por_fora(...)` para
   simular um objeto que chegou sem passar pela URL assinada.
+- **O que é publicado é exatamente o que foi conferido:** o ETag do HEAD vai como `If-Match`
+  na leitura do começo e como `CopySourceIfMatch` na cópia. Um 2º PUT na mesma URL no meio da
+  conferência (o mesmo tamanho, outro conteúdo) faz a confirmação responder 409
+  `arquivo_nao_chegou` e o arquivo continua pendente; confirmar de novo confere o conteúdo que
+  estiver lá (dúvida 13). O `moto` ignora o `CopySourceIfMatch`: o teste confere que a cópia o
+  pede, e o falso imita a recusa.
 - **O tamanho declarado entra na assinatura do PUT** (`ContentLength`): o R2 recusa o envio de
   outro tamanho. Sem isso, a mesma URL aceitaria gigabytes declarando 209 bytes.
 - `obter_armazenamento()` é dependência FastAPI: `ArmazenamentoS3` com a configuração da seção
@@ -173,6 +186,7 @@ tela                          API                                   R2
  │ PUT url (Content-Type) ──────────────────────────────────────────► │ envios/<chave>
  │ POST /api/arquivos/{id}/confirmar ► HEAD + 16 primeiros bytes ───► │
  │                             │ tamanho e assinatura batem?          │
+ │                             │   outro tamanho que o declarado, ou o ETag mudou → 409
  │                             │   não → apaga o envio, apaga a linha, histórico, 422
  │                             │   sim → copia para arquivos/<chave>, apaga o envio,
  │ ◄──── ArquivoEnviado        │         confirmado_em = now()        │
@@ -190,6 +204,9 @@ tela                          API                                   R2
   `arquivo_recusado`, o objeto sai de `envios/`, a linha sai do banco e o histórico ganha
   `arquivo_recusado` `{"motivo": "conteudo" | "tamanho", "tipo_declarado", "tipo_encontrado",
   "tamanho_bytes"}` (sem o nome do arquivo, que pode ter nome de gente).
+- **Tamanho real diferente do declarado** (só acontece se o objeto chegou por fora da URL
+  assinada, que tem o tamanho): 409 `arquivo_nao_chegou`, continua pendente. Acima do limite
+  continua sendo 422 `arquivo_recusado` (o limite é conferido antes).
 - Assinatura de **outro tipo aceito** (uma foto PNG com nome `.jpg`): aceita, e o `tipo` passa
   a ser o encontrado (dúvida 6). O navegador escolhe o tipo pela extensão; quem paga o erro da
   extensão não pode ser a Dona Socorro.

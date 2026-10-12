@@ -31,7 +31,7 @@ from app.esquemas.arquivos import (
 from app.modelos import Arquivo
 from app.modelos.arquivos import LIMITE_POR_FINALIDADE
 from app.seguranca.dependencias import Logado
-from app.servicos.armazenamento import Armazenamento, ObjetoAusente
+from app.servicos.armazenamento import Armazenamento, EnvioMudou, ObjetoAusente
 from app.servicos.historico import Acao, registrar
 
 # Quantos bytes do começo bastam para reconhecer os quatro tipos (o WEBP precisa de 12).
@@ -170,9 +170,10 @@ def confirmar_envio(
         "arquivo_nao_chegou",
         "O arquivo não chegou ao Portal. Confira a internet e envie de novo.",
     )
-    tamanho = armazenamento.tamanho_do_envio(arquivo.chave)
-    if tamanho is None:
+    recebido = armazenamento.envio_recebido(arquivo.chave)
+    if recebido is None:
         raise nao_chegou
+    tamanho = recebido.tamanho
     if tamanho > LIMITE_POR_FINALIDADE[arquivo.finalidade]:
         raise _recusar(
             db,
@@ -184,12 +185,31 @@ def confirmar_envio(
             encontrado=None,
             mensagem=mensagem_do_limite(arquivo.finalidade),
         )
+    if tamanho == 0:
+        raise _recusar(
+            db,
+            logado,
+            arquivo,
+            armazenamento,
+            motivo="conteudo",
+            tamanho=tamanho,
+            encontrado=None,
+            mensagem=MSG_CONTEUDO,
+        )
+    # O R2 só aceita pela URL assinada o tamanho declarado; outro tamanho chegou por fora dela.
+    # Não é o arquivo que a tela mandou: continua pendente, à espera do envio certo.
+    if tamanho != arquivo.tamanho_bytes:
+        raise nao_chegou
     try:
-        inicio = armazenamento.inicio_do_envio(arquivo.chave, BYTES_DA_ASSINATURA)
-    except ObjetoAusente as erro:
+        # O começo lido e o objeto publicado são os do ETag do HEAD: um 2º PUT na mesma URL,
+        # no meio da conferência, não troca o conteúdo publicado.
+        inicio = armazenamento.inicio_do_envio(
+            arquivo.chave, BYTES_DA_ASSINATURA, etag=recebido.etag
+        )
+    except (ObjetoAusente, EnvioMudou) as erro:
         raise nao_chegou from erro
     encontrado = tipo_pelo_conteudo(inicio)
-    if encontrado is None or tamanho == 0:
+    if encontrado is None:
         raise _recusar(
             db,
             logado,
@@ -203,7 +223,10 @@ def confirmar_envio(
 
     # Publica antes de gravar: se o commit falhar, sobra um objeto travado sem linha (pouco e
     # invisível); o contrário deixaria uma linha confirmada apontando para nada.
-    armazenamento.publicar(arquivo.chave, encontrado)
+    try:
+        armazenamento.publicar(arquivo.chave, encontrado, etag=recebido.etag)
+    except (ObjetoAusente, EnvioMudou) as erro:
+        raise nao_chegou from erro
     arquivo.tipo = encontrado
     arquivo.tamanho_bytes = tamanho
     arquivo.confirmado_em = func.now()
