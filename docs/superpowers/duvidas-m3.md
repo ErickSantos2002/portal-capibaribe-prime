@@ -88,7 +88,7 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
 
 ## 9. Foto pequena vai com os metadados do celular **[Erick]**
 - **Dúvida:** a compressão (seção 4 da spec) regrava em WEBP só a foto com o lado maior acima
-  de 1920 px. Regravar descarta os metadados (EXIF), inclusive a localização do GPS; a foto
+  de 1920 px (ou a menor que passa do limite do destino, desde a revisão do contrato). Regravar descarta os metadados (EXIF), inclusive a localização do GPS; a foto
   menor vai como saiu do celular.
 - **Decisão:** mantida como na spec. A maioria das fotos de celular passa de 1920 px e é
   regravada; print de tela e foto já reduzida pelo WhatsApp normalmente não têm GPS.

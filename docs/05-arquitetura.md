@@ -142,7 +142,8 @@ O envio de arquivo é o mesmo para anexo e documento (`enviarArquivo` no front; 
 seção 4):
 
 1. A tela confere tipo e tamanho e **comprime a foto** (lado maior acima de 1920 px vira
-   1920 px em WEBP; PDF vai como está).
+   1920 px em WEBP; a menor que passa do limite é regravada no mesmo tamanho; PDF vai como
+   está).
 2. `POST /api/arquivos` com nome, tipo, tamanho e finalidade (`aviso`): a API confere o papel e
    os limites, grava o arquivo **pendente** e devolve uma URL assinada de `PUT` em
    `envios/<chave>`, válida por 10 minutos.

@@ -7,6 +7,7 @@ import { confirmarEnvio, pedirEnvio } from './api'
 import {
   comprimir,
   dimensoesReduzidas,
+  ferramentasDoNavegador,
   LADO_MAXIMO,
   nomeComExtensao,
   type Ferramentas,
@@ -117,6 +118,60 @@ describe('compressão de foto (ADR-0004)', () => {
     const foto = arquivo('foto.webp', 'image/webp', 500)
     const f = ferramentas(4000, 3000, new Blob([new Uint8Array(800)], { type: 'image/webp' }))
     await expect(comprimir(foto, f)).resolves.toBe(foto)
+  })
+
+  it('foto pequena acima do limite do destino é regravada em WEBP, com as mesmas dimensões', async () => {
+    // Um print PNG de 1900 px e 12 MB não passa no aviso (10 MB) como está.
+    const foto = arquivo('print.png', 'image/png', 12 * MB)
+    const f = ferramentas(1900, 1000, new Blob([new Uint8Array(2 * MB)], { type: 'image/webp' }))
+    const saida = await comprimir(foto, f, LIMITES.aviso)
+    expect(f.regravar).toHaveBeenCalledWith(foto, 1900, 1000, 'image/webp', 0.82)
+    expect([saida.name, saida.type, saida.size]).toEqual(['print.webp', 'image/webp', 2 * MB])
+  })
+
+  it('foto pequena acima do limite que não diminui ao regravar: vai a original', async () => {
+    const foto = arquivo('print.png', 'image/png', 12 * MB)
+    const f = ferramentas(1900, 1000, new Blob([new Uint8Array(13 * MB)], { type: 'image/webp' }))
+    await expect(comprimir(foto, f, LIMITES.aviso)).resolves.toBe(foto)
+  })
+
+  it('foto pequena dentro do limite continua indo como está', async () => {
+    const foto = arquivo('foto.jpg', 'image/jpeg', 2 * MB)
+    const f = ferramentas(1600, 1200, new Blob(['x'], { type: 'image/webp' }))
+    await expect(comprimir(foto, f, LIMITES.aviso)).resolves.toBe(foto)
+    expect(f.regravar).not.toHaveBeenCalled()
+  })
+
+  it('regravar em JPEG pinta o fundo de branco antes (PNG transparente não fica preto)', async () => {
+    const passos: string[] = []
+    const contexto = {
+      set fillStyle(cor: string) {
+        passos.push(`cor ${cor}`)
+      },
+      fillRect: vi.fn(() => passos.push('fundo')),
+      drawImage: vi.fn(() => passos.push('imagem')),
+    }
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 10, height: 10, close: vi.fn() })),
+    )
+    const getContext = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(contexto as unknown as CanvasRenderingContext2D)
+    const toBlob = vi
+      .spyOn(HTMLCanvasElement.prototype, 'toBlob')
+      .mockImplementation((pronto, tipo) => pronto(new Blob(['x'], { type: tipo })))
+    try {
+      const png = arquivo('logo.png', 'image/png')
+      await ferramentasDoNavegador.regravar(png, 10, 10, 'image/jpeg', 0.85)
+      expect(passos).toEqual(['cor #ffffff', 'fundo', 'imagem'])
+      passos.length = 0
+      await ferramentasDoNavegador.regravar(png, 10, 10, 'image/webp', 0.82)
+      expect(passos).toEqual(['imagem'])
+    } finally {
+      getContext.mockRestore()
+      toBlob.mockRestore()
+    }
   })
 
   it('foto que o navegador não consegue abrir vai como está (o servidor confere)', async () => {
@@ -236,6 +291,18 @@ describe('enviarArquivo', () => {
       tamanho_bytes: 2000,
     })
     expect((put.opcoes.body as File).size).toBe(2000)
+  })
+
+  it('print pequeno e pesado: regravado para caber no limite do destino', async () => {
+    const fetch = rede()
+    const foto = arquivo('print.png', 'image/png', 12 * MB)
+    const menor = new Blob([new Uint8Array(3000)], { type: 'image/webp' })
+    await enviarArquivo(foto, 'aviso', ferramentas(1900, 1000, menor))
+    const [pedido] = chamadas(fetch)
+    expect(JSON.parse(String(pedido.opcoes.body))).toMatchObject({
+      nome: 'print.webp',
+      tamanho_bytes: 3000,
+    })
   })
 
   it('tipo fora da lista: recusa na tela, sem chamar a API', async () => {

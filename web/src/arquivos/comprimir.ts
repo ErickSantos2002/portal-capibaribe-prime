@@ -1,7 +1,9 @@
 // Comum · Compressão de foto no navegador, antes do envio (ADR-0004; spec do M3, seção 4).
 // Foto com o lado maior acima de 1920 px é reduzida para 1920 px e regravada em WEBP (0,82); se
-// o navegador não grava WEBP, JPEG (0,85). Se o resultado ficar maior, vai o original. PDF vai
-// como está. Arquivo comum: os épicos usam, não editam.
+// o navegador não grava WEBP, JPEG (0,85, com fundo branco no lugar da transparência). Foto
+// menor, mas acima do limite do destino (um print PNG pesado), é regravada com as mesmas
+// dimensões. Se o resultado ficar maior, vai o original. PDF vai como está. Arquivo comum: os
+// épicos usam, não editam.
 import type { TipoArquivo } from './tipos'
 
 export const LADO_MAXIMO = 1920
@@ -57,6 +59,11 @@ export const ferramentasDoNavegador: Ferramentas = {
       tela.height = altura
       const contexto = tela.getContext('2d')
       if (!contexto) return null
+      if (tipo === 'image/jpeg') {
+        // JPEG não tem transparência: sem fundo, o transparente do PNG sai preto.
+        contexto.fillStyle = '#ffffff'
+        contexto.fillRect(0, 0, largura, altura)
+      }
       contexto.drawImage(imagem, 0, 0, largura, altura)
       return await new Promise<Blob | null>((pronto) => tela.toBlob(pronto, tipo, qualidade))
     } finally {
@@ -79,16 +86,19 @@ async function regravarComo(
   return new File([blob], nomeComExtensao(arquivo.name, tipo), { type: tipo })
 }
 
-/** O arquivo como deve ser enviado: a foto reduzida, ou o próprio arquivo. Nunca falha: uma foto
- *  que o navegador não abre vai como está, e o servidor confere o conteúdo. */
+/** O arquivo como deve ser enviado: a foto reduzida, ou o próprio arquivo. `limite` é o tamanho
+ *  máximo do destino (`LIMITES[finalidade]`): a foto pequena acima dele também é regravada.
+ *  Nunca falha: uma foto que o navegador não abre vai como está, e o servidor confere o
+ *  conteúdo; a que continua grande é recusada na tela, pelo tamanho. */
 export async function comprimir(
   arquivo: File,
   ferramentas: Ferramentas = ferramentasDoNavegador,
+  limite = Infinity,
 ): Promise<File> {
   if (!arquivo.type.startsWith('image/')) return arquivo
   try {
     const { largura, altura } = await ferramentas.medir(arquivo)
-    if (Math.max(largura, altura) <= LADO_MAXIMO) return arquivo
+    if (Math.max(largura, altura) <= LADO_MAXIMO && arquivo.size <= limite) return arquivo
     const novo = dimensoesReduzidas(largura, altura)
     const reduzido =
       (await regravarComo(arquivo, ferramentas, novo.largura, novo.altura, 'image/webp', 0.82)) ??

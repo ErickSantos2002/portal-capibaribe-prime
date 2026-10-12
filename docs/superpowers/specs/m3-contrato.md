@@ -226,8 +226,10 @@ tela                          API                                   R2
   bucket (travado). É pouco e não aparece para ninguém; aceito (dúvida 7).
 - **Compressão no navegador** (`web/src/arquivos/comprimir.ts`, ADR-0004): imagem com o lado
   maior acima de 1920 px é reduzida para 1920 px e regravada em WEBP (qualidade 0,82; se o
-  navegador não grava WEBP, JPEG 0,85); se o resultado ficar maior que o original, vai o
-  original. PDF vai como está. A compressão acontece **antes** do pedido (o tamanho declarado
+  navegador não grava WEBP, JPEG 0,85, com fundo branco no lugar da transparência); a foto
+  menor que isso, mas acima do limite do destino (um print PNG de 12 MB para um aviso), é
+  regravada com as mesmas dimensões. Se o resultado ficar maior que o original, vai o original
+  (e a tela recusa pelo tamanho, se for o caso). PDF vai como está. A compressão acontece **antes** do pedido (o tamanho declarado
   já é o comprimido) e troca a extensão do nome (`foto.jpg` → `foto.webp`).
 
 ## 5. Contrato da API

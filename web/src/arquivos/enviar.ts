@@ -5,7 +5,7 @@
 import { ErroDaApi } from '../api/cliente'
 import { confirmarEnvio, pedirEnvio } from './api'
 import { comprimir, ferramentasDoNavegador, type Ferramentas } from './comprimir'
-import { problemaNaTela } from './limites'
+import { LIMITES, problemaNaTela } from './limites'
 import type { ArquivoEnviado, Finalidade, TipoArquivo } from './tipos'
 
 export const MENSAGEM_NAO_CHEGOU =
@@ -29,7 +29,7 @@ export async function enviarArquivo(
   const tipoRecusado = problemaNaTela({ type: escolhido.type, size: 1 }, finalidade)
   if (tipoRecusado) throw recusadoNaTela(tipoRecusado)
 
-  const arquivo = await comprimir(escolhido, ferramentas)
+  const arquivo = await comprimir(escolhido, ferramentas, LIMITES[finalidade])
   const problema = problemaNaTela(arquivo, finalidade)
   if (problema) throw recusadoNaTela(problema)
 
