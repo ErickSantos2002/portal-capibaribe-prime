@@ -1,0 +1,328 @@
+/* Épico A do M3 · Documentos. Só os tokens de `estilo.css` (verde-mata, ipê, papel, folha).
+   A peça marcante é a "folha" do documento aberto: uma página com o canto dobrado em ipê, o
+   mesmo papel que a pessoa imagina quando pensa em "documento do condomínio". O resto fica
+   quieto: listas e formulários como os dos avisos. */
+
+/* ---------- lista ---------- */
+
+.doc-busca {
+  margin-bottom: 4px;
+}
+
+.doc-busca label {
+  margin-top: 0;
+}
+
+.doc-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ipe-suave);
+  color: var(--tinta);
+  font-weight: 700;
+}
+
+.doc-marca svg {
+  color: var(--ipe-forte);
+}
+
+.doc-rodape {
+  margin: 24px 0 0;
+}
+
+.doc-intro {
+  margin: 0 0 4px;
+}
+
+/* Públicos: cada item tem os próprios botões (sem a seta de "abrir a página"). */
+.item.doc-publico {
+  grid-template-columns: 1fr;
+}
+
+.doc-publico-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.doc-publico-acoes .botao {
+  width: auto;
+  min-height: 48px;
+  flex: 1 1 140px;
+  margin: 0;
+}
+
+/* ---------- documento aberto ---------- */
+
+.doc-folha {
+  position: relative;
+  margin: 4px 0 16px;
+  padding: 22px 20px 20px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio) 0 var(--r-medio) var(--r-medio);
+  background:
+    linear-gradient(225deg, var(--papel) 0 26px, transparent 26px) top right / 38px 38px
+      no-repeat,
+    var(--folha);
+  box-shadow: var(--sombra);
+}
+
+/* O canto dobrado: um triângulo ipê embaixo do recorte. */
+.doc-folha::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(225deg, transparent 0 50%, var(--ipe) 50%);
+  border-bottom-left-radius: 6px;
+}
+
+.doc-assunto {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  color: var(--mata);
+  font-weight: 700;
+}
+
+.doc-data {
+  margin: 0;
+  font-size: 18px;
+}
+
+.doc-arquivo {
+  margin: 14px 0 0;
+  font-weight: 700;
+}
+
+.doc-versao {
+  margin: 2px 0 0;
+}
+
+.doc-botoes {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.doc-botoes .botao + .botao {
+  margin-top: 0;
+}
+
+.doc-quem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--tinta-suave);
+}
+
+.doc-quem svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.doc-versoes .ajuda {
+  margin: -4px 0 10px;
+}
+
+.doc-versoes ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-versao-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--linha);
+}
+
+.doc-versao-item:first-child {
+  border-top: 0;
+}
+
+.doc-versao-item > span {
+  display: grid;
+  gap: 2px;
+}
+
+.doc-versao-item .botao {
+  width: auto;
+  min-height: 48px;
+  margin: 0;
+}
+
+.doc-acoes {
+  display: grid;
+  gap: 10px;
+}
+
+.doc-acoes .botao + .botao,
+.doc-acoes .aviso-caixa {
+  margin: 0;
+}
+
+.doc-acoes .aviso-caixa .botao {
+  margin-top: 12px;
+}
+
+/* ---------- formulários ---------- */
+
+.doc-form > :first-child {
+  margin-top: 0;
+}
+
+.doc-lado {
+  display: grid;
+  gap: 0 16px;
+}
+
+.doc-rotulo {
+  margin: 18px 0 6px;
+  font-weight: 700;
+}
+
+/* Escolher o arquivo: o rótulo grande é o alvo do toque; o foco do input aparece nele. */
+.doc-escolher {
+  cursor: pointer;
+}
+
+.doc-escolher:focus-within {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
+.doc-escolhido {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-pequeno);
+  background: var(--mata-suave);
+  overflow-wrap: anywhere;
+}
+
+.doc-escolhido svg {
+  flex: none;
+  color: var(--mata);
+}
+
+.doc-escolhido > span {
+  display: grid;
+}
+
+.doc-erro-campo {
+  margin: 6px 0 0;
+  color: var(--erro);
+  font-weight: 700;
+}
+
+.doc-niveis {
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.doc-niveis legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.doc-nivel {
+  align-items: flex-start;
+  margin: 0 0 10px;
+}
+
+.doc-nivel input {
+  margin-top: 2px;
+}
+
+.doc-nivel > span {
+  display: grid;
+  gap: 2px;
+}
+
+.doc-nivel .suave {
+  font-weight: 400;
+}
+
+.doc-avisar {
+  margin-top: 18px;
+}
+
+.doc-avisar .opcao {
+  margin-bottom: 0;
+}
+
+.doc-enviar {
+  margin-top: 28px;
+}
+
+.doc-de {
+  display: grid;
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+/* ---------- o documento no aviso automático (RF-33) ---------- */
+
+.doc-do-aviso {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  margin: 20px 0;
+  padding: 14px 16px;
+  border: 2px solid var(--mata);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+  color: inherit;
+  text-decoration: none;
+}
+
+.doc-do-aviso:hover {
+  background: var(--mata-suave);
+}
+
+.doc-do-aviso svg {
+  flex: none;
+  color: var(--mata);
+}
+
+.doc-do-aviso > span {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+
+.doc-do-aviso b {
+  color: var(--mata);
+}
+
+.doc-do-aviso-titulo {
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 600px) {
+  .doc-lado {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .doc-botoes {
+    grid-template-columns: 1fr 1fr;
+  }
+}
