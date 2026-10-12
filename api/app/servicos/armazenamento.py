@@ -5,8 +5,9 @@ Arquivo comum: os épicos usam, não editam.
 O conteúdo nunca passa pela API (a Vercel recusa corpo acima de 4,5 MB): a API dá ao navegador
 uma URL assinada, curta, e confere depois. Duas pastas no bucket:
 
-- `envios/<chave>`: onde o navegador põe o arquivo (PUT, 10 minutos). Pode ser apagado; o R2
-  apaga sozinho o que ficar mais de 1 dia (regra de ciclo de vida).
+- `envios/<chave>`: onde o navegador põe o arquivo (PUT, 10 minutos, com o tipo e o tamanho
+  assinados). Pode ser apagado; o R2 apaga sozinho o que ficar mais de 1 dia (regra de ciclo
+  de vida), então apagar aqui é só faxina: se falhar, nada quebra.
 - `arquivos/<chave>`: o que foi conferido e publicado. **Nunca apagado nem sobrescrito**: o R2
   tem uma trava nesta pasta, e esta camada nem tem como pedir isso (só recebe a chave, e o único
   "apagar" é o do envio).
@@ -19,6 +20,8 @@ uma URL assinada, curta, e confere depois. Duas pastas no bucket:
 import hashlib
 import re
 import unicodedata
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import cache
@@ -47,6 +50,10 @@ _FORA_DO_ASCII_SEGURO = re.compile(r"[^A-Za-z0-9 ._()-]")
 
 class ObjetoAusente(Exception):
     """O envio não está no bucket (o navegador não mandou, ou já foi apagado)."""
+
+
+class FalhaNoArmazenamento(Exception):
+    """O bucket não respondeu como devia (fora do ar, chave sem permissão, bucket errado)."""
 
 
 class EnvioMudou(Exception):
@@ -89,6 +96,7 @@ class Armazenamento(Protocol):
 
     def publicar(self, chave: str, tipo: str, *, etag: str) -> None: ...
 
+    # Quem chama apaga o envio depois de publicar (e não falha se não conseguir).
     def descartar_envio(self, chave: str) -> None: ...
 
 
@@ -204,58 +212,71 @@ class ArmazenamentoS3:
         )
         return UrlAssinada(url=url, expira_em=_agora() + VALIDADE_LEITURA)
 
-    def envio_recebido(self, chave: str) -> EnvioRecebido | None:
-        from botocore.exceptions import ClientError
+    @contextmanager
+    def _falando_com_o_bucket(self, caminho: str) -> Iterator[None]:
+        """Traduz os erros do boto3: "não existe" (`ObjetoAusente`), "ETag mudou"
+        (`EnvioMudou`) e qualquer outro (`FalhaNoArmazenamento`, que a rota responde como 503,
+        nunca como erro interno cru)."""
+        from botocore.exceptions import BotoCoreError, ClientError
 
         try:
-            resposta = self.cliente.head_object(
-                Bucket=self._bucket, Key=PASTA_ENVIOS + _conferir(chave)
-            )
+            yield
         except ClientError as erro:
-            if _codigo(erro) in _NAO_EXISTE:
-                return None
-            raise
+            codigo = _codigo(erro)
+            if codigo in _NAO_EXISTE:
+                raise ObjetoAusente(caminho) from erro
+            if codigo in _CONDICAO_FALHOU:
+                raise EnvioMudou(caminho) from erro
+            raise FalhaNoArmazenamento(f"{codigo} em {caminho}") from erro
+        except BotoCoreError as erro:
+            raise FalhaNoArmazenamento(f"{type(erro).__name__} em {caminho}") from erro
+
+    def _cabecalho(self, caminho: str) -> dict | None:
+        try:
+            with self._falando_com_o_bucket(caminho):
+                return self.cliente.head_object(Bucket=self._bucket, Key=caminho)
+        except ObjetoAusente:
+            return None
+
+    def envio_recebido(self, chave: str) -> EnvioRecebido | None:
+        resposta = self._cabecalho(PASTA_ENVIOS + _conferir(chave))
+        if resposta is None:
+            return None
         return EnvioRecebido(tamanho=int(resposta["ContentLength"]), etag=resposta["ETag"])
 
     def inicio_do_envio(self, chave: str, n: int = 16, *, etag: str) -> bytes:
-        from botocore.exceptions import ClientError
-
         caminho = PASTA_ENVIOS + _conferir(chave)
-        try:
+        with self._falando_com_o_bucket(caminho):
             resposta = self.cliente.get_object(
                 Bucket=self._bucket, Key=caminho, Range=f"bytes=0-{n - 1}", IfMatch=etag
             )
-        except ClientError as erro:
-            if _codigo(erro) in _NAO_EXISTE:
-                raise ObjetoAusente(caminho) from erro
-            if _codigo(erro) in _CONDICAO_FALHOU:
-                raise EnvioMudou(caminho) from erro
-            raise
-        return resposta["Body"].read(n)
+            return resposta["Body"].read(n)
 
     def publicar(self, chave: str, tipo: str, *, etag: str) -> None:
-        from botocore.exceptions import ClientError
-
-        _conferir(chave)
-        try:
+        destino = PASTA_ARQUIVOS + _conferir(chave)
+        # Idempotente: uma tentativa anterior pode ter copiado e falhado depois (a linha ficou
+        # pendente). Copiar por cima de arquivos/ travado falharia sempre no R2.
+        publicado = self._cabecalho(destino)
+        if publicado is not None:
+            if publicado["ETag"] == etag:
+                return
+            raise ObjetoTravado(destino)
+        with self._falando_com_o_bucket(PASTA_ENVIOS + chave):
             # Só copia se o envio ainda é o conferido (o R2 respeita o CopySourceIfMatch).
             self.cliente.copy_object(
                 Bucket=self._bucket,
-                Key=PASTA_ARQUIVOS + chave,
+                Key=destino,
                 CopySource={"Bucket": self._bucket, "Key": PASTA_ENVIOS + chave},
                 CopySourceIfMatch=etag,
                 ContentType=tipo,
                 MetadataDirective="REPLACE",
             )
-        except ClientError as erro:
-            if _codigo(erro) in _CONDICAO_FALHOU:
-                raise EnvioMudou(PASTA_ENVIOS + chave) from erro
-            raise
-        self.descartar_envio(chave)
 
     def descartar_envio(self, chave: str) -> None:
+        caminho = PASTA_ENVIOS + _conferir(chave)
         # Apagar o que não existe não é erro no S3.
-        self.cliente.delete_object(Bucket=self._bucket, Key=PASTA_ENVIOS + _conferir(chave))
+        with self._falando_com_o_bucket(caminho):
+            self.cliente.delete_object(Bucket=self._bucket, Key=caminho)
 
 
 class ArmazenamentoFalso:
@@ -310,12 +331,12 @@ class ArmazenamentoFalso:
         return self._envio(chave, etag)[:n]
 
     def publicar(self, chave: str, tipo: str, *, etag: str) -> None:
-        conteudo = self._envio(chave, etag)
-        destino = PASTA_ARQUIVOS + chave
+        destino = PASTA_ARQUIVOS + _conferir(chave)
         if destino in self.objetos:
+            if _etag_de(self.objetos[destino][0]) == etag:
+                return
             raise ObjetoTravado(destino)
-        self.objetos[destino] = (conteudo, tipo)
-        del self.objetos[PASTA_ENVIOS + chave]
+        self.objetos[destino] = (self._envio(chave, etag), tipo)
 
     def descartar_envio(self, chave: str) -> None:
         self.objetos.pop(PASTA_ENVIOS + _conferir(chave), None)

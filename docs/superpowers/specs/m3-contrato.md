@@ -147,7 +147,8 @@ class Armazenamento(Protocol):
         # GET com Range e If-Match; ETag diferente → EnvioMudou
     def publicar(self, chave: str, tipo: str, *, etag: str) -> None: ...
         # copia envios/<chave> → arquivos/<chave> (com o tipo conferido) só se o envio ainda
-        # tem este ETag (CopySourceIfMatch; senão EnvioMudou), e apaga o envio
+        # tem este ETag (CopySourceIfMatch; senão EnvioMudou). Idempotente: arquivos/<chave>
+        # já publicado com o mesmo ETag conta como publicado; com outro, ObjetoTravado
     def descartar_envio(self, chave: str) -> None: ...          # apaga envios/<chave>
 ```
 
@@ -164,6 +165,12 @@ class Armazenamento(Protocol):
   `arquivo_nao_chegou` e o arquivo continua pendente; confirmar de novo confere o conteúdo que
   estiver lá (dúvida 13). O `moto` ignora o `CopySourceIfMatch`: o teste confere que a cópia o
   pede, e o falso imita a recusa.
+- **Erros do bucket:** o `ArmazenamentoS3` traduz os do boto3 em `ObjetoAusente`,
+  `EnvioMudou` ou `FalhaNoArmazenamento`; nenhum `ClientError` cru chega à rota. A
+  confirmação responde 503 `armazenamento_indisponivel` à `FalhaNoArmazenamento` (o arquivo
+  continua pendente) e 409 `arquivo_nao_chegou` ao `ObjetoTravado`.
+- **Apagar o envio é faxina:** a API apaga `envios/<chave>` depois do commit (publicado) ou na
+  recusa, e uma falha aí só vai para o log; a regra de ciclo de vida do R2 apaga o resto.
 - **O tamanho declarado entra na assinatura do PUT** (`ContentLength`): o R2 recusa o envio de
   outro tamanho. Sem isso, a mesma URL aceitaria gigabytes declarando 209 bytes.
 - `obter_armazenamento()` é dependência FastAPI: `ArmazenamentoS3` com a configuração da seção
@@ -245,7 +252,7 @@ do corpo já são as de verdade. O que vale antes e depois dos épicos fica em
 | Rota | Quem | Corpo | Resposta | Erros |
 |---|---|---|---|---|
 | `POST /api/arquivos` | `Gestao` | `PedirEnvio` | 201 `EnvioAutorizado` | 422, 409 `muitos_arquivos`, 503 `arquivos_desligados`, 401, 403 |
-| `POST /api/arquivos/{arquivo_id}/confirmar` | `Gestao` | — | 200 `ArquivoEnviado` | 404 `arquivo_nao_encontrado`, 409 `arquivo_nao_chegou`, 422 `arquivo_recusado`, 503, 401, 403 |
+| `POST /api/arquivos/{arquivo_id}/confirmar` | `Gestao` | — | 200 `ArquivoEnviado` | 404 `arquivo_nao_encontrado`, 409 `arquivo_nao_chegou`, 422 `arquivo_recusado`, 503 `arquivos_desligados` ou `armazenamento_indisponivel`, 401, 403 |
 
 - `PedirEnvio`: `nome` (o nome do arquivo no aparelho; sem controle nem caracteres de direção),
   `tipo` (`TipoArquivo`), `tamanho_bytes` (≥ 1), `finalidade` (`Finalidade`). Mensagens: "O
@@ -259,7 +266,8 @@ do corpo já são as de verdade. O que vale antes e depois dos épicos fica em
   e envie de novo."; `arquivo_recusado` "Este arquivo não é um PDF nem uma foto (JPEG, PNG ou
   WEBP). Escolha outro." (conteúdo) ou a do limite (tamanho); `muitos_arquivos` "Muitos
   arquivos enviados hoje. Tente de novo amanhã."; `arquivos_desligados` "O envio de arquivos
-  ainda não está ligado no Portal.".
+  ainda não está ligado no Portal."; `armazenamento_indisponivel` "Não deu para guardar o
+  arquivo agora. Tente de novo em alguns minutos.".
 
 ### 5.2 Épico A · Documentos (`app/rotas/documentos.py`)
 

@@ -13,6 +13,7 @@ unidade?), `como_enviado` (o `ArquivoEnviado` de uma linha) e `link_do_arquivo` 
 de leitura, depois de o épico conferir quem pode ver).
 """
 
+import logging
 import secrets
 
 import psycopg
@@ -31,8 +32,16 @@ from app.esquemas.arquivos import (
 from app.modelos import Arquivo
 from app.modelos.arquivos import LIMITE_POR_FINALIDADE
 from app.seguranca.dependencias import Logado
-from app.servicos.armazenamento import Armazenamento, EnvioMudou, ObjetoAusente
+from app.servicos.armazenamento import (
+    Armazenamento,
+    EnvioMudou,
+    FalhaNoArmazenamento,
+    ObjetoAusente,
+    ObjetoTravado,
+)
 from app.servicos.historico import Acao, registrar
+
+log = logging.getLogger(__name__)
 
 # Quantos bytes do começo bastam para reconhecer os quatro tipos (o WEBP precisa de 12).
 BYTES_DA_ASSINATURA = 16
@@ -60,6 +69,15 @@ def exigir(armazenamento: Armazenamento | None) -> Armazenamento:
             503, "arquivos_desligados", "O envio de arquivos ainda não está ligado no Portal."
         )
     return armazenamento
+
+
+def _descartar_sem_falhar(armazenamento: Armazenamento, chave: str) -> None:
+    """Apaga o envio; se o bucket falhar, a regra de ciclo de vida de `envios/` apaga em até
+    ~2 dias. Nunca derruba a resposta por isso."""
+    try:
+        armazenamento.descartar_envio(chave)
+    except FalhaNoArmazenamento:
+        log.warning("envio não apagado (o ciclo de vida do bucket apaga depois)", exc_info=True)
 
 
 def _nao_encontrado() -> ErroApi:
@@ -130,7 +148,7 @@ def _recusar(
     mensagem: str,
 ) -> ErroApi:
     """Apaga o envio e a linha, registra (sem o nome do arquivo) e devolve o 422."""
-    armazenamento.descartar_envio(arquivo.chave)
+    _descartar_sem_falhar(armazenamento, arquivo.chave)
     registrar(
         db,
         Acao.arquivo_recusado,
@@ -154,6 +172,23 @@ def confirmar_envio(
     db: Session, logado: Logado, arquivo_id: int, armazenamento: Armazenamento | None
 ) -> ArquivoEnviado:
     armazenamento = exigir(armazenamento)
+    try:
+        return _confirmar(db, logado, arquivo_id, armazenamento)
+    except FalhaNoArmazenamento as erro:
+        # O bucket falhou (fora do ar, chave errada): nada foi gravado, o arquivo continua
+        # pendente e a pessoa tenta de novo.
+        log.exception("bucket de arquivos falhou ao confirmar")
+        db.rollback()
+        raise ErroApi(
+            503,
+            "armazenamento_indisponivel",
+            "Não deu para guardar o arquivo agora. Tente de novo em alguns minutos.",
+        ) from erro
+
+
+def _confirmar(
+    db: Session, logado: Logado, arquivo_id: int, armazenamento: Armazenamento
+) -> ArquivoEnviado:
     # Trava a linha: duas confirmações ao mesmo tempo não publicam duas vezes.
     arquivo = db.scalars(
         select(Arquivo)
@@ -221,16 +256,23 @@ def confirmar_envio(
             mensagem=MSG_CONTEUDO,
         )
 
-    # Publica antes de gravar: se o commit falhar, sobra um objeto travado sem linha (pouco e
-    # invisível); o contrário deixaria uma linha confirmada apontando para nada.
+    # Publica antes de gravar: se o commit falhar, sobra o objeto travado com a linha pendente,
+    # e a confirmação seguinte vê que já está publicado (mesmo ETag) e grava; o contrário
+    # deixaria uma linha confirmada apontando para nada. O envio só é apagado depois do commit.
     try:
         armazenamento.publicar(arquivo.chave, encontrado, etag=recebido.etag)
     except (ObjetoAusente, EnvioMudou) as erro:
+        raise nao_chegou from erro
+    except ObjetoTravado as erro:
+        # Já há outro conteúdo publicado nesta chave (não deveria acontecer: a chave é nova a
+        # cada pedido). Fica pendente; a tela pede um envio novo, com outra chave.
+        log.error("arquivos/%s já existe com outro conteúdo", arquivo.chave)
         raise nao_chegou from erro
     arquivo.tipo = encontrado
     arquivo.tamanho_bytes = tamanho
     arquivo.confirmado_em = func.now()
     db.commit()
+    _descartar_sem_falhar(armazenamento, arquivo.chave)
     return como_enviado(arquivo)
 
 

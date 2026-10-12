@@ -5,7 +5,8 @@
 - `POST /api/arquivos/{arquivo_id}/confirmar` → `ArquivoEnviado` (`Gestao`, só quem pediu): o
   servidor confere tamanho e conteúdo; recusado (422 `arquivo_recusado`) é apagado
 
-503 `arquivos_desligados` sem a configuração do bucket. Regras em `app/servicos/arquivos.py`.
+503 `arquivos_desligados` sem a configuração do bucket; 503 `armazenamento_indisponivel` se o
+bucket falhar na confirmação (o arquivo continua pendente). Regras em `app/servicos/arquivos.py`.
 """
 
 from fastapi import APIRouter, Depends

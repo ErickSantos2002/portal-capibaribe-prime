@@ -13,6 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.esquemas.arquivos import MSG_TIPO
+from app.servicos.armazenamento import FalhaNoArmazenamento
 from app.servicos.arquivos import arquivo_utilizavel, link_do_arquivo, tipo_pelo_conteudo
 from app.servicos.visibilidade import niveis_que_ve
 from testes.conftest import ADMIN, COMISSAO, COMUM, NAO_ATIVADA
@@ -335,6 +336,76 @@ def test_objeto_de_outro_tamanho_que_o_declarado_nao_e_publicado(logar, armazena
     assert resposta.status_code == 409
     assert resposta.json()["codigo"] == "arquivo_nao_chegou"
     assert f"arquivos/{_chave(envio)}" not in armazenamento.objetos
+    assert _linha(engine_app, envio["arquivo_id"])[2] is None
+
+
+def test_publicado_numa_tentativa_que_nao_gravou_confirma_na_seguinte(
+    logar, armazenamento, engine_app
+):
+    # A cópia para arquivos/ aconteceu, mas a linha ficou pendente (falhou depois). Copiar de
+    # novo por cima de arquivos/ travado daria erro para sempre no R2.
+    admin = logar(ADMIN)
+    envio = _pedido(admin)
+    chave = _chave(envio)
+    armazenamento.receber(chave, PDF)
+    armazenamento.objetos[f"arquivos/{chave}"] = (PDF, "application/pdf")
+    resposta = _confirmar(admin, envio["arquivo_id"])
+    assert resposta.status_code == 200, resposta.text
+    assert armazenamento.objetos == {f"arquivos/{chave}": (PDF, "application/pdf")}
+    assert _linha(engine_app, envio["arquivo_id"])[2] is not None
+
+
+def test_publicado_com_outro_conteudo_nao_vira_500(logar, armazenamento, engine_app):
+    admin = logar(ADMIN)
+    envio = _pedido(admin)
+    chave = _chave(envio)
+    armazenamento.receber(chave, PDF)
+    armazenamento.objetos[f"arquivos/{chave}"] = (JPEG, "image/jpeg")
+    resposta = _confirmar(admin, envio["arquivo_id"])
+    assert resposta.status_code == 409
+    assert resposta.json()["codigo"] == "arquivo_nao_chegou"
+    assert armazenamento.objetos[f"arquivos/{chave}"] == (JPEG, "image/jpeg")
+    assert _linha(engine_app, envio["arquivo_id"])[2] is None
+
+
+def test_falha_ao_descartar_o_envio_nao_impede_confirmar(
+    logar, armazenamento, engine_app, monkeypatch
+):
+    # O ciclo de vida de 1 dia do R2 limpa o que sobrar em envios/.
+    def falhar(chave):
+        raise FalhaNoArmazenamento("delete_object")
+
+    monkeypatch.setattr(armazenamento, "descartar_envio", falhar)
+    admin = logar(ADMIN)
+    envio = _pedido(admin)
+    chave = _chave(envio)
+    armazenamento.receber(chave, PDF)
+    assert _confirmar(admin, envio["arquivo_id"]).status_code == 200
+    assert armazenamento.objetos[f"arquivos/{chave}"] == (PDF, "application/pdf")
+    assert _linha(engine_app, envio["arquivo_id"])[2] is not None
+    # Na recusa também: a linha sai e o histórico registra, mesmo sem apagar o envio.
+    recusado = _pedido(admin, tamanho_bytes=len(EXE))
+    armazenamento.receber(_chave(recusado), EXE)
+    assert _confirmar(admin, recusado["arquivo_id"]).json()["codigo"] == "arquivo_recusado"
+    assert _linha(engine_app, recusado["arquivo_id"]) is None
+
+
+def test_bucket_fora_do_ar_responde_503_sem_mexer_no_arquivo(
+    logar, armazenamento, engine_app, monkeypatch
+):
+    def fora_do_ar(chave):
+        raise FalhaNoArmazenamento("head_object")
+
+    admin = logar(ADMIN)
+    envio = _pedido(admin)
+    armazenamento.receber(_chave(envio), PDF)
+    monkeypatch.setattr(armazenamento, "envio_recebido", fora_do_ar)
+    resposta = _confirmar(admin, envio["arquivo_id"])
+    assert resposta.status_code == 503
+    assert resposta.json() == {
+        "codigo": "armazenamento_indisponivel",
+        "mensagem": "Não deu para guardar o arquivo agora. Tente de novo em alguns minutos.",
+    }
     assert _linha(engine_app, envio["arquivo_id"])[2] is None
 
 

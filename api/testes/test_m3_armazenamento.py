@@ -7,6 +7,7 @@ Nenhum teste fala com o R2 de verdade.
 
 import hashlib
 import os
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, unquote, urlsplit
 
@@ -26,6 +27,7 @@ from app.servicos.armazenamento import (  # noqa: E402
     ArmazenamentoS3,
     EnvioMudou,
     EnvioRecusado,
+    FalhaNoArmazenamento,
     ObjetoAusente,
     ObjetoTravado,
     disposicao,
@@ -116,11 +118,27 @@ def test_inicio_do_envio_que_mudou_falha(arm):
         arm.inicio_do_envio(CHAVE, etag=etag)
 
 
-def test_publicar_copia_com_o_tipo_conferido_e_apaga_o_envio(arm):
+def test_publicar_copia_com_o_tipo_conferido(arm):
     _receber(arm, CHAVE, PDF, "image/jpeg")
     arm.publicar(CHAVE, "application/pdf", etag=_etag(arm))
     assert _publicado(arm, CHAVE) == (PDF, "application/pdf")
-    assert arm.envio_recebido(CHAVE) is None
+
+
+def test_publicar_de_novo_o_mesmo_conteudo_nao_falha(arm):
+    # Tentativa anterior copiou e não gravou a linha: a seguinte vê arquivos/ e segue.
+    _receber(arm, CHAVE, PDF)
+    arm.publicar(CHAVE, "application/pdf", etag=_etag(arm))
+    arm.publicar(CHAVE, "application/pdf", etag=_etag(arm))
+    assert _publicado(arm, CHAVE) == (PDF, "application/pdf")
+
+
+def test_publicar_por_cima_de_outro_conteudo_e_objeto_travado(arm):
+    _receber(arm, CHAVE, PDF)
+    arm.publicar(CHAVE, "application/pdf", etag=_etag(arm))
+    _receber(arm, CHAVE, PDF + b"outro")
+    with pytest.raises(ObjetoTravado):
+        arm.publicar(CHAVE, "application/pdf", etag=_etag(arm))
+    assert _publicado(arm, CHAVE) == (PDF, "application/pdf")
 
 
 def test_descartar_so_mexe_no_envio(arm):
@@ -213,9 +231,33 @@ def test_url_de_leitura_forca_tipo_e_nome(s3):
     assert consulta["response-cache-control"] == "private, max-age=300"
 
 
-def test_publicar_no_s3_de_verdade_falha_alto_se_o_envio_sumiu(s3):
-    with pytest.raises(Exception):  # noqa: B017 - o erro do boto3 sobe
+def test_publicar_no_s3_se_o_envio_sumiu_e_objeto_ausente(s3):
+    with pytest.raises(ObjetoAusente):
         s3.publicar(CHAVE, "application/pdf", etag='"x"')
+
+
+def test_publicado_com_o_mesmo_etag_nao_e_copiado_de_novo(s3):
+    # No R2, copiar por cima de arquivos/ travado falha sempre (era 500 permanente).
+    copias = []
+    s3.cliente.meta.events.register(
+        "before-parameter-build.s3.CopyObject", lambda params, **_: copias.append(params)
+    )
+    _receber(s3, CHAVE, PDF)
+    s3.publicar(CHAVE, "application/pdf", etag=_etag(s3))
+    s3.publicar(CHAVE, "application/pdf", etag=_etag(s3))
+    assert len(copias) == 1
+
+
+def test_erro_do_bucket_vira_falha_no_armazenamento(s3):
+    # Bucket que não existe (ou R2 fora do ar): nada de ClientError cru na rota.
+    outro = ArmazenamentoS3(replace(CONFIG, bucket="bucket-que-nao-existe"))
+    for chamada in (
+        lambda: outro.inicio_do_envio(CHAVE, etag='"x"'),
+        lambda: outro.publicar(CHAVE, "application/pdf", etag='"x"'),
+        lambda: outro.descartar_envio(CHAVE),
+    ):
+        with pytest.raises(FalhaNoArmazenamento):
+            chamada()
 
 
 def test_publicar_no_s3_copia_so_se_o_envio_ainda_e_o_conferido(s3):
