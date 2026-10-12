@@ -212,28 +212,25 @@ describe('encaixes do épico A ligados', () => {
   })
 })
 
-describe('encaixes do épico A ainda não mostram nada', () => {
+// Épico A: o bloco "ainda não mostram nada" virou este (dúvidas do épico A, item 8). O que cada
+// encaixe mostra está em `documentos/documentos.test.tsx`.
+describe('encaixes do épico A mostram o que devem', () => {
   afterEach(cleanup)
 
-  it('sem rotas e sem item no menu', async () => {
+  it('rotas dos documentos e item no menu para toda unidade', async () => {
     const { rotasDocumentos } =
       await vi.importActual<typeof import('./documentos/rotas')>('./documentos/rotas')
     const { itemDocumentos } = await vi.importActual<typeof import('./documentos/menu')>('./documentos/menu')
-    expect(rotasDocumentos).toEqual([])
-    expect(itemDocumentos(eu())).toBeNull()
-    expect(itemDocumentos(eu(['admin']))).toBeNull()
+    expect(rotasDocumentos).not.toEqual([])
+    expect(itemDocumentos(eu())?.para).toBe('/documentos')
+    expect(itemDocumentos(eu(['admin']))?.para).toBe('/documentos')
   })
 
-  it('entrada sem link e aviso sem botão', async () => {
-    const { LinkDocumentosPublicos } = await vi.importActual<
-      typeof import('./documentos/LinkDocumentosPublicos')
-    >('./documentos/LinkDocumentosPublicos')
+  it('aviso sem documento continua sem botão', async () => {
     const { DocumentoDoAviso } = await vi.importActual<typeof import('./documentos/DocumentoDoAviso')>(
       './documentos/DocumentoDoAviso',
     )
-    expect(render(createElement(LinkDocumentosPublicos)).container.innerHTML).toBe('')
-    const documento = { id: 7, titulo: 'Ata de outubro' }
-    expect(render(createElement(DocumentoDoAviso, { documento })).container.innerHTML).toBe('')
+    expect(render(createElement(DocumentoDoAviso, { documento: null })).container.innerHTML).toBe('')
   })
 })
 

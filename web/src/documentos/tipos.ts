@@ -22,11 +22,16 @@ export interface NovoDocumento {
   arquivo_id: number
   /** RF-33: cria o aviso automático (não vale para `gestao`). */
   avisar_unidades?: boolean
+  /** Linha da gestão que vai no texto do aviso automático (revisão UX, U13). */
+  nota_do_aviso?: string | null
 }
 
 /** `POST /api/documentos/{id}/versoes` (H-19). */
 export interface NovaVersaoDocumento {
   arquivo_id: number
+  /** Aviso no mural com "o que mudou" (revisão UX, U3); desmarcado na tela. */
+  avisar_unidades?: boolean
+  nota_do_aviso?: string | null
 }
 
 export interface VersaoDocumento {

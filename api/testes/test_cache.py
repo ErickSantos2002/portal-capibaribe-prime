@@ -14,10 +14,6 @@ pytestmark = pytest.mark.usefixtures("predio")
 # Rotas do contrato que ainda respondem 501 (spec do M3, seção 5). Cada épico tira daqui as
 # dele quando implementar: o épico A, as `/api/documentos…`; o épico B, a do link do anexo.
 EM_CONSTRUCAO: set[str] = {
-    "/api/documentos",
-    "/api/documentos/publicos",
-    "/api/documentos/{documento_id}",
-    "/api/documentos/{documento_id}/versoes/{versao}/link",
     "/api/avisos/{aviso_id}/anexos/{arquivo_id}/link",
 }
 # Rotas que dependem de um documento ou arquivo que este teste não cria: depois do épico, 404
