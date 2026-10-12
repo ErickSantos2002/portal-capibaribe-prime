@@ -169,6 +169,8 @@ s3t "$R2_ENDPOINT" "$R2_BUCKET" criar
 BUCKET_ARQUIVOS=portal-capibaribe-arquivos BUCKET_COPIA=portal-capibaribe-copia-arquivos
 s3t "$R2_ENDPOINT" "$BUCKET_ARQUIVOS" criar
 s3t "$B2_ENDPOINT" "$BUCKET_COPIA" criar
+# Como o bucket do B2 ("Keep all versions", passo B.2): reenviar ou esconder não perde a versão.
+s3t "$B2_ENDPOINT" "$BUCKET_COPIA" versionar
 arq() { s3t "$R2_ENDPOINT" "$BUCKET_ARQUIVOS" "$@"; }
 b2() { s3t "$B2_ENDPOINT" "$BUCKET_COPIA" "$@"; }
 # As variáveis do workflow para o bucket de arquivos (chave só de leitura) e para a cópia (B2).
@@ -485,9 +487,19 @@ restaurar_arquivos() { # bucket de destino
     BACKUP_AGE_KEY="$(cat "${CHAVE_RESTAURAR:-$temp/chave-teste.age}")" \
     "$pasta/restaurar-arquivos.sh"
 }
+# A versão mais nova de uma cópia estragada (não decifra) e outra cópia escondida (o "hide" do
+# B2, que no S3 é um marcador de remoção): as duas voltam das versões anteriores.
+head -c 3000 /dev/urandom >"$temp/estragada"
+b2 gravar "$temp/estragada" "arquivos/${CHAVES[1]}.age"
+b2 apagar "arquivos/${CHAVES[2]}.age"
+b2 listar arquivos/ | grep -q "${CHAVES[2]}" && reprovar "a cópia escondida ainda aparece na listagem"
 restaurar_arquivos "$BUCKET_NOVO" >"$temp/saida.txt" 2>&1 || {
   cat "$temp/saida.txt" >&2
   reprovar "a restauração dos arquivos falhou"
+}
+grep -q "de versão anterior: 1 · estavam escondidos: 1" "$temp/saida.txt" || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a restauração deveria recuperar 1 de versão anterior e 1 escondido"
 }
 grep -q "restaurados agora: 6 · já no destino: 0 · sem assinatura conhecida: 1" "$temp/saida.txt" || {
   cat "$temp/saida.txt" >&2

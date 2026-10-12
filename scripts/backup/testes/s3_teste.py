@@ -7,9 +7,10 @@ scripts de backup, para preparar e conferir o cenário. Nunca aponte para um buc
 
 Uso: uv run --frozen --script s3_teste.py ENDPOINT BUCKET <comando>
   criar                     cria o bucket
+  versionar                 liga o versionamento (como o "Keep all versions" do B2)
   gravar ARQUIVO CHAVE [TIPO]
   ler CHAVE ARQUIVO
-  apagar CHAVE              (o teste simula um objeto que sumiu da cópia)
+  apagar CHAVE              (num bucket versionado, só esconde: o "hide" do B2)
   listar PREFIXO            uma linha por objeto: chave, tamanho, ETag e data
   tipo CHAVE                o Content-Type guardado
 """
@@ -31,6 +32,8 @@ bucket, comando, args = sys.argv[2], sys.argv[3], sys.argv[4:]
 
 if comando == "criar":
     s3.create_bucket(Bucket=bucket)
+elif comando == "versionar":
+    s3.put_bucket_versioning(Bucket=bucket, VersioningConfiguration={"Status": "Enabled"})
 elif comando == "gravar":
     extra = {"ContentType": args[2]} if len(args) > 2 else {}
     with open(args[0], "rb") as f:

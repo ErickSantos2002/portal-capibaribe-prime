@@ -175,6 +175,25 @@ class Bucket:
             chaves |= {o["Key"]: o["Size"] for o in pagina.get("Contents", [])}
         return chaves
 
+    def versoes(self, prefixo: str) -> tuple[dict[str, list[str]], set[str]]:
+        """Chave → VersionIds da mais nova para a mais velha (sem os marcadores de remoção), e as
+        chaves cuja versão mais nova é um marcador (escondidas: o "hide" do B2)."""
+        versoes: dict[str, list[tuple[str, str]]] = {}
+        escondidas: set[str] = set()
+        for pagina in self.s3.get_paginator("list_object_versions").paginate(
+            Bucket=self.nome, Prefix=prefixo
+        ):
+            for v in pagina.get("Versions", []):
+                versoes.setdefault(v["Key"], []).append((v["LastModified"], v["VersionId"]))
+            for m in pagina.get("DeleteMarkers", []):
+                if m.get("IsLatest"):
+                    escondidas.add(m["Key"])
+        ordenadas = {
+            k: [vid for _, vid in sorted(lista, key=lambda x: x[0], reverse=True)]
+            for k, lista in versoes.items()
+        }
+        return ordenadas, escondidas & set(ordenadas)
+
     def enviar(self, arquivo: str, chave: str, tipo: str | None = None) -> None:
         """Envia e confere o tamanho no destino."""
         extra = {"ContentType": tipo} if tipo else None
@@ -437,27 +456,37 @@ def conferir(lista: str, identidade: str | None) -> int:
 
 
 # --- restaurar -------------------------------------------------------------------------------
-def restaurar_um(copia: Bucket, destino: Bucket, chave: str, identidade: str, temp: str) -> bool:
-    """Decifra uma cópia e a envia ao destino. O claro fica só no diretório temporário 700 e é
-    apagado logo depois do envio. Devolve se o conteúdo tem uma assinatura conhecida."""
+def restaurar_um(
+    copia: Bucket, destino: Bucket, chave: str, versoes: list[str], identidade: str, temp: str
+) -> tuple[bool, int]:
+    """Decifra a versão mais nova da cópia que decifrar (a mais nova pode estar estragada; o B2
+    guarda as anteriores) e a envia ao destino. O claro fica só no diretório temporário 700 e é
+    apagado logo depois do envio. Devolve se o conteúdo tem uma assinatura conhecida e quantas
+    versões mais novas foram puladas."""
     cifrado = os.path.join(temp, f"{chave}.age")
     claro = os.path.join(temp, chave)
     try:
-        copia.s3.download_file(copia.nome, f"arquivos/{chave}.age", cifrado)
-        decifrado = subprocess.run(
-            ["age", "--decrypt", "--identity", identidade, "--output", claro, cifrado],
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        if decifrado.returncode != 0:
+        for pulada, versao in enumerate(versoes):
+            copia.s3.download_file(
+                copia.nome, f"arquivos/{chave}.age", cifrado, ExtraArgs={"VersionId": versao}
+            )
+            decifrado = subprocess.run(
+                ["age", "--decrypt", "--identity", identidade, "--output", claro, cifrado],
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            if decifrado.returncode == 0:
+                break
+            log(f"a versão {pulada + 1} (da mais nova) da cópia de {chave} não decifra")
+        else:
             raise Falha(
-                f"não consegui decifrar a cópia de {chave} "
-                "(chave privada errada ou cópia corrompida)"
+                f"não consegui decifrar a cópia de {chave} em nenhuma das {len(versoes)} "
+                "versão(ões) (chave privada errada ou cópia corrompida)"
             )
         with open(claro, "rb") as f:
             tipo = tipo_pelo_conteudo(f.read(BYTES_DA_ASSINATURA))
         destino.enviar(claro, f"arquivos/{chave}", tipo or "application/octet-stream")
-        return tipo is not None
+        return tipo is not None, pulada
     finally:
         for caminho in (cifrado, claro):
             if os.path.exists(caminho):
@@ -476,9 +505,12 @@ def restaurar(identidade: str) -> int:
             "O destino é a própria cópia (DESTINO_S3_* = COPIA_S3_*): os arquivos seriam gravados "
             "em claro no B2. Use um bucket NOVO de arquivos."
         )
-    na_copia = copia.listar("arquivos/")
-    chaves = sorted(c for k in na_copia if (c := chave_da_copia(k)))
-    ignorados = len(na_copia) - len(chaves)
+    # Pelas versões, não só pela listagem: o escondido e a versão anterior de uma cópia
+    # estragada também voltam.
+    versoes, escondidas = copia.versoes("arquivos/")
+    por_chave = {c: v for k, v in versoes.items() if (c := chave_da_copia(k))}
+    chaves = sorted(por_chave)
+    ignorados = len(versoes) - len(chaves)
     no_destino = destino.listar("arquivos/")
     if any(k.endswith(".age") for k in no_destino):
         sys.exit(
@@ -486,7 +518,8 @@ def restaurar(identidade: str) -> int:
             "bucket de arquivos. Use um bucket NOVO de arquivos."
         )
 
-    restaurados = ja = sem_assinatura = 0
+    restaurados = ja = sem_assinatura = de_versao_anterior = 0
+    estavam_escondidos = sum(1 for k in escondidas if chave_da_copia(k))
     falhas: list[str] = []
     with tempfile.TemporaryDirectory(prefix="restaurar-arquivos-") as temp:
         os.chmod(temp, 0o700)
@@ -497,8 +530,11 @@ def restaurar(identidade: str) -> int:
                 continue
             log(f"restaurando {chave}")
             try:
-                if not restaurar_um(copia, destino, chave, identidade, temp):
-                    sem_assinatura += 1
+                conhecido, puladas = restaurar_um(
+                    copia, destino, chave, por_chave[chave], identidade, temp
+                )
+                sem_assinatura += not conhecido
+                de_versao_anterior += puladas > 0
                 restaurados += 1
             except Exception as erro:
                 log(f"FALHOU {chave}: {descrever(erro)}")
@@ -506,7 +542,9 @@ def restaurar(identidade: str) -> int:
 
     linha = (
         f"restaurados agora: {restaurados} · já no destino: {ja} · "
-        f"sem assinatura conhecida: {sem_assinatura} · ignorados (fora do padrão): {ignorados}"
+        f"sem assinatura conhecida: {sem_assinatura} · "
+        f"de versão anterior: {de_versao_anterior} · estavam escondidos: {estavam_escondidos} · "
+        f"ignorados (fora do padrão): {ignorados}"
     )
     log(f"restauração dos arquivos: {linha}")
     if sem_assinatura:
