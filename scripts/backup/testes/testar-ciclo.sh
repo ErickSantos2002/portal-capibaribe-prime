@@ -272,7 +272,7 @@ s3 listar mensais | grep -q "2026-10-02" && reprovar "dia 2 não deveria virar m
 ok "dia 2 gera só o diário, e a retenção segue em 30"
 
 # --- 4c. Cópia dos arquivos configurada -------------------------------------------------------
-copiar() { env "${VARS_ARQUIVOS[@]}" "${VARS_COPIA[@]}" "$pasta/copiar-arquivos.sh" "$@"; }
+copiar() { env "${VARS_ARQUIVOS[@]}" "${VARS_COPIA[@]}" "$pasta/copiar-arquivos.sh"; }
 : >"$resumo"
 GITHUB_STEP_SUMMARY="$resumo" copiar >"$temp/saida.txt" 2>&1 || {
   cat "$temp/saida.txt" >&2
