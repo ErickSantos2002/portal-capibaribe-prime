@@ -21,16 +21,16 @@ no mesmo estilo de `fazer-backup.sh` e `restaurar.sh`.
 ## Tarefas
 
 1. [x] Spec e plano.
-2. [ ] **Copiar.** Teste no `testar-ciclo.sh` (dois `moto`, objetos de 4 tipos, chave fora do
+2. [x] **Copiar.** Teste no `testar-ciclo.sh` (dois `moto`, objetos de 4 tipos, chave fora do
    padrão, `envios/`, sem variáveis, segunda rodada) vermelho → `arquivos.py copiar` +
    `copiar-arquivos.sh` + lock → verde → commit.
-3. [ ] **Conferir.** Linhas `arquivo` confirmadas e pendentes na origem antes do backup do dia 2;
+3. [x] **Conferir.** Linhas `arquivo` confirmadas e pendentes na origem antes do backup do dia 2;
    teste da conferência (passa, passa com aviso, quatro falhas) vermelho → `arquivos.py
    conferir` + `conferir-arquivos.sh` → verde → commit.
-4. [ ] **Restaurar.** Teste (bucket novo, mesmos bytes, tipo, idempotência, recusa de `backup`)
+4. [x] **Restaurar.** Teste (bucket novo, mesmos bytes, tipo, idempotência, recusa de `backup`)
    vermelho → `arquivos.py restaurar` + `restaurar-arquivos.sh` → verde → commit.
-5. [ ] **Workflow.** Passo da cópia no job `backup` (depois do backup do banco) e da conferência
+5. [x] **Workflow.** Passo da cópia no job `backup` (depois do backup do banco) e da conferência
    no job `restauracao`; a restauração roda mesmo se só a cópia falhou. `pre-commit` (actions
    por SHA) → commit.
-6. [ ] **README e dúvidas.** Seção "Backup" com a cópia e o passo a passo da restauração dos
+6. [x] **README e dúvidas.** Seção "Backup" com a cópia e o passo a passo da restauração dos
    arquivos; `duvidas-m3-protecao.md` → commit.

@@ -118,9 +118,28 @@ Decisões: [ADR-0007](docs/adr/0007-backup.md) e [ADR-0009](docs/adr/0009-backup
 
 - **Disparar à mão:** `gh workflow run backup.yml -f restaurar=true` (backup + restauração de
   teste) ou `gh workflow run backup.yml` (só backup).
-- **Testar o ciclo inteiro localmente** (Postgres do passo 1 de "Rodar localmente", S3 falso,
-  nada de R2 nem Neon): `scripts/backup/testes/testar-ciclo.sh`. Precisa de Docker, `uv` e
-  `age`; sem `pg_dump` 17 no PATH, usa o da imagem `postgres:17`.
+- **Testar o ciclo inteiro localmente** (Postgres do passo 1 de "Rodar localmente", dois S3
+  falsos, nada de R2, B2 nem Neon): `scripts/backup/testes/testar-ciclo.sh`. Precisa de Docker,
+  `uv` e `age`; sem `pg_dump` 17 no PATH, usa o da imagem `postgres:17`. Cobre também a cópia,
+  a conferência e a restauração dos arquivos.
+
+### Arquivos (cópia cifrada no Backblaze B2)
+
+Os documentos e anexos moram no bucket `portal-capibaribe-arquivos` (R2), em `arquivos/<chave>`,
+travados contra apagar e sobrescrever. O mesmo workflow, logo depois do `pg_dump`, copia para
+um bucket privado do **Backblaze B2** cada arquivo que ainda não está lá, cifrado com `age`
+(as mesmas chaves públicas de `scripts/backup/destinatarios.age`), como
+`arquivos/<chave>.age` (`scripts/backup/copiar-arquivos.sh`). A cópia só acrescenta: nunca
+apaga, nunca sobrescreve, e a chave do B2 nem tem permissão de apagar. No dia 2, a restauração
+de teste confere que todo arquivo confirmado no banco restaurado tem cópia e decifra um deles
+ao acaso (`scripts/backup/conferir-arquivos.sh`). Decisão: [ADR-0011](docs/adr/0011-arquivos-protegidos-contra-perda.md).
+
+- **Segredos:** `ARQUIVOS_R2_*` (chave só de leitura do bucket de arquivos) e `COPIA_S3_*` (o
+  B2), com os nomes da seção C de `docs/superpowers/duvidas-m3.md`. Sem eles, o passo só
+  avisa (aviso amarelo no resumo do run) e o backup do banco segue normal. Com arquivos
+  confirmados no banco e sem eles, a conferência do dia 2 reprova.
+- **Onde ver:** no resumo de cada run do `Backup`, a seção "Cópia dos arquivos" diz quantos
+  foram copiados agora e quantos já estavam lá.
 
 ### Restaurar num desastre (passo a passo)
 
@@ -153,6 +172,55 @@ e só então a aplicação passa a usá-lo.
    `/api/saude` e um login. O banco antigo fica guardado até a causa do desastre ser entendida.
 7. **Papel de backup:** rode `scripts/backup/criar-papel-backup.sql` no banco novo e atualize o
    segredo `BACKUP_DATABASE_URL` (o backup das 03:00 passa a ler o banco novo).
+
+### Restaurar os arquivos num desastre (passo a passo)
+
+Para quando o bucket de arquivos (ou a conta da Cloudflare) se perdeu. Os arquivos voltam da
+cópia no B2 para um bucket **novo**, decifrados, com os mesmos nomes (`arquivos/<chave>`); não
+precisa do banco. Se o banco também se perdeu, restaure-o primeiro (acima): é ele que diz quais
+arquivos cada documento usa, e os nomes batem.
+
+1. **Ferramentas:** `age` e `uv` (o script baixa o resto na primeira vez).
+2. **Chave privada:** a mesma cópia offline do backup do banco, num arquivo 600 (`chave.age`).
+3. **Bucket novo no R2:** como no passo A.1 de `docs/superpowers/duvidas-m3.md` (privado,
+   Standard), com outro nome (ex.: `portal-capibaribe-arquivos-2`; nunca com "backup" no nome:
+   o script recusa). Crie uma chave **Object Read & Write só desse bucket** (passo A.2): ela
+   serve para restaurar e depois para a API.
+4. **Chave de leitura do B2:** o valor do segredo `COPIA_S3_*` do GitHub não pode ser lido de
+   volta; crie no site do B2 (Application Keys → Add a New Application Key) uma chave **Read
+   Only** só do bucket da cópia.
+5. **Restaurar** (da raiz do repositório, no fish; `read -s` pergunta sem mostrar nem gravar
+   no histórico):
+   ```sh
+   set -x COPIA_S3_ENDPOINT https://s3.<região>.backblazeb2.com
+   set -x COPIA_S3_BUCKET <bucket da cópia>
+   read -s -x COPIA_S3_ACCESS_KEY_ID
+   read -s -x COPIA_S3_SECRET_ACCESS_KEY
+   set -x DESTINO_S3_ENDPOINT https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+   set -x DESTINO_S3_BUCKET portal-capibaribe-arquivos-2
+   read -s -x DESTINO_S3_ACCESS_KEY_ID
+   read -s -x DESTINO_S3_SECRET_ACCESS_KEY
+   BACKUP_AGE_KEY_FILE=chave.age scripts/backup/restaurar-arquivos.sh
+   ```
+   O fim diz `restaurados agora: N · já no destino: M · ...`. Se algum falhou (rede, por
+   exemplo), rode de novo: ele pula o que já voltou. Pronto quando sai sem `ERRO`. Um aviso de
+   "sem assinatura conhecida" quer dizer um objeto que não é PDF nem foto; ele volta como
+   `application/octet-stream`.
+6. **Configurar o bucket novo** como o antigo: CORS, ciclo de vida de `envios/` e a trava de
+   `arquivos/` (passos A.4 a A.6). A trava pode vir antes ou depois da restauração: ela não
+   impede gravar objeto novo, só apagar e sobrescrever.
+7. **Apontar a API:** na Vercel (Production), troque `PORTAL_ARQUIVOS_ENDPOINT`,
+   `PORTAL_ARQUIVOS_BUCKET`, `PORTAL_ARQUIVOS_CHAVE_ID` e `PORTAL_ARQUIVOS_CHAVE_SECRETA` para o
+   bucket e a chave do passo 3, e faça um redeploy. Confira nos logs que **não** aparece
+   "arquivos desligados" e abra um documento no Portal.
+8. **Backup:** troque os segredos `ARQUIVOS_R2_*` do GitHub para o bucket novo, com uma chave
+   **só de leitura** dele (passo A.3). A cópia continua de onde estava: os nomes são os mesmos,
+   então nada é copiado de novo.
+9. **Limpar:** `set -e` nas variáveis do passo 5 (ou feche o terminal) e apague a chave Read
+   Only do B2 do passo 4.
+
+Se quem se perdeu foi o **B2**, nada precisa voltar: crie outro bucket e chave (passos B.2 e
+B.3), troque os segredos `COPIA_S3_*`, e o próximo backup copia tudo de novo.
 
 ## O primeiro administrador (produção)
 
