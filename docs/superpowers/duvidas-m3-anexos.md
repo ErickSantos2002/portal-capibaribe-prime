@@ -50,3 +50,26 @@ resto é decisão técnica que pode ser revista na revisão do marco.
 - **Dúvida:** o e-mail do aviso (M2) podia dizer "tem 2 anexos".
 - **Decisão:** não muda (o envio é do `notificacoes`/e-mail, comuns). Quem abre o aviso vê os
   anexos; o link do anexo exige sessão de qualquer jeito.
+
+## 8. Fotos primeiro, PDFs depois
+- **Dúvida:** os anexos têm uma ordem (1 a 5); misturar foto e PDF na ordem exata quebraria a
+  grade de fotos.
+- **Decisão:** no aviso aberto, as fotos em grade e depois os PDFs, cada grupo na ordem dos
+  anexos. No formulário, a lista segue a ordem exata.
+
+## 9. "Enviar de novo" só quando pode dar certo
+- **Decisão:** o arquivo recusado pela API (422: não é PDF nem foto, ou passou do limite) mostra
+  só "Tirar"; erro de rede ou do bucket mostra "Enviar de novo" também. Achado na conferência
+  visual: o botão para um `.pdf` falso só repetiria o mesmo erro.
+
+## 10. Conferência visual com um navegador próprio
+- **Dúvida:** o navegador do MCP do Playwright é um só para os três agentes do M3; no meio da
+  conferência, a aba passou a mostrar a tela do épico A (`127.0.0.1:5191/documentos/5`).
+- **Decisão:** a conferência rodou com um script do próprio Playwright (Chrome sem janela, um
+  contexto por pessoa), contra a API (8182), o Vite (5192), o banco próprio e o `moto_server`
+  (9182, com CORS do bucket). Prints em `docs/superpowers/prints/m3-anexos/`, só com dados
+  fictícios (fotos desenhadas, PDF gerado).
+- **O que não foi conferido:** tema escuro (o tema do Portal é escolhido no botão da casca,
+  não pelo sistema, e o script não o trocou), um iPhone de verdade (o `window.open` antes do
+  pedido é o caminho recomendado para o Safari, mas só foi testado no Chrome) e o R2 de verdade
+  (CORS e CSP de produção).

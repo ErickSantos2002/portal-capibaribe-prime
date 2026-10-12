@@ -63,7 +63,9 @@ export function useAnexos(iniciais: readonly ArquivoEnviado[] = []): ListaDeAnex
             tipo: enviado.tipo,
           })
         } catch (e) {
-          mudar(chave, { situacao: 'erro', erro: comoErroDaApi(e).mensagem })
+          const erro = comoErroDaApi(e)
+          // 422: o arquivo em si foi recusado (tipo, tamanho); mandar o mesmo de novo não adianta.
+          mudar(chave, { situacao: 'erro', erro: erro.mensagem, podeTentar: erro.status !== 422 })
         }
       })
     },

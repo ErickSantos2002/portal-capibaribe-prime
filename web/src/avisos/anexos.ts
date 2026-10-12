@@ -18,6 +18,8 @@ export interface ItemAnexo {
   arquivo?: ArquivoEnviado
   /** A mensagem para a pessoa, quando `erro`. */
   erro?: string
+  /** O erro passa tentando de novo (rede, bucket fora do ar)? Arquivo recusado não passa. */
+  podeTentar?: boolean
   /** Já era anexo da versão em vigor (formulário de correção). */
   jaPublicado?: boolean
 }

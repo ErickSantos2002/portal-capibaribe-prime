@@ -105,6 +105,12 @@ button.anexo-pdf[aria-busy='true'] {
   text-underline-offset: 3px;
 }
 
+/* Na prévia o PDF ainda não abre: sem cara de link. */
+div.anexo-pdf .anexo-nome {
+  color: var(--tinta);
+  text-decoration: none;
+}
+
 .anexo-nome {
   display: block;
   font-weight: 700;
@@ -129,8 +135,8 @@ button.anexo-pdf[aria-busy='true'] {
   flex-direction: column;
   gap: 12px;
   padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
-  /* Um véu escuro nos dois temas: a foto é o que importa. */
-  background: rgb(8 14 10 / 0.94);
+  /* Fundo escuro e opaco nos dois temas: só a foto aparece. */
+  background: rgb(8 14 10);
 }
 
 .anexo-visualizador-topo {
@@ -262,11 +268,11 @@ button.anexo-pdf[aria-busy='true'] {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  grid-column: 1 / -1;
+  grid-column: 2;
 }
 
 .anexo-acoes .botao {
-  flex: 1;
+  flex: none;
   width: auto;
   min-height: 44px;
   margin: 0;
@@ -281,10 +287,6 @@ button.anexo-pdf[aria-busy='true'] {
 
   .anexo-acoes {
     grid-column: auto;
-  }
-
-  .anexo-acoes .botao {
-    flex: none;
   }
 }
 

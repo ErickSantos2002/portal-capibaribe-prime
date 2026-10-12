@@ -86,7 +86,9 @@ novidades (coordenador).
   - `enviando`: "Enviando…" com uma barra animada (o `enviarArquivo` não informa o progresso;
     dúvida 3); `aria-live` anuncia.
   - `pronto`: "PDF, 320 KB" / "Foto, 1,2 MB" (tamanho **real**, o devolvido pela API).
-  - `erro`: a mensagem do `ErroDaApi` (já na voz do morador) e **"Tentar de novo"**.
+  - `erro`: a mensagem do `ErroDaApi` (já na voz do morador) e **"Enviar de novo"**, só
+    quando tentar de novo pode dar certo (rede, bucket fora do ar); arquivo recusado (422: não
+    é PDF nem foto, ou grande demais) fica só com "Tirar".
 - Escolher mais que as vagas: entram os primeiros até 5, e a caixa diz "Até 5 anexos por aviso.
   Ficaram de fora: <nomes>.". Com 5, o botão some e fica "Já são 5 anexos, o máximo.".
 - **Tirar** antes de publicar só tira da lista (o arquivo confirmado fica guardado sem aparecer,
@@ -102,7 +104,8 @@ novidades (coordenador).
 
 ### 3.3 Aviso aberto
 
-Depois do texto e antes do `<DocumentoDoAviso />` (encaixe do épico A, intacto):
+Depois do texto e antes do `<DocumentoDoAviso />` (encaixe do épico A, intacto). As fotos
+vêm primeiro, em grade, e os PDFs depois, cada grupo na ordem dos anexos:
 
 - **Fotos**: grade de miniaturas (uma só: largura toda, 16:10; várias: 2 colunas no celular,
   3 no computador, 4:3), `object-fit: cover`. Cada uma é um `<button>` "Ver a foto <nome> em

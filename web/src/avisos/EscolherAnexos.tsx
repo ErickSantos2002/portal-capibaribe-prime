@@ -81,7 +81,7 @@ export function EscolherAnexos({ anexos, avisoId, erro, aoMudar }: Props) {
                 {item.situacao === 'erro' && <span className="anexo-erro">{item.erro}</span>}
               </span>
               <span className="anexo-acoes">
-                {item.situacao === 'erro' && (
+                {item.situacao === 'erro' && item.podeTentar && (
                   <button
                     type="button"
                     className="botao leve"

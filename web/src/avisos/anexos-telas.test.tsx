@@ -326,6 +326,22 @@ describe('formulário: novo aviso com anexos', () => {
     expect(fetch.mock.calls.some(([, i]) => i?.method === 'POST')).toBe(false)
   })
 
+  it('arquivo recusado pelo conteúdo: só "Tirar" (enviar de novo daria o mesmo erro)', async () => {
+    enviarArquivo.mockRejectedValueOnce(
+      new ErroDaApi(422, {
+        codigo: 'arquivo_recusado',
+        mensagem: 'Este arquivo não é um PDF nem uma foto (JPEG, PNG ou WEBP). Escolha outro.',
+      }),
+    )
+    api(eu(['comissao']), () => undefined)
+    abrir('/avisos/novo')
+    await preencher()
+    escolher(arquivo('mapa.pdf', 'application/pdf'))
+    expect(await screen.findByText(/não é um PDF nem uma foto/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Enviar de novo mapa.pdf' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Tirar mapa.pdf' })).toBeTruthy()
+  })
+
   it('até 5: os que sobram ficam de fora com aviso, e o botão some', async () => {
     enviarArquivo.mockImplementation(async (f: File) => ({ ...PDF, nome: f.name }))
     api(eu(['comissao']), () => undefined)
