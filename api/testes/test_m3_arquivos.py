@@ -119,6 +119,11 @@ def test_pedir_cria_pendente_e_devolve_o_put(logar, armazenamento, engine_app):
     assert (tipo, tamanho, confirmado) == ("image/webp", len(PDF), None)
 
 
+def test_a_url_de_envio_so_aceita_o_tamanho_declarado(logar, armazenamento):
+    envio = _pedido(logar(ADMIN), tamanho_bytes=len(PDF))
+    assert armazenamento.tamanho_assinado[_chave(envio)] == len(PDF)
+
+
 def test_cada_pedido_ganha_uma_chave_nova(logar, armazenamento):
     admin = logar(ADMIN)
     chaves = {_chave(_pedido(admin)) for _ in range(5)}
@@ -223,7 +228,7 @@ def _confirmar(cliente, arquivo_id: int):
 
 def test_confirmar_publica_com_o_tamanho_de_verdade(logar, armazenamento, engine_app):
     admin = logar(ADMIN)
-    envio = _pedido(admin, tamanho_bytes=999)
+    envio = _pedido(admin)
     chave = _chave(envio)
     armazenamento.receber(chave, PDF, "application/pdf")
     resposta = _confirmar(admin, envio["arquivo_id"])
@@ -242,7 +247,7 @@ def test_confirmar_publica_com_o_tamanho_de_verdade(logar, armazenamento, engine
 
 def test_exe_renomeado_para_pdf_e_recusado_e_apagado(logar, armazenamento, engine_app, predio):
     admin = logar(ADMIN)
-    envio = _pedido(admin, nome="Boleto de Fulano.pdf")
+    envio = _pedido(admin, nome="Boleto de Fulano.pdf", tamanho_bytes=len(EXE))
     armazenamento.receber(_chave(envio), EXE, "application/pdf")
     resposta = _confirmar(admin, envio["arquivo_id"])
     assert resposta.status_code == 422
@@ -270,17 +275,19 @@ def test_exe_renomeado_para_pdf_e_recusado_e_apagado(logar, armazenamento, engin
 @pytest.mark.parametrize("conteudo", [b"", b"%PD", b"<html><script>"])
 def test_conteudo_vazio_curto_ou_html_tambem_e_recusado(logar, armazenamento, conteudo):
     admin = logar(ADMIN)
-    envio = _pedido(admin)
-    armazenamento.receber(_chave(envio), conteudo)
+    envio = _pedido(admin, tamanho_bytes=max(1, len(conteudo)))
+    # O vazio não passa pela URL assinada (o tamanho declarado é pelo menos 1): só por fora.
+    armazenamento.gravar_por_fora(_chave(envio), conteudo)
     assert _confirmar(admin, envio["arquivo_id"]).json()["codigo"] == "arquivo_recusado"
     assert armazenamento.objetos == {}
 
 
 def test_maior_que_o_limite_de_verdade_e_recusado(logar, armazenamento, engine_app):
     admin = logar(ADMIN)
-    # Declarou 1 KB e mandou 10 MB + 1 (a URL assinada não limita o tamanho).
+    # Declarou 1 KB e o bucket tem 10 MB + 1. A URL assinada já não aceita outro tamanho, mas a
+    # confirmação confere de novo: o objeto pode ter chegado por fora dela.
     envio = _pedido(admin, finalidade="aviso", tamanho_bytes=1024)
-    armazenamento.receber(_chave(envio), PDF + b"0" * (10 * MB + 1 - len(PDF)))
+    armazenamento.gravar_por_fora(_chave(envio), PDF + b"0" * (10 * MB + 1 - len(PDF)))
     resposta = _confirmar(admin, envio["arquivo_id"])
     assert resposta.status_code == 422
     assert resposta.json() == {
@@ -293,7 +300,9 @@ def test_maior_que_o_limite_de_verdade_e_recusado(logar, armazenamento, engine_a
 
 def test_foto_png_com_nome_de_jpeg_vale_como_png(logar, armazenamento, engine_app):
     admin = logar(ADMIN)
-    envio = _pedido(admin, nome="foto.jpg", tipo="image/jpeg", finalidade="aviso")
+    envio = _pedido(
+        admin, nome="foto.jpg", tipo="image/jpeg", finalidade="aviso", tamanho_bytes=len(PNG)
+    )
     chave = _chave(envio)
     armazenamento.receber(chave, PNG, "image/jpeg")
     resposta = _confirmar(admin, envio["arquivo_id"])
@@ -305,7 +314,9 @@ def test_foto_png_com_nome_de_jpeg_vale_como_png(logar, armazenamento, engine_ap
 @pytest.mark.parametrize("conteudo", [JPEG, PNG, WEBP])
 def test_fotos_aceitas(logar, armazenamento, conteudo):
     admin = logar(ADMIN)
-    envio = _pedido(admin, nome="foto", tipo="image/jpeg", finalidade="aviso")
+    envio = _pedido(
+        admin, nome="foto", tipo="image/jpeg", finalidade="aviso", tamanho_bytes=len(conteudo)
+    )
     armazenamento.receber(_chave(envio), conteudo)
     assert _confirmar(admin, envio["arquivo_id"]).status_code == 200
 

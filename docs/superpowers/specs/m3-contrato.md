@@ -133,8 +133,8 @@ class UrlAssinada:
     expira_em: datetime
 
 class Armazenamento(Protocol):
-    def url_de_envio(self, chave: str, tipo: str) -> UrlAssinada: ...
-        # PUT em envios/<chave>, assinado com o Content-Type, vale 10 minutos
+    def url_de_envio(self, chave: str, tipo: str, tamanho: int) -> UrlAssinada: ...
+        # PUT em envios/<chave>, assinado com o Content-Type e o Content-Length, 10 minutos
     def url_de_leitura(self, chave: str, *, tipo: str, nome: str, baixar: bool) -> UrlAssinada: ...
         # GET em arquivos/<chave>, vale 5 minutos; força Content-Type e Content-Disposition
     def tamanho_do_envio(self, chave: str) -> int | None: ...   # HEAD; None = não chegou
@@ -148,7 +148,11 @@ class Armazenamento(Protocol):
   `arquivos/` por ela (ADR-0011). `ArmazenamentoS3` (boto3, `signature_version="s3v4"`,
   checksums só quando exigidos, como no `scripts/backup/s3.py`) fala com o R2;
   `ArmazenamentoFalso` guarda em memória, imita a trava (publicar por cima de `arquivos/`
-  falha) e tem `receber(chave, conteudo, tipo)` para o teste fazer o papel do navegador.
+  falha) e tem `receber(chave, conteudo, tipo)` para o teste fazer o papel do navegador
+  (recusa, como o R2, o PUT de tamanho diferente do assinado) e `gravar_por_fora(...)` para
+  simular um objeto que chegou sem passar pela URL assinada.
+- **O tamanho declarado entra na assinatura do PUT** (`ContentLength`): o R2 recusa o envio de
+  outro tamanho. Sem isso, a mesma URL aceitaria gigabytes declarando 209 bytes.
 - `obter_armazenamento()` é dependência FastAPI: `ArmazenamentoS3` com a configuração da seção
   6, ou `None` (arquivos desligados). Os testes trocam pelo falso
   (`app.dependency_overrides`, fixture `armazenamento` do `conftest.py`). **Nenhum teste fala
@@ -176,8 +180,9 @@ tela                          API                                   R2
 ```
 
 - **Tipos aceitos:** PDF, JPEG, PNG, WEBP (ADR-0004). **Limites:** 10 MB por anexo de aviso
-  (H-12), 20 MB por documento (H-17). Conferidos três vezes: na tela (antes de mandar), no
-  pedido (o tamanho declarado) e na confirmação (o tamanho **real**, pelo HEAD).
+  (H-12), 20 MB por documento (H-17). Conferidos quatro vezes: na tela (antes de mandar), no
+  pedido (o tamanho declarado), no PUT (o R2 só aceita o tamanho declarado, que está na
+  assinatura) e na confirmação (o tamanho **real**, pelo HEAD).
 - **Conteúdo conferido pelo servidor, depois do envio:** os primeiros bytes do objeto têm de
   ser a assinatura de um dos quatro tipos (`app/servicos/arquivos.py`, `tipo_pelo_conteudo`):
   PDF `%PDF-`; JPEG `FF D8 FF`; PNG `89 50 4E 47 0D 0A 1A 0A`; WEBP `RIFF` + 4 bytes +

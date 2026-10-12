@@ -48,6 +48,10 @@ class ObjetoAusente(Exception):
     """O envio não está no bucket (o navegador não mandou, ou já foi apagado)."""
 
 
+class EnvioRecusado(Exception):
+    """O bucket recusou o PUT: fora do que a URL assinada permite (ex.: outro tamanho)."""
+
+
 class ObjetoTravado(Exception):
     """Já existe um arquivo publicado com esta chave: o bucket não deixa sobrescrever."""
 
@@ -59,7 +63,7 @@ class UrlAssinada:
 
 
 class Armazenamento(Protocol):
-    def url_de_envio(self, chave: str, tipo: str) -> UrlAssinada: ...
+    def url_de_envio(self, chave: str, tipo: str, tamanho: int) -> UrlAssinada: ...
 
     def url_de_leitura(self, chave: str, *, tipo: str, nome: str, baixar: bool) -> UrlAssinada: ...
 
@@ -138,14 +142,17 @@ class ArmazenamentoS3:
             ),
         )
 
-    def url_de_envio(self, chave: str, tipo: str) -> UrlAssinada:
-        # O Content-Type entra na assinatura: o navegador tem de mandar exatamente este.
+    def url_de_envio(self, chave: str, tipo: str, tamanho: int) -> UrlAssinada:
+        # O Content-Type e o Content-Length entram na assinatura: o navegador tem de mandar
+        # exatamente este tipo e exatamente o tamanho declarado no pedido. Sem o tamanho, a
+        # mesma URL aceitaria gigabytes declarando 209 bytes (o R2 cobra e enche o bucket).
         url = self.cliente.generate_presigned_url(
             "put_object",
             Params={
                 "Bucket": self._bucket,
                 "Key": PASTA_ENVIOS + _conferir(chave),
                 "ContentType": tipo,
+                "ContentLength": tamanho,
             },
             ExpiresIn=int(VALIDADE_ENVIO.total_seconds()),
             HttpMethod="PUT",
@@ -207,19 +214,30 @@ class ArmazenamentoS3:
 
 
 class ArmazenamentoFalso:
-    """Bucket em memória, para os testes. `receber` faz o papel do navegador; publicar por cima
-    de um arquivo já publicado falha, como a trava do R2."""
+    """Bucket em memória, para os testes. `receber` faz o papel do navegador (o PUT na URL
+    assinada: recusa outro tamanho, como o R2); `gravar_por_fora` escreve sem passar pela
+    assinatura (alguém com a chave, ou um bug), para testar as defesas da confirmação. Publicar
+    por cima de um arquivo já publicado falha, como a trava do R2."""
 
     BASE = "https://armazenamento.falso"
 
     def __init__(self) -> None:
         # caminho → (conteúdo, tipo)
         self.objetos: dict[str, tuple[bytes, str]] = {}
+        # chave → tamanho assinado na URL de envio
+        self.tamanho_assinado: dict[str, int] = {}
 
     def receber(self, chave: str, conteudo: bytes, tipo: str = "application/pdf") -> None:
+        assinado = self.tamanho_assinado.get(_conferir(chave))
+        if assinado is not None and assinado != len(conteudo):
+            raise EnvioRecusado(f"Content-Length {len(conteudo)} != {assinado}")
+        self.gravar_por_fora(chave, conteudo, tipo)
+
+    def gravar_por_fora(self, chave: str, conteudo: bytes, tipo: str = "application/pdf") -> None:
         self.objetos[PASTA_ENVIOS + _conferir(chave)] = (conteudo, tipo)
 
-    def url_de_envio(self, chave: str, tipo: str) -> UrlAssinada:
+    def url_de_envio(self, chave: str, tipo: str, tamanho: int) -> UrlAssinada:
+        self.tamanho_assinado[_conferir(chave)] = tamanho
         url = f"{self.BASE}/{PASTA_ENVIOS}{_conferir(chave)}?tipo={quote(tipo, safe='')}"
         return UrlAssinada(url=url, expira_em=_agora() + VALIDADE_ENVIO)
 

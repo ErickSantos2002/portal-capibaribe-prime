@@ -41,7 +41,8 @@ export async function enviarArquivo(
   })
 
   // Direto para o bucket: sem `X-Portal` (o R2 recusaria o cabeçalho que não está na
-  // assinatura), sem cookie e com o Content-Type exato que foi assinado.
+  // assinatura), sem cookie e com o Content-Type exato que foi assinado. O tamanho também está
+  // na assinatura: o corpo é o mesmo `arquivo` cujo `size` foi declarado no pedido.
   const resposta = await fetch(envio.url, {
     method: 'PUT',
     headers: { 'Content-Type': envio.content_type },

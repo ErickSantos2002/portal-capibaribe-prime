@@ -23,6 +23,7 @@ from app.servicos import armazenamento  # noqa: E402
 from app.servicos.armazenamento import (  # noqa: E402
     ArmazenamentoFalso,
     ArmazenamentoS3,
+    EnvioRecusado,
     ObjetoAusente,
     ObjetoTravado,
     disposicao,
@@ -121,7 +122,7 @@ def test_descartar_so_mexe_no_envio(arm):
 )
 def test_chave_fora_do_formato_nunca_vira_caminho(arm, chave):
     for chamada in (
-        lambda: arm.url_de_envio(chave, "application/pdf"),
+        lambda: arm.url_de_envio(chave, "application/pdf", 1),
         lambda: arm.url_de_leitura(chave, tipo="application/pdf", nome="a.pdf", baixar=False),
         lambda: arm.tamanho_do_envio(chave),
         lambda: arm.inicio_do_envio(chave),
@@ -146,7 +147,7 @@ def test_nao_existe_jeito_de_apagar_o_publicado():
 
 
 def test_validades(arm):
-    envio = arm.url_de_envio(CHAVE, "application/pdf")
+    envio = arm.url_de_envio(CHAVE, "application/pdf", 1)
     leitura = arm.url_de_leitura(CHAVE, tipo="application/pdf", nome="a.pdf", baixar=False)
     assert _perto(envio.expira_em, timedelta(minutes=10))
     assert _perto(leitura.expira_em, timedelta(minutes=5))
@@ -169,12 +170,18 @@ def _partes(url: str):
 
 
 def test_url_de_envio_e_put_em_envios_com_o_tipo_assinado(s3):
-    url = s3.url_de_envio(CHAVE, "image/webp").url
+    url = s3.url_de_envio(CHAVE, "image/webp", 209).url
     partes, consulta = _partes(url)
     assert f"{partes.scheme}://{partes.netloc}" == ENDPOINT
     assert partes.path == f"/{BUCKET}/envios/{CHAVE}"
     assert consulta["X-Amz-Expires"] == "600"
     assert "content-type" in consulta["X-Amz-SignedHeaders"].split(";")
+
+
+def test_url_de_envio_assina_o_tamanho_declarado(s3):
+    # Sem o tamanho na assinatura, a mesma URL aceitaria GBs declarando 209 bytes.
+    _, consulta = _partes(s3.url_de_envio(CHAVE, "application/pdf", 209).url)
+    assert "content-length" in consulta["X-Amz-SignedHeaders"].split(";")
 
 
 def test_url_de_leitura_forca_tipo_e_nome(s3):
@@ -207,9 +214,20 @@ def test_falso_imita_a_trava_de_arquivos():
     assert falso.objetos[f"arquivos/{CHAVE}"] == (PDF, "application/pdf")
 
 
+def test_falso_recusa_put_de_tamanho_diferente_do_assinado():
+    # Como o R2 com o Content-Length na assinatura: o PUT de outro tamanho não entra.
+    falso = ArmazenamentoFalso()
+    falso.url_de_envio(CHAVE, "application/pdf", len(PDF))
+    with pytest.raises(EnvioRecusado):
+        falso.receber(CHAVE, PDF + b"a mais")
+    assert falso.objetos == {}
+    falso.receber(CHAVE, PDF)
+    assert falso.tamanho_do_envio(CHAVE) == len(PDF)
+
+
 def test_falso_monta_urls_reconheciveis():
     falso = ArmazenamentoFalso()
-    assert falso.url_de_envio(CHAVE, "image/png").url.startswith(
+    assert falso.url_de_envio(CHAVE, "image/png", 1).url.startswith(
         f"https://armazenamento.falso/envios/{CHAVE}"
     )
     leitura = falso.url_de_leitura(CHAVE, tipo="image/png", nome="a.png", baixar=True).url

@@ -97,7 +97,7 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
 `VALIDADE_LEITURA`, `nome_para_baixar`.
 
 - [x] Testes falhando (contra o `moto` e contra o falso, os mesmos casos): URL de envio é PUT
-  em `envios/<chave>` com o Content-Type assinado e 10 minutos; URL de leitura é GET em
+  em `envios/<chave>` com o Content-Type e o Content-Length assinados e 10 minutos; URL de leitura é GET em
   `arquivos/<chave>`, 5 minutos, com tipo e `Content-Disposition` forçados (inline/attachment,
   nome UTF-8 e reserva ASCII, extensão acrescentada); tamanho do envio (None se não chegou);
   início do envio com Range; publicar copia com o tipo novo e apaga o envio; publicar por cima

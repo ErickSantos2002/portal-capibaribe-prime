@@ -146,7 +146,8 @@ seção 4):
 2. `POST /api/arquivos` com nome, tipo, tamanho e finalidade (`aviso`): a API confere o papel e
    os limites, grava o arquivo **pendente** e devolve uma URL assinada de `PUT` em
    `envios/<chave>`, válida por 10 minutos.
-3. A tela envia direto ao R2 (sem cookie, com o `Content-Type` assinado).
+3. A tela envia direto ao R2 (sem cookie, com o `Content-Type` e o tamanho assinados: o R2
+   recusa outro tamanho).
 4. `POST /api/arquivos/{id}/confirmar`: a API lê o tamanho e os primeiros bytes do objeto. Não
    é PDF nem foto, ou passou do limite: apaga o envio e a linha, registra no histórico e
    responde 422. Senão, copia para `arquivos/<chave>` (travado), apaga o envio e marca

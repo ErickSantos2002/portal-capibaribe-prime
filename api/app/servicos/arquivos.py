@@ -110,7 +110,7 @@ def pedir_envio(
                 409, "muitos_arquivos", "Muitos arquivos enviados hoje. Tente de novo amanhã."
             ) from erro
         raise
-    url = armazenamento.url_de_envio(arquivo.chave, arquivo.tipo)
+    url = armazenamento.url_de_envio(arquivo.chave, arquivo.tipo, arquivo.tamanho_bytes)
     resposta = EnvioAutorizado(
         arquivo_id=arquivo.id, url=url.url, content_type=arquivo.tipo, expira_em=url.expira_em
     )
