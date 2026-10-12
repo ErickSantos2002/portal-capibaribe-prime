@@ -83,7 +83,7 @@ def test_avisar_as_unidades_publica_o_aviso_junto(logar, armazenamento, engine_a
     assert "“Regimento interno”" in aviso["texto"]
     # Serve aberto no Portal e na cópia por e-mail: não manda "abrir este aviso" a quem já abriu.
     assert aviso["texto"].endswith(
-        "Ele fica guardado em Documentos, no menu do Portal, e o botão “Abrir o documento”"
+        "Ele fica guardado em Documentos, no menu do Portal, e o botão “Ver o documento”"
         " deste aviso leva direto a ele."
     )
     assert aviso["documento"] == {"id": documento["id"], "titulo": "Regimento interno"}
@@ -163,7 +163,7 @@ def test_nova_versao_guarda_a_anterior(logar, armazenamento, engine_app, predio)
             "unidade_id": predio[ADMIN],
             "entidade": "documento",
             "entidade_id": publicado["id"],
-            "detalhes": {"versao": 2},
+            "detalhes": {"versao": 2, "avisou": False},
         }
     ]
 

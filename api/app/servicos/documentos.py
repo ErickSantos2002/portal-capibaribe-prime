@@ -10,23 +10,25 @@ disso, 404 igual a documento inexistente, na lista, no documento e no link.
 """
 
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import psycopg
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.configuracao import url_base
 from app.erros_api import ErroApi
 from app.esquemas.arquivos import LinkDoArquivo
-from app.esquemas.avisos import NovoAviso
-from app.esquemas.documentos import Documento as DocumentoSaida
+from app.esquemas.avisos import Categoria, NovoAviso
 from app.esquemas.documentos import (
+    MSG_SO_VISIVEL,
     DocumentoResumo,
     NovaVersaoDocumento,
     NovoDocumento,
     VersaoDocumento,
 )
+from app.esquemas.documentos import Documento as DocumentoSaida
 from app.modelos import Arquivo, Documento, DocumentoVersao
 from app.modelos.avisos import LIMITE_TITULO as LIMITE_TITULO_AVISO
 from app.seguranca.dependencias import Logado
@@ -38,6 +40,7 @@ from app.servicos.visibilidade import niveis_que_ve
 
 MSG_ENVIE_DE_NOVO = "Envie o arquivo de novo."
 PREFIXO_DO_AVISO = "Documento novo: "
+PREFIXO_DA_VERSAO = "Documento atualizado: "
 
 
 # --- erros ------------------------------------------------------------------------------------
@@ -163,8 +166,12 @@ def _buscar(
     return documento
 
 
-def _completo(db: Session, documento: Documento) -> DocumentoSaida:
+def _completo(db: Session, documento: Documento, ate: int | None = None) -> DocumentoSaida:
+    """O documento como a unidade vê. `ate`: como ficou na versão `ate` (a resposta de quem
+    enviou essa versão, mesmo que outra tenha chegado logo depois; revisão de código, C4)."""
     versoes = _versoes(db, [documento.id])[documento.id]
+    if ate is not None:
+        versoes = [(v, a) for v, a in versoes if v.versao <= ate]
     return DocumentoSaida(
         **_resumo(documento, versoes),
         versoes_anteriores=[
@@ -205,40 +212,107 @@ def link(
     return link_do_arquivo(armazenamento, arquivo, baixar=baixar)
 
 
+def abrir_ate(db: Session, logado: Logado, documento_id: int, versao: int) -> DocumentoSaida:
+    """O documento como ficou na versão que este pedido criou (C4)."""
+    return _completo(db, _buscar(db, logado, documento_id), ate=versao)
+
+
+def destino_de_abrir(
+    db: Session,
+    logado: Logado | None,
+    documento_id: int,
+    versao: int,
+    armazenamento: Armazenamento | None,
+    *,
+    baixar: bool,
+) -> str:
+    """Revisão UX, U7: para onde a rota `.../abrir` manda o navegador. Um link novo a cada vez
+    (recarregar a aba do PDF depois de 5 minutos não mostra o erro do bucket); sem acesso (ou
+    inexistente), a página do documento no Portal, que diz "não achamos" ou pede para entrar;
+    arquivos desligados, a mesma página com o motivo."""
+    pagina = f"/documentos/{documento_id}"
+    try:
+        return link(db, logado, documento_id, versao, armazenamento, baixar=baixar).url
+    except ErroApi as erro:
+        if erro.status == 404:
+            return pagina
+        return f"{pagina}?erro={erro.codigo}"
+
+
 # --- gestão -----------------------------------------------------------------------------------
 
 
 def _arquivo(db: Session, logado: Logado, arquivo_id: int) -> Arquivo:
+    """O arquivo que esta unidade enviou para documento. Já usado num documento que a unidade
+    vê (a tela mandou de novo porque a resposta se perdeu, revisão UX, U1): 409 com onde ele
+    está, para a tela levar a pessoa até lá em vez de pedir o arquivo de novo."""
     arquivo = arquivo_utilizavel(db, logado, arquivo_id, "documento")
     if arquivo is None:
         raise _envie_de_novo()
+    usado = db.execute(
+        select(DocumentoVersao.documento_id, DocumentoVersao.versao)
+        .join(Documento, Documento.id == DocumentoVersao.documento_id)
+        .where(DocumentoVersao.arquivo_id == arquivo.id, _visivel(logado))
+    ).one_or_none()
+    if usado is not None:
+        erro = _em_uso()
+        erro.extras.update(documento_id=usado.documento_id, versao=usado.versao)
+        raise erro
     return arquivo
 
 
-def _titulo_do_aviso(titulo: str) -> str:
-    completo = PREFIXO_DO_AVISO + titulo
+# A categoria do aviso automático que combina com o assunto do documento (revisão UX, U13).
+CATEGORIA_DO_AVISO = {"obra": Categoria.obra, "ata": Categoria.reuniao}
+
+
+def _cortar_titulo(prefixo: str, titulo: str) -> str:
+    completo = prefixo + titulo
     if len(completo) <= LIMITE_TITULO_AVISO:
         return completo
     return completo[: LIMITE_TITULO_AVISO - 1].rstrip() + "…"
 
 
-def _aviso_automatico(titulo: str) -> NovoAviso:
-    """RF-33. O mesmo texto serve no aviso aberto e na cópia por e-mail (que leva ao aviso)."""
+def _paragrafos(*partes: str | None) -> str:
+    return "\n\n".join(p for p in partes if p)
+
+
+def _aviso_do_documento_novo(dados: NovoDocumento) -> NovoAviso:
+    """RF-33. O mesmo texto serve no aviso aberto (com o botão "Ver o documento") e na cópia por
+    e-mail (que leva ao aviso). A linha da gestão, se houver, entra no meio."""
     return NovoAviso(
-        titulo=_titulo_do_aviso(titulo),
-        texto=(
-            f"Um documento novo foi publicado no Portal: “{titulo}”.\n\n"
-            "Ele fica guardado em Documentos, no menu do Portal, e o botão “Abrir o documento”"
-            " deste aviso leva direto a ele."
+        titulo=_cortar_titulo(PREFIXO_DO_AVISO, dados.titulo),
+        texto=_paragrafos(
+            f"Um documento novo foi publicado no Portal: “{dados.titulo}”.",
+            dados.nota_do_aviso,
+            "Ele fica guardado em Documentos, no menu do Portal, e o botão “Ver o documento”"
+            " deste aviso leva direto a ele.",
         ),
+        categoria=CATEGORIA_DO_AVISO.get(dados.categoria.value, Categoria.geral),
         para_todos=True,
     )
 
 
-def _gravar(db: Session) -> None:
-    """Flush que traduz as restrições do banco; qualquer erro desfaz tudo."""
+def _aviso_da_versao(documento: Documento, versao: int, nota: str | None) -> NovoAviso:
+    """Revisão UX, U3. O aviso da versão nova não ganha o botão do documento: `documento.aviso_id`
+    guarda um aviso só, o da criação (dúvidas do épico A, item 13). No lugar, o endereço do
+    documento no texto, que vira link no mural e no e-mail, se o endereço do Portal existe."""
+    base = url_base()
+    onde = "Ela fica guardada em Documentos, no menu do Portal"
+    onde = f"{onde}: {base}/documentos/{documento.id}" if base else f"{onde}."
+    return NovoAviso(
+        titulo=_cortar_titulo(PREFIXO_DA_VERSAO, documento.titulo),
+        texto=_paragrafos(
+            f"Saiu a versão {versao} de um documento do Portal: “{documento.titulo}”.", nota, onde
+        ),
+        categoria=CATEGORIA_DO_AVISO.get(documento.categoria, Categoria.geral),
+        para_todos=True,
+    )
+
+
+def _traduzindo(db: Session, acao: Callable[[], None]) -> None:
+    """Roda `flush` ou `commit` traduzindo as restrições do banco; qualquer erro desfaz tudo."""
     try:
-        db.flush()
+        acao()
     except IntegrityError as erro:
         db.rollback()
         traduzido = _traduzir(erro)
@@ -253,7 +327,7 @@ def publicar(db: Session, logado: Logado, dados: NovoDocumento) -> tuple[int, in
     arquivo = _arquivo(db, logado, dados.arquivo_id)
     aviso_id = None
     if dados.avisar_unidades:
-        aviso_id = avisos.gravar_publicacao(db, logado, _aviso_automatico(dados.titulo))
+        aviso_id = avisos.gravar_publicacao(db, logado, _aviso_do_documento_novo(dados))
     documento = Documento(
         titulo=dados.titulo,
         categoria=dados.categoria.value,
@@ -263,7 +337,7 @@ def publicar(db: Session, logado: Logado, dados: NovoDocumento) -> tuple[int, in
         aviso_id=aviso_id,
     )
     db.add(documento)
-    _gravar(db)
+    _traduzindo(db, db.flush)
     db.add(
         DocumentoVersao(
             documento_id=documento.id,
@@ -272,7 +346,7 @@ def publicar(db: Session, logado: Logado, dados: NovoDocumento) -> tuple[int, in
             enviada_por=logado.unidade_id,
         )
     )
-    _gravar(db)
+    _traduzindo(db, db.flush)
     registrar(
         db,
         Acao.documento_publicado,
@@ -286,22 +360,25 @@ def publicar(db: Session, logado: Logado, dados: NovoDocumento) -> tuple[int, in
             "avisou": aviso_id is not None,
         },
     )
-    try:
-        db.commit()
-    except IntegrityError as erro:
-        db.rollback()
-        traduzido = _traduzir(erro)
-        if traduzido is None:
-            raise
-        raise traduzido from erro
+    _traduzindo(db, db.commit)
     return documento.id, aviso_id
 
 
-def nova_versao(db: Session, logado: Logado, documento_id: int, dados: NovaVersaoDocumento) -> None:
-    """H-19. A trava do documento põe em fila duas versões ao mesmo tempo e o arquivar."""
+def nova_versao(
+    db: Session, logado: Logado, documento_id: int, dados: NovaVersaoDocumento
+) -> tuple[int, int | None]:
+    """H-19. Devolve (a versão criada, o aviso ou `None`). A trava do documento põe em fila
+    duas versões ao mesmo tempo e o arquivar."""
     documento = _buscar(db, logado, documento_id, travar=True)
     if documento.arquivado_em is not None:
         raise _arquivado()
+    if dados.avisar_unidades and documento.acesso == "gestao":
+        raise ErroApi(
+            422,
+            "dados_invalidos",
+            MSG_SO_VISIVEL,
+            campos=[{"campo": "avisar_unidades", "mensagem": MSG_SO_VISIVEL}],
+        )
     arquivo = _arquivo(db, logado, dados.arquivo_id)
     versao = (
         db.scalar(
@@ -319,16 +396,22 @@ def nova_versao(db: Session, logado: Logado, documento_id: int, dados: NovaVersa
             enviada_por=logado.unidade_id,
         )
     )
-    _gravar(db)
+    _traduzindo(db, db.flush)
+    aviso_id = None
+    if dados.avisar_unidades:
+        aviso_id = avisos.gravar_publicacao(
+            db, logado, _aviso_da_versao(documento, versao, dados.nota_do_aviso)
+        )
     registrar(
         db,
         Acao.documento_versao_enviada,
         unidade_id=logado.unidade_id,
         entidade="documento",
         entidade_id=documento.id,
-        detalhes={"versao": versao},
+        detalhes={"versao": versao, "avisou": aviso_id is not None},
     )
-    db.commit()
+    _traduzindo(db, db.commit)
+    return versao, aviso_id
 
 
 def arquivar(db: Session, logado: Logado, documento_id: int) -> None:

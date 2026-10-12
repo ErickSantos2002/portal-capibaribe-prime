@@ -18,10 +18,14 @@ Quem vê o quê: `app.servicos.visibilidade.niveis_que_ve`, e arquivado só para
 disso, 404 igual a documento inexistente.
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, BackgroundTasks, Depends, Path
+from fastapi.responses import RedirectResponse
 
 from app.esquemas.arquivos import LinkDoArquivo
 from app.esquemas.documentos import (
+    MAIOR_ID,
     Documento,
     ListaDocumentos,
     NovaVersaoDocumento,
@@ -38,6 +42,10 @@ from app.servicos import documentos as servico
 from app.servicos import notificacoes
 from app.servicos.armazenamento import Armazenado
 
+# Revisão de código, C1 e C2: fora do tipo do banco (bigint, smallint) é 422, não erro 500.
+IdDocumento = Annotated[int, Path(ge=1, le=MAIOR_ID)]
+NumeroDaVersao = Annotated[int, Path(ge=1, le=32767)]
+
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(prefix="/api/documentos", dependencies=[Depends(exige_cabecalho_portal)])
 
@@ -53,7 +61,7 @@ def publicos(db: Banco) -> ListaDocumentos:
 
 
 @rotas.get("/{documento_id}")
-def abrir(documento_id: int, logado: UnidadeLogada, db: Banco) -> Documento:
+def abrir(documento_id: IdDocumento, logado: UnidadeLogada, db: Banco) -> Documento:
     return servico.abrir(db, logado, documento_id)
 
 
@@ -70,14 +78,21 @@ def publicar(
 
 @rotas.post("/{documento_id}/versoes", status_code=201)
 def nova_versao(
-    documento_id: int, dados: NovaVersaoDocumento, logado: Gestao, db: Banco
+    documento_id: IdDocumento,
+    dados: NovaVersaoDocumento,
+    logado: Gestao,
+    db: Banco,
+    tarefas: BackgroundTasks,
 ) -> Documento:
-    servico.nova_versao(db, logado, documento_id, dados)
-    return servico.abrir(db, logado, documento_id)
+    versao, aviso_id = servico.nova_versao(db, logado, documento_id, dados)
+    if aviso_id is not None:
+        notificacoes.agendar(tarefas, aviso_id)
+    # C4: a versão que este pedido criou, mesmo que outra tenha chegado logo depois.
+    return servico.abrir_ate(db, logado, documento_id, versao)
 
 
 @rotas.post("/{documento_id}/arquivar")
-def arquivar(documento_id: int, logado: Gestao, db: Banco) -> Documento:
+def arquivar(documento_id: IdDocumento, logado: Gestao, db: Banco) -> Documento:
     servico.arquivar(db, logado, documento_id)
     db.expire_all()
     return servico.abrir(db, logado, documento_id)
@@ -85,11 +100,29 @@ def arquivar(documento_id: int, logado: Gestao, db: Banco) -> Documento:
 
 @rotas.get("/{documento_id}/versoes/{versao}/link")
 def link(
-    documento_id: int,
-    versao: int,
+    documento_id: IdDocumento,
+    versao: NumeroDaVersao,
     logado: SessaoOpcional,
     db: Banco,
     bucket: Armazenado,
     baixar: bool = False,
 ) -> LinkDoArquivo:
     return servico.link(db, logado, documento_id, versao, bucket, baixar=baixar)
+
+
+# Revisão UX, U7: o "Abrir" e o "Baixar" da tela apontam para cá, não para o link assinado
+# (que vence em 5 minutos: recarregar a aba do PDF mostrava o erro do bucket). Cada visita
+# confere o acesso de novo e redireciona para um link novo. Sem acesso, ou com os arquivos
+# desligados, volta para a página do documento no Portal. Fica fora do OpenAPI: é navegação
+# do navegador, não JSON (dúvidas do épico A, item 12). `no-store` vem do middleware comum.
+@rotas.get("/{documento_id}/versoes/{versao}/abrir", include_in_schema=False)
+def abrir_arquivo(
+    documento_id: IdDocumento,
+    versao: NumeroDaVersao,
+    logado: SessaoOpcional,
+    db: Banco,
+    bucket: Armazenado,
+    baixar: bool = False,
+) -> RedirectResponse:
+    destino = servico.destino_de_abrir(db, logado, documento_id, versao, bucket, baixar=baixar)
+    return RedirectResponse(destino, status_code=302)

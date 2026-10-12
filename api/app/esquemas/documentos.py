@@ -4,14 +4,15 @@ Espelho TypeScript: `web/src/documentos/tipos.ts`. O arquivo de cada versão já
 conferido pela rota comum (`POST /api/arquivos`); aqui só vai o id dele.
 """
 
+import unicodedata
 from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import AfterValidator, ValidationInfo, field_validator
+from pydantic import AfterValidator, Field, ValidationInfo, field_validator
 
 from app.esquemas.arquivos import ArquivoEnviado
-from app.esquemas.comum import Entrada, Saida, sem_controle, sem_invisiveis
+from app.esquemas.comum import MSG_CONTROLE, Entrada, Saida, sem_controle, sem_invisiveis
 from app.modelos.documentos import (
     DATA_DOCUMENTO_ATE,
     DATA_DOCUMENTO_DESDE,
@@ -39,9 +40,32 @@ class NivelAcesso(StrEnum):
     gestao = "gestao"
 
 
+# Revisão de código do épico A, C3: além da regra comum (`sem_controle`, `sem_invisiveis`),
+# nada que pareça vazio ou quebre a linha sem aparecer: separador de linha e de parágrafo (Zl,
+# Zp), todo caractere de formatação (Cf, ex.: U+061C, U+180E, hífen invisível U+00AD) e os
+# "preenchimentos" do Hangul, que são letras mas não desenham nada. O ZWJ (U+200D) fica, como
+# na regra comum: os emojis de família e de profissão usam. Dúvidas do épico A, item 11: a mesma
+# regra deveria ir para o comum.
+_CATEGORIAS_INVISIVEIS = frozenset({"Zl", "Zp", "Cf"})
+_PREENCHIMENTOS = frozenset("ᅟᅠㅤﾠ")
+_ZWJ = "‍"
+
+
+def sem_invisivel_nenhum(texto: str) -> str:
+    sem_controle(texto)
+    sem_invisiveis(texto)
+    for caractere in texto:
+        if caractere == _ZWJ:
+            continue
+        if caractere in _PREENCHIMENTOS or (
+            unicodedata.category(caractere) in _CATEGORIAS_INVISIVEIS
+        ):
+            raise ValueError(MSG_CONTROLE)
+    return texto
+
+
 def validar_titulo(titulo: str) -> str:
-    sem_controle(titulo)
-    sem_invisiveis(titulo)
+    sem_invisivel_nenhum(titulo)
     titulo = titulo.strip()
     if not titulo:
         raise ValueError("Escreva o título do documento.")
@@ -56,8 +80,26 @@ def validar_data(data: date) -> date:
     return data
 
 
+def validar_nota(nota: str | None) -> str | None:
+    """A linha opcional que a gestão escreve para o aviso automático (revisão UX, U3 e U13):
+    uma linha só (espaços e quebras viram um espaço), até 300 letras; vazia é nenhuma."""
+    if nota is None:
+        return None
+    sem_invisivel_nenhum(nota.replace("\n", " ").replace("\r", " ").replace("\t", " "))
+    nota = " ".join(nota.split())
+    if len(nota) > LIMITE_NOTA_DO_AVISO:
+        raise ValueError(f"A linha do aviso pode ter até {LIMITE_NOTA_DO_AVISO} letras.")
+    return nota or None
+
+
+LIMITE_NOTA_DO_AVISO = 300
+# Ids do banco são bigint (C2): fora disso, 422 em vez de erro 500 do banco.
+MAIOR_ID = 2**63 - 1
+IdDoBanco = Annotated[int, Field(ge=1, le=MAIOR_ID)]
 TituloDocumento = Annotated[str, AfterValidator(validar_titulo)]
 DataDocumento = Annotated[date, AfterValidator(validar_data)]
+NotaDoAviso = Annotated[str | None, AfterValidator(validar_nota)]
+MSG_SO_VISIVEL = "Só dá para avisar as unidades de documento que elas podem ver."
 
 
 # --- requisições -------------------------------------------------------------------------------
@@ -72,21 +114,26 @@ class NovoDocumento(Entrada):
     categoria: CategoriaDocumento
     data_documento: DataDocumento
     acesso: NivelAcesso
-    arquivo_id: int
+    arquivo_id: IdDoBanco
     avisar_unidades: bool = False
+    # A linha que a gestão escreve para o aviso automático (revisão UX, U13). Sem aviso, ignorada.
+    nota_do_aviso: NotaDoAviso = None
 
     @field_validator("avisar_unidades")
     @classmethod
     def _avisar(cls, avisar: bool, info: ValidationInfo) -> bool:
         if avisar and info.data.get("acesso") == NivelAcesso.gestao:
-            raise ValueError("Só dá para avisar as unidades de documento que elas podem ver.")
+            raise ValueError(MSG_SO_VISIVEL)
         return avisar
 
 
 class NovaVersaoDocumento(Entrada):
-    """`POST /api/documentos/{id}/versoes` (H-19): o arquivo da versão nova."""
+    """`POST /api/documentos/{id}/versoes` (H-19): o arquivo da versão nova e, se quiser, o
+    aviso para as unidades com "o que mudou" (revisão UX, U3; desmarcado por padrão)."""
 
-    arquivo_id: int
+    arquivo_id: IdDoBanco
+    avisar_unidades: bool = False
+    nota_do_aviso: NotaDoAviso = None
 
 
 # --- respostas ---------------------------------------------------------------------------------
