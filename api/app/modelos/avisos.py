@@ -1,4 +1,5 @@
-"""Avisos sem anexo: `aviso`, `aviso_versao`, `aviso_bloco`, `aviso_leitura` (modelo, seção 3.3).
+"""Avisos: `aviso`, `aviso_versao`, `aviso_bloco`, `aviso_leitura` (modelo, seção 3.3) e, desde
+o M3, `aviso_anexo`.
 
 Regras que o banco garante (migração 0002) e que estes modelos não repetem: datas carimbadas
 pelo banco, versões em sequência, aviso completo no commit (versão 1 e destino), o `app` sem
@@ -13,8 +14,10 @@ from sqlalchemy import (
     Enum,
     FetchedValue,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     SmallInteger,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -118,3 +121,26 @@ class AvisoLeitura(Base):
     lido_em: Mapped[datetime] = mapped_column(server_default=func.now())
     # Maior versão que a unidade abriu (migração 0003). Só sobe; `lido_em` não muda com ela.
     versao_lida: Mapped[int] = mapped_column(SmallInteger)
+
+
+ANEXOS_POR_VERSAO = 5
+
+
+class AvisoAnexo(Base):
+    """Anexo de uma versão do aviso (M3, migração 0007; H-12). Gravado só na transação que cria
+    a versão; até 5 por versão; um arquivo de finalidade `aviso` serve a um aviso só."""
+
+    __tablename__ = "aviso_anexo"
+    __table_args__ = (
+        CheckConstraint(f"ordem between 1 and {ANEXOS_POR_VERSAO}", name="aviso_anexo_ordem"),
+        UniqueConstraint("aviso_id", "versao", "ordem", name="aviso_anexo_ordem_unica"),
+        ForeignKeyConstraint(
+            ["aviso_id", "versao"], ["aviso_versao.aviso_id", "aviso_versao.versao"]
+        ),
+        Index("aviso_anexo_arquivo", "arquivo_id"),
+    )
+
+    aviso_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    versao: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
+    arquivo_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("arquivo.id"), primary_key=True)
+    ordem: Mapped[int] = mapped_column(SmallInteger)

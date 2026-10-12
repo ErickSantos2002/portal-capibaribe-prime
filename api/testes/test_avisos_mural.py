@@ -78,6 +78,7 @@ def test_item_do_mural(logar):
         "corrigido_desde_a_leitura": False,
         "categoria": "geral",
         "evento_quando": None,
+        "quantidade_anexos": 0,
     }
 
 

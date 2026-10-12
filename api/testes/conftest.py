@@ -34,6 +34,10 @@ ADMIN_URL = os.environ.get(
 PAPEIS = {"dono": "dono-teste", "app": "app-teste"}
 BANCO = os.environ.get("PORTAL_TESTE_BANCO", "portal_teste")
 TABELAS = [
+    "aviso_anexo",
+    "documento_versao",
+    "documento",
+    "arquivo",
     "notificacao_envio",
     "token_recuperacao",
     "inscricao_push",
@@ -214,6 +218,23 @@ def logar(cliente: TestClient, engine_app) -> Callable[[str], TestClient]:
         return logado
 
     return _logar
+
+
+@pytest.fixture
+def armazenamento():
+    """Arquivos ligados, com o bucket falso em memória no lugar do R2 (spec do M3, seção 3).
+
+    Sem esta fixture, a API roda com os arquivos desligados (sem `PORTAL_ARQUIVOS_*`): as rotas
+    que geram URL respondem 503. `armazenamento.receber(chave, conteudo, tipo)` faz o papel do
+    navegador mandando o arquivo; `armazenamento.objetos` mostra o que está no bucket.
+    """
+    from app.main import app
+    from app.servicos.armazenamento import ArmazenamentoFalso, obter_armazenamento
+
+    falso = ArmazenamentoFalso()
+    app.dependency_overrides[obter_armazenamento] = lambda: falso
+    yield falso
+    app.dependency_overrides.pop(obter_armazenamento, None)
 
 
 @pytest.fixture

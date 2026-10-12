@@ -8,6 +8,7 @@ import { NaoEncontrado } from '../casca/guardas'
 import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
+import { DocumentoDoAviso } from '../documentos/DocumentoDoAviso'
 import { abrirAviso, arquivarAviso, marcarLido, mudarFixado } from './api'
 import { comoErroDaApi, useCarga, useIdDoAviso } from './carregar'
 import {
@@ -63,6 +64,8 @@ function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCo
         texto={aviso.texto}
         avisos={<Situacao aviso={aviso} />}
       />
+      {/* M3, épico A: o documento que gerou este aviso (RF-33). */}
+      <DocumentoDoAviso documento={aviso.documento} />
       {eu?.gestao && <ParaAGestao aviso={aviso} trocar={trocar} />}
     </article>
   )

@@ -32,6 +32,8 @@ ROTAS_DE_LEITURA = [
     ("GET", "/api/avisos/nao-lidos", None),
     ("GET", "/api/avisos/{id}", None),
     ("POST", "/api/avisos/{id}/lido", None),
+    # M3, épico B: o link curto de um anexo (spec do M3, seção 5.3).
+    ("GET", "/api/avisos/{id}/anexos/{arquivo_id}/link", None),
 ]
 
 
@@ -41,7 +43,8 @@ def aviso_id(logar) -> int:
 
 
 def _pedir(cliente, metodo: str, caminho: str, corpo, aviso_id: int):
-    return cliente.request(metodo, caminho.format(id=aviso_id), json=corpo)
+    url = caminho.replace("{id}", str(aviso_id)).replace("{arquivo_id}", "1")
+    return cliente.request(metodo, url, json=corpo)
 
 
 def _contar_avisos(engine) -> tuple[int, int]:
@@ -102,7 +105,7 @@ def test_toda_rota_de_avisos_esta_nas_listas_de_permissao():
         (metodo, caminho.replace("{id}", "{aviso_id}"))
         for metodo, caminho, _ in ROTAS_DE_GESTAO + ROTAS_DE_LEITURA
     }
-    assert len(no_app) == 12
+    assert len(no_app) == 13
     assert no_app == testadas
 
 

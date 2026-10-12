@@ -19,7 +19,16 @@ from typing import Annotated, Any, Literal, Union
 import pytest
 from pydantic import BaseModel
 
-from app.esquemas import acesso, administracao, avisos, comum, push, recuperacao
+from app.esquemas import (
+    acesso,
+    administracao,
+    arquivos,
+    avisos,
+    comum,
+    documentos,
+    push,
+    recuperacao,
+)
 from app.modelos import Canal, Papel, SituacaoEnvio
 
 WEB = Path(__file__).resolve().parents[2] / "web" / "src"
@@ -31,10 +40,13 @@ ARQUIVOS_TS = {
     # M2: épico A (push) e épico B (recuperação).
     push: WEB / "notificacoes" / "tipos.ts",
     recuperacao: WEB / "recuperacao" / "tipos.ts",
+    # M3: comum (envio de arquivo) e épico A (documentos; os anexos do épico B estão em avisos).
+    arquivos: WEB / "arquivos" / "tipos.ts",
+    documentos: WEB / "documentos" / "tipos.ts",
 }
 BASES = {comum.Entrada, comum.Saida}
 # Apelidos de tipo do front que valem o tipo básico.
-APELIDOS_TS = {"DataHora": "string"}
+APELIDOS_TS = {"DataHora": "string", "Data": "string"}
 
 _INTERFACE = re.compile(r"export interface (\w+)(?: extends ([\w, ]+))? \{(.*?)\n\}", re.S)
 _APELIDO = re.compile(r"export type (\w+) = ([A-Z]\w*)\s*$", re.M)
@@ -162,3 +174,22 @@ def test_o_teste_enxerga_os_esquemas():
         frozenset({"CampoInvalido[]", "null"}),
         True,
     )
+
+
+def test_limites_do_envio_iguais_na_tela_e_na_api():
+    # M3 (spec, seção 4): a tela confere tipo e tamanho antes de mandar, com os mesmos números e
+    # as mesmas mensagens da API (`web/src/arquivos/limites.ts`).
+    from app.modelos.arquivos import LIMITE_POR_FINALIDADE, MB, TIPOS_ACEITOS
+
+    texto = (WEB / "arquivos" / "limites.ts").read_text(encoding="utf-8")
+    lista = re.search(r"TIPOS_ACEITOS: readonly TipoArquivo\[\] = \[(.*?)\]", texto, re.S)
+    assert lista, "limites.ts sem TIPOS_ACEITOS"
+    assert tuple(re.findall(r"'([^']+)'", lista.group(1))) == TIPOS_ACEITOS
+    limites = re.search(r"LIMITES[^=]*= \{ aviso: (\d+) \* MB, documento: (\d+) \* MB \}", texto)
+    assert limites, "limites.ts sem LIMITES"
+    assert {"aviso": int(limites[1]) * MB, "documento": int(limites[2]) * MB} == (
+        LIMITE_POR_FINALIDADE
+    )
+    assert f"'{arquivos.MSG_TIPO}'" in texto
+    assert "O arquivo pode ter até ${LIMITES[finalidade] / MB} MB." in texto
+    assert arquivos.mensagem_do_limite("aviso") == "O arquivo pode ter até 10 MB."

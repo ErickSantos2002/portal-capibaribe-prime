@@ -6,6 +6,7 @@ import { rotasAdministracao } from './administracao/rotas'
 import { rotasAvisos } from './avisos/rotas'
 import { NaoEncontrado } from './casca/guardas'
 import { Raiz } from './casca/Raiz'
+import { rotasDocumentos } from './documentos/rotas'
 import { rotasNotificacoes } from './notificacoes/rotas'
 import { rotasRecuperacao } from './recuperacao/rotas'
 
@@ -20,6 +21,8 @@ export const rotas: RouteObject[] = [
       // M2: épico A (notificações) e épico B (esqueci a senha).
       ...rotasNotificacoes,
       ...rotasRecuperacao,
+      // M3: épico A (documentos; os anexos do épico B ficam nas rotas dos avisos).
+      ...rotasDocumentos,
       { path: '*', element: <NaoEncontrado /> },
     ],
   },

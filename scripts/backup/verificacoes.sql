@@ -11,13 +11,14 @@ select set_config('verificacao.head', :'head', false) \gset
 
 do $$
 declare
-    -- Tabelas do modelo até a migração 0006 (a 0006 só acrescentou uma coluna em `unidade`;
+    -- Tabelas do modelo até a migração 0007 (a 0006 só acrescentou uma coluna em `unidade`;
     -- aqui se conferem tabelas, não colunas). Migração nova que cria tabela: acrescentar aqui
     -- (o teste api/testes/test_m2_backup.py confere contra o banco migrado).
     esperadas constant text[] := array[
         'bloco', 'unidade', 'unidade_papel', 'sessao', 'historico', 'erro',
         'aviso', 'aviso_versao', 'aviso_bloco', 'aviso_leitura', 'entrada_tentativa',
-        'inscricao_push', 'token_recuperacao', 'notificacao_envio', 'alembic_version'
+        'inscricao_push', 'token_recuperacao', 'notificacao_envio',
+        'arquivo', 'documento', 'documento_versao', 'aviso_anexo', 'alembic_version'
     ];
     faltando text[];
     head constant text := current_setting('verificacao.head');

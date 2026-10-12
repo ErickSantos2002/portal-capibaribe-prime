@@ -40,6 +40,14 @@ class Acao(enum.StrEnum):
     # (`unidade_id` nulo, entidade `unidade`), com `{"enviado": bool, "motivo": ...}`.
     recuperacao_pedida = "recuperacao_pedida"
     senha_redefinida = "senha_redefinida"
+    # Envio de arquivo (M3, comum; spec do M3, seção 4): entidade `arquivo`, com
+    # `{"motivo": "conteudo" | "tamanho", "finalidade", "tipo_declarado", "tipo_encontrado",
+    # "tamanho_bytes"}`, nunca o nome do arquivo.
+    arquivo_recusado = "arquivo_recusado"
+    # Documentos (M3, épico A; spec do M3, seção 5.2): entidade `documento`.
+    documento_publicado = "documento_publicado"
+    documento_versao_enviada = "documento_versao_enviada"
+    documento_arquivado = "documento_arquivado"
 
 
 # Chaves que denunciam dado pessoal ou segredo. Comparação por "contém", em minúsculas.

@@ -40,6 +40,10 @@ def test_upgrade_downgrade_upgrade(banco_vazio):
         "inscricao_push",
         "token_recuperacao",
         "notificacao_envio",
+        "arquivo",
+        "documento",
+        "documento_versao",
+        "aviso_anexo",
     }
 
     rodar_alembic(banco_vazio, "upgrade", "head")
@@ -268,3 +272,35 @@ def test_downgrade_da_0006_volta_a_0005(banco_vazio):
     assert "receber_avisos_email" not in _colunas(banco_vazio, "unidade")
     rodar_alembic(banco_vazio, "upgrade", "head")
     assert "receber_avisos_email" in _colunas(banco_vazio, "unidade")
+
+
+NOVAS_DA_0007 = {"arquivo", "documento", "documento_versao", "aviso_anexo"}
+FUNCOES_DA_0007 = {
+    "arquivo_conferir",
+    "arquivo_conferir_uso",
+    "documento_carimbar",
+    "documento_conferir_completo",
+    "documento_versao_conferir",
+    "aviso_anexo_conferir",
+}
+
+
+def test_downgrade_da_0007_volta_a_0006(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "0006")
+    funcoes_da_0006 = _funcoes(banco_vazio)
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0007
+    rodar_alembic(banco_vazio, "downgrade", "0006")
+    assert not NOVAS_DA_0007 & _tabelas(banco_vazio)
+    # Nada da 0007 fica para trás (funções de trigger incluídas).
+    assert _funcoes(banco_vazio) == funcoes_da_0006
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0007
+
+
+def test_funcoes_de_trigger_da_0007_com_search_path_fixo(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    funcoes = _funcoes(banco_vazio)
+    assert set(funcoes) >= FUNCOES_DA_0007
+    for nome in FUNCOES_DA_0007:
+        assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome

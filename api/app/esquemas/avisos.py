@@ -11,23 +11,23 @@ from typing import Annotated, Any
 
 from pydantic import AfterValidator, Field, ValidationInfo, field_validator, model_validator
 
-from app.esquemas.comum import MSG_CONTROLE, Entrada, Saida, UnidadeRef, sem_controle
+from app.esquemas.arquivos import ArquivoEnviado
+from app.esquemas.comum import (
+    DIRECAO,
+    INVISIVEIS,
+    Entrada,
+    Saida,
+    UnidadeRef,
+    sem_controle,
+    sem_invisiveis,
+)
 from app.modelos.avisos import EVENTO_ATE, EVENTO_DESDE, LIMITE_ONDE, LIMITE_TEXTO, LIMITE_TITULO
 
 NumeroDeBloco = Annotated[int, Field(ge=1, le=9)]
 
-
-# Revisão de código, achado 6: caracteres de direção (que invertem o que se lê, ex.: um link
-# "gpj.exe") e de largura zero (campo que parece vazio). O ZWJ (U+200D) fica: os emojis de
-# família e de profissão usam.
-DIRECAO = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
-INVISIVEIS = DIRECAO | frozenset("\u200b\u200c\u200e\u200f\u2060\ufeff")
-
-
-def sem_invisiveis(texto: str, proibidos: frozenset[str] = INVISIVEIS) -> str:
-    if any(c in proibidos for c in texto):
-        raise ValueError(MSG_CONTROLE)
-    return texto
+# `DIRECAO`, `INVISIVEIS` e `sem_invisiveis` moram em `comum.py` desde o M3 (o nome do arquivo
+# enviado usa as mesmas regras); continuam importáveis daqui.
+_REEXPORTADOS = (DIRECAO, INVISIVEIS, sem_invisiveis)
 
 
 def validar_titulo(titulo: str) -> str:
@@ -128,6 +128,10 @@ class CorrigirAviso(Entrada):
     texto: Texto
     categoria: Categoria = Categoria.geral
     evento: Evento | None = None
+    # M3 (épico B; spec do M3, seção 5.3): ids dos arquivos (`POST /api/arquivos`) da versão
+    # nova, na ordem. Na correção, omitido (ou nulo) repete os anexos da versão em vigor e `[]`
+    # tira todos; ao publicar (`NovoAviso` herda), omitido, nulo ou `[]` é sem anexo.
+    anexos: list[int] | None = None
 
 
 class NovoAviso(CorrigirAviso):
@@ -178,6 +182,8 @@ class AvisoResumo(Saida):
     categoria: Categoria
     # Para a linha do evento no mural ("Sáb, 11/10 · 9h"); nulo se não é evento.
     evento_quando: datetime | None
+    # M3 (épico B): quantos anexos a versão em vigor tem (o clipe no mural).
+    quantidade_anexos: int
 
 
 class VersaoAviso(Saida):
@@ -188,6 +194,8 @@ class VersaoAviso(Saida):
     # Cada versão guarda os dela: o "ver como era antes" mostra a categoria e o evento antigos.
     categoria: Categoria
     evento: Evento | None
+    # M3 (épico B): os anexos daquela versão, na ordem.
+    anexos: list[ArquivoEnviado]
 
 
 class ContagemLeitura(Saida):
@@ -195,6 +203,13 @@ class ContagemLeitura(Saida):
 
     lidos: int
     total: int
+
+
+class DocumentoDoAviso(Saida):
+    """O botão "Abrir o documento" do aviso automático (RF-33; épico A desenha)."""
+
+    id: int
+    titulo: str
 
 
 class AvisoCompleto(AvisoResumo):
@@ -205,6 +220,11 @@ class AvisoCompleto(AvisoResumo):
     # Da mais nova para a mais antiga, sem a em vigor.
     versoes_anteriores: list[VersaoAviso]
     leitura: ContagemLeitura | None
+    # M3 (épico B): os anexos da versão em vigor, na ordem.
+    anexos: list[ArquivoEnviado]
+    # M3 (RF-33): o documento que gerou este aviso ("Avisar as unidades"), se a unidade pode
+    # vê-lo e ele não está arquivado. Pronto desde o contrato.
+    documento: DocumentoDoAviso | None
 
 
 class ListaAvisos(Saida):

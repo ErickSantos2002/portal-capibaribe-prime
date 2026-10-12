@@ -1,4 +1,5 @@
-"""Configuração de push e e-mail, lida das variáveis de ambiente (spec do M2, seção 6).
+"""Configuração de push, e-mail (spec do M2, seção 6) e arquivos (spec do M3, seção 6), lida
+das variáveis de ambiente.
 
 Regra: **sem configuração, o canal fica desligado e nada quebra.** Variável ausente, em branco
 ou com valor inválido desliga só aquele canal (com um aviso no log que nunca mostra o valor); o
@@ -13,6 +14,12 @@ resto do Portal funciona igual. Por isso o M2 pode ir ao ar antes da conta do Gm
 - `PORTAL_URL_BASE`: endereço do Portal nos links dos e-mails, ex.:
   `https://portal-capibaribe-prime.vercel.app`.
 
+- `PORTAL_ARQUIVOS_ENDPOINT`, `PORTAL_ARQUIVOS_BUCKET`, `PORTAL_ARQUIVOS_CHAVE_ID`,
+  `PORTAL_ARQUIVOS_CHAVE_SECRETA` (M3): o bucket de arquivos do R2 e a chave própria da API,
+  só dele; `PORTAL_ARQUIVOS_REGIAO` opcional (`auto`). O endpoint pode vir com `/<bucket>` no
+  fim (como o painel da Cloudflare mostra): esse caminho é tirado. Sem elas, documentos e
+  anexos não abrem nem são enviados (503), e o resto funciona.
+
 A chave pública VAPID não é variável: sai da privada, então as duas nunca ficam trocadas.
 
 `PORTAL_URL_BASE` existe para o link do e-mail **nunca** vir do cabeçalho `Host` da requisição:
@@ -24,6 +31,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from functools import cache
+from urllib.parse import urlsplit, urlunsplit
 
 from py_vapid import Vapid
 
@@ -114,7 +122,70 @@ def _config_email(
     return ConfigEmail(usuario=usuario, senha_app=senha, host=host, porta=int(porta), url_base=base)
 
 
+@dataclass(frozen=True)
+class ConfigArquivos:
+    """O bucket **de arquivos** do R2 (spec do M3, seção 6). Nunca o de backups (ADR-0009)."""
+
+    endpoint: str
+    bucket: str
+    chave_id: str
+    chave_secreta: str = field(repr=False)
+    regiao: str = "auto"
+
+
+_ENDPOINT = re.compile(
+    r"^(https://[A-Za-z0-9.-]+(:[0-9]{1,5})?|http://(localhost|127\.0\.0\.1)(:[0-9]{1,5})?)$"
+)
+# Regra de nome de bucket do S3 e do R2: 3 a 63, minúsculas, números e hífen nas pontas não.
+_BUCKET = re.compile(r"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")
+
+
+def config_arquivos() -> ConfigArquivos | None:
+    return _config_arquivos(
+        _ler("PORTAL_ARQUIVOS_ENDPOINT").rstrip("/"),
+        _ler("PORTAL_ARQUIVOS_BUCKET"),
+        _ler("PORTAL_ARQUIVOS_CHAVE_ID"),
+        _ler("PORTAL_ARQUIVOS_CHAVE_SECRETA"),
+        _ler("PORTAL_ARQUIVOS_REGIAO") or "auto",
+    )
+
+
+@cache
+def _config_arquivos(
+    endpoint: str, bucket: str, chave_id: str, secreta: str, regiao: str
+) -> ConfigArquivos | None:
+    if not (endpoint and bucket and chave_id and secreta):
+        if endpoint or bucket or chave_id or secreta:
+            log.warning(
+                "arquivos desligados: falta PORTAL_ARQUIVOS_ENDPOINT, PORTAL_ARQUIVOS_BUCKET, "
+                "PORTAL_ARQUIVOS_CHAVE_ID ou PORTAL_ARQUIVOS_CHAVE_SECRETA"
+            )
+        return None
+    # A página do bucket no painel da Cloudflare mostra o endereço com `/<bucket>` no fim. Esse
+    # caminho (e só ele) sai; o boto3 põe o bucket no caminho sozinho.
+    partes = urlsplit(endpoint)
+    if partes.path == "/" + bucket and not (partes.query or partes.fragment):
+        endpoint = urlunsplit(partes._replace(path=""))
+    if not _ENDPOINT.match(endpoint):
+        log.warning(
+            "arquivos desligados: PORTAL_ARQUIVOS_ENDPOINT precisa ser https:// (ou a máquina "
+            "local), sem caminho (só o nome do bucket no fim é aceito)"
+        )
+        return None
+    # A chave da API nunca enxerga os backups (ADR-0009): o bucket deles fica de fora.
+    if "backup" in bucket.lower():
+        log.warning("arquivos desligados: PORTAL_ARQUIVOS_BUCKET não pode ser o bucket de backup")
+        return None
+    if not _BUCKET.match(bucket):
+        log.warning("arquivos desligados: PORTAL_ARQUIVOS_BUCKET não é um nome de bucket válido")
+        return None
+    return ConfigArquivos(
+        endpoint=endpoint, bucket=bucket, chave_id=chave_id, chave_secreta=secreta, regiao=regiao
+    )
+
+
 def limpar_cache() -> None:
     """Para os testes: esquece as configurações já calculadas."""
     _config_push.cache_clear()
     _config_email.cache_clear()
+    _config_arquivos.cache_clear()

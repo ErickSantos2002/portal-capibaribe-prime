@@ -1,5 +1,6 @@
 // Épico C · Avisos: uma função por rota do contrato (spec do M1, seção 4.4). Pertence ao épico C.
 import { api } from '../api/cliente'
+import type { LinkDoArquivo } from '../arquivos/tipos'
 import type {
   Alcance,
   AvisoCompleto,
@@ -41,3 +42,10 @@ export const mudarFixado = (id: number, fixado: boolean) =>
   api.put<AvisoCompleto>(`/api/avisos/${id}/fixado`, { fixado })
 
 export const buscarLeitura = (id: number) => api.get<Leitura>(`/api/avisos/${id}/leitura`)
+
+/** M3 (épico B): link de 5 minutos de um anexo, de qualquer versão do aviso. Pedir na hora do
+ *  toque, nunca guardar. */
+export const linkDoAnexo = (avisoId: number, arquivoId: number, baixar = false) =>
+  api.get<LinkDoArquivo>(`/api/avisos/${avisoId}/anexos/${arquivoId}/link`, {
+    baixar: baixar || undefined,
+  })

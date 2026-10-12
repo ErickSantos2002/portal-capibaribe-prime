@@ -11,9 +11,22 @@ from testes.test_avisos_apoio import publicar
 
 pytestmark = pytest.mark.usefixtures("predio")
 
-# Rotas do contrato do M2 que ainda respondem 501 (spec do M2, seção 4). O épico A tira daqui
-# o `/api/notificacoes` quando implementar.
-EM_CONSTRUCAO: set[str] = set()
+# Rotas do contrato que ainda respondem 501 (spec do M3, seção 5). Cada épico tira daqui as
+# dele quando implementar: o épico A, as `/api/documentos…`; o épico B, a do link do anexo.
+EM_CONSTRUCAO: set[str] = {
+    "/api/documentos",
+    "/api/documentos/publicos",
+    "/api/documentos/{documento_id}",
+    "/api/documentos/{documento_id}/versoes/{versao}/link",
+    "/api/avisos/{aviso_id}/anexos/{arquivo_id}/link",
+}
+# Rotas que dependem de um documento ou arquivo que este teste não cria: depois do épico, 404
+# (ou 503, sem bucket) também vale. O que este teste confere é o `no-store`.
+SEM_DADO = {
+    "/api/documentos/{documento_id}",
+    "/api/documentos/{documento_id}/versoes/{versao}/link",
+    "/api/avisos/{aviso_id}/anexos/{arquivo_id}/link",
+}
 
 
 def _caminhos_get() -> list[str]:
@@ -29,15 +42,27 @@ def _caminhos_get() -> list[str]:
 def test_todo_get_da_api_sai_sem_cache(logar):
     admin = logar(ADMIN)
     aviso = publicar(admin)
-    substituir = {"{aviso_id}": str(aviso["id"]), "{login}": COMUM}
+    substituir = {
+        "{aviso_id}": str(aviso["id"]),
+        "{login}": COMUM,
+        "{documento_id}": "1",
+        "{versao}": "1",
+        "{arquivo_id}": "1",
+    }
     caminhos = _caminhos_get()
     assert "/api/avisos" in caminhos and "/api/avisos/{aviso_id}" in caminhos
-    for caminho in caminhos:
+    for modelo in caminhos:
+        caminho = modelo
         for marcador, valor in substituir.items():
             caminho = caminho.replace(marcador, valor)
         resposta = admin.get(caminho)
-        esperado = 501 if caminho in EM_CONSTRUCAO else 200
-        assert resposta.status_code == esperado, (caminho, resposta.text)
+        if modelo in EM_CONSTRUCAO:
+            esperados = {501}
+        elif modelo in SEM_DADO:
+            esperados = {200, 404, 503}
+        else:
+            esperados = {200}
+        assert resposta.status_code in esperados, (caminho, resposta.text)
         assert resposta.headers.get("cache-control") == "no-store", caminho
 
 
