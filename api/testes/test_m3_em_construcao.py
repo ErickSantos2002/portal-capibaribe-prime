@@ -7,9 +7,8 @@ Cada épico, ao implementar, troca o corpo da função e **apaga a própria seç
 
 import pytest
 
-from testes.conftest import ADMIN, COMISSAO, COMUM
+from testes.conftest import ADMIN, COMUM
 from testes.test_avisos_apoio import publicar
-from testes.test_m3_rotas import NOVO_DOCUMENTO
 
 pytestmark = pytest.mark.usefixtures("predio", "armazenamento")
 
@@ -22,29 +21,6 @@ EM_CONSTRUCAO = {
 def _501(resposta) -> None:
     assert resposta.status_code == 501, resposta.text
     assert resposta.json() == EM_CONSTRUCAO
-
-
-# --- épico A · documentos ----------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "caminho",
-    ["/api/documentos", "/api/documentos?arquivados=true", "/api/documentos/1"],
-)
-def test_a_leitura_dos_documentos(logar, caminho):
-    _501(logar(COMUM).get(caminho))
-
-
-def test_a_documentos_publicos_e_link(cliente):
-    _501(cliente.get("/api/documentos/publicos"))
-    _501(cliente.get("/api/documentos/1/versoes/1/link?baixar=true"))
-
-
-def test_a_publicar_versao_e_arquivar(logar):
-    comissao = logar(COMISSAO)
-    _501(comissao.post("/api/documentos", json={**NOVO_DOCUMENTO, "avisar_unidades": True}))
-    _501(comissao.post("/api/documentos/1/versoes", json={"arquivo_id": 1}))
-    _501(comissao.post("/api/documentos/1/arquivar"))
 
 
 # --- épico B · anexos nos avisos ---------------------------------------------------------------
