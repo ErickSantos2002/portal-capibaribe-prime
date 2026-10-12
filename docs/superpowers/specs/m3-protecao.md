@@ -85,8 +85,9 @@ Depois do `restaurar.sh`, no banco restaurado:
 - o `Content-Type` vem da assinatura do conteúdo (`application/octet-stream` se não for nenhum
   dos quatro; contado no aviso);
 - o arquivo decifrado fica num diretório temporário 700, apagado a cada arquivo e no fim;
-- objeto que já está no destino com o mesmo tamanho é pulado (dá para rodar de novo depois de
-  uma queda); com outro tamanho é falha (nunca sobrescreve);
+- objeto que já está no destino é pulado sem baixar (dá para rodar de novo depois de uma
+  queda; o PUT do S3 é atômico, então um envio interrompido não deixa objeto pela metade);
+  nunca sobrescreve;
 - recusa destino com `backup` no nome (a API também recusa esse bucket);
 - tamanho enviado conferido com HEAD.
 

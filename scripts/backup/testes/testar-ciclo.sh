@@ -450,6 +450,53 @@ esperar_falha "fazer-backup.sh para se o pg_dump falha" "password authentication
 s3 listar diarios | grep -q 2026-10-04 && reprovar "um backup que falhou foi enviado"
 ok "backup que falhou não chega ao bucket"
 
+# --- 7. Desastre: os arquivos voltam da cópia para um bucket novo ---------------------------
+# Na cópia agora: os 4 publicados, o que falhou e foi copiado na rodada seguinte, e a cópia sem
+# assinatura conhecida do teste da conferência.
+BUCKET_NOVO=portal-capibaribe-arquivos-novo
+s3t "$R2_ENDPOINT" "$BUCKET_NOVO" criar
+s3t "$R2_ENDPOINT" "$BUCKET_NOVO-2" criar
+novo() { s3t "$R2_ENDPOINT" "$BUCKET_NOVO" "$@"; }
+restaurar_arquivos() { # bucket de destino
+  env "${VARS_COPIA[@]}" DESTINO_S3_ENDPOINT="$R2_ENDPOINT" DESTINO_S3_ACCESS_KEY_ID=teste \
+    DESTINO_S3_SECRET_ACCESS_KEY=teste DESTINO_S3_BUCKET="$1" DESTINO_S3_REGIAO=us-east-1 \
+    BACKUP_AGE_KEY="$(cat "${CHAVE_RESTAURAR:-$temp/chave-teste.age}")" \
+    "$pasta/restaurar-arquivos.sh"
+}
+restaurar_arquivos "$BUCKET_NOVO" >"$temp/saida.txt" 2>&1 || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a restauração dos arquivos falhou"
+}
+grep -q "restaurados agora: 6 · já no destino: 0 · sem assinatura conhecida: 1" "$temp/saida.txt" || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a restauração dos arquivos deveria contar 6 restaurados, 1 sem assinatura conhecida"
+}
+novo listar arquivos/ | awk '{print $1}' | sort >"$temp/no-novo.txt"
+printf 'arquivos/%s\n' "${CHAVES[@]}" "$CHAVE_NOVA" "$CHAVE_LIXO" | sort >"$temp/esperado.txt"
+diff -u "$temp/esperado.txt" "$temp/no-novo.txt" >&2 ||
+  reprovar "o bucket novo deveria ter arquivos/<chave> de cada cópia, sem .age"
+for i in 0 1 2 3; do
+  novo ler "arquivos/${CHAVES[$i]}" "$temp/restaurado"
+  cmp -s "$temp/restaurado" "$temp/originais/$i" || reprovar "o arquivo $i não voltou igual ao original"
+  [[ "$(novo tipo "arquivos/${CHAVES[$i]}")" == "${TIPOS[$i]}" ]] ||
+    reprovar "o arquivo $i voltou sem o Content-Type ${TIPOS[$i]}"
+done
+[[ "$(novo tipo "arquivos/$CHAVE_LIXO")" == "application/octet-stream" ]] ||
+  reprovar "conteúdo sem assinatura conhecida deveria voltar como application/octet-stream"
+ok "restauração dos arquivos: bucket novo com os mesmos bytes e o tipo pela assinatura"
+
+restaurar_arquivos "$BUCKET_NOVO" >"$temp/saida.txt" 2>&1 || reprovar "a segunda rodada da restauração falhou"
+grep -q "restaurados agora: 0 · já no destino: 6" "$temp/saida.txt" ||
+  reprovar "a segunda rodada não deveria refazer o que já está no destino"
+ok "restauração dos arquivos pode rodar de novo: pula o que já está no destino"
+
+CHAVE_RESTAURAR="$temp/chave-errada.age" esperar_falha "restauração com a chave errada falha" \
+  "não consegui decifrar" restaurar_arquivos "$BUCKET_NOVO-2"
+[[ -z "$(s3t "$R2_ENDPOINT" "$BUCKET_NOVO-2" listar arquivos/)" ]] ||
+  reprovar "a restauração com a chave errada gravou alguma coisa"
+esperar_falha "restauração dos arquivos recusa o bucket de backups" "backup" \
+  restaurar_arquivos portal-capibaribe-backups
+
 # --- Limpeza ---------------------------------------------------------------------------------
 admin -c "drop database if exists $DESTINO with (force)" -c "drop database if exists $ORIGEM with (force)"
 log "TUDO PASSOU ($passou verificações)"

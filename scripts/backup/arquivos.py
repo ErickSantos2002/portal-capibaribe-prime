@@ -14,11 +14,16 @@ Comandos:
       a lista (uma linha por arquivo confirmado no banco restaurado: chave, tipo e tamanho,
       separados por tabulação) inteira tem cópia; um deles, ao acaso, decifra com o tamanho e
       a assinatura do tipo registrado. Lista vazia: passa com aviso.
+  restaurar --identidade CHAVE_PRIVADA
+      desastre: decifra a cópia inteira (`arquivos/<chave>.age`) para `arquivos/<chave>` no
+      bucket DESTINO_S3_*, com o Content-Type pela assinatura. Pula o que já está no destino
+      (dá para rodar de novo depois de uma queda); nunca sobrescreve.
 
 Variáveis (só o NOME aparece em mensagens; nenhum valor é impresso). Cada grupo tem quatro:
 <GRUPO>_ENDPOINT, <GRUPO>_ACCESS_KEY_ID, <GRUPO>_SECRET_ACCESS_KEY e <GRUPO>_BUCKET.
   ARQUIVOS_R2_*   o bucket de arquivos do Portal (chave só de leitura)
   COPIA_S3_*      a cópia (Backblaze B2; chave sem deleteFiles)
+  DESTINO_S3_*    o bucket novo de um desastre (só `restaurar`)
   <GRUPO>_REGIAO  opcional; padrão: a região de `s3.<região>.backblazeb2.com`, senão "auto"
 
 Saída: o andamento vai para stderr. No GitHub Actions (GITHUB_ACTIONS=true), avisos viram
@@ -38,6 +43,7 @@ from urllib.parse import urlparse
 
 ORIGEM = "ARQUIVOS_R2"
 COPIA = "COPIA_S3"
+DESTINO = "DESTINO_S3"
 # A API só cria `arquivos/<32 hexadecimais>` (m3-contrato, seção 2.1).
 CHAVE_ORIGEM = re.compile(r"^arquivos/([0-9a-f]{32})$")
 CHAVE_COPIA = re.compile(r"^arquivos/([0-9a-f]{32})\.age$")
@@ -350,6 +356,80 @@ def conferir(lista: str, identidade: str | None) -> int:
     return 0
 
 
+# --- restaurar -------------------------------------------------------------------------------
+def restaurar_um(copia: Bucket, destino: Bucket, chave: str, identidade: str, temp: str) -> bool:
+    """Decifra uma cópia e a envia ao destino. O claro fica só no diretório temporário 700 e é
+    apagado logo depois do envio. Devolve se o conteúdo tem uma assinatura conhecida."""
+    cifrado = os.path.join(temp, f"{chave}.age")
+    claro = os.path.join(temp, chave)
+    try:
+        copia.s3.download_file(copia.nome, f"arquivos/{chave}.age", cifrado)
+        decifrado = subprocess.run(
+            ["age", "--decrypt", "--identity", identidade, "--output", claro, cifrado],
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if decifrado.returncode != 0:
+            raise Falha(
+                f"não consegui decifrar a cópia de {chave} "
+                "(chave privada errada ou cópia corrompida)"
+            )
+        with open(claro, "rb") as f:
+            tipo = tipo_pelo_conteudo(f.read(BYTES_DA_ASSINATURA))
+        destino.enviar(claro, f"arquivos/{chave}", tipo or "application/octet-stream")
+        return tipo is not None
+    finally:
+        for caminho in (cifrado, claro):
+            if os.path.exists(caminho):
+                os.remove(caminho)
+
+
+def restaurar(identidade: str) -> int:
+    copia, destino = abrir(COPIA), abrir(DESTINO)
+    if "backup" in destino.nome.lower():
+        sys.exit(
+            "O destino tem 'backup' no nome: os arquivos voltam para um bucket NOVO de arquivos, "
+            "nunca para o de backups (a API também recusa esse nome)."
+        )
+    na_copia = copia.listar("arquivos/")
+    chaves = sorted(m.group(1) for k in na_copia if (m := CHAVE_COPIA.match(k)))
+    ignorados = len(na_copia) - len(chaves)
+    no_destino = destino.listar("arquivos/")
+
+    restaurados = ja = sem_assinatura = 0
+    falhas: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="restaurar-arquivos-") as temp:
+        os.chmod(temp, 0o700)
+        for chave in chaves:
+            # O PUT do S3 é atômico: um envio interrompido não deixa objeto pela metade.
+            if f"arquivos/{chave}" in no_destino:
+                ja += 1
+                continue
+            log(f"restaurando {chave}")
+            try:
+                if not restaurar_um(copia, destino, chave, identidade, temp):
+                    sem_assinatura += 1
+                restaurados += 1
+            except Exception as erro:
+                log(f"FALHOU {chave}: {descrever(erro)}")
+                falhas.append(chave)
+
+    linha = (
+        f"restaurados agora: {restaurados} · já no destino: {ja} · "
+        f"sem assinatura conhecida: {sem_assinatura} · ignorados (fora do padrão): {ignorados}"
+    )
+    log(f"restauração dos arquivos: {linha}")
+    if sem_assinatura:
+        avisar(
+            f"{sem_assinatura} arquivo(s) sem assinatura de PDF/JPEG/PNG/WEBP, "
+            "restaurado(s) como application/octet-stream"
+        )
+    if falhas:
+        log(f"ERRO: {len(falhas)} arquivo(s) não restaurado(s): {', '.join(falhas)}")
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = p.add_subparsers(dest="comando", required=True)
@@ -358,12 +438,16 @@ def main(argv: list[str] | None = None) -> int:
     f = sub.add_parser("conferir")
     f.add_argument("--lista", required=True)
     f.add_argument("--identidade")
+    r = sub.add_parser("restaurar")
+    r.add_argument("--identidade", required=True)
     args = p.parse_args(argv)
 
     if args.comando == "copiar":
         return copiar(args.destinatarios)
     if args.comando == "conferir":
         return conferir(args.lista, args.identidade)
+    if args.comando == "restaurar":
+        return restaurar(args.identidade)
     return 2
 
 
