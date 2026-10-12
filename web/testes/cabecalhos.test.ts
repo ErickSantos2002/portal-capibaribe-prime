@@ -61,11 +61,29 @@ test('a CSP deixa o service worker e o manifest do PWA (M2) virem do próprio Po
   const csp = cabecalhosDoVercel()['Content-Security-Policy']
   const worker = fontesEfetivas(csp, ['worker-src', 'child-src', 'script-src', 'default-src'])
   const manifest = fontesEfetivas(csp, ['manifest-src', 'default-src'])
-  assert.ok(worker.includes("'self'"), `worker-src efetivo: ${worker.join(' ')}`)
-  assert.ok(manifest.includes("'self'"), `manifest-src efetivo: ${manifest.join(' ')}`)
   // O push não passa pela CSP (quem fala com o serviço de push é o navegador), e o toque na
-  // notificação abre uma página do próprio Portal: nada de terceiros é liberado.
-  assert.doesNotMatch(csp, /https?:\/\//, 'CSP com endereço de terceiros')
+  // notificação abre uma página do próprio Portal: o worker e o manifest só vêm do Portal.
+  assert.deepEqual(worker, ["'self'"], `worker-src efetivo: ${worker.join(' ')}`)
+  assert.deepEqual(manifest, ["'self'"], `manifest-src efetivo: ${manifest.join(' ')}`)
+})
+
+test('a CSP libera o R2 só para o envio e para a foto do anexo (M3)', () => {
+  // Spec do M3, seção 8: o navegador faz o PUT direto no bucket (connect-src) e mostra a foto do
+  // anexo por URL assinada, além da prévia local da foto escolhida (img-src com blob:). O
+  // curinga evita pôr o número da conta da Cloudflare no repositório público.
+  const csp = cabecalhosDoVercel()['Content-Security-Policy']
+  const R2 = 'https://*.r2.cloudflarestorage.com'
+  assert.deepEqual(fontesEfetivas(csp, ['connect-src', 'default-src']), ["'self'", R2])
+  assert.deepEqual(fontesEfetivas(csp, ['img-src', 'default-src']), ["'self'", 'blob:', R2])
+  assert.deepEqual(fontesEfetivas(csp, ['default-src']), ["'self'"])
+  // Só esse endereço de terceiros, e só nessas duas diretivas.
+  const comTerceiros = csp
+    .split(';')
+    .map((d) => d.trim())
+    .filter((d) => /https?:|\bblob:|\bdata:|\*/.test(d))
+    .map((d) => d.split(/\s+/)[0])
+  assert.deepEqual(comTerceiros, ['connect-src', 'img-src'])
+  assert.deepEqual(csp.match(/https?:\/\/[^\s;]+/g), [R2, R2])
 })
 
 test('o vite preview responde com os mesmos cabeçalhos do vercel.json', async () => {
