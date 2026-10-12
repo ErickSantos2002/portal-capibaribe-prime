@@ -67,6 +67,28 @@ BLOCO = 1024 * 1024
 BYTES_DA_ASSINATURA = 16
 
 
+# Formato do age (age-encryption.org/v1): cabeçalho em texto + carga. A carga é um nonce de 16
+# bytes e o conteúdo em blocos de 64 KiB, cada um com 16 bytes de autenticação; o arquivo vazio
+# ainda tem um bloco. O cabeçalho tem 22 bytes de versão, 48 do MAC e 98 por destinatário
+# X25519 (as chaves `age1...` de destinatarios.age). Conferido contra o age de verdade nos
+# testes de unidade.
+CABECALHO_AGE = b"age-encryption.org/v1\n"
+BLOCO_AGE = 64 * 1024
+CABECALHO_FIXO, POR_DESTINATARIO, MAX_DESTINATARIOS = 70, 98, 20
+# Quantas cópias têm o começo lido em cada conferência (item 2 de duvidas-m3-protecao.md).
+AMOSTRA_CABECALHO = 200
+
+
+def tamanho_da_copia_confere(tamanho_copia: int, tamanho_original: int) -> bool:
+    """Se uma cópia deste tamanho pode ser o age de um arquivo deste tamanho, cifrado para 1 a
+    20 destinatários X25519. Pega lixo, truncamento e troca de arquivo sem baixar nada (o
+    tamanho vem da listagem)."""
+    blocos = max(1, -(-tamanho_original // BLOCO_AGE))
+    cabecalho = tamanho_copia - (16 + tamanho_original + 16 * blocos)
+    destinatarios, resto = divmod(cabecalho - CABECALHO_FIXO, POR_DESTINATARIO)
+    return resto == 0 and 1 <= destinatarios <= MAX_DESTINATARIOS
+
+
 def tipo_pelo_conteudo(inicio: bytes) -> str | None:
     """Os mesmos bytes mágicos da conferência do envio (`api/app/servicos/arquivos.py`)."""
     if inicio.startswith(b"%PDF-"):
@@ -325,22 +347,48 @@ def conferir(lista: str, identidade: str | None) -> int:
     copia = abrir(COPIA)
     na_copia = copia.listar("arquivos/")
     sem_copia = [c for c, _, _ in arquivos if f"arquivos/{c}.age" not in na_copia]
-    # O age só acrescenta (cabeçalho e 16 bytes por bloco): menor ou igual é cópia truncada.
-    truncadas = [
-        c for c, _, t in arquivos if c not in sem_copia and na_copia[f"arquivos/{c}.age"] <= t
+    # Toda cópia: o tamanho exato de um age deste arquivo (pela listagem, sem baixar nada).
+    tamanho_errado = [
+        c
+        for c, _, t in arquivos
+        if c not in sem_copia and not tamanho_da_copia_confere(na_copia[f"arquivos/{c}.age"], t)
     ]
-    if sem_copia:
-        log(f"ERRO: sem cópia: {', '.join(sem_copia)}")
-    if truncadas:
-        log(f"ERRO: cópia menor que o arquivo: {', '.join(truncadas)}")
-    if sem_copia or truncadas:
-        resumo(
-            "### Cópia dos arquivos",
-            f"- :x: sem cópia ou truncados: {len(sem_copia) + len(truncadas)}",
-        )
+    # Até AMOSTRA_CABECALHO cópias (todas, enquanto forem poucas): os primeiros bytes são do
+    # age. Um GET parcial por cópia; o limite deixa folga nas 2.500 leituras grátis por dia do
+    # B2 quando houver milhares de arquivos.
+    com_tamanho_certo = [c for c, _, _ in arquivos if c not in sem_copia + tamanho_errado]
+    amostra = (
+        com_tamanho_certo
+        if len(com_tamanho_certo) <= AMOSTRA_CABECALHO
+        else secrets.SystemRandom().sample(com_tamanho_certo, AMOSTRA_CABECALHO)
+    )
+    cabecalho_errado = []
+    for c in amostra:
+        try:
+            inicio = copia.s3.get_object(
+                Bucket=copia.nome,
+                Key=f"arquivos/{c}.age",
+                Range=f"bytes=0-{len(CABECALHO_AGE) - 1}",
+            )["Body"].read()
+        except Exception as erro:
+            sys.exit(f"Não consegui ler o começo da cópia de {c}: {descrever(erro)}")
+        if inicio != CABECALHO_AGE:
+            cabecalho_errado.append(c)
+
+    problemas = {
+        "sem cópia": sem_copia,
+        "tamanho que não é o de um age deste arquivo": tamanho_errado,
+        "cabeçalho que não é do age": cabecalho_errado,
+    }
+    for motivo, chaves in problemas.items():
+        if chaves:
+            log(f"ERRO: {motivo}: {', '.join(chaves)}")
+    if total := sum(len(c) for c in problemas.values()):
+        resumo("### Cópia dos arquivos", f"- :x: cópias faltando ou estragadas: {total}")
         sys.exit(
-            f"A cópia dos arquivos está incompleta: {len(sem_copia)} sem cópia e "
-            f"{len(truncadas)} truncado(s), de {len(arquivos)} confirmado(s)."
+            f"A cópia dos arquivos está incompleta ou estragada: {len(sem_copia)} sem cópia, "
+            f"{len(tamanho_errado)} com tamanho errado e {len(cabecalho_errado)} com cabeçalho "
+            f"errado, de {len(arquivos)} confirmado(s)."
         )
 
     chave, tipo, tamanho = secrets.SystemRandom().choice(arquivos)
@@ -363,7 +411,8 @@ def conferir(lista: str, identidade: str | None) -> int:
         sys.exit(f"A cópia de {chave} decifra com {decifrado} bytes; o banco diz {tamanho}.")
 
     linha = (
-        f"{len(arquivos)} arquivo(s) confirmado(s), todos com cópia; conferido ao acaso: "
+        f"{len(arquivos)} arquivo(s) confirmado(s), todos com cópia do tamanho certo; "
+        f"cabeçalho conferido em {len(amostra)}; decifrado ao acaso: "
         f"{chave} ({tipo}, {tamanho} bytes) decifra com a assinatura certa"
     )
     log(f"conferência ok: {linha}")

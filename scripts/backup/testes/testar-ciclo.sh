@@ -354,9 +354,9 @@ GITHUB_STEP_SUMMARY="$resumo" conferir >"$temp/saida.txt" 2>&1 || {
   cat "$temp/saida.txt" >&2
   reprovar "a conferência da cópia dos arquivos falhou com a cópia em dia"
 }
-grep -q "4 arquivo(s) confirmado(s), todos com cópia" "$temp/saida.txt" ||
+grep -q "4 arquivo(s) confirmado(s), todos com cópia do tamanho certo; cabeçalho conferido em 4" "$temp/saida.txt" ||
   reprovar "a conferência deveria achar os 4 confirmados (e ignorar o pendente)"
-grep -qE "conferido ao acaso: [0-9a-f]{32}" "$temp/saida.txt" ||
+grep -qE "decifrado ao acaso: [0-9a-f]{32}" "$temp/saida.txt" ||
   reprovar "a conferência deveria decifrar um arquivo ao acaso"
 grep -q "todos com cópia" "$resumo" || reprovar "a conferência deveria escrever no resumo do job"
 ok "conferência: os 4 confirmados têm cópia, e um ao acaso decifra com a assinatura certa"
@@ -380,6 +380,23 @@ CHAVE_CONFERIR="$temp/chave-errada.age" esperar_falha "chave privada errada não
 esperar_falha "arquivos confirmados sem as variáveis da cópia reprovam" "COPIA_S3_ENDPOINT" \
   env BACKUP_AGE_KEY_FILE="$temp/chave-teste.age" \
   "$pasta/conferir-arquivos.sh" --destino "$URL_DESTINO_ADMIN"
+
+# Cópias estragadas que o sorteio quase nunca pegaria: toda cópia tem o tamanho exato do age
+# e o cabeçalho conferidos. Usa a do WEBP (1016 bytes) e devolve a boa no fim de cada caso.
+alvo="arquivos/${CHAVES[3]}.age"
+b2 ler "$alvo" "$temp/boa.age"
+estragar() { # descrição texto-esperado arquivo-estragado
+  b2 gravar "$3" "$alvo"
+  esperar_falha "$1" "$2" conferir
+  b2 gravar "$temp/boa.age" "$alvo"
+}
+head -c 5000 /dev/urandom >"$temp/estragada"
+estragar "cópia trocada por lixo maior que o original reprova" "${CHAVES[3]}" "$temp/estragada"
+head -c "$(($(stat -c %s "$temp/boa.age") - 10))" "$temp/boa.age" >"$temp/estragada"
+estragar "cópia truncada (ainda maior que o original) reprova" "${CHAVES[3]}" "$temp/estragada"
+{ printf 'X%.0s' $(seq 1 21); tail -c +22 "$temp/boa.age"; } >"$temp/estragada"
+estragar "cópia do tamanho certo com cabeçalho errado reprova" "cabeçalho" "$temp/estragada"
+conferir >/dev/null 2>&1 || reprovar "a conferência deveria voltar a passar com a cópia boa"
 [[ "$(pg psql --no-psqlrc -tAc 'select count(*) from unidade' \
   --dbname="$(url app app-teste "$DESTINO")")" == 320 ]] ||
   reprovar "o papel app não lê o banco restaurado"
