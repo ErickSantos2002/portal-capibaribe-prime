@@ -111,10 +111,11 @@ def link(
 
 
 # Revisão UX, U7: o "Abrir" e o "Baixar" da tela apontam para cá, não para o link assinado
-# (que vence em 5 minutos: recarregar a aba do PDF mostrava o erro do bucket). Cada visita
-# confere o acesso de novo e redireciona para um link novo. Sem acesso, ou com os arquivos
+# (que vence em 5 minutos). Cada visita (toque, nova aba, link copiado) confere o acesso de
+# novo e redireciona para um link novo; recarregar a aba do PDF depois do redirecionamento
+# continua no link assinado (dúvidas do épico A, item 12). Sem acesso, ou com os arquivos
 # desligados, volta para a página do documento no Portal. Fica fora do OpenAPI: é navegação
-# do navegador, não JSON (dúvidas do épico A, item 12). `no-store` vem do middleware comum.
+# do navegador, não JSON. `no-store` vem do middleware comum.
 @rotas.get("/{documento_id}/versoes/{versao}/abrir", include_in_schema=False)
 def abrir_arquivo(
     documento_id: IdDocumento,

@@ -47,3 +47,7 @@
   uvicorn na 8181, Vite na 5191; Playwright a 390 px e 1280 px como morador e como gestão;
   prints em `docs/superpowers/prints/m3-documentos/`.
 - [x] **7. Fechamento:** suíte inteira, dúvidas, relatório.
+- [x] **8. Revisão independente (código e UX):** C1 a C4 e U1 a U17 em
+  `test_documentos_revisao.py`, `documentos.test.tsx` e `formatos.test.ts`; o que ficou para o
+  coordenador está nas dúvidas, itens 11 a 17; conferência visual refeita com Chrome headless
+  próprio, por script (prints 1 a 9).

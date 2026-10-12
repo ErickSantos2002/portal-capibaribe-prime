@@ -104,3 +104,13 @@ link direto para a conta comum, nem para quem não entrou (critério do roadmap)
 
 Corrigir título ou nível de documento publicado (dúvida 5 do contrato); prévia do PDF embutida
 na página (dúvida 8 do contrato); mostrar o documento como anexo no mural.
+
+## 5. Depois da revisão independente (código e UX)
+
+O que mudou está em `duvidas-m3-documentos.md`, itens 11 a 17, e vale sobre o texto acima:
+números fora do tipo do banco dão 422; título sem invisíveis; a resposta da nova versão é a
+versão criada; o 409 `arquivo_em_uso` traz `documento_id` e `versao` (a tela leva ao que já foi
+publicado); a nova versão pode avisar, com "o que mudou"; o documento novo tem uma linha
+opcional para o aviso, com prévia, e a categoria do aviso combina com o assunto; "Abrir" e
+"Baixar" passam por `GET .../versoes/{versao}/abrir` (302 para um link novo); o documento
+público abre por link sem entrar; o cartão do aviso diz "Ver o documento".

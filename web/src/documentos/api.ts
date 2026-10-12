@@ -31,7 +31,7 @@ export const linkDaVersao = (id: number, versao: number, baixar = false) =>
   })
 
 /** Revisão UX, U7: o endereço do Portal que abre (ou baixa) o arquivo de uma versão. A API
- *  confere quem vê e redireciona para um link novo a cada visita: recarregar a aba depois de 5
- *  minutos continua funcionando. É um `href` comum, não um `fetch`. */
+ *  confere quem vê e redireciona para um link novo a cada visita (toque, nova aba, link
+ *  copiado). É um `href` comum, não um `fetch`. */
 export const enderecoParaAbrir = (id: number, versao: number, baixar = false) =>
   `/api/documentos/${id}/versoes/${versao}/abrir${baixar ? '?baixar=true' : ''}`

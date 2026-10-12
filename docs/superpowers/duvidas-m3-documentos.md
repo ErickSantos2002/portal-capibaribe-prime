@@ -45,7 +45,7 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
   validação". **Código novo no contrato** (permitido dentro do épico, contrato seção 10); o
   épico B pode querer o mesmo código para os anexos.
 
-## 6. Abrir o PDF: aba aberta antes do pedido
+## 6. Abrir o PDF: aba aberta antes do pedido · substituído pelo item 12 (revisão)
 - **Dúvida:** o link é pedido na hora do toque (vale 5 minutos), mas o navegador do celular só
   abre aba nova **no próprio toque**; depois de esperar a API, o `window.open` é bloqueado.
 - **Decisão:** abre a aba vazia no toque e põe o endereço nela quando o link chega; se o
@@ -87,3 +87,98 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
   celular de quem ativou as notificações." O aviso automático entra no mesmo envio de push e
   e-mail de qualquer aviso (M2); quem marca a caixa precisa saber que vai tocar no celular de
   muita gente.
+
+---
+
+# Revisão independente (código e UX) · o que mudou e o que ficou para o coordenador
+
+## 11. Título sem nenhum invisível (C3) · a regra deveria ir para o comum
+- **Decisão:** `validar_titulo` (e a linha do aviso) recusam, além da regra comum, as categorias
+  Unicode Zl, Zp e Cf (U+2028, U+2029, U+061C, U+180E, U+00AD…) e os preenchimentos do Hangul
+  (U+115F, U+1160, U+3164, U+FFA0). O ZWJ (U+200D) continua aceito, como na regra comum (emojis
+  compostos).
+- **Pendência do coordenador:** a mesma regra em `app/esquemas/comum.py` (`sem_invisiveis`),
+  para o título do aviso, o nome do arquivo e o resto. O épico A não edita o comum.
+
+## 12. "Abrir" e "Baixar" pelo Portal: rota nova `GET .../versoes/{versao}/abrir` (U7)
+- **Mudança de contrato:** `GET /api/documentos/{documento_id}/versoes/{versao}/abrir?baixar=`
+  responde **302** para um link assinado novo (confere quem vê a cada visita; sem sessão, só o
+  público). Sem acesso ou inexistente: 302 para `/documentos/{id}` (a página diz "não achamos"
+  ou pede para entrar). Arquivos desligados: 302 para `/documentos/{id}?erro=arquivos_desligados`.
+  `no-store` vem do middleware comum. A tela usa `href` comum (abrir: `target="_blank"`, com
+  "(abre em outra aba)" para o leitor de tela; baixar: na própria aba). O `GET .../link`
+  (JSON) continua, como no contrato.
+- **O que isto resolve e o que não resolve (conferido no navegador):** todo toque no Portal
+  (inclusive numa página deixada aberta por horas), "abrir em nova aba" pelo toque longo e o
+  link copiado ou compartilhado passam pela conferência e ganham link novo. Mas **recarregar a
+  aba do PDF não**: depois do 302, o endereço da aba é o link assinado, e o navegador recarrega
+  esse endereço; passados 5 minutos, aparece o erro do bucket. Resolver isso de vez pede
+  validade maior no link de leitura (`VALIDADE_LEITURA`, em `app/servicos/armazenamento.py`,
+  comum) ou servir o arquivo pela API (a Vercel limita a resposta a 4,5 MB). **Pendência do
+  coordenador** (a decisão vale também para os anexos do épico B).
+- **Fora do OpenAPI** (`include_in_schema=False`): é navegação do navegador, não JSON, e o teste
+  comum `test_m3_rotas.py::test_rotas_do_m3_declaradas` compara a lista exata de rotas, que o
+  épico não pode editar. **Pendência do coordenador:** decidir no merge se a rota entra no
+  OpenAPI e no teste comum (o épico B recebeu a mesma sugestão para os anexos, com
+  `GET /api/avisos/{id}/anexos/{arquivo_id}/abrir`: o formato é o mesmo).
+- Some com isso a aba aberta antes do pedido (item 6): o `href` abre a aba no próprio toque.
+
+## 13. Aviso da versão nova sem o botão "Ver o documento" (U3) · pendência do coordenador
+- **Decisão:** "Enviar nova versão" ganhou "Avisar os apartamentos" (**desmarcado**) e "O que
+  mudou (se quiser)". O aviso sai com título "Documento atualizado: <título>" e o texto "Saiu
+  a versão N de um documento do Portal: “<título>”." + a linha + "Ela fica guardada em
+  Documentos, no menu do Portal: <endereço do documento>" (o endereço só quando
+  `PORTAL_URL_BASE` existe; vira link no mural e no e-mail).
+- **Por que sem o botão:** `documento.aviso_id` guarda um aviso só (o da criação), único, e o
+  `app` não tem UPDATE nele; o botão do aviso vem desse campo. Ligar mais avisos ao documento
+  pede migração (uma coluna `aviso_id` em `documento_versao`, ou uma tabela), o que o épico não
+  faz. O "o que mudou" também não aparece no documento, só no aviso, pelo mesmo motivo.
+
+## 14. A resposta se perdeu: 409 `arquivo_em_uso` diz onde está (U1)
+- **Mudança de contrato:** quando o arquivo (que a própria unidade enviou) já está num
+  documento que ela vê, o 409 `arquivo_em_uso` traz `documento_id` e `versao`. A tela leva a
+  pessoa até lá com "Já estava publicado: o primeiro envio tinha dado certo, e nada foi
+  publicado em dobro." (ou "Já estava enviada", na versão nova). A conferência é feita antes
+  de gravar qualquer coisa: o reenvio não cria aviso nem notificação de novo.
+- **Por que assim, e não chave de idempotência:** o próprio id do arquivo já é a chave (ele é
+  único por envio e só pode entrar em um documento), e não precisa de coluna nova.
+
+## 15. Categoria do aviso automático (U13)
+- **Decisão:** documento de Obra → aviso de Obra; Ata → Reunião; os outros → Geral. A gestão
+  pode escrever uma linha para o aviso, e a tela mostra a prévia (categoria, título e texto,
+  os mesmos que a API grava; os dois lados têm teste com o mesmo texto).
+
+## 16. Recado que some e fonte em px (U9, U18) · pendências do coordenador
+- **U9:** o recado da casca (`useRecado`, comum) some em 2,6 s; não mexi. No documento, depois
+  de publicar ou enviar versão, fica uma confirmação fixa ("Pronto: o documento foi publicado.
+  Ele já aparece em Documentos. O aviso saiu no mural."), até sair da tela.
+- **U18:** as fontes do Portal inteiro estão em px (`estilo.css`, comum); a CSS do épico seguiu
+  o padrão. Trocar por `rem` é decisão do coordenador para o Portal todo.
+
+## 17. Outras decisões da revisão
+- **C1/C2:** número fora do tipo do banco (versão acima de 32767, id acima de bigint, zero)
+  responde **422** `dados_invalidos`, não 404 nem 500, nas rotas e no `arquivo_id` do épico. O
+  mesmo ajuste nas rotas de avisos e arquivos é do coordenador.
+- **C4:** a resposta de "Enviar nova versão" é o documento como ficou **na versão que o pedido
+  criou** (versões até ela), mesmo que outra tenha chegado logo depois.
+- **Histórico:** `documento_versao_enviada` passou a ter `{"versao": n, "avisou": bool}` (a
+  frase de `frases.ts` só usa a versão; nada muda nela).
+- **U2:** o link de um documento **público** aberto sem entrar mostra a página dele (com Abrir,
+  Baixar e "Entrar"); a tela acha o documento na lista dos públicos (a API não tem o documento
+  aberto sem sessão). Não é público: vai para "Entrar" e volta para o documento depois.
+- **U4:** cada versão antiga diz "Substituída pela versão N em <data>"; o botão é discreto
+  (link). Para o morador, as versões ficam recolhidas em "Ver versões anteriores (N)"; a gestão
+  as vê abertas.
+- **U5:** sair de "Novo documento" ou "Enviar nova versão" com algo escrito, arquivo escolhido
+  ou no meio do envio pergunta antes (`window.confirm`, a pergunta nativa, que o leitor de tela
+  e o celular conhecem) e, ao fechar a aba, o `beforeunload`. Solução do próprio épico
+  (`documentos/confirmarSaida.ts`); o épico B fez a dele no aviso: vale unificar depois.
+- **U6:** a ajuda do arquivo diz "Se o documento tem várias páginas, junte num PDF antes de
+  enviar.". Várias fotos num documento só não foi feito (fica para quando a Comissão pedir).
+- **U10:** o arquivo é conferido na hora de escolher, com o que fazer: Word ("salve como PDF"),
+  outro tipo, vazio, PDF acima de 20 MB (com o tamanho e como reduzir). Foto grande passa,
+  porque é reduzida antes de enviar. Trocar o arquivo limpa o erro de antes.
+- **U11, U12, U14 a U17:** "Documentos públicos" sem o convite para entrar quando já se entrou
+  (e com "Entrar" para o visitante); "Quem vê" só na parte da gestão; o assunto começa em
+  "Escolha…" e é obrigatório; selo "qualquer pessoa vê" na lista da gestão; arquivados com a
+  data em que foram arquivados; título do topo em até 2 linhas, com o título inteiro na folha.

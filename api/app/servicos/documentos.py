@@ -227,7 +227,7 @@ def destino_de_abrir(
     baixar: bool,
 ) -> str:
     """Revisão UX, U7: para onde a rota `.../abrir` manda o navegador. Um link novo a cada vez
-    (recarregar a aba do PDF depois de 5 minutos não mostra o erro do bucket); sem acesso (ou
+    (toque, nova aba, link copiado: nenhum fica velho); sem acesso (ou
     inexistente), a página do documento no Portal, que diz "não achamos" ou pede para entrar;
     arquivos desligados, a mesma página com o motivo."""
     pagina = f"/documentos/{documento_id}"
