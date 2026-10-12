@@ -37,11 +37,24 @@ spec `specs/m3-protecao.md`). **[Erick]** marca o que só o Erick pode confirmar
   YAML; o actionlint passa). Se não chegarem, a restauração só pula no dia em que a cópia falhou.
 
 ## 5. A conferência é mais rígida que "tem assinatura"
-- **Decisão:** além de existir `arquivos/<chave>.age` para todo confirmado, a cópia precisa ser
-  **maior** que o original (o `age` só acrescenta; menor ou igual é cópia truncada), e o
-  sorteado precisa decifrar com **o tamanho e o tipo registrados no banco** (não só "algum dos
-  quatro tipos"). Sem `COPIA_S3_*` e com arquivo confirmado: reprova. Sem nenhum confirmado
-  (hoje): passa com aviso, mesmo sem as variáveis.
+- **Decisão:** para **toda** cópia de arquivo confirmado:
+  - existe `arquivos/<chave>.age`;
+  - o tamanho (da listagem, sem baixar nada) é **exatamente** o de um `age` daquele arquivo:
+    carga de `16 + t + 16 × blocos de 64 KiB` (mínimo 1 bloco) mais cabeçalho de
+    `70 + 98 × destinatários X25519` (1 a 20). Conferido contra o `age` de verdade nos testes de
+    unidade, para 1 e 2 destinatários e nos limites do bloco;
+  - o começo é `age-encryption.org/v1` (GET parcial de 22 bytes) em até 200 cópias por
+    conferência (todas, enquanto forem até 200; acima disso, 200 ao acaso).
+  E o sorteado decifra com **o tamanho e o tipo registrados no banco**. Sem `COPIA_S3_*` e com
+  arquivo confirmado: reprova. Sem nenhum confirmado (hoje): passa com aviso.
+- **Revisão independente:** antes só "cópia menor ou igual ao original" reprovava, e lixo de 300
+  bytes passava em 6 de 10 rodadas (só o sorteado era decifrado).
+- **Custo:** a listagem é classe C do B2 (1 por 1.000 objetos); o GET parcial é classe B, com
+  2.500 grátis por dia. O teto de 200 deixa folga mesmo com milhares de arquivos, e com o teto de
+  gasto em US$ 0 (passo B.1b) passar do grátis faria o B2 recusar, não cobrar.
+- **Limite:** destinatário que não seja X25519 (chave SSH, por exemplo) tem outro tamanho de
+  cabeçalho e reprovaria a conferência. Hoje `destinatarios.age` só tem `age1...`; quem trocar
+  por outro tipo ajusta `CABECALHO_FIXO`/`POR_DESTINATARIO` em `arquivos.py`.
 - Só chave, tipo e tamanho saem do banco; o nome original do arquivo nunca entra no log.
 
 ## 6. Nada de nome fora do padrão no log
@@ -75,6 +88,36 @@ spec `specs/m3-protecao.md`). **[Erick]** marca o que só o Erick pode confirmar
   rodar de novo depois de uma queda não baixa tudo outra vez. Content-Type pela assinatura;
   conteúdo desconhecido volta como `application/octet-stream`, com aviso. Destino com "backup"
   no nome é recusado (a API recusaria esse bucket).
+- **Destino que é a própria cópia** (revisão independente): `DESTINO_S3_*` igual a `COPIA_S3_*`
+  gravava os arquivos **em claro** no B2. Agora é recusado comparando bucket e endpoint
+  normalizado (esquema e host sem caixa, porta padrão explícita, sem barra no fim), e também é
+  recusado qualquer destino que já tenha `.age` em `arquivos/`. Não recuso "destino = bucket de
+  arquivos de origem": restaurar é justamente para um bucket novo, e o script não conhece o
+  bucket de origem (não usa `ARQUIVOS_R2_*`).
+
+## 9b. Restauração pelas versões do B2
+- **Dúvida (revisão independente):** a restauração só via a versão mais nova
+  (`list_objects_v2`); uma cópia escondida ou com a versão mais nova estragada não voltava.
+- **Decisão:** a restauração lista por `list_object_versions`. Uma cópia escondida (no S3, um
+  marcador de remoção por cima) volta pela versão anterior a ele; se a versão mais nova não
+  decifra, tenta as anteriores, da mais nova para a mais velha, antes de desistir. O resumo
+  conta "de versão anterior" e "estavam escondidos". Testado no `moto` com versionamento ligado
+  (como o "Keep all versions" do B2).
+- A **conferência** e a **cópia** continuam olhando só a versão mais nova, de propósito: uma
+  versão nova estragada ou um arquivo escondido têm de dar alarme (a conferência reprova), e a
+  cópia reenvia o escondido como versão nova.
+- **Só se prova no B2 real:** que o `ListObjectVersions` e o GET com `VersionId` da API S3 do
+  B2 se comportam como o `moto` (a chave Read Only do passo 4 do README tem `listFiles` e
+  `readFiles`, que é o que essas chamadas pedem).
+
+## 9c. Trocar a chave do `age`
+- **Dúvida (revisão independente):** as cópias de arquivo são permanentes e cifradas para os
+  destinatários do dia em que foram feitas.
+- **Decisão:** documentado no README ("Trocar a chave do `age`"): a chave privada antiga nunca
+  pode ser descartada enquanto houver cópia para ela; na troca, `BACKUP_AGE_KEY` passa a ter as
+  duas chaves privadas (uma por linha; o teste confere que a conferência passa assim). Recifrar
+  as cópias antigas (caso de chave vazada) fica fora: exige script novo e apagar versões à mão
+  no B2. Nenhuma ação agora; só vale no dia de uma troca.
 
 ## 10. Python do épico com trava de dependências (`--frozen`)
 - **Decisão:** `arquivos.py` e o ajudante de teste `testes/s3_teste.py` são scripts `uv` com
@@ -83,16 +126,30 @@ spec `specs/m3-protecao.md`). **[Erick]** marca o que só o Erick pode confirmar
   `uv lock --script scripts/backup/s3.py` e `--frozen` em `comum.sh`.
 - O `moto` do teste continua como no M1 (`uv run --with 'moto[server]==5.2.3'`).
 
-## 11. Tempo do job
-- **Decisão:** o `timeout-minutes: 20` do job `backup` ficou. A cópia é incremental (no dia a
-  dia, poucos arquivos novos) e o volume esperado é 1 a 3 GB em 2 anos. Se a primeira cópia
-  depois de configurar estourar o tempo, o próximo run continua de onde parou (só copia o que
-  falta). Subir para 30 é uma linha.
+## 11. Tempo do job e da cópia
+- **Decisão (revista na revisão independente):** o passo da cópia tem `timeout-minutes: 12`,
+  menor que os 20 do job. Uma primeira cópia longa para no meio como falha **do passo** (e-mail),
+  o job termina, a restauração de teste do dia ainda roda (item 4), e o próximo run continua de
+  onde parou (só copia o que falta; o PUT é atômico). No dia a dia a cópia é de poucos arquivos.
+- **A cópia só roda se o backup do banco passou** (o padrão do Actions, mantido de propósito):
+  sem o dump de hoje, a falha dele já manda e-mail, e a cópia de amanhã pega o que faltou.
+
+## 11b. Erros sem traceback nem endereço
+- **Decisão (revisão independente):** erro de conexão ou de listagem saía como traceback do
+  Python, com a URL do bucket, num log público. Agora todo erro passa por `descrever()`: só o
+  código e a operação (`o bucket respondeu NoSuchBucket em ListObjectsV2`) ou o tipo do erro
+  (`EndpointConnectionError`), nunca endpoint nem nome de bucket. Testado com um bucket fora do
+  ar e um inexistente.
+
+## 11c. Padrão das chaves com `fullmatch`
+- **Decisão (revisão independente):** o `$` do `re` aceitava `arquivos/<chave>\n`, que é outro
+  objeto. Os padrões passaram a `fullmatch` (teste de unidade com o `\n` e outros casos).
 
 ## 12. O teste local continua fora do CI
 - Mesmo motivo do M1 (`duvidas-m1-backup.md`, item 10): o `testar-ciclo.sh` precisa de Docker,
-  `age` e dois `moto`, e o workflow mensal é a prova contínua. 37 verificações hoje (19 do M1 +
-  18 da proteção).
+  `age` e dois `moto`, e o workflow mensal é a prova contínua. 46 verificações hoje (19 do M1 +
+  27 da proteção), mais os testes de unidade de `testes/testar_arquivos_unidade.py`, rodados
+  por ele.
 
 ## 13. O que só o Actions de verdade prova **[Erick]**
 - Assinatura e envio no **B2 real** (região, envio em partes acima de 8 MB, checksums só

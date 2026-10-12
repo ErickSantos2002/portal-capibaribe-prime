@@ -71,8 +71,10 @@ Depois do `restaurar.sh`, no banco restaurado:
 2. Nenhuma linha (a situação de hoje): passa com aviso.
 3. Com linhas e sem `COPIA_S3_*`: **falha** (há arquivos publicados e não dá para provar que
    estão protegidos).
-4. Toda chave tem `arquivos/<chave>.age` na cópia, maior que o tamanho original (o `age` só
-   acrescenta). Faltou ou é menor: falha, listando as chaves.
+4. Toda chave tem `arquivos/<chave>.age` na cópia, com o tamanho exato de um `age` daquele
+   arquivo (carga `16 + t + 16 × blocos de 64 KiB`, cabeçalho `70 + 98 × destinatários X25519`),
+   e até 200 cópias têm o começo `age-encryption.org/v1` (GET parcial). Faltou ou não confere:
+   falha, listando as chaves.
 5. Uma chave ao acaso (`secrets.SystemRandom`) é baixada, decifrada com `BACKUP_AGE_KEY` (em
    fluxo, sem gravar o claro) e tem: o tamanho de `tamanho_bytes` e a assinatura do `tipo`
    registrado (os mesmos bytes mágicos de `api/app/servicos/arquivos.py`). Senão, falha.
@@ -81,6 +83,10 @@ Depois do `restaurar.sh`, no banco restaurado:
 
 `restaurar-arquivos.sh` decifra **toda** a cópia (`arquivos/<chave>.age`) para
 `arquivos/<chave>` num bucket novo (`DESTINO_S3_*`), sem precisar do banco:
+
+- lista pelas versões (`list_object_versions`): a cópia escondida volta, e se a versão mais
+  nova não decifra, tenta as anteriores;
+- recusa destino igual à cópia (bucket e endpoint normalizado) e destino que já tem `.age`;
 
 - o `Content-Type` vem da assinatura do conteúdo (`application/octet-stream` se não for nenhum
   dos quatro; contado no aviso);
@@ -105,7 +111,13 @@ o bucket novo do desastre) e outro o do B2. Chave `age` gerada no teste. Casos:
   falha se falta a cópia de um, com a chave errada, sem `COPIA_S3_*` havendo arquivos, e com
   conteúdo de assinatura errada;
 - restauração para bucket novo: mesmos bytes, `Content-Type` certo, segunda rodada não refaz
-  nada, destino com `backup` no nome é recusado.
+  nada, versão anterior e escondida voltam; destino com `backup` no nome, igual à cópia ou com
+  `.age` é recusado;
+- cópia estragada (lixo maior, truncada, cabeçalho errado) reprova a conferência sem depender
+  do sorteio; conferência com duas chaves privadas (troca de chave) passa;
+- bucket fora do ar ou inexistente: erro curto, sem traceback, endereço nem nome de bucket;
+- testes de unidade (`testes/testar_arquivos_unidade.py`): padrão das chaves, tamanho do `age`
+  contra o `age` de verdade, endpoint normalizado.
 
 ## 8. Fora do escopo
 

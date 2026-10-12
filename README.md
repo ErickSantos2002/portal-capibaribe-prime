@@ -141,6 +141,24 @@ ao acaso (`scripts/backup/conferir-arquivos.sh`). Decisão: [ADR-0011](docs/adr/
 - **Onde ver:** no resumo de cada run do `Backup`, a seção "Cópia dos arquivos" diz quantos
   foram copiados agora e quantos já estavam lá.
 
+#### Trocar a chave do `age` (a cópia dos arquivos é para sempre)
+
+Cada cópia de arquivo é cifrada **uma vez**, para as chaves públicas de `destinatarios.age`
+daquele dia, e nunca mais é refeita. Trocar `destinatarios.age` só muda as cópias **novas**. Por
+isso a chave privada antiga **nunca** pode ser jogada fora enquanto existir cópia cifrada para
+ela (na prática, para sempre). Diferente dos backups do banco, que saem da retenção em 12 meses.
+
+Para trocar:
+1. Gere a nova (`age-keygen -o chave-AAAA-MM.age`) e guarde a cópia offline **junto** da antiga,
+   cada uma com a data em que passou a valer.
+2. Troque a linha de `scripts/backup/destinatarios.age` pela nova chave pública (`age1...`).
+3. No segredo `BACKUP_AGE_KEY` do GitHub, ponha **as duas** chaves privadas, uma por linha (o
+   `age` aceita várias num arquivo só e usa a que servir): a conferência do dia 2 sorteia
+   qualquer cópia, antiga ou nova. Na restauração à mão, o mesmo: um `chave.age` com as duas.
+4. Se a troca é porque a chave antiga **vazou**, isso não basta: as cópias antigas continuam
+   legíveis com ela. Recifrá-las exige um script que ainda não existe e apagar as versões
+   antigas à mão no B2 (com uma chave que tenha `deleteFiles`, que a do workflow não tem).
+
 ### Restaurar num desastre (passo a passo)
 
 O script nunca escreve por cima de um banco em uso: restaura num banco **novo e vazio**, confere,
@@ -205,7 +223,10 @@ arquivos cada documento usa, e os nomes batem.
    O fim diz `restaurados agora: N · já no destino: M · ...`. Se algum falhou (rede, por
    exemplo), rode de novo: ele pula o que já voltou. Pronto quando sai sem `ERRO`. Um aviso de
    "sem assinatura conhecida" quer dizer um objeto que não é PDF nem foto; ele volta como
-   `application/octet-stream`.
+   `application/octet-stream`. O script usa as versões que o B2 guarda: uma cópia escondida
+   volta, e se a versão mais nova de uma cópia não decifrar, ele tenta as anteriores (o fim
+   conta "de versão anterior" e "estavam escondidos"). Ele recusa como destino a própria cópia
+   e qualquer bucket que já tenha `.age` em `arquivos/`.
 6. **Configurar o bucket novo** como o antigo: CORS, ciclo de vida de `envios/` e a trava de
    `arquivos/` (passos A.4 a A.6). A trava pode vir antes ou depois da restauração: ela não
    impede gravar objeto novo, só apagar e sobrescrever.

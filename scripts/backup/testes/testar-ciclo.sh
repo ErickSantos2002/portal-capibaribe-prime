@@ -385,6 +385,14 @@ grep -qE "decifrado ao acaso: [0-9a-f]{32}" "$temp/saida.txt" ||
 grep -q "todos com cópia" "$resumo" || reprovar "a conferência deveria escrever no resumo do job"
 ok "conferência: os 4 confirmados têm cópia, e um ao acaso decifra com a assinatura certa"
 
+# Troca da chave do age (README): BACKUP_AGE_KEY com a antiga e a nova, uma por linha.
+cat "$temp/chave-errada.age" "$temp/chave-teste.age" >"$temp/duas-chaves.age"
+CHAVE_CONFERIR="$temp/duas-chaves.age" conferir >"$temp/saida.txt" 2>&1 || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a conferência deveria passar com as duas chaves privadas no mesmo arquivo"
+}
+ok "conferência com duas chaves privadas (troca de chave) passa"
+
 # Um arquivo confirmado no banco que não está na cópia reprova (e diz qual).
 CHAVE_SEM_COPIA="$(nova_chave)"
 admin --dbname="$URL_DESTINO_ADMIN" >/dev/null <<SQL
