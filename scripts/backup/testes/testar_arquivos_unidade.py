@@ -80,6 +80,27 @@ def tamanho_da_copia_recusa_lixo():
     assert not arquivos.tamanho_da_copia_confere(0, 0)
 
 
+@teste
+def mesmo_bucket_com_endpoint_escrito_diferente():
+    b2 = "https://s3.us-east-005.backblazeb2.com"
+    iguais = (
+        b2,
+        b2 + "/",
+        "HTTPS://S3.us-east-005.BackBlazeB2.com",
+        "https://s3.us-east-005.backblazeb2.com:443",
+        "https://s3.us-east-005.backblazeb2.com:443//",
+    )
+    for outro in iguais:
+        assert arquivos.mesmo_bucket(b2, "copia", outro, "copia"), outro
+    assert not arquivos.mesmo_bucket(b2, "copia", b2, "outro")
+    assert not arquivos.mesmo_bucket(b2, "copia", "https://conta.r2.cloudflarestorage.com", "copia")
+    assert not arquivos.mesmo_bucket(
+        b2, "copia", "https://s3.us-east-005.backblazeb2.com:8443", "copia"
+    )
+    assert arquivos.mesmo_bucket("http://127.0.0.1:9000", "b", "http://127.0.0.1:9000/", "b")
+    assert arquivos.mesmo_bucket("http://localhost", "b", "http://localhost:80", "b")
+
+
 falhas = 0
 for f in testes:
     try:

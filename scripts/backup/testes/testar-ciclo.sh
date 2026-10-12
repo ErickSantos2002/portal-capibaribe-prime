@@ -519,6 +519,22 @@ CHAVE_RESTAURAR="$temp/chave-errada.age" esperar_falha "restauração com a chav
 esperar_falha "restauração dos arquivos recusa o bucket de backups" "backup" \
   restaurar_arquivos portal-capibaribe-backups
 
+# O destino nunca é a própria cópia: gravaria os arquivos em claro no B2 (achado da revisão),
+# nem com o endpoint escrito de outro jeito, nem um bucket que já tem cópias (.age).
+b2 listar "" >"$temp/antes.txt"
+esperar_falha "restauração dos arquivos recusa a própria cópia como destino" "a própria cópia" \
+  env "${VARS_COPIA[@]}" DESTINO_S3_ENDPOINT="${B2_ENDPOINT/http:/HTTP:}/" DESTINO_S3_ACCESS_KEY_ID=teste \
+  DESTINO_S3_SECRET_ACCESS_KEY=teste DESTINO_S3_BUCKET="$BUCKET_COPIA" DESTINO_S3_REGIAO=us-east-1 \
+  BACKUP_AGE_KEY_FILE="$temp/chave-teste.age" "$pasta/restaurar-arquivos.sh"
+b2 listar "" >"$temp/depois.txt"
+cmp -s "$temp/antes.txt" "$temp/depois.txt" || reprovar "a restauração recusada mexeu na cópia"
+s3t "$R2_ENDPOINT" "$BUCKET_NOVO-3" criar
+s3t "$R2_ENDPOINT" "$BUCKET_NOVO-3" gravar "$temp/lixo.age" "arquivos/$CHAVE_LIXO.age"
+esperar_falha "restauração dos arquivos recusa destino que já tem cópias .age" ".age" \
+  restaurar_arquivos "$BUCKET_NOVO-3"
+[[ "$(s3t "$R2_ENDPOINT" "$BUCKET_NOVO-3" listar arquivos/ | wc -l)" == 1 ]] ||
+  reprovar "a restauração recusada gravou no destino"
+
 # --- Limpeza ---------------------------------------------------------------------------------
 admin -c "drop database if exists $DESTINO with (force)" -c "drop database if exists $ORIGEM with (force)"
 log "TUDO PASSOU ($passou verificações)"

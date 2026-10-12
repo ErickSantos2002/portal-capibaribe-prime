@@ -145,10 +145,26 @@ def regiao(grupo: str, endpoint: str) -> str:
     return m.group(1) if m else "auto"
 
 
+def endpoint_normalizado(endpoint: str) -> tuple[str, str, int, str]:
+    """Esquema, host e porta como o servidor os entende (sem caixa, porta padrão explícita) e o
+    caminho sem barras no fim: dois jeitos de escrever o mesmo endereço dão o mesmo valor."""
+    url = urlparse(endpoint.strip())
+    esquema = url.scheme.lower()
+    porta = url.port or {"https": 443, "http": 80}.get(esquema, 0)
+    return esquema, (url.hostname or "").lower(), porta, url.path.rstrip("/")
+
+
+def mesmo_bucket(endpoint_a: str, bucket_a: str, endpoint_b: str, bucket_b: str) -> bool:
+    return bucket_a == bucket_b and endpoint_normalizado(endpoint_a) == endpoint_normalizado(
+        endpoint_b
+    )
+
+
 @dataclass(frozen=True)
 class Bucket:
     s3: object
     nome: str
+    endpoint: str
 
     def listar(self, prefixo: str) -> dict[str, int]:
         """Chave → tamanho, de todas as páginas."""
@@ -190,7 +206,7 @@ def abrir(grupo: str) -> Bucket:
         region_name=regiao(grupo, endpoint),
         config=config,
     )
-    return Bucket(s3, os.environ[f"{grupo}_BUCKET"])
+    return Bucket(s3, os.environ[f"{grupo}_BUCKET"], endpoint)
 
 
 def primeira_linha(texto: str) -> str:
@@ -455,10 +471,20 @@ def restaurar(identidade: str) -> int:
             "O destino tem 'backup' no nome: os arquivos voltam para um bucket NOVO de arquivos, "
             "nunca para o de backups (a API também recusa esse nome)."
         )
+    if mesmo_bucket(copia.endpoint, copia.nome, destino.endpoint, destino.nome):
+        sys.exit(
+            "O destino é a própria cópia (DESTINO_S3_* = COPIA_S3_*): os arquivos seriam gravados "
+            "em claro no B2. Use um bucket NOVO de arquivos."
+        )
     na_copia = copia.listar("arquivos/")
     chaves = sorted(c for k in na_copia if (c := chave_da_copia(k)))
     ignorados = len(na_copia) - len(chaves)
     no_destino = destino.listar("arquivos/")
+    if any(k.endswith(".age") for k in no_destino):
+        sys.exit(
+            "O destino já tem cópias cifradas (.age) em arquivos/: parece uma cópia, não um "
+            "bucket de arquivos. Use um bucket NOVO de arquivos."
+        )
 
     restaurados = ja = sem_assinatura = 0
     falhas: list[str] = []
