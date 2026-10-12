@@ -195,7 +195,7 @@ describe('aviso aberto com anexos', () => {
     )
   })
 
-  it('U12: o PDF é um link do Portal que abre em outra aba (recarregar sempre funciona)', async () => {
+  it('U12: o PDF é um link do Portal que abre em outra aba (link novo a cada toque)', async () => {
     api(eu(), (url) =>
       url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [PDF] })) : undefined,
     )

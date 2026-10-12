@@ -22,6 +22,11 @@
   .anexos-fotos {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  /* No computador, uma foto só não toma a tela inteira: o "Ampliar" mostra grande. */
+  .anexos-fotos.uma {
+    max-width: 520px;
+  }
 }
 
 .anexo-foto {

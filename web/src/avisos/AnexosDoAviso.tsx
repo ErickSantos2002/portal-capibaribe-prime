@@ -232,7 +232,8 @@ function Pdf({ avisoId, arquivo }: { avisoId?: number; arquivo: ArquivoEnviado }
   )
   // Na prévia o aviso ainda não existe: o PDF aparece, mas não abre.
   if (avisoId === undefined) return <div className="anexo-pdf">{conteudo}</div>
-  // Um link de verdade (U12): o Safari do iPhone não bloqueia a aba e recarregar funciona.
+  // Um link de verdade (U12): o Safari do iPhone não bloqueia a aba, e cada toque (mesmo com a
+  // página aberta há horas) pede um link novo.
   return (
     <a
       className="anexo-pdf"

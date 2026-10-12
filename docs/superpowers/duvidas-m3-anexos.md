@@ -87,6 +87,13 @@ resto é decisão técnica que pode ser revista na revisão do marco.
   de outro aviso, bucket desligado) vira uma página HTML simples com a frase da API, não JSON.
   O cookie de sessão vai junto (navegação de topo no mesmo site, `SameSite=Lax`); GET não exige
   `X-Portal`. Sem sessão, a resposta continua a JSON 401 da dependência comum.
+- **Limite, conferido no navegador:** depois do 302 a aba mostra o endereço assinado do R2;
+  recarregar **essa aba** depois de 5 minutos ainda mostra o erro do R2. O que a rota resolve:
+  a foto e o PDF abrem mesmo com a página do aviso aberta há horas (antes a tela pedia o link
+  por JavaScript, e o Safari bloqueava a aba aberta depois da espera); tocar de novo no Portal
+  sempre funciona. Resolver o recarregar da própria aba exigiria a API entregar o conteúdo do
+  arquivo (a Vercel limita a resposta a 4,5 MB, ADR-0004) ou um link mais longo que 5 minutos
+  (`armazenamento.py`, comum): fica para o coordenador decidir.
 - **Fora do OpenAPI** (`include_in_schema=False`): as listas de rotas do contrato
   (`test_m3_rotas.py::test_rotas_do_m3_declaradas` e `test_cache.py`) são comuns e quebrariam
   com uma rota nova. **Para o coordenador:** ao fechar o marco, pôr a rota no esquema e nas duas
@@ -130,3 +137,15 @@ resto é decisão técnica que pode ser revista na revisão do marco.
 ## 17. Foto sem nome para o morador (U7)
 - No aviso aberto e no visualizador a foto é "Foto 1 de 2" (rótulo e texto alternativo); o
   nome do arquivo só aparece no formulário da gestão. O PDF mantém o nome como foi enviado.
+
+## 18. Conferência visual da revisão
+- Mesmo arranjo da dúvida 10 (Chrome próprio sem janela, banco, API, Vite e `moto_server`
+  locais; sem o MCP compartilhado). Prints novos em `docs/superpowers/prints/m3-anexos/`:
+  botão "Esperando os arquivos…", formulário pronto, "Sair sem publicar?" (pelo voltar do
+  navegador), aviso aberto com "Ampliar", visualizador com "Anterior"/"Próxima", correção que
+  trocou anexos no computador ("Anexos: entrou …; saiu 1 foto.", "Assim era antes", "Como está
+  agora:") e o mural. O PDF abriu pela rota `…/abrir` e recarregar a aba dentro dos 5 minutos
+  deu 200. Achado e corrigido na conferência: no computador, uma foto só ocupava a largura
+  toda; agora vai até 520 px.
+- **Não conferido:** tema escuro, iPhone de verdade (zoom de dois dedos e a aba do PDF), R2 de
+  verdade, e o recarregar da aba do PDF depois de 5 minutos (limite descrito na dúvida 11).

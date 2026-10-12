@@ -171,8 +171,10 @@ def abrir_anexo(
 ):
     """Revisão do épico B, U12: a tela abre o anexo por aqui (`<img src>` e o botão do PDF numa
     aba nova). A sessão vai no cookie da navegação; cada pedido confere quem vê e redireciona
-    para um link de 5 minutos **novo**, então recarregar a aba sempre funciona (o link guardado
-    venceria e mostraria o XML de erro do R2). A resposta sai com `no-store`, como toda a API."""
+    para um link de 5 minutos **novo**: a foto e o PDF abrem mesmo com a página do aviso aberta há
+    horas. Limite (dúvida 11): depois do redirecionamento a aba mostra o endereço do R2, e
+    recarregar essa aba depois de 5 minutos ainda dá o erro do R2; tocar de novo no Portal
+    funciona. A resposta sai com `no-store`, como toda a API."""
     try:
         link = servico.link_do_anexo(db, logado, aviso_id, arquivo_id, bucket, baixar=False)
     except ErroApi as erro:

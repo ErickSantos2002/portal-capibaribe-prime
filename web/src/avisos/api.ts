@@ -45,7 +45,7 @@ export const buscarLeitura = (id: number) => api.get<Leitura>(`/api/avisos/${id}
 
 /** M3 (épico B, revisão U12): o endereço do Portal que abre o anexo. A API confere a sessão
  *  e redireciona para um link de 5 minutos novo a cada pedido: serve de `src` da foto e de
- *  `href` do PDF, e recarregar a aba sempre funciona (um link guardado venceria). */
+ *  `href` do PDF: cada toque pede um link novo, mesmo com a página aberta há horas. */
 export const enderecoDoAnexo = (avisoId: number, arquivoId: number) =>
   `/api/avisos/${avisoId}/anexos/${arquivoId}/abrir`
 

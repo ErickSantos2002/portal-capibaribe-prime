@@ -4,7 +4,7 @@
 - C2: correção feita num formulário velho não apaga o que outra pessoa pôs (`versao_base`).
 - C5: ids fora do `bigint` são 422, não 500.
 - U12: `…/anexos/{arquivo_id}/abrir` confere o acesso pela sessão e redireciona para um link
-  novo: recarregar a aba do PDF (ou da foto) sempre funciona.
+  novo a cada pedido (a foto e o PDF abrem mesmo com a página aberta há horas).
 """
 
 import threading
