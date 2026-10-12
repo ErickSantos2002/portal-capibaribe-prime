@@ -6,8 +6,11 @@ import { useSessao } from '../casca/contextoSessao'
 import { NaoEncontrado } from '../casca/guardas'
 import { Icone } from '../casca/Icone'
 import { Tela } from '../casca/Tela'
+import { AnexosDoAviso } from './AnexosDoAviso'
+import { idsProntos, situacaoDosAnexos, type ItemAnexo } from './anexos'
 import { abrirAviso, calcularAlcance, corrigirAviso, listarDestinos, publicarAviso } from './api'
 import { CamposDoAviso } from './CamposDoAviso'
+import { EscolherAnexos } from './EscolherAnexos'
 import { comoErroDaApi, useCarga, useIdDoAviso } from './carregar'
 import { AvisoFixado, Carregando, CorpoDoAviso, FalhaAoCarregar, ItemAviso } from './componentes'
 import { destinoEmTexto } from './formatos'
@@ -24,19 +27,36 @@ import {
   type Rascunho,
 } from './rascunho'
 import type { AvisoCompleto, AvisoResumo, CorrigirAviso } from './tipos'
+import { useAnexos } from './useAnexos'
 import './avisos.css'
 
 const CAMPOS: readonly Campo[] = ['titulo', 'texto', 'blocos', 'evento', 'categoria']
 
-/** Erro da API: os campos marcados (422) e a mensagem geral. `evento.quando` marca o evento. */
-function errosDaApi(e: unknown): { geral: string; campos: Erros } {
+/** Erro da API: os campos marcados (422) e a mensagem geral. `evento.quando` marca o evento;
+ *  `anexos` (M3) vai para baixo do campo dos anexos. */
+function errosDaApi(e: unknown): { geral: string; campos: Erros; anexos: string } {
   const erro = comoErroDaApi(e)
   const campos: Erros = {}
   for (const c of erro.campos) {
     const campo = c.campo?.split('.')[0] as Campo | undefined
     if (campo && CAMPOS.includes(campo)) campos[campo] ??= c.mensagem
   }
-  return { geral: erro.mensagem, campos }
+  return { geral: erro.mensagem, campos, anexos: erro.doCampo('anexos') ?? '' }
+}
+
+/** A conferência antes de enviar: os campos do texto e os anexos (enviando ou com erro). */
+function conferirTudo(r: Rascunho, itens: readonly ItemAnexo[]) {
+  const erros = conferir(r)
+  const anexos = situacaoDosAnexos(itens)
+  const geral = [mensagemGeral(erros), anexos.mensagem].filter(Boolean).join(' ')
+  return { erros, anexos: anexos.mensagem, geral }
+}
+
+/** Os anexos prontos, como a prévia e o aviso aberto mostram. */
+function paraMostrar(itens: readonly ItemAnexo[]) {
+  return itens.flatMap((i) =>
+    i.situacao === 'pronto' && i.arquivo ? [{ arquivo: i.arquivo, previa: i.previa }] : [],
+  )
 }
 
 /** O corpo que a API recebe, a partir do rascunho. */
@@ -79,6 +99,8 @@ export function NovoAviso() {
   const [geral, setGeral] = useState('')
   const [previa, setPrevia] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const anexos = useAnexos()
+  const [erroAnexos, setErroAnexos] = useState('')
   const caixaDeErro = useRef<HTMLDivElement>(null)
   const caixaDaPrevia = useRef<HTMLDivElement>(null)
   const paraTodos = blocos.length === 0
@@ -108,10 +130,12 @@ export function NovoAviso() {
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
-    const encontrados = conferir(rascunho)
-    setErros(encontrados)
-    if (Object.keys(encontrados).length > 0) {
-      setGeral(mensagemGeral(encontrados))
+    const conferido = conferirTudo(rascunho, anexos.itens)
+    setErros(conferido.erros)
+    setErroAnexos(conferido.anexos)
+    if (conferido.geral) {
+      setGeral(conferido.geral)
+      setPrevia(false)
       return
     }
     setGeral('')
@@ -121,11 +145,18 @@ export function NovoAviso() {
     }
     setEnviando(true)
     try {
-      await publicarAviso({ ...corpoDe(rascunho), para_todos: paraTodos, blocos, fixado })
+      await publicarAviso({
+        ...corpoDe(rascunho),
+        para_todos: paraTodos,
+        blocos,
+        fixado,
+        anexos: idsProntos(anexos.itens),
+      })
       navegar('/avisos', { state: { recado: 'Aviso publicado.' } })
     } catch (e) {
-      const { geral: mensagem, campos } = errosDaApi(e)
+      const { geral: mensagem, campos, anexos: doCampo } = errosDaApi(e)
       setErros(campos)
+      setErroAnexos(doCampo)
       setGeral(mensagem)
       setPrevia(false)
       if (campos.blocos) recarregarDestinos()
@@ -149,7 +180,7 @@ export function NovoAviso() {
     corrigido_desde_a_leitura: false,
     categoria: rascunho.categoria,
     evento_quando: eventoNaPrevia?.quando ?? null,
-    quantidade_anexos: 0,
+    quantidade_anexos: idsProntos(anexos.itens).length,
   }
   const unidades = alcance.situacao === 'pronta' ? alcance.dados.unidades : null
 
@@ -158,6 +189,14 @@ export function NovoAviso() {
       <form onSubmit={enviar} noValidate>
         {geral && <ErroGeral mensagem={geral} alvo={caixaDeErro} />}
         <CamposDoAviso rascunho={rascunho} erros={erros} mudar={mudar} />
+        <EscolherAnexos
+          anexos={anexos}
+          erro={erroAnexos}
+          aoMudar={() => {
+            setErroAnexos('')
+            setPrevia(false)
+          }}
+        />
         <p className="avisos-rotulo" id="aviso-destino">
           Para quem
         </p>
@@ -242,6 +281,7 @@ export function NovoAviso() {
                 texto={rascunho.texto}
                 nivel={3}
               />
+              <AnexosDoAviso anexos={paraMostrar(anexos.itens)} />
             </div>
           </div>
         )}
@@ -287,6 +327,8 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
   const [erros, setErros] = useState<Erros>({})
   const [geral, setGeral] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const anexos = useAnexos(aviso.anexos)
+  const [erroAnexos, setErroAnexos] = useState('')
   const caixaDeErro = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -295,20 +337,23 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
-    const encontrados = conferir(rascunho)
-    setErros(encontrados)
-    if (Object.keys(encontrados).length > 0) {
-      setGeral(mensagemGeral(encontrados))
+    const conferido = conferirTudo(rascunho, anexos.itens)
+    setErros(conferido.erros)
+    setErroAnexos(conferido.anexos)
+    if (conferido.geral) {
+      setGeral(conferido.geral)
       return
     }
     setEnviando(true)
     setGeral('')
     try {
-      await corrigirAviso(aviso.id, corpoDe(rascunho))
+      // A lista sempre explícita: o que está na tela é o que a versão nova vai ter.
+      await corrigirAviso(aviso.id, { ...corpoDe(rascunho), anexos: idsProntos(anexos.itens) })
       navegar(`/avisos/${aviso.id}`, { replace: true, state: { recado: 'Aviso corrigido.' } })
     } catch (e) {
-      const { geral: mensagem, campos } = errosDaApi(e)
+      const { geral: mensagem, campos, anexos: doCampo } = errosDaApi(e)
       setErros(campos)
+      setErroAnexos(doCampo)
       setGeral(mensagem)
       setEnviando(false)
     }
@@ -331,6 +376,12 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
           setRascunho((atual) => ({ ...atual, ...mudanca }))
           setErros((atuais) => semErrosDe(atuais, mudanca))
         }}
+      />
+      <EscolherAnexos
+        anexos={anexos}
+        avisoId={aviso.id}
+        erro={erroAnexos}
+        aoMudar={() => setErroAnexos('')}
       />
       <button className="botao avisos-enviar" type="submit" disabled={enviando}>
         {enviando ? 'Salvando…' : 'Salvar correção'}

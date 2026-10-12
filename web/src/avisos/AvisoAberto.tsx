@@ -9,6 +9,7 @@ import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
 import { DocumentoDoAviso } from '../documentos/DocumentoDoAviso'
+import { AnexosDoAviso } from './AnexosDoAviso'
 import { abrirAviso, arquivarAviso, marcarLido, mudarFixado } from './api'
 import { comoErroDaApi, useCarga, useIdDoAviso } from './carregar'
 import {
@@ -64,6 +65,8 @@ function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCo
         texto={aviso.texto}
         avisos={<Situacao aviso={aviso} />}
       />
+      {/* M3, épico B: fotos e PDFs da versão em vigor. */}
+      <AnexosDoAviso avisoId={aviso.id} anexos={aviso.anexos.map((arquivo) => ({ arquivo }))} />
       {/* M3, épico A: o documento que gerou este aviso (RF-33). */}
       <DocumentoDoAviso documento={aviso.documento} />
       {eu?.gestao && <ParaAGestao aviso={aviso} trocar={trocar} />}
@@ -104,6 +107,10 @@ function Situacao({ aviso }: { aviso: AvisoCompleto }) {
                   <h2 className="avisos-versao-titulo">{v.titulo}</h2>
                   {v.evento && <QuadroEvento evento={v.evento} />}
                   <TextoDoAviso texto={v.texto} nivel={3} />
+                  <AnexosDoAviso
+                    avisoId={aviso.id}
+                    anexos={v.anexos.map((arquivo) => ({ arquivo }))}
+                  />
                 </section>
               ))}
             </details>

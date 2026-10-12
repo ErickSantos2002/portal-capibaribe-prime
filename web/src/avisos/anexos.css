@@ -1,0 +1,324 @@
+/* M3 · Épico B · Anexos nos avisos. Só os tokens de `estilo.css` (claro e escuro). */
+
+/* ---------- no aviso aberto ---------- */
+
+.anexos {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 8px;
+}
+
+.anexos-fotos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.anexos-fotos.uma {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 720px) {
+  .anexos-fotos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.anexo-foto {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio);
+  background: var(--mata-suave);
+  color: var(--tinta-suave);
+  cursor: zoom-in;
+}
+
+.anexo-foto.unica {
+  aspect-ratio: 16 / 10;
+}
+
+.anexo-foto:disabled {
+  cursor: progress;
+}
+
+.anexo-foto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.anexo-foto.falhou {
+  align-content: center;
+  gap: 4px;
+  padding: 12px;
+  text-align: center;
+  cursor: default;
+}
+
+.anexo-foto.falhou p {
+  margin: 0;
+  color: var(--tinta);
+  font-size: 16px;
+}
+
+/* O PDF: o `.arquivo` do protótipo, como botão. */
+.anexo-pdf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+  color: var(--tinta);
+  text-align: left;
+}
+
+button.anexo-pdf {
+  cursor: pointer;
+}
+
+button.anexo-pdf:hover {
+  background: var(--mata-suave);
+}
+
+button.anexo-pdf[aria-busy='true'] {
+  cursor: progress;
+}
+
+.anexo-pdf svg {
+  flex: none;
+  color: var(--mata);
+}
+
+.anexo-pdf .anexo-nome {
+  color: var(--mata);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.anexo-nome {
+  display: block;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.anexo-detalhe {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tinta-suave);
+  font-size: 16px;
+}
+
+/* ---------- a foto grande ---------- */
+
+.anexo-visualizador {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  /* Um véu escuro nos dois temas: a foto é o que importa. */
+  background: rgb(8 14 10 / 0.94);
+}
+
+.anexo-visualizador-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(100%, 1100px);
+  margin: 0 auto;
+}
+
+.anexo-visualizador-topo p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #ffffff;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anexo-visualizador-topo .botao {
+  flex: none;
+  width: auto;
+  min-height: 48px;
+  border-color: var(--folha);
+  background: var(--folha);
+  color: var(--mata);
+}
+
+.anexo-visualizador-topo .botao:focus-visible {
+  outline-color: var(--ipe);
+}
+
+.anexo-visualizador img {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+
+/* ---------- no formulário ---------- */
+
+.anexos-lista {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.anexo-item {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 12px;
+  padding: 10px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+}
+
+.anexo-item.erro {
+  border: 2px solid var(--erro);
+}
+
+.anexo-miniatura {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: var(--r-pequeno);
+  background: var(--mata-suave);
+  color: var(--tinta-suave);
+}
+
+.anexo-miniatura img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.anexo-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.anexo-item.pronto .anexo-detalhe svg {
+  color: var(--mata);
+}
+
+.anexo-erro {
+  color: var(--erro);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Enviando: sem porcentagem (o envio não informa), uma faixa que anda. */
+.anexo-barra {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--mata-suave);
+}
+
+.anexo-barra::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: 3px;
+  background: var(--mata);
+  animation: anexo-andando 1.2s ease-in-out infinite;
+}
+
+@keyframes anexo-andando {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.anexo-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.anexo-acoes .botao {
+  flex: 1;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 16px;
+}
+
+@media (min-width: 600px) {
+  .anexo-item {
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+  }
+
+  .anexo-acoes {
+    grid-column: auto;
+  }
+
+  .anexo-acoes .botao {
+    flex: none;
+  }
+}
+
+.anexos-andamento {
+  margin: 8px 0 0;
+  font-weight: 700;
+}
+
+.anexos-andamento:empty {
+  display: none;
+}
+
+.anexos-escolher {
+  position: relative;
+  margin-top: 10px;
+}
+
+/* O campo de arquivo fica invisível, mas focável: quem vê é o rótulo-botão. */
+.anexos-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.anexos-input:focus-visible + label {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
+/* ---------- no mural ---------- */
+
+.com-anexo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
