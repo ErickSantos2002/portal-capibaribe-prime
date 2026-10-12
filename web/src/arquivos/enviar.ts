@@ -11,6 +11,13 @@ import type { ArquivoEnviado, Finalidade, TipoArquivo } from './tipos'
 export const MENSAGEM_NAO_CHEGOU =
   'O arquivo não chegou ao Portal. Confira a internet e envie de novo.'
 
+/** Quanto o PUT pode demorar antes de desistir: 2 minutos, mais o tempo de mandar o arquivo a
+ *  50 KB/s (internet ruim de celular), até 10 minutos (a validade da URL assinada). Um arquivo de
+ *  20 MB tem 9 minutos. Sem isso, um PUT parado prenderia a tela para sempre. */
+export function prazoDoEnvio(tamanho: number): number {
+  return Math.min(10 * 60_000, 2 * 60_000 + Math.ceil(tamanho / 50))
+}
+
 function recusadoNaTela(mensagem: string): ErroDaApi {
   return new ErroDaApi(422, {
     codigo: 'dados_invalidos',
@@ -49,6 +56,8 @@ export async function enviarArquivo(
     body: arquivo,
     credentials: 'omit',
     cache: 'no-store',
+    // Passou do prazo: o fetch falha com TimeoutError e vira `arquivo_nao_chegou`, como a rede.
+    signal: AbortSignal.timeout(prazoDoEnvio(arquivo.size)),
   }).catch(() => null)
   if (!resposta?.ok) {
     throw new ErroDaApi(resposta?.status ?? 0, {

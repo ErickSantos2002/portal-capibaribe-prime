@@ -374,8 +374,9 @@ enviam arquivo. É o mesmo princípio do M2: o Portal sobe antes de o bucket exi
 | `web/src/avisos/**` | épico B | tipos com os campos novos; o resto é do épico |
 
 `enviarArquivo` faz o PUT com `fetch` direto para a URL assinada: **sem** `X-Portal`, **sem**
-cookie (`credentials: 'omit'`) e com o `Content-Type` devolvido pela API. Erro do R2 ou da rede
-no PUT vira `ErroDaApi` `arquivo_nao_chegou`.
+cookie (`credentials: 'omit'`), com o `Content-Type` devolvido pela API e com tempo limite
+(`prazoDoEnvio`: 2 minutos mais o arquivo a 50 KB/s, até 10 minutos). Erro do R2, da rede ou
+o tempo esgotado no PUT vira `ErroDaApi` `arquivo_nao_chegou`.
 
 Pontos de encaixe já ligados (o épico troca só o corpo, do lado dele):
 

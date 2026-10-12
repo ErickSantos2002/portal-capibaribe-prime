@@ -12,7 +12,7 @@ import {
   nomeComExtensao,
   type Ferramentas,
 } from './comprimir'
-import { enviarArquivo, MENSAGEM_NAO_CHEGOU } from './enviar'
+import { enviarArquivo, MENSAGEM_NAO_CHEGOU, prazoDoEnvio } from './enviar'
 import { ACEITAR, LIMITES, mensagemDoLimite, MSG_TIPO, problemaNaTela, TIPOS_ACEITOS } from './limites'
 import type { ArquivoEnviado, EnvioAutorizado } from './tipos'
 
@@ -343,6 +343,30 @@ describe('enviarArquivo', () => {
     )) as ErroDaApi
     expect(erro.codigo).toBe('arquivo_nao_chegou')
     expect(MENSAGEM_NAO_CHEGOU).toBe('O arquivo não chegou ao Portal. Confira a internet e envie de novo.')
+  })
+
+  it('o PUT tem tempo limite, proporcional ao tamanho, de 2 a 10 minutos', async () => {
+    expect(prazoDoEnvio(1000)).toBe(2 * 60_000 + 20)
+    expect(prazoDoEnvio(20 * MB)).toBe(2 * 60_000 + Math.ceil((20 * MB) / 50))
+    expect(prazoDoEnvio(200 * MB)).toBe(10 * 60_000)
+    const timeout = vi.spyOn(AbortSignal, 'timeout')
+    const fetch = rede()
+    await enviarArquivo(arquivo('a.pdf', 'application/pdf'), 'aviso', SEM_IMAGEM)
+    const put = chamadas(fetch).find((c) => c.opcoes.method === 'PUT')
+    expect(put?.opcoes.signal).toBeInstanceOf(AbortSignal)
+    expect(timeout).toHaveBeenCalledWith(prazoDoEnvio(1000))
+    timeout.mockRestore()
+  })
+
+  it('o PUT passou do tempo: arquivo_nao_chegou, sem confirmar', async () => {
+    const fetch = rede(async () => {
+      throw new DOMException('signal timed out', 'TimeoutError')
+    })
+    const erro = (await enviarArquivo(arquivo('a.pdf', 'application/pdf'), 'aviso', SEM_IMAGEM).catch(
+      (e: unknown) => e,
+    )) as ErroDaApi
+    expect([erro.codigo, erro.mensagem]).toEqual(['arquivo_nao_chegou', MENSAGEM_NAO_CHEGOU])
+    expect(chamadas(fetch).map((c) => c.caminho)).not.toContain('/api/arquivos/42/confirmar')
   })
 
   it('erro da API (no pedido ou na confirmação) chega como veio', async () => {
