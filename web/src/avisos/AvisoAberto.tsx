@@ -10,6 +10,7 @@ import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
 import { DocumentoDoAviso } from '../documentos/DocumentoDoAviso'
 import { AnexosDoAviso } from './AnexosDoAviso'
+import { mudancaNosAnexos } from './anexos'
 import { abrirAviso, arquivarAviso, marcarLido, mudarFixado } from './api'
 import { comoErroDaApi, useCarga, useIdDoAviso } from './carregar'
 import {
@@ -92,6 +93,13 @@ function Situacao({ aviso }: { aviso: AvisoCompleto }) {
           <Icone nome="editar" />
           <div className="avisos-versoes">
             <p>Corrigido em {formatarData(aviso.editado_em)}.</p>
+            {/* U6: a correção que mexeu nos anexos diz o quê. */}
+            {aviso.versoes_anteriores[0] && (
+              <MudancaNosAnexos
+                antes={aviso.versoes_anteriores[0].anexos}
+                depois={aviso.anexos}
+              />
+            )}
             <details>
               <summary>
                 {aviso.versoes_anteriores.length > 1
@@ -101,7 +109,8 @@ function Situacao({ aviso }: { aviso: AvisoCompleto }) {
               {aviso.versoes_anteriores.map((v) => (
                 <section key={v.versao} className={`avisos-versao cat-${v.categoria}`}>
                   <p className="suave">
-                    {v.versao === 1 ? 'Publicado' : 'Corrigido'} em {formatarData(v.criada_em)}:
+                    Assim era antes ({v.versao === 1 ? 'publicado' : 'corrigido'} em{' '}
+                    {formatarData(v.criada_em)}):
                   </p>
                   <RotuloCategoria categoria={v.categoria} />
                   <h2 className="avisos-versao-titulo">{v.titulo}</h2>
@@ -117,8 +126,20 @@ function Situacao({ aviso }: { aviso: AvisoCompleto }) {
           </div>
         </div>
       )}
+      {aviso.editado_em && <p className="secao avisos-agora">Como está agora:</p>}
     </>
   )
+}
+
+function MudancaNosAnexos({
+  antes,
+  depois,
+}: {
+  antes: AvisoCompleto['anexos']
+  depois: AvisoCompleto['anexos']
+}) {
+  const frase = mudancaNosAnexos(antes, depois)
+  return frase ? <p>{frase}</p> : null
 }
 
 function ParaAGestao({

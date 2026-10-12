@@ -113,86 +113,105 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+const FOTO2: ArquivoEnviado = { id: 13, nome: 'IMG_2031.webp', tipo: 'image/webp', tamanho_bytes: 900 * 1024 }
+
 describe('aviso aberto com anexos', () => {
-  it('a foto aparece pelo link e abre grande; o foco volta ao fechar', async () => {
+  it('fotos pela rota de abrir do Portal, sem o nome técnico; tocar abre grande', async () => {
     api(eu(), (url) =>
-      url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [FOTO, PDF] })) : link(url),
+      url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [FOTO, FOTO2, PDF] })) : undefined,
     )
     abrir('/avisos/5')
-    const botao = await screen.findByRole('button', {
-      name: 'Ver a foto fundação.webp em tamanho grande',
-    })
-    const miniatura = await within(botao).findByRole('img')
-    await waitFor(() => expect(miniatura.getAttribute('src')).toBe('https://r2.test/arquivos/11?baixar='))
-    expect(miniatura.getAttribute('alt')).toBe('Foto: fundação.webp')
+    const botao = await screen.findByRole('button', { name: 'Ver a foto 1 de 2 em tamanho grande' })
+    const miniatura = within(botao).getByRole('img')
+    expect(miniatura.getAttribute('src')).toBe('/api/avisos/5/anexos/11/abrir')
+    expect(miniatura.getAttribute('alt')).toBe('Foto 1 de 2')
+    // U9: a miniatura diz que amplia.
+    expect(botao.textContent).toContain('Ampliar')
+    // U7: o nome do arquivo da foto não aparece para o morador.
+    expect(document.body.textContent).not.toContain('IMG_2031')
 
     fireEvent.click(botao)
-    const janela = screen.getByRole('dialog', { name: 'Foto: fundação.webp' })
-    const fechar = within(janela).getByRole('button', { name: 'Fechar' })
-    expect(document.activeElement).toBe(fechar)
-    fireEvent.keyDown(janela, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(document.activeElement).toBe(botao)
+    const janela = screen.getByRole('dialog', { name: 'Foto 1 de 2' })
+    expect(within(janela).getByRole('img').getAttribute('src')).toBe('/api/avisos/5/anexos/11/abrir')
+    expect(document.activeElement).toBe(within(janela).getByRole('button', { name: 'Fechar' }))
   })
 
-  it('a foto que falha pede o link de novo uma vez, depois oferece tentar de novo', async () => {
-    const fetch = api(eu(), (url) =>
-      url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [FOTO] })) : link(url),
+  it('visualizador: próxima e anterior, setas do teclado, Esc e o foco volta à foto vista', async () => {
+    api(eu(), (url) =>
+      url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [FOTO, FOTO2] })) : undefined,
+    )
+    abrir('/avisos/5')
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver a foto 1 de 2 em tamanho grande' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima foto' }))
+    const janela = screen.getByRole('dialog', { name: 'Foto 2 de 2' })
+    expect(within(janela).getByRole('img').getAttribute('src')).toBe('/api/avisos/5/anexos/13/abrir')
+    fireEvent.keyDown(document, { key: 'ArrowLeft' })
+    expect(screen.getByRole('dialog', { name: 'Foto 1 de 2' })).toBeTruthy()
+    fireEvent.keyDown(document, { key: 'ArrowRight' })
+    // C4: clicar na foto (fora dos botões) não tira o foco do diálogo e o Esc continua valendo.
+    fireEvent.mouseDown(within(screen.getByRole('dialog')).getByRole('img'))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Ver a foto 2 de 2 em tamanho grande' }),
+    )
+  })
+
+  it('C4: com o visualizador aberto, a página de trás fica inerte e o foco não sai', async () => {
+    api(eu(), (url) =>
+      url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [FOTO] })) : undefined,
+    )
+    abrir('/avisos/5')
+    const botao = await screen.findByRole('button', { name: 'Ver a foto 1 de 1 em tamanho grande' })
+    fireEvent.click(botao)
+    const janela = screen.getByRole('dialog')
+    const fundo = [...document.body.children].filter((e) => !e.contains(janela))
+    expect(fundo.length).toBeGreaterThan(0)
+    expect(fundo.every((e) => e.hasAttribute('inert'))).toBe(true)
+    // Só uma foto: sem "Anterior"/"Próxima".
+    expect(within(janela).queryByRole('button', { name: 'Próxima foto' })).toBeNull()
+    act(() => botao.focus())
+    expect(janela.contains(document.activeElement)).toBe(true)
+    fireEvent.click(within(janela).getByRole('button', { name: 'Fechar' }))
+    expect(fundo.some((e) => e.hasAttribute('inert'))).toBe(false)
+  })
+
+  it('a foto que falha é pedida de novo uma vez, depois oferece tentar de novo', async () => {
+    api(eu(), (url) =>
+      url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [FOTO] })) : undefined,
     )
     abrir('/avisos/5')
     const botao = await screen.findByRole('button', { name: /Ver a foto/ })
-    const imagem = await within(botao).findByRole('img')
-    await waitFor(() => expect(imagem.getAttribute('src')).toBeTruthy())
-    fireEvent.error(imagem)
-    await waitFor(() =>
-      expect(fetch.mock.calls.filter(([c]) => String(c).includes('/anexos/11/link'))).toHaveLength(2),
+    fireEvent.error(within(botao).getByRole('img'))
+    expect(within(botao).getByRole('img').getAttribute('src')).toBe(
+      '/api/avisos/5/anexos/11/abrir?tentativa=2',
     )
-    fireEvent.error(await within(botao).findByRole('img'))
+    fireEvent.error(within(botao).getByRole('img'))
     expect(await screen.findByText('Não deu para mostrar a foto.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
-    await waitFor(() =>
-      expect(fetch.mock.calls.filter(([c]) => String(c).includes('/anexos/11/link'))).toHaveLength(3),
+    const outra = await screen.findByRole('button', { name: /Ver a foto/ })
+    expect(within(outra).getByRole('img').getAttribute('src')).toBe(
+      '/api/avisos/5/anexos/11/abrir?tentativa=3',
     )
   })
 
-  it('o PDF é um botão com nome e tamanho que abre o link numa aba nova', async () => {
-    const aba = { opener: {}, location: { href: '' }, close: vi.fn() }
-    const open = vi.fn(() => aba)
-    vi.stubGlobal('open', open)
+  it('U12: o PDF é um link do Portal que abre em outra aba (recarregar sempre funciona)', async () => {
     api(eu(), (url) =>
-      url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [PDF] })) : link(url),
+      url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [PDF] })) : undefined,
     )
     abrir('/avisos/5')
-    const botao = await screen.findByRole('button', { name: /Regras da visita\.pdf/ })
-    expect(botao.textContent).toContain('PDF, 320 KB')
-    fireEvent.click(botao)
-    expect(open).toHaveBeenCalledWith('', '_blank')
-    await waitFor(() => expect(aba.location.href).toBe('https://r2.test/arquivos/12?baixar='))
-    expect(aba.opener).toBeNull()
+    const link = await screen.findByRole('link', { name: /Regras da visita\.pdf/ })
+    expect(link.textContent).toContain('PDF, 320 KB')
+    expect(link.getAttribute('href')).toBe('/api/avisos/5/anexos/12/abrir')
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(link.getAttribute('rel')).toContain('noopener')
   })
 
-  it('o link do PDF falhou: fecha a aba e mostra a mensagem', async () => {
-    const aba = { opener: {}, location: { href: '' }, close: vi.fn() }
-    vi.stubGlobal('open', vi.fn(() => aba))
-    api(eu(), (url) => {
-      if (url.pathname === '/api/avisos/5') return json(200, completo(5, { anexos: [PDF] }))
-      return json(503, {
-        codigo: 'arquivos_desligados',
-        mensagem: 'O envio de arquivos ainda não está ligado no Portal.',
-      })
-    })
-    abrir('/avisos/5')
-    fireEvent.click(await screen.findByRole('button', { name: /Regras da visita\.pdf/ }))
-    expect(
-      await screen.findByText('O envio de arquivos ainda não está ligado no Portal.'),
-    ).toBeTruthy()
-    expect(aba.close).toHaveBeenCalled()
-  })
-
-  it('a versão antiga mostra os anexos dela', async () => {
+  it('a versão antiga mostra os anexos dela, e a correção diz o que mudou nos anexos', async () => {
+    const COMUNICADO = { ...PDF, id: 14, nome: 'Comunicado.pdf' }
     const aviso = completo(5, {
       editado_em: '2026-11-04T12:00:00Z',
-      anexos: [],
+      anexos: [PDF, COMUNICADO],
       versoes_anteriores: [
         {
           versao: 1,
@@ -201,14 +220,18 @@ describe('aviso aberto com anexos', () => {
           criada_em: '2026-11-03T12:00:00Z',
           categoria: 'obra',
           evento: null,
-          anexos: [PDF],
+          anexos: [FOTO, PDF],
         },
       ],
     })
-    api(eu(), (url) => (url.pathname === '/api/avisos/5' ? json(200, aviso) : link(url)))
+    api(eu(), (url) => (url.pathname === '/api/avisos/5' ? json(200, aviso) : undefined))
     abrir('/avisos/5')
     const antes = (await screen.findByText('Antes')).closest('section')!
-    expect(within(antes).getByRole('button', { name: /Regras da visita\.pdf/ })).toBeTruthy()
+    expect(within(antes).getByRole('link', { name: /Regras da visita\.pdf/ })).toBeTruthy()
+    expect(within(antes).getByText(/Assim era antes/)).toBeTruthy()
+    // U6
+    expect(screen.getByText('Anexos: entrou Comunicado.pdf; saiu 1 foto.')).toBeTruthy()
+    expect(screen.getByText('Como está agora:')).toBeTruthy()
   })
 
   it('sem anexo, nada aparece', async () => {
@@ -337,7 +360,7 @@ describe('formulário: novo aviso com anexos', () => {
     abrir('/avisos/novo')
     await preencher()
     escolher(arquivo('mapa.pdf', 'application/pdf'))
-    expect(await screen.findByText(/não é um PDF nem uma foto/)).toBeTruthy()
+    expect((await screen.findAllByText(/não é um PDF nem uma foto/)).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: 'Enviar de novo mapa.pdf' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Tirar mapa.pdf' })).toBeTruthy()
   })
@@ -396,5 +419,158 @@ describe('formulário: corrigir aviso com anexos', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }))
     const mensagens = await screen.findAllByText('Envie o arquivo de novo.')
     expect(mensagens.some((m) => m.classList.contains('avisos-erro-campo'))).toBe(true)
+  })
+})
+
+describe('formulário: revisão de UX e de código', () => {
+  it('U3: durante o envio, o botão espera os arquivos (desabilitado); U2: nada fica para trás', async () => {
+    let terminar: (a: ArquivoEnviado) => void = () => {}
+    enviarArquivo.mockImplementationOnce(() => new Promise((r) => (terminar = r)))
+    enviarArquivo.mockResolvedValueOnce(FOTO)
+    api(eu(['comissao']), () => undefined)
+    abrir('/avisos/novo')
+    await preencher()
+    escolher(arquivo('a.pdf', 'application/pdf'), arquivo('b.jpg', 'image/jpeg'))
+    const botao = await screen.findByRole('button', { name: 'Esperando os arquivos… (0 de 2)' })
+    expect((botao as HTMLButtonElement).disabled).toBe(true)
+    await act(async () => terminar(PDF))
+    expect(await screen.findByRole('button', { name: 'Ver prévia' })).toBeTruthy()
+    expect(screen.queryByText('Espere os arquivos terminarem de enviar.')).toBeNull()
+  })
+
+  it('U4: anuncia cada arquivo pronto ou recusado, com o motivo', async () => {
+    enviarArquivo.mockResolvedValueOnce(PDF)
+    enviarArquivo.mockRejectedValueOnce(
+      new ErroDaApi(422, { codigo: 'arquivo_recusado', mensagem: 'O arquivo pode ter até 10 MB.' }),
+    )
+    api(eu(['comissao']), () => undefined)
+    abrir('/avisos/novo')
+    await preencher()
+    escolher(arquivo('Regras da visita.pdf', 'application/pdf'), arquivo('grande.jpg', 'image/jpeg'))
+    const regiao = document.querySelector('.anexos-anuncio')!
+    expect(regiao.getAttribute('aria-live')).toBe('polite')
+    await waitFor(() =>
+      expect(regiao.textContent).toBe('Não deu para anexar grande.jpg: O arquivo pode ter até 10 MB.'),
+    )
+  })
+
+  it('U5: depois de "Tirar", o foco vai para o próximo item ou para "Anexar foto ou PDF"', async () => {
+    let id = 100
+    enviarArquivo.mockImplementation(async (f: File) => ({ ...PDF, id: id++, nome: f.name }))
+    api(eu(['comissao']), () => undefined)
+    abrir('/avisos/novo')
+    await preencher()
+    escolher(arquivo('um.pdf', 'application/pdf'), arquivo('dois.pdf', 'application/pdf'))
+    await waitFor(() => expect(screen.getAllByText(/^PDF, /)).toHaveLength(2))
+    fireEvent.click(screen.getByRole('button', { name: 'Tirar um.pdf' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Tirar dois.pdf' })),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Tirar dois.pdf' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByLabelText('Anexar foto ou PDF')),
+    )
+  })
+
+  it('U10 e U11: a ajuda diz quando o envio começa; com 5 e erro, a frase manda tirar', async () => {
+    enviarArquivo.mockRejectedValue(
+      new ErroDaApi(422, { codigo: 'arquivo_recusado', mensagem: 'O arquivo pode ter até 10 MB.' }),
+    )
+    api(eu(['comissao']), () => undefined)
+    abrir('/avisos/novo')
+    await preencher()
+    expect(screen.getByText(/O envio começa assim que você escolhe/)).toBeTruthy()
+    escolher(...['1', '2', '3', '4', '5'].map((n) => arquivo(`${n}.jpg`, 'image/jpeg')))
+    expect(
+      await screen.findByText('Já são 5 arquivos. Tire os que deram erro para anexar outros.'),
+    ).toBeTruthy()
+  })
+
+  it('U1: sair com algo escrito pede confirmação; "Continuar escrevendo" fica', async () => {
+    api(eu(['comissao']), (url) =>
+      url.pathname === '/api/avisos' ? json(200, { itens: [] }) : undefined,
+    )
+    const roteador = abrir('/avisos/novo')
+    await preencher()
+    await act(async () => {
+      await roteador.navigate('/avisos')
+    })
+    const pergunta = screen.getByRole('alertdialog', { name: 'Sair sem publicar?' })
+    expect(pergunta.textContent).toContain('O que você escreveu e os anexos vão se perder.')
+    fireEvent.click(within(pergunta).getByRole('button', { name: 'Continuar escrevendo' }))
+    expect(roteador.state.location.pathname).toBe('/avisos/novo')
+    await act(async () => {
+      await roteador.navigate('/avisos')
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Sair sem publicar' }))
+    await waitFor(() => expect(roteador.state.location.pathname).toBe('/avisos'))
+  })
+
+  it('U1: formulário vazio sai sem perguntar; recarregar com texto pede confirmação', async () => {
+    api(eu(['comissao']), (url) =>
+      url.pathname === '/api/avisos' ? json(200, { itens: [] }) : undefined,
+    )
+    const roteador = abrir('/avisos/novo')
+    await screen.findByLabelText('Título')
+    const vazio = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(vazio)
+    expect(vazio.defaultPrevented).toBe(false)
+    await preencher()
+    const comTexto = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(comTexto)
+    expect(comTexto.defaultPrevented).toBe(true)
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Texto do aviso'), { target: { value: '' } })
+    await act(async () => {
+      await roteador.navigate('/avisos')
+    })
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(roteador.state.location.pathname).toBe('/avisos')
+  })
+
+  it('C2: a correção manda a versão de origem; se outra pessoa corrigiu, avisa e recarrega', async () => {
+    let vezes = 0
+    const V1 = {
+      versao: 1,
+      titulo: 'V1',
+      texto: 'x',
+      criada_em: '2026-11-03T12:00:00Z',
+      categoria: 'obra' as const,
+      evento: null,
+      anexos: [],
+    }
+    const fetch = api(eu(['comissao']), (url, init) => {
+      if (url.pathname === '/api/avisos/5' && init.method === 'PUT') {
+        return json(409, {
+          codigo: 'aviso_corrigido_agora',
+          mensagem: 'Outra pessoa corrigiu este aviso agora há pouco. Abra de novo e confira.',
+        })
+      }
+      if (url.pathname === '/api/avisos/5') {
+        vezes += 1
+        return json(
+          200,
+          vezes > 1
+            ? completo(5, { texto: 'Versão nova', anexos: [PDF], versoes_anteriores: [V1] })
+            : completo(5, { anexos: [PDF] }),
+        )
+      }
+      return undefined
+    })
+    abrir('/avisos/5/corrigir')
+    fireEvent.change(await screen.findByLabelText('Texto do aviso'), {
+      target: { value: 'Meu texto' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }))
+    await waitFor(() => expect(fetch.mock.calls.some(([, i]) => i?.method === 'PUT')).toBe(true))
+    const [, init] = fetch.mock.calls.find(([, i]) => i?.method === 'PUT')!
+    expect(JSON.parse(String(init!.body)).versao_base).toBe(1)
+    expect(await screen.findByText(/Outra pessoa corrigiu este aviso agora há pouco/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir a versão nova' }))
+    await waitFor(() =>
+      expect((screen.getByLabelText('Texto do aviso') as HTMLTextAreaElement).value).toBe(
+        'Versão nova',
+      ),
+    )
   })
 })

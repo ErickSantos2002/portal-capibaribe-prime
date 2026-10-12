@@ -25,6 +25,7 @@
 }
 
 .anexo-foto {
+  position: relative;
   display: grid;
   place-items: center;
   width: 100%;
@@ -51,6 +52,23 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* U9: a miniatura diz que amplia (no celular não há "passar o mouse"). */
+.anexo-ampliar {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--folha);
+  color: var(--tinta);
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
 }
 
 .anexo-foto.falhou {
@@ -82,16 +100,13 @@
   text-align: left;
 }
 
-button.anexo-pdf {
+a.anexo-pdf {
+  text-decoration: none;
   cursor: pointer;
 }
 
-button.anexo-pdf:hover {
+a.anexo-pdf:hover {
   background: var(--mata-suave);
-}
-
-button.anexo-pdf[aria-busy='true'] {
-  cursor: progress;
 }
 
 .anexo-pdf svg {
@@ -171,11 +186,36 @@ div.anexo-pdf .anexo-nome {
   outline-color: var(--ipe);
 }
 
+.anexo-visualizador:focus {
+  outline: none;
+}
+
+/* Sem `touch-action: none`: o zoom de dois dedos do navegador continua valendo (U8). */
 .anexo-visualizador img {
   flex: 1;
   width: 100%;
   min-height: 0;
   object-fit: contain;
+}
+
+.anexo-visualizador-passar {
+  display: flex;
+  gap: 12px;
+  width: min(100%, 1100px);
+  margin: 0 auto;
+}
+
+.anexo-visualizador-passar .botao {
+  flex: 1;
+  min-height: 52px;
+  margin: 0;
+  border-color: var(--folha);
+  background: var(--folha);
+  color: var(--mata);
+}
+
+.anexo-visualizador-passar .botao:focus-visible {
+  outline-color: var(--ipe);
 }
 
 /* ---------- no formulário ---------- */
@@ -323,4 +363,43 @@ div.anexo-pdf .anexo-nome {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+/* ---------- "Como está agora", depois das versões de antes (U6) ---------- */
+
+.avisos-agora {
+  margin-bottom: 4px;
+}
+
+/* ---------- "Sair sem publicar?" (U1) ---------- */
+
+.sair-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(8 14 10 / 0.6);
+}
+
+.sair-pergunta {
+  width: min(100%, 440px);
+  padding: 20px;
+  border-radius: var(--r-medio);
+  background: var(--folha);
+  color: var(--tinta);
+}
+
+.sair-pergunta svg {
+  color: var(--ipe-forte);
+}
+
+.sair-pergunta h2 {
+  margin: 8px 0 4px;
+  font-size: 22px;
+}
+
+.sair-pergunta p {
+  margin: 0 0 16px;
 }

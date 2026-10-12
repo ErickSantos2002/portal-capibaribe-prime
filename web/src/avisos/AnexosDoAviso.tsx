@@ -1,13 +1,13 @@
 // M3 · Épico B: os anexos no aviso aberto, na versão antiga e na prévia (spec `m3-anexos.md`,
-// seção 3.3). Foto na própria tela (toque abre grande); PDF como botão que abre numa aba nova
-// (a CSP não deixa embutir PDF). O link vale 5 minutos e é pedido na hora, nunca guardado.
-import { useEffect, useRef, useState } from 'react'
+// seção 3.3). Foto na própria tela (toque abre grande, com anterior e próxima); PDF como link que
+// abre numa aba nova (a CSP não deixa embutir PDF). Os dois passam pela rota `…/abrir` do Portal,
+// que confere a sessão e redireciona para um link novo (revisão U12).
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ArquivoEnviado } from '../arquivos/tipos'
 import { Icone } from '../casca/Icone'
 import { descricaoDoAnexo, ehFoto } from './anexos'
-import { linkDoAnexo } from './api'
-import { comoErroDaApi } from './carregar'
+import { enderecoDoAnexo } from './api'
 import { IconeAnexo } from './IconesAnexo'
 import './anexos.css'
 
@@ -17,95 +17,34 @@ export interface AnexoParaMostrar {
   previa?: string | null
 }
 
-/** Quantas vezes a foto pede o link antes de desistir sozinha (o link pode ter vencido). */
-const PEDIDOS_POR_VEZ = 2
+/** Quantas vezes a miniatura tenta carregar antes de desistir sozinha. */
+const TENTATIVAS_POR_VEZ = 2
 
-/** O endereço da foto: a miniatura local, ou o link pedido à API (e pedido de novo se a
- *  imagem falhar uma vez). `falhou`: desistiu; `tentar` recomeça. */
-function useEnderecoDaFoto(
-  avisoId: number | undefined,
-  arquivo: ArquivoEnviado,
-  previa?: string | null,
-) {
-  const [vez, setVez] = useState(0)
-  const [pedidos, setPedidos] = useState(1)
-  const [link, setLink] = useState<{ vez: number; url: string } | null>(null)
-  const [falhou, setFalhou] = useState(false)
-  const remoto = !previa && avisoId !== undefined
-
-  useEffect(() => {
-    if (!remoto) return
-    let valendo = true
-    linkDoAnexo(avisoId, arquivo.id)
-      .then((l) => valendo && setLink({ vez, url: l.url }))
-      .catch(() => valendo && setFalhou(true))
-    return () => {
-      valendo = false
-    }
-  }, [remoto, avisoId, arquivo.id, vez])
-
-  const url = previa ?? (link?.vez === vez ? link.url : null)
-  return {
-    url,
-    falhou,
-    /** A imagem não carregou: pede o link de novo, ou desiste. */
-    aoFalhar() {
-      if (!remoto || pedidos >= PEDIDOS_POR_VEZ) {
-        setFalhou(true)
-        return
-      }
-      setPedidos((p) => p + 1)
-      setVez((v) => v + 1)
-    },
-    tentar() {
-      setFalhou(false)
-      setPedidos(1)
-      setVez((v) => v + 1)
-    },
-  }
+/** O endereço da foto: a miniatura local, ou a rota de abrir do Portal (com `?tentativa=` para
+ *  o navegador não reaproveitar a resposta que falhou). */
+function enderecoDaFoto(avisoId: number | undefined, anexo: AnexoParaMostrar, tentativa = 1) {
+  if (anexo.previa) return anexo.previa
+  if (avisoId === undefined) return null
+  const base = enderecoDoAnexo(avisoId, anexo.arquivo.id)
+  return tentativa > 1 ? `${base}?tentativa=${tentativa}` : base
 }
 
-/** A foto grande, por cima da tela. Esc ou "Fechar" fecham; o foco fica no "Fechar". */
-function Visualizador({ url, nome, fechar }: { url: string; nome: string; fechar: () => void }) {
-  const botao = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    botao.current?.focus()
-    const antes = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = antes
-    }
-  }, [])
-  return createPortal(
-    <div
-      className="anexo-visualizador"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Foto: ${nome}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation()
-          fechar()
-        } else if (e.key === 'Tab') {
-          // O único controle da janela é o "Fechar": o foco não sai dela.
-          e.preventDefault()
-          botao.current?.focus()
-        }
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) fechar()
-      }}
-    >
-      <div className="anexo-visualizador-topo">
-        <p>{nome}</p>
-        <button ref={botao} type="button" className="botao leve" onClick={fechar}>
-          <IconeAnexo nome="fechar" /> Fechar
-        </button>
-      </div>
-      <img src={url} alt={`Foto: ${nome}`} />
-    </div>,
-    document.body,
-  )
+function useFotoQueTenta(avisoId: number | undefined, anexo: AnexoParaMostrar) {
+  const [tentativa, setTentativa] = useState(1)
+  const [falhasSeguidas, setFalhasSeguidas] = useState(0)
+  const falhou = falhasSeguidas >= TENTATIVAS_POR_VEZ
+  return {
+    url: enderecoDaFoto(avisoId, anexo, tentativa),
+    falhou,
+    aoFalhar() {
+      setFalhasSeguidas((f) => f + 1)
+      if (falhasSeguidas + 1 < TENTATIVAS_POR_VEZ) setTentativa((t) => t + 1)
+    },
+    tentar() {
+      setFalhasSeguidas(0)
+      setTentativa((t) => t + 1)
+    },
+  }
 }
 
 /** A miniatura de uma foto que já está no Portal (usada também no formulário de correção). */
@@ -116,22 +55,134 @@ export function MiniaturaRemota({
   avisoId: number
   arquivo: ArquivoEnviado
 }) {
-  const foto = useEnderecoDaFoto(avisoId, arquivo)
+  const foto = useFotoQueTenta(avisoId, { arquivo })
   if (foto.falhou || !foto.url) return <IconeAnexo nome="foto" tamanho={28} />
   return <img src={foto.url} alt="" onError={foto.aoFalhar} />
+}
+
+interface PropsVisualizador {
+  avisoId?: number
+  fotos: readonly AnexoParaMostrar[]
+  inicio: number
+  /** Fecha e diz qual foto estava aberta (o foco volta para a miniatura dela). */
+  fechar: (indice: number) => void
+}
+
+/** As fotos grandes, por cima da tela (C4, U7, U8). Enquanto aberto: o resto da página fica
+ *  inerte, o foco não sai, Esc fecha e as setas do teclado trocam de foto. O zoom de dois dedos
+ *  do navegador continua valendo (nada de `touch-action: none`). */
+function Visualizador({ avisoId, fotos, inicio, fechar }: PropsVisualizador) {
+  const [indice, setIndice] = useState(inicio)
+  const janela = useRef<HTMLDivElement>(null)
+  const botaoFechar = useRef<HTMLButtonElement>(null)
+  const atual = useRef(indice)
+  useEffect(() => {
+    atual.current = indice
+  }, [indice])
+  const varias = fotos.length > 1
+  const rotulo = `Foto ${indice + 1} de ${fotos.length}`
+
+  useEffect(() => {
+    const dialogo = janela.current
+    botaoFechar.current?.focus()
+    // O resto da página fica inerte (nem foco nem leitor de tela chegam lá).
+    const fundo = [...document.body.children].filter((e) => dialogo && !e.contains(dialogo))
+    for (const e of fundo) e.setAttribute('inert', '')
+    const rolagem = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function teclar(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        fechar(atual.current)
+      } else if (e.key === 'ArrowRight') {
+        setIndice((i) => (i + 1) % fotos.length)
+      } else if (e.key === 'ArrowLeft') {
+        setIndice((i) => (i - 1 + fotos.length) % fotos.length)
+      } else if (e.key === 'Tab' && dialogo) {
+        // O foco gira entre os botões da janela.
+        const botoes = [...dialogo.querySelectorAll('button')]
+        const posicao = botoes.indexOf(document.activeElement as HTMLButtonElement)
+        const proximo = e.shiftKey ? posicao - 1 : posicao + 1
+        e.preventDefault()
+        botoes[(proximo + botoes.length) % botoes.length]?.focus()
+      }
+    }
+    // O foco que escapar (um toque na foto, por exemplo) volta para a janela.
+    function prender(e: FocusEvent) {
+      if (dialogo && !dialogo.contains(e.target as Node)) botaoFechar.current?.focus()
+    }
+    document.addEventListener('keydown', teclar)
+    document.addEventListener('focusin', prender)
+    return () => {
+      document.removeEventListener('keydown', teclar)
+      document.removeEventListener('focusin', prender)
+      for (const e of fundo) e.removeAttribute('inert')
+      document.body.style.overflow = rolagem
+    }
+  }, [fechar, fotos.length])
+
+  const url = enderecoDaFoto(avisoId, fotos[indice])
+  return createPortal(
+    <div
+      ref={janela}
+      className="anexo-visualizador"
+      role="dialog"
+      aria-modal="true"
+      aria-label={rotulo}
+      // Um toque na foto ou no fundo mantém o foco na janela.
+      tabIndex={-1}
+    >
+      <div className="anexo-visualizador-topo">
+        <p aria-live="polite">{rotulo}</p>
+        <button
+          ref={botaoFechar}
+          type="button"
+          className="botao leve"
+          onClick={() => fechar(indice)}
+        >
+          <IconeAnexo nome="fechar" /> Fechar
+        </button>
+      </div>
+      {url && <img src={url} alt={rotulo} />}
+      {varias && (
+        <div className="anexo-visualizador-passar">
+          <button
+            type="button"
+            className="botao leve"
+            aria-label="Foto anterior"
+            onClick={() => setIndice((i) => (i - 1 + fotos.length) % fotos.length)}
+          >
+            <Icone nome="voltar" /> Anterior
+          </button>
+          <button
+            type="button"
+            className="botao leve"
+            aria-label="Próxima foto"
+            onClick={() => setIndice((i) => (i + 1) % fotos.length)}
+          >
+            Próxima <Icone nome="seta" />
+          </button>
+        </div>
+      )}
+    </div>,
+    document.body,
+  )
 }
 
 interface PropsFoto {
   avisoId?: number
   anexo: AnexoParaMostrar
-  unica: boolean
+  posicao: number
+  total: number
+  abrir: () => void
+  botao: (elemento: HTMLButtonElement | null) => void
 }
 
-function Foto({ avisoId, anexo, unica }: PropsFoto) {
-  const { arquivo } = anexo
-  const foto = useEnderecoDaFoto(avisoId, arquivo, anexo.previa)
-  const [aberta, setAberta] = useState(false)
-  const botao = useRef<HTMLButtonElement>(null)
+function Foto({ avisoId, anexo, posicao, total, abrir, botao }: PropsFoto) {
+  const foto = useFotoQueTenta(avisoId, anexo)
+  const unica = total === 1
+  const rotulo = `Foto ${posicao} de ${total}`
 
   if (foto.falhou) {
     return (
@@ -145,38 +196,28 @@ function Foto({ avisoId, anexo, unica }: PropsFoto) {
     )
   }
   return (
-    <>
-      <button
-        ref={botao}
-        type="button"
-        className={`anexo-foto${unica ? ' unica' : ''}`}
-        aria-label={`Ver a foto ${arquivo.nome} em tamanho grande`}
-        disabled={!foto.url}
-        onClick={() => setAberta(true)}
-      >
-        {foto.url ? (
-          <img src={foto.url} alt={`Foto: ${arquivo.nome}`} onError={foto.aoFalhar} />
-        ) : (
-          <IconeAnexo nome="foto" tamanho={32} />
-        )}
-      </button>
-      {aberta && foto.url && (
-        <Visualizador
-          url={foto.url}
-          nome={arquivo.nome}
-          fechar={() => {
-            setAberta(false)
-            botao.current?.focus()
-          }}
-        />
+    <button
+      ref={botao}
+      type="button"
+      className={`anexo-foto${unica ? ' unica' : ''}`}
+      // U7: o morador não vê o nome técnico do arquivo (IMG_2031.webp).
+      aria-label={`Ver a foto ${posicao} de ${total} em tamanho grande`}
+      onClick={abrir}
+    >
+      {foto.url ? (
+        <img src={foto.url} alt={rotulo} onError={foto.aoFalhar} />
+      ) : (
+        <IconeAnexo nome="foto" tamanho={32} />
       )}
-    </>
+      {/* U9: a miniatura diz que dá para ampliar. */}
+      <span className="anexo-ampliar" aria-hidden="true">
+        <Icone nome="busca" tamanho={18} /> Ampliar
+      </span>
+    </button>
   )
 }
 
 function Pdf({ avisoId, arquivo }: { avisoId?: number; arquivo: ArquivoEnviado }) {
-  const [abrindo, setAbrindo] = useState(false)
-  const [erro, setErro] = useState('')
   const conteudo = (
     <>
       <Icone nome="documentos" tamanho={32} />
@@ -191,45 +232,16 @@ function Pdf({ avisoId, arquivo }: { avisoId?: number; arquivo: ArquivoEnviado }
   )
   // Na prévia o aviso ainda não existe: o PDF aparece, mas não abre.
   if (avisoId === undefined) return <div className="anexo-pdf">{conteudo}</div>
-
-  async function abrir(id: number) {
-    // A aba nasce no toque (o Safari do iPhone bloqueia a que nasce depois de esperar a API).
-    const aba = window.open('', '_blank')
-    setAbrindo(true)
-    setErro('')
-    try {
-      const { url } = await linkDoAnexo(id, arquivo.id)
-      if (aba) {
-        aba.opener = null
-        aba.location.href = url
-      } else {
-        window.location.assign(url)
-      }
-    } catch (e) {
-      aba?.close()
-      setErro(comoErroDaApi(e).mensagem)
-    } finally {
-      setAbrindo(false)
-    }
-  }
-
+  // Um link de verdade (U12): o Safari do iPhone não bloqueia a aba e recarregar funciona.
   return (
-    <>
-      <button
-        type="button"
-        className="anexo-pdf"
-        aria-busy={abrindo}
-        onClick={() => abrir(avisoId)}
-      >
-        {conteudo}
-      </button>
-      {erro && (
-        <div className="aviso-caixa erro" role="alert">
-          <Icone nome="alerta" />
-          <p>{erro}</p>
-        </div>
-      )}
-    </>
+    <a
+      className="anexo-pdf"
+      href={enderecoDoAnexo(avisoId, arquivo.id)}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {conteudo}
+    </a>
   )
 }
 
@@ -241,6 +253,20 @@ export function AnexosDoAviso({
   avisoId?: number
   anexos: readonly AnexoParaMostrar[]
 }) {
+  const [aberta, setAberta] = useState<number | null>(null)
+  const miniaturas = useRef<(HTMLButtonElement | null)[]>([])
+  const focarDepois = useRef<number | null>(null)
+  const fechar = useCallback((indice: number) => {
+    focarDepois.current = indice
+    setAberta(null)
+  }, [])
+  // O foco volta para a miniatura da foto que estava aberta, depois que a página deixou de
+  // estar inerte (a janela já saiu).
+  useEffect(() => {
+    if (aberta !== null || focarDepois.current === null) return
+    miniaturas.current[focarDepois.current]?.focus()
+    focarDepois.current = null
+  }, [aberta])
   if (anexos.length === 0) return null
   const fotos = anexos.filter((a) => ehFoto(a.arquivo.tipo))
   const pdfs = anexos.filter((a) => !ehFoto(a.arquivo.tipo))
@@ -248,14 +274,32 @@ export function AnexosDoAviso({
     <section className="anexos" aria-label="Anexos">
       {fotos.length > 0 && (
         <div className={`anexos-fotos${fotos.length === 1 ? ' uma' : ''}`}>
-          {fotos.map((a) => (
-            <Foto key={a.arquivo.id} avisoId={avisoId} anexo={a} unica={fotos.length === 1} />
+          {fotos.map((a, i) => (
+            <Foto
+              key={a.arquivo.id}
+              avisoId={avisoId}
+              anexo={a}
+              posicao={i + 1}
+              total={fotos.length}
+              abrir={() => setAberta(i)}
+              botao={(elemento) => {
+                miniaturas.current[i] = elemento
+              }}
+            />
           ))}
         </div>
       )}
       {pdfs.map((a) => (
         <Pdf key={a.arquivo.id} avisoId={avisoId} arquivo={a.arquivo} />
       ))}
+      {aberta !== null && (
+        <Visualizador
+          avisoId={avisoId}
+          fotos={fotos}
+          inicio={aberta}
+          fechar={fechar}
+        />
+      )}
     </section>
   )
 }

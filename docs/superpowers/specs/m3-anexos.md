@@ -139,3 +139,22 @@ vêm primeiro, em grade, e os PDFs depois, cada grupo na ordem dos anexos:
   PDF; visualizador; mural com o clipe; correção manda a lista).
 - Conferência local com Playwright: gestão publicando com foto e PDF, morador abrindo, em
   390 px e 1280 px; prints em `docs/superpowers/prints/m3-anexos/`.
+
+## 5. Revisão independente (código e UX)
+
+Achados das duas revisões e o que mudou (detalhes nas dúvidas 11 a 17):
+
+- **API:** os anexos travam os arquivos em ordem de id antes de gravar (sem deadlock; o que
+  sobrar vira a mesma 422); `versao_base` na correção (409 `aviso_corrigido_agora` para
+  formulário velho); ids fora do `bigint` são 422; rota `…/anexos/{arquivo_id}/abrir` (302 para
+  um link novo; erro em página HTML simples), usada pela foto e pelo PDF.
+- **Aviso aberto:** foto como "Foto 1 de 2" (sem nome técnico), selo "Ampliar"; visualizador com
+  "Anterior"/"Próxima" (52 px), setas do teclado, Esc, foco preso, o resto da página `inert`, e o
+  foco volta à miniatura da foto vista; PDF como link do Portal; "Corrigido em" diz o que mudou
+  nos anexos, as versões de antes dizem "Assim era antes" e o texto atual vem com "Como está
+  agora:".
+- **Formulário:** "Sair sem publicar?" ao sair com algo escrito (e o aviso do navegador ao
+  recarregar); botão "Esperando os arquivos… (1 de 3)" desabilitado enquanto sobem; anúncio
+  para o leitor de tela de cada arquivo pronto, recusado (com o motivo) ou tirado; foco depois
+  de "Tirar"; frase das 5 vagas com erro; ajuda "O envio começa assim que você escolhe"; a fila
+  para de enviar quando a tela sai.

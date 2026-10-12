@@ -12,6 +12,8 @@ export interface ListaDeAnexos {
   adicionar: (arquivos: readonly File[]) => string[]
   tirar: (chave: string) => void
   tentarDeNovo: (chave: string) => void
+  /** A última novidade, para o leitor de tela (U4): pronto, recusado ou tirado. */
+  anuncio: string
 }
 
 function miniatura(arquivo: File): string | null {
@@ -19,7 +21,7 @@ function miniatura(arquivo: File): string | null {
   return URL.createObjectURL(arquivo)
 }
 
-function soltar(previa: string | null): void {
+function soltar(previa: string | null | undefined): void {
   if (previa && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(previa)
 }
 
@@ -36,14 +38,21 @@ export function useAnexos(iniciais: readonly ArquivoEnviado[] = []): ListaDeAnex
       jaPublicado: true,
     })),
   )
-  // O que a tela precisa saber na hora, sem esperar o React redesenhar.
-  const quantos = useRef(iniciais.length)
+  const [anuncio, setAnuncio] = useState('')
+  // C6: as chaves que estão na lista, atualizadas na hora (nunca dentro de um `setItens`): as
+  // vagas valem já, mesmo antes de o React redesenhar.
+  const naLista = useRef(new Set(iniciais.map((a) => `publicado-${a.id}`)))
   const escolhidos = useRef(new Map<string, File>())
+  // O nome que a lista mostra, para o anúncio de "saiu da lista".
+  const nomes = useRef(new Map(iniciais.map((a) => [`publicado-${a.id}`, a.nome])))
   const previas = useRef(new Map<string, string>())
   const fila = useRef<Promise<void>>(Promise.resolve())
   const proxima = useRef(0)
+  // C3: saiu da tela, a fila para (nada novo é enviado, nenhum estado muda).
+  const naTela = useRef(true)
 
   const mudar = useCallback((chave: string, mudanca: Partial<ItemAnexo>) => {
+    if (!naTela.current) return
     // Tirado no meio do envio: o item não está mais na lista e nada muda.
     setItens((atuais) => atuais.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)))
   }, [])
@@ -52,9 +61,11 @@ export function useAnexos(iniciais: readonly ArquivoEnviado[] = []): ListaDeAnex
     (chave: string) => {
       fila.current = fila.current.then(async () => {
         const arquivo = escolhidos.current.get(chave)
-        if (!arquivo) return
+        if (!arquivo || !naTela.current) return
         try {
           const enviado = await enviarArquivo(arquivo, 'aviso')
+          if (!naLista.current.has(chave)) return
+          nomes.current.set(chave, enviado.nome)
           // O nome pode ter mudado (foto.jpg → foto.webp, na compressão).
           mudar(chave, {
             situacao: 'pronto',
@@ -62,10 +73,13 @@ export function useAnexos(iniciais: readonly ArquivoEnviado[] = []): ListaDeAnex
             nome: enviado.nome,
             tipo: enviado.tipo,
           })
+          if (naTela.current) setAnuncio(`${enviado.nome} pronto para anexar.`)
         } catch (e) {
+          if (!naLista.current.has(chave)) return
           const erro = comoErroDaApi(e)
           // 422: o arquivo em si foi recusado (tipo, tamanho); mandar o mesmo de novo não adianta.
           mudar(chave, { situacao: 'erro', erro: erro.mensagem, podeTentar: erro.status !== 422 })
+          if (naTela.current) setAnuncio(`Não deu para anexar ${arquivo.name}: ${erro.mensagem}`)
         }
       })
     },
@@ -74,16 +88,17 @@ export function useAnexos(iniciais: readonly ArquivoEnviado[] = []): ListaDeAnex
 
   const adicionar = useCallback(
     (arquivos: readonly File[]) => {
-      const vagas = Math.max(0, MAXIMO_DE_ANEXOS - quantos.current)
+      const vagas = Math.max(0, MAXIMO_DE_ANEXOS - naLista.current.size)
       const entram = arquivos.slice(0, vagas)
       const novos: ItemAnexo[] = entram.map((arquivo) => {
         const chave = `escolhido-${proxima.current++}`
         const previa = miniatura(arquivo)
+        naLista.current.add(chave)
+        nomes.current.set(chave, arquivo.name)
         escolhidos.current.set(chave, arquivo)
         if (previa) previas.current.set(chave, previa)
         return { chave, nome: arquivo.name, tipo: arquivo.type, previa, situacao: 'enviando' }
       })
-      quantos.current += novos.length
       setItens((atuais) => [...atuais, ...novos])
       for (const item of novos) enviar(item.chave)
       return arquivos.slice(vagas).map((a) => a.name)
@@ -92,14 +107,13 @@ export function useAnexos(iniciais: readonly ArquivoEnviado[] = []): ListaDeAnex
   )
 
   const tirar = useCallback((chave: string) => {
+    if (!naLista.current.delete(chave)) return
     escolhidos.current.delete(chave)
-    soltar(previas.current.get(chave) ?? null)
+    soltar(previas.current.get(chave))
     previas.current.delete(chave)
-    setItens((atuais) => {
-      const restantes = atuais.filter((i) => i.chave !== chave)
-      quantos.current = restantes.length
-      return restantes
-    })
+    setAnuncio(`${nomes.current.get(chave) ?? 'O arquivo'} saiu da lista.`)
+    nomes.current.delete(chave)
+    setItens((atuais) => atuais.filter((i) => i.chave !== chave))
   }, [])
 
   const tentarDeNovo = useCallback(
@@ -110,14 +124,18 @@ export function useAnexos(iniciais: readonly ArquivoEnviado[] = []): ListaDeAnex
     [enviar, mudar],
   )
 
-  // Saiu da tela: as miniaturas locais deixam de ocupar memória.
   useEffect(() => {
+    naTela.current = true
     const locais = previas.current
+    const arquivos = escolhidos.current
     return () => {
+      // Saiu da tela: a fila não manda mais nada e as miniaturas locais saem da memória.
+      naTela.current = false
+      arquivos.clear()
       for (const previa of locais.values()) soltar(previa)
       locais.clear()
     }
   }, [])
 
-  return { itens, adicionar, tirar, tentarDeNovo }
+  return { itens, adicionar, tirar, tentarDeNovo, anuncio }
 }

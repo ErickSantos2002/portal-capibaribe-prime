@@ -4,6 +4,8 @@ import {
   descricaoDoAnexo,
   ehFoto,
   idsProntos,
+  mudancaNosAnexos,
+  progressoDoEnvio,
   quantosAnexos,
   situacaoDosAnexos,
   tamanhoEmTexto,
@@ -49,6 +51,49 @@ describe('textos dos anexos', () => {
   it('quantos anexos, no singular e no plural', () => {
     expect(quantosAnexos(1)).toBe('1 anexo')
     expect(quantosAnexos(3)).toBe('3 anexos')
+  })
+})
+
+describe('o que mudou nos anexos na correção (U6)', () => {
+  const foto = (id: number) => ({
+    id,
+    nome: `f${id}.webp`,
+    tipo: 'image/webp' as const,
+    tamanho_bytes: 1,
+  })
+  const pdf = (id: number, nome: string) => ({
+    id,
+    nome,
+    tipo: 'application/pdf' as const,
+    tamanho_bytes: 1,
+  })
+
+  it('entrou e saiu, fotos contadas e PDFs pelo nome', () => {
+    expect(mudancaNosAnexos([foto(1), pdf(2, 'A.pdf')], [pdf(2, 'A.pdf'), pdf(3, 'Comunicado.pdf')])).toBe(
+      'Anexos: entrou Comunicado.pdf; saiu 1 foto.',
+    )
+    expect(mudancaNosAnexos([], [foto(1), foto(2), pdf(3, 'B.pdf')])).toBe(
+      'Anexos: entraram B.pdf e 2 fotos.',
+    )
+    expect(mudancaNosAnexos([pdf(1, 'A.pdf'), pdf(2, 'B.pdf'), foto(3)], [])).toBe(
+      'Anexos: saíram A.pdf, B.pdf e 1 foto.',
+    )
+  })
+
+  it('só a ordem, ou nada', () => {
+    expect(mudancaNosAnexos([foto(1), foto(2)], [foto(2), foto(1)])).toBe('Anexos: mudou a ordem.')
+    expect(mudancaNosAnexos([foto(1)], [foto(1)])).toBeNull()
+  })
+})
+
+describe('progresso do envio (U3)', () => {
+  it('quantos já terminaram dos escolhidos agora, enquanto algum envia', () => {
+    expect(progressoDoEnvio([item('pronto', 1)])).toBeNull()
+    const ja = { ...item('pronto', 9), jaPublicado: true }
+    expect(progressoDoEnvio([ja, item('pronto', 1), item('erro', 2), item('enviando', 3)])).toEqual({
+      feitos: 2,
+      total: 3,
+    })
   })
 })
 

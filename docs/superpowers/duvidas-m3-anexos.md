@@ -73,3 +73,60 @@ resto é decisão técnica que pode ser revista na revisão do marco.
   não pelo sistema, e o script não o trocou), um iPhone de verdade (o `window.open` antes do
   pedido é o caminho recomendado para o Safari, mas só foi testado no Chrome) e o R2 de verdade
   (CORS e CSP de produção).
+
+## Revisão independente (código e UX)
+
+## 11. Rota `…/anexos/{arquivo_id}/abrir` (U12): mudança de contrato dentro do épico
+- **Dúvida:** o link de 5 minutos aberto numa aba nova vence; recarregar a aba mostrava o XML
+  de erro do R2.
+- **Decisão:** `GET /api/avisos/{aviso_id}/anexos/{arquivo_id}/abrir`, com a mesma regra do
+  `…/link` (sessão da unidade, aviso visível, arquivo anexo de alguma versão), responde **302**
+  para um link novo a cada pedido, com `no-store`. A tela usa essa rota como `href` do PDF
+  (`<a target="_blank">`, que o Safari do iPhone não bloqueia) e como `src` da foto (a CSP já
+  aceita `'self'` e o redirecionamento para o R2 em `img-src`). Erro (aviso que não vê, arquivo
+  de outro aviso, bucket desligado) vira uma página HTML simples com a frase da API, não JSON.
+  O cookie de sessão vai junto (navegação de topo no mesmo site, `SameSite=Lax`); GET não exige
+  `X-Portal`. Sem sessão, a resposta continua a JSON 401 da dependência comum.
+- **Fora do OpenAPI** (`include_in_schema=False`): as listas de rotas do contrato
+  (`test_m3_rotas.py::test_rotas_do_m3_declaradas` e `test_cache.py`) são comuns e quebrariam
+  com uma rota nova. **Para o coordenador:** ao fechar o marco, pôr a rota no esquema e nas duas
+  listas (ela responde 302/404/503, sempre com `no-store`).
+- **Para o épico A (mesmo formato):** `GET /api/documentos/{id}/versoes/{versao}/abrir` →
+  `servico.link…` dentro de `try`, `RedirectResponse(link.url, 302)`; `ErroApi` →
+  `_pagina_de_erro(erro)` (HTML com `html.escape` na mensagem). O `…/link` fica para quem quer
+  o JSON (`baixar=true`).
+
+## 12. `versao_base` na correção (C2): mudança de contrato dentro do épico
+- `CorrigirAviso.versao_base: int | None` (1 a 32.767; espelho em `web/src/avisos/tipos.ts`,
+  `test_contrato.py` verde). Diferente da versão em vigor: 409 `aviso_corrigido_agora` (o código
+  e a frase que a correção simultânea já usava). Omitida, não confere (cliente antigo). A tela
+  manda sempre (`versoes_anteriores.length + 1`) e, no 409, mostra a frase e o botão "Abrir a
+  versão nova", que recarrega o formulário com a versão nova (o que a pessoa escreveu se perde;
+  ela foi avisada pela frase).
+
+## 13. Sair no meio: pergunta, mas não guarda rascunho (U1)
+- **Decisão:** `useBlocker` (o roteador é de dados: `createBrowserRouter`) pergunta "Sair sem
+  publicar?" ao sair por dentro do Portal; `beforeunload` faz o navegador perguntar ao recarregar
+  ou fechar. Formulário sem nada escrito sai sem perguntar.
+- **Não feito:** guardar o texto em `sessionStorage`. Os anexos não dá para guardar (o arquivo
+  escolhido não sobrevive a recarregar), e meio rascunho confunde mais do que ajuda. Se a
+  Comissão pedir, é um efeito no `Formularios.tsx`.
+- A pergunta é um `alertdialog` com o foco em "Continuar escrevendo" e Esc para ficar; a página
+  de trás não fica `inert` (a pergunta só aparece por um instante e cobre a tela).
+
+## 14. Correção que tira anexos não tem prévia (U13)
+- Só registrado: a correção salva direto, como antes do M3. O aviso aberto diz depois o que
+  mudou nos anexos ("Anexos: saiu 1 foto.", U6), e a versão antiga guarda os anexos dela.
+
+## 15. Botão do PDF desabilitado enquanto abre (C7): deixou de existir
+- Com a rota `…/abrir` (dúvida 11), o PDF virou um link comum: não há espera nem janela aberta
+  por script. Tocar duas vezes abre duas abas, cada uma com um link válido.
+
+## 16. Recusados continuam contando nas 5 vagas (U10)
+- **Decisão:** a frase muda: com 5 na lista e algum com erro, "Já são 5 arquivos. Tire os que
+  deram erro para anexar outros.". Tirar libera a vaga na hora (e o foco vai para o próximo item
+  ou para "Anexar foto ou PDF", U5).
+
+## 17. Foto sem nome para o morador (U7)
+- No aviso aberto e no visualizador a foto é "Foto 1 de 2" (rótulo e texto alternativo); o
+  nome do arquivo só aparece no formulário da gestão. O PDF mantém o nome como foi enviado.

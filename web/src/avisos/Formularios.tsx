@@ -7,7 +7,7 @@ import { NaoEncontrado } from '../casca/guardas'
 import { Icone } from '../casca/Icone'
 import { Tela } from '../casca/Tela'
 import { AnexosDoAviso } from './AnexosDoAviso'
-import { idsProntos, situacaoDosAnexos, type ItemAnexo } from './anexos'
+import { idsProntos, progressoDoEnvio, situacaoDosAnexos, type ItemAnexo } from './anexos'
 import { abrirAviso, calcularAlcance, corrigirAviso, listarDestinos, publicarAviso } from './api'
 import { CamposDoAviso } from './CamposDoAviso'
 import { EscolherAnexos } from './EscolherAnexos'
@@ -27,7 +27,9 @@ import {
   type Rascunho,
 } from './rascunho'
 import type { AvisoCompleto, AvisoResumo, CorrigirAviso } from './tipos'
+import { PerguntaSairSemPublicar } from './SairSemPublicar'
 import { useAnexos } from './useAnexos'
+import { useAvisarAoSair } from './useAvisarAoSair'
 import './avisos.css'
 
 const CAMPOS: readonly Campo[] = ['titulo', 'texto', 'blocos', 'evento', 'categoria']
@@ -50,6 +52,17 @@ function conferirTudo(r: Rascunho, itens: readonly ItemAnexo[]) {
   const anexos = situacaoDosAnexos(itens)
   const geral = [mensagemGeral(erros), anexos.mensagem].filter(Boolean).join(' ')
   return { erros, anexos: anexos.mensagem, geral }
+}
+
+/** O rascunho mudou em relação ao de partida (U1: há o que perder ao sair). */
+function mudou(r: Rascunho, inicial: Rascunho): boolean {
+  return (Object.keys(inicial) as (keyof Rascunho)[]).some((k) => r[k] !== inicial[k])
+}
+
+/** U3: o texto do botão de enviar enquanto os arquivos sobem (o botão fica desabilitado). */
+function esperandoOsArquivos(itens: readonly ItemAnexo[]): string | null {
+  const progresso = progressoDoEnvio(itens)
+  return progresso && `Esperando os arquivos… (${progresso.feitos} de ${progresso.total})`
 }
 
 /** Os anexos prontos, como a prévia e o aviso aberto mostram. */
@@ -105,6 +118,10 @@ export function NovoAviso() {
   const caixaDaPrevia = useRef<HTMLDivElement>(null)
   const paraTodos = blocos.length === 0
   const [alcance] = useCarga(() => calcularAlcance(blocos), [blocos.join(',')])
+  const esperando = esperandoOsArquivos(anexos.itens)
+  const { blocker, liberar } = useAvisarAoSair(
+    mudou(rascunho, RASCUNHO_VAZIO) || anexos.itens.length > 0 || blocos.length > 0 || fixado,
+  )
 
   useEffect(() => {
     if (geral) caixaDeErro.current?.focus()
@@ -130,6 +147,8 @@ export function NovoAviso() {
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
+    // U2/U3: enquanto os arquivos sobem, o botão espera (nenhuma mensagem fica para trás).
+    if (esperando) return
     const conferido = conferirTudo(rascunho, anexos.itens)
     setErros(conferido.erros)
     setErroAnexos(conferido.anexos)
@@ -152,6 +171,7 @@ export function NovoAviso() {
         fixado,
         anexos: idsProntos(anexos.itens),
       })
+      liberar()
       navegar('/avisos', { state: { recado: 'Aviso publicado.' } })
     } catch (e) {
       const { geral: mensagem, campos, anexos: doCampo } = errosDaApi(e)
@@ -285,10 +305,11 @@ export function NovoAviso() {
             </div>
           </div>
         )}
-        <button className="botao avisos-enviar" type="submit" disabled={enviando}>
-          {enviando ? 'Publicando…' : previa ? 'Publicar aviso' : 'Ver prévia'}
+        <button className="botao avisos-enviar" type="submit" disabled={enviando || !!esperando}>
+          {esperando ?? (enviando ? 'Publicando…' : previa ? 'Publicar aviso' : 'Ver prévia')}
         </button>
       </form>
+      <PerguntaSairSemPublicar blocker={blocker} />
     </Tela>
   )
 }
@@ -315,13 +336,24 @@ function Corrigir({ id }: { id: number }) {
           <p>Aviso arquivado não pode ser corrigido.</p>
         </div>
       ) : (
-        <FormularioCorrigir aviso={carga.dados} />
+        // A chave é a versão: "Abrir a versão nova" (C2) recomeça o formulário com ela.
+        <FormularioCorrigir
+          key={carga.dados.versoes_anteriores.length}
+          aviso={carga.dados}
+          recarregar={recarregar}
+        />
       )}
     </Tela>
   )
 }
 
-function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
+function FormularioCorrigir({
+  aviso,
+  recarregar,
+}: {
+  aviso: AvisoCompleto
+  recarregar: () => void
+}) {
   const navegar = useNavigate()
   const [rascunho, setRascunho] = useState<Rascunho>(() => rascunhoDe(aviso))
   const [erros, setErros] = useState<Erros>({})
@@ -329,7 +361,17 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
   const [enviando, setEnviando] = useState(false)
   const anexos = useAnexos(aviso.anexos)
   const [erroAnexos, setErroAnexos] = useState('')
+  // C2: outra pessoa corrigiu depois que este formulário abriu.
+  const [corrigidoAgora, setCorrigidoAgora] = useState(false)
   const caixaDeErro = useRef<HTMLDivElement>(null)
+  const [inicial] = useState(() => rascunhoDe(aviso))
+  const esperando = esperandoOsArquivos(anexos.itens)
+  const idsDoAviso = aviso.anexos.map((a) => a.id).join(',')
+  const { blocker, liberar } = useAvisarAoSair(
+    mudou(rascunho, inicial) ||
+      idsProntos(anexos.itens).join(',') !== idsDoAviso ||
+      anexos.itens.some((i) => i.situacao !== 'pronto'),
+  )
 
   useEffect(() => {
     if (geral) caixaDeErro.current?.focus()
@@ -337,6 +379,8 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
+    if (esperando) return
+    setCorrigidoAgora(false)
     const conferido = conferirTudo(rascunho, anexos.itens)
     setErros(conferido.erros)
     setErroAnexos(conferido.anexos)
@@ -348,13 +392,20 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
     setGeral('')
     try {
       // A lista sempre explícita: o que está na tela é o que a versão nova vai ter.
-      await corrigirAviso(aviso.id, { ...corpoDe(rascunho), anexos: idsProntos(anexos.itens) })
+      await corrigirAviso(aviso.id, {
+        ...corpoDe(rascunho),
+        anexos: idsProntos(anexos.itens),
+        // A versão em vigor quando o formulário abriu (as versões são 1, 2, 3…).
+        versao_base: aviso.versoes_anteriores.length + 1,
+      })
+      liberar()
       navegar(`/avisos/${aviso.id}`, { replace: true, state: { recado: 'Aviso corrigido.' } })
     } catch (e) {
       const { geral: mensagem, campos, anexos: doCampo } = errosDaApi(e)
       setErros(campos)
       setErroAnexos(doCampo)
       setGeral(mensagem)
+      setCorrigidoAgora(comoErroDaApi(e).codigo === 'aviso_corrigido_agora')
       setEnviando(false)
     }
   }
@@ -369,6 +420,11 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
         </p>
       </div>
       {geral && <ErroGeral mensagem={geral} alvo={caixaDeErro} />}
+      {corrigidoAgora && (
+        <button type="button" className="botao leve" onClick={recarregar}>
+          Abrir a versão nova
+        </button>
+      )}
       <CamposDoAviso
         rascunho={rascunho}
         erros={erros}
@@ -383,9 +439,10 @@ function FormularioCorrigir({ aviso }: { aviso: AvisoCompleto }) {
         erro={erroAnexos}
         aoMudar={() => setErroAnexos('')}
       />
-      <button className="botao avisos-enviar" type="submit" disabled={enviando}>
-        {enviando ? 'Salvando…' : 'Salvar correção'}
+      <button className="botao avisos-enviar" type="submit" disabled={enviando || !!esperando}>
+        {esperando ?? (enviando ? 'Salvando…' : 'Salvar correção')}
       </button>
+      <PerguntaSairSemPublicar blocker={blocker} />
     </form>
   )
 }

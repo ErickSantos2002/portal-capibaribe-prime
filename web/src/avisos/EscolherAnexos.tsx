@@ -1,9 +1,15 @@
 // M3 · Épico B: o campo "Fotos ou PDF, se tiver" do formulário do aviso (spec `m3-anexos.md`,
 // seção 3.2). O arquivo é enviado assim que é escolhido; "Tirar" só tira da lista.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ACEITAR } from '../arquivos/limites'
 import { Icone } from '../casca/Icone'
-import { descricaoDoAnexo, ehFoto, MAXIMO_DE_ANEXOS, type ItemAnexo } from './anexos'
+import {
+  descricaoDoAnexo,
+  ehFoto,
+  MAXIMO_DE_ANEXOS,
+  progressoDoEnvio,
+  type ItemAnexo,
+} from './anexos'
 import { MiniaturaRemota } from './AnexosDoAviso'
 import { IconeAnexo } from './IconesAnexo'
 import type { ListaDeAnexos } from './useAnexos'
@@ -33,20 +39,41 @@ function Miniatura({ item, avisoId }: { item: ItemAnexo; avisoId?: number }) {
 
 /** "Enviando 2 de 3…", quando há mais de um na vez; com um só, o próprio item diz. */
 function andamento(itens: readonly ItemAnexo[]): string {
-  const desta = itens.filter((i) => !i.jaPublicado)
-  const enviando = desta.filter((i) => i.situacao === 'enviando').length
-  if (enviando === 0 || desta.length < 2) return ''
-  return `Enviando ${desta.length - enviando + 1} de ${desta.length}…`
+  const progresso = progressoDoEnvio(itens)
+  if (!progresso || progresso.total < 2) return ''
+  return `Enviando ${progresso.feitos + 1} de ${progresso.total}…`
 }
 
 export function EscolherAnexos({ anexos, avisoId, erro, aoMudar }: Props) {
   const [deFora, setDeFora] = useState<string[]>([])
   const { itens } = anexos
   const cheio = itens.length >= MAXIMO_DE_ANEXOS
+  const comErro = itens.some((i) => i.situacao === 'erro')
+  const campo = useRef<HTMLDivElement>(null)
+  // U5: depois de "Tirar", o foco vai para o "Tirar" do próximo item, ou para "Anexar".
+  const focarDepois = useRef<string | null>(null)
+  useEffect(() => {
+    if (focarDepois.current === null) return
+    const alvo =
+      campo.current?.querySelector<HTMLElement>(`[data-tirar="${focarDepois.current}"]`) ??
+      campo.current?.querySelector<HTMLElement>('#anexos-arquivo')
+    alvo?.focus()
+    focarDepois.current = null
+  }, [itens])
+
+  function tirar(chave: string) {
+    const posicao = itens.findIndex((i) => i.chave === chave)
+    focarDepois.current = itens[posicao + 1]?.chave ?? ''
+    anexos.tirar(chave)
+    setDeFora([])
+    aoMudar?.()
+  }
+
   const descrito = ['anexos-ajuda', erro ? 'anexos-erro' : ''].filter(Boolean).join(' ')
 
   return (
     <div
+      ref={campo}
       className="anexos-campo"
       role="group"
       aria-labelledby="anexos-rotulo"
@@ -56,7 +83,8 @@ export function EscolherAnexos({ anexos, avisoId, erro, aoMudar }: Props) {
         Fotos ou PDF, se tiver
       </p>
       <p className="ajuda" id="anexos-ajuda">
-        Até 5 arquivos, de até 10 MB cada. Fotos grandes são reduzidas antes de enviar.
+        Até 5 arquivos, de até 10 MB cada. O envio começa assim que você escolhe, e dá para tirar
+        antes de publicar. Fotos grandes são reduzidas.
       </p>
       {itens.length > 0 && (
         <ul className="anexos-lista" role="list">
@@ -98,11 +126,8 @@ export function EscolherAnexos({ anexos, avisoId, erro, aoMudar }: Props) {
                   type="button"
                   className="botao leve"
                   aria-label={`Tirar ${item.nome}`}
-                  onClick={() => {
-                    anexos.tirar(item.chave)
-                    setDeFora([])
-                    aoMudar?.()
-                  }}
+                  data-tirar={item.chave}
+                  onClick={() => tirar(item.chave)}
                 >
                   <IconeAnexo nome="fechar" tamanho={20} /> Tirar
                 </button>
@@ -111,8 +136,10 @@ export function EscolherAnexos({ anexos, avisoId, erro, aoMudar }: Props) {
           ))}
         </ul>
       )}
-      <p className="anexos-andamento" aria-live="polite">
-        {andamento(itens)}
+      <p className="anexos-andamento">{andamento(itens)}</p>
+      {/* U4: o leitor de tela ouve cada arquivo pronto, recusado (com o motivo) ou tirado. */}
+      <p className="oculto anexos-anuncio" aria-live="polite">
+        {anexos.anuncio}
       </p>
       {deFora.length > 0 && (
         <div className="aviso-caixa atencao" role="status">
@@ -121,7 +148,11 @@ export function EscolherAnexos({ anexos, avisoId, erro, aoMudar }: Props) {
         </div>
       )}
       {cheio ? (
-        <p className="ajuda">Já são 5 anexos, o máximo.</p>
+        <p className="ajuda">
+          {comErro
+            ? 'Já são 5 arquivos. Tire os que deram erro para anexar outros.'
+            : 'Já são 5 anexos, o máximo.'}
+        </p>
       ) : (
         <div className="anexos-escolher">
           <input
