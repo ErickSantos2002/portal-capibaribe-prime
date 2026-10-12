@@ -44,9 +44,24 @@ from urllib.parse import urlparse
 ORIGEM = "ARQUIVOS_R2"
 COPIA = "COPIA_S3"
 DESTINO = "DESTINO_S3"
-# A API só cria `arquivos/<32 hexadecimais>` (m3-contrato, seção 2.1).
-CHAVE_ORIGEM = re.compile(r"^arquivos/([0-9a-f]{32})$")
-CHAVE_COPIA = re.compile(r"^arquivos/([0-9a-f]{32})\.age$")
+# A API só cria `arquivos/<32 hexadecimais>` (m3-contrato, seção 2.1). Sempre `fullmatch`: o
+# `$` do `re` aceitaria um "\n" no fim, que já é outro objeto.
+CHAVE_ORIGEM = re.compile(r"arquivos/([0-9a-f]{32})")
+CHAVE_COPIA = re.compile(r"arquivos/([0-9a-f]{32})\.age")
+
+
+def chave_publicada(objeto: str) -> str | None:
+    """A chave de `arquivos/<chave>` no bucket de arquivos, ou None fora do padrão."""
+    m = CHAVE_ORIGEM.fullmatch(objeto)
+    return m.group(1) if m else None
+
+
+def chave_da_copia(objeto: str) -> str | None:
+    """A chave de `arquivos/<chave>.age` na cópia, ou None fora do padrão."""
+    m = CHAVE_COPIA.fullmatch(objeto)
+    return m.group(1) if m else None
+
+
 BLOCO = 1024 * 1024
 # Bytes que bastam para reconhecer os quatro tipos (o WEBP precisa de 12).
 BYTES_DA_ASSINATURA = 16
@@ -219,9 +234,9 @@ def copiar(destinatarios: str) -> int:
 
     origem, copia = abrir(ORIGEM), abrir(COPIA)
     na_origem = origem.listar("arquivos/")
-    publicados = {m.group(1): t for k, t in na_origem.items() if (m := CHAVE_ORIGEM.match(k))}
+    publicados = {c: t for k, t in na_origem.items() if (c := chave_publicada(k))}
     ignorados = len(na_origem) - len(publicados)
-    ja_copiados = {m.group(1) for k in copia.listar("arquivos/") if (m := CHAVE_COPIA.match(k))}
+    ja_copiados = {c for k in copia.listar("arquivos/") if (c := chave_da_copia(k))}
     faltam = sorted(set(publicados) - ja_copiados)
     if ignorados:
         # Sem o nome: o log de repositório público é público, e um nome fora do padrão da API
@@ -392,7 +407,7 @@ def restaurar(identidade: str) -> int:
             "nunca para o de backups (a API também recusa esse nome)."
         )
     na_copia = copia.listar("arquivos/")
-    chaves = sorted(m.group(1) for k in na_copia if (m := CHAVE_COPIA.match(k)))
+    chaves = sorted(c for k in na_copia if (c := chave_da_copia(k)))
     ignorados = len(na_copia) - len(chaves)
     no_destino = destino.listar("arquivos/")
 

@@ -83,6 +83,11 @@ esperar_falha() {
 }
 contar() { s3 listar "$1" | grep -c .; }
 
+# --- 0. Funções puras do arquivos.py (padrões, tamanhos, endpoints) ------------------------
+uv run --quiet --frozen --script "$pasta/testes/testar_arquivos_unidade.py" >&2 ||
+  reprovar "testes de unidade do arquivos.py"
+ok "testes de unidade do arquivos.py"
+
 # --- 1. Banco de origem: migração + carga + dados fictícios, como em produção ---------------
 log "preparando $ORIGEM"
 admin <<SQL
