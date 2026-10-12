@@ -17,7 +17,7 @@ from dataclasses import dataclass
 import psycopg
 from sqlalchemy import ColumnElement, exists, func, select, true
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.erros_api import ErroApi
@@ -567,17 +567,40 @@ def _gravar_anexos(db: Session, aviso_id: int, versao: int, anexos: Sequence[int
     outro aviso usando o mesmo arquivo para no banco (`arquivo_em_uso`): mesma frase."""
     if not anexos:
         return
-    db.add_all(
-        AvisoAnexo(aviso_id=aviso_id, versao=versao, arquivo_id=arquivo_id, ordem=ordem)
-        for ordem, arquivo_id in enumerate(anexos, start=1)
-    )
     try:
+        # Trava os arquivos em ordem de id, com a mesma trava do gatilho (`for no key update`):
+        # dois pedidos com os mesmos arquivos em ordem diferente esperam um pelo outro em vez de
+        # travarem em cruz (deadlock; revisão do épico B, C1). O segundo vê `arquivo_em_uso`.
+        db.execute(
+            select(Arquivo.id)
+            .where(Arquivo.id.in_(anexos))
+            .order_by(Arquivo.id)
+            .with_for_update(key_share=True)
+        )
+        db.add_all(
+            AvisoAnexo(aviso_id=aviso_id, versao=versao, arquivo_id=arquivo_id, ordem=ordem)
+            for ordem, arquivo_id in enumerate(anexos, start=1)
+        )
         db.flush()
     except IntegrityError as erro:
         if _restricao(erro) != "arquivo_em_uso":
             raise
         db.rollback()
         raise _anexo_recusado(ENVIE_DE_NOVO) from erro
+    except OperationalError as erro:
+        # Deadlock que sobrar (com outra transação que trave em outra ordem): a mesma frase.
+        if not isinstance(erro.orig, psycopg.errors.DeadlockDetected):
+            raise
+        db.rollback()
+        raise _anexo_recusado(ENVIE_DE_NOVO) from erro
+
+
+def _corrigido_agora() -> ErroApi:
+    return ErroApi(
+        409,
+        "aviso_corrigido_agora",
+        "Outra pessoa corrigiu este aviso agora há pouco. Abra de novo e confira.",
+    )
 
 
 def _recusar_arquivado(aviso: Aviso, mensagem: str) -> None:
@@ -604,6 +627,8 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
         .order_by(AvisoVersao.versao.desc())
         .limit(1)
     ).one()
+    if dados.versao_base is not None and dados.versao_base != atual.versao:
+        raise _corrigido_agora()
     novas = _categoria_e_evento(dados)
     em_vigor = list(
         db.scalars(
@@ -663,11 +688,7 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
                 409, "aviso_arquivado", "Aviso arquivado não pode ser corrigido."
             ) from erro
         if restricao in ("aviso_versao_pkey", "aviso_versao_sequencia"):
-            raise ErroApi(
-                409,
-                "aviso_corrigido_agora",
-                "Outra pessoa corrigiu este aviso agora há pouco. Abra de novo e confira.",
-            ) from erro
+            raise _corrigido_agora() from erro
         raise
     _gravar_anexos(db, aviso.id, versao, anexos)
     detalhes: dict = {"versao": versao, "titulo": dados.titulo}

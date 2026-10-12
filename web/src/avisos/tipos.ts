@@ -22,6 +22,9 @@ export interface CorrigirAviso {
   /** M3: ids dos anexos (`enviarArquivo(…, 'aviso')`), na ordem. Na correção, omitido repete
    *  os da versão em vigor e `[]` tira todos; ao publicar, omitido é sem anexo. */
   anexos?: number[] | null
+  /** M3 (revisão C2): a versão em vigor quando o formulário abriu; se outra pessoa corrigiu
+   *  depois, 409 `aviso_corrigido_agora`. Só na correção. */
+  versao_base?: number | null
 }
 
 export interface NovoAviso extends CorrigirAviso {

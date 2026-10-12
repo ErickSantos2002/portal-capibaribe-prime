@@ -28,12 +28,16 @@ Modelos em `app/modelos/avisos.py`. O banco carimba as datas, exige versões em 
 confere no commit que o aviso tem versão 1 e destino (restrição `aviso_completo`).
 """
 
+import html
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Query
+from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.erros_api import ErroApi
 from app.esquemas.arquivos import LinkDoArquivo
 from app.esquemas.avisos import (
+    MAIOR_ID,
     Alcance,
     AvisoCompleto,
     Busca,
@@ -123,10 +127,14 @@ def leitura(aviso_id: int, logado: Gestao, db: Banco) -> Leitura:
     return servico.leitura(db, logado, aviso_id)
 
 
+# Ids das rotas dos anexos: fora do `bigint`, 422 (revisão do épico B, C5).
+IdNaRota = Annotated[int, Path(ge=1, le=MAIOR_ID)]
+
+
 @rotas.get("/{aviso_id}/anexos/{arquivo_id}/link")
 def link_do_anexo(
-    aviso_id: int,
-    arquivo_id: int,
+    aviso_id: IdNaRota,
+    arquivo_id: IdNaRota,
     logado: UnidadeLogada,
     db: Banco,
     bucket: Armazenado,
@@ -135,3 +143,38 @@ def link_do_anexo(
     # M3, épico B: o aviso visível para a unidade e o arquivo anexo de alguma versão dele; senão
     # 404 `aviso_nao_encontrado`. Sem bucket, 503 depois dessas conferências.
     return servico.link_do_anexo(db, logado, aviso_id, arquivo_id, bucket, baixar=baixar)
+
+
+def _pagina_de_erro(erro: ErroApi) -> HTMLResponse:
+    """O erro numa página simples: quem abriu o anexo está numa aba nova (ou numa <img>), não na
+    tela do Portal, e um JSON não diria nada à Dona Socorro."""
+    mensagem = html.escape(erro.mensagem)
+    corpo = (
+        '<!doctype html><html lang="pt-BR"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        "<title>Portal Capibaribe Prime</title>"
+        f"<h1>Não deu para abrir o arquivo</h1><p>{mensagem}</p>"
+        "<p>Feche esta aba e volte ao Portal.</p></html>"
+    )
+    return HTMLResponse(corpo, status_code=erro.status)
+
+
+# Fora do OpenAPI de propósito: as listas de rotas do contrato (`test_m3_rotas.py`,
+# `test_cache.py`) são comuns e não conhecem esta rota (dúvida 11 do épico B).
+@rotas.get("/{aviso_id}/anexos/{arquivo_id}/abrir", include_in_schema=False)
+def abrir_anexo(
+    aviso_id: IdNaRota,
+    arquivo_id: IdNaRota,
+    logado: UnidadeLogada,
+    db: Banco,
+    bucket: Armazenado,
+):
+    """Revisão do épico B, U12: a tela abre o anexo por aqui (`<img src>` e o botão do PDF numa
+    aba nova). A sessão vai no cookie da navegação; cada pedido confere quem vê e redireciona
+    para um link de 5 minutos **novo**, então recarregar a aba sempre funciona (o link guardado
+    venceria e mostraria o XML de erro do R2). A resposta sai com `no-store`, como toda a API."""
+    try:
+        link = servico.link_do_anexo(db, logado, aviso_id, arquivo_id, bucket, baixar=False)
+    except ErroApi as erro:
+        return _pagina_de_erro(erro)
+    return RedirectResponse(link.url, status_code=302)
