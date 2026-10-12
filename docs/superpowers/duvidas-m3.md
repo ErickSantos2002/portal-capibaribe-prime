@@ -78,7 +78,7 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
   quer que o Portal consiga. O volume é pequeno. Se um dia for preciso apagar (LGPD), é o
   caminho manual da ADR-0011.
 
-## 8. CSP com curinga `https://*.r2.cloudflarestorage.com` **[Erick]**
+## 8. CSP com curinga `https://*.r2.cloudflarestorage.com` · respondida
 - **Dúvida:** o endereço exato do bucket tem o ID da conta da Cloudflare
   (`<ACCOUNT_ID>.r2.cloudflarestorage.com`), e o repositório é público.
 - **Decisão (provisória, mantida):** o curinga, só em `connect-src` e `img-src` (o teste de
@@ -94,7 +94,8 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
     é mais um dado da conta exposto para sempre no histórico do git.
 - **Recomendação:** manter o curinga. Se preferir o host exato, é trocar o endereço em
   `vercel.json` e no teste `web/testes/cabecalhos.test.ts`.
-- **Confirmar:** qual dos dois.
+- **Resposta do Erick (12/10/2026):** manter o curinga. Revisitar só se o Portal passar a
+  guardar algo realmente sensível.
 - **Nota:** abrir o PDF numa aba nova funciona com a CSP de hoje. **Embutir** o PDF na página
   (num `<iframe>` ou `<object>`) exigiria liberar o R2 também em `frame-src`/`object-src`;
   ninguém pediu isso, e o épico B mostra o PDF como botão.
