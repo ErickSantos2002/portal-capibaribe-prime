@@ -338,6 +338,43 @@ grep -q "baixando diarios/2026-10-02.dump.age" "$temp/restauracao.txt" ||
 grep -q "verificações ok: 5 blocos, 320 unidades" "$temp/restauracao.txt" ||
   reprovar "a restauração não mostrou as verificações"
 ok "restaurar.sh restaurou o mais recente e passou nas verificações"
+
+# --- 5b. Conferência da cópia dos arquivos no banco restaurado ------------------------------
+conferir() {
+  env "${VARS_COPIA[@]}" BACKUP_AGE_KEY_FILE="${CHAVE_CONFERIR:-$temp/chave-teste.age}" \
+    "$pasta/conferir-arquivos.sh" --destino "$URL_DESTINO_ADMIN"
+}
+: >"$resumo"
+GITHUB_STEP_SUMMARY="$resumo" conferir >"$temp/saida.txt" 2>&1 || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a conferência da cópia dos arquivos falhou com a cópia em dia"
+}
+grep -q "4 arquivo(s) confirmado(s), todos com cópia" "$temp/saida.txt" ||
+  reprovar "a conferência deveria achar os 4 confirmados (e ignorar o pendente)"
+grep -qE "conferido ao acaso: [0-9a-f]{32}" "$temp/saida.txt" ||
+  reprovar "a conferência deveria decifrar um arquivo ao acaso"
+grep -q "todos com cópia" "$resumo" || reprovar "a conferência deveria escrever no resumo do job"
+ok "conferência: os 4 confirmados têm cópia, e um ao acaso decifra com a assinatura certa"
+
+# Um arquivo confirmado no banco que não está na cópia reprova (e diz qual).
+CHAVE_SEM_COPIA="$(nova_chave)"
+admin --dbname="$URL_DESTINO_ADMIN" >/dev/null <<SQL
+insert into arquivo (chave, nome_original, tipo, finalidade, tamanho_bytes, enviado_por)
+values ('$CHAVE_SEM_COPIA', 'sem-copia', 'application/pdf', 'documento', 10, (select min(id) from unidade));
+update arquivo set confirmado_em = now() where chave = '$CHAVE_SEM_COPIA';
+SQL
+esperar_falha "arquivo confirmado sem cópia reprova a conferência" "$CHAVE_SEM_COPIA" conferir
+# Arquivo publicado não se apaga (gatilho); aqui é um banco descartável de teste.
+admin --dbname="$URL_DESTINO_ADMIN" >/dev/null <<SQL
+set session_replication_role = replica;
+delete from arquivo where chave = '$CHAVE_SEM_COPIA';
+SQL
+
+CHAVE_CONFERIR="$temp/chave-errada.age" esperar_falha "chave privada errada não decifra a cópia" \
+  "não consegui decifrar" conferir
+esperar_falha "arquivos confirmados sem as variáveis da cópia reprovam" "COPIA_S3_ENDPOINT" \
+  env BACKUP_AGE_KEY_FILE="$temp/chave-teste.age" \
+  "$pasta/conferir-arquivos.sh" --destino "$URL_DESTINO_ADMIN"
 [[ "$(pg psql --no-psqlrc -tAc 'select count(*) from unidade' \
   --dbname="$(url app app-teste "$DESTINO")")" == 320 ]] ||
   reprovar "o papel app não lê o banco restaurado"
@@ -353,6 +390,30 @@ env -u R2_ENDPOINT -u R2_BUCKET BACKUP_AGE_KEY_FILE="$temp/chave-teste.age" \
   "$pasta/restaurar.sh" --destino "$URL_DESTINO_ADMIN" --arquivo "$temp/baixado" --head "$head" \
   >/dev/null 2>&1 || reprovar "restaurar com --arquivo falhou"
 ok "restaurar.sh --arquivo funciona sem acesso ao bucket"
+
+# O backup de 01/10 é de antes do primeiro arquivo (a situação de hoje em produção).
+: >"$resumo"
+GITHUB_STEP_SUMMARY="$resumo" GITHUB_ACTIONS=true \
+  "$pasta/conferir-arquivos.sh" --destino "$URL_DESTINO_ADMIN" >"$temp/saida.txt" 2>&1 || {
+  cat "$temp/saida.txt" >&2
+  reprovar "banco sem arquivo confirmado deveria passar a conferência"
+}
+grep -q "::warning::.*nenhum arquivo confirmado" "$temp/saida.txt" ||
+  reprovar "banco sem arquivo confirmado deveria passar com aviso"
+grep -q "nenhum arquivo confirmado" "$resumo" || reprovar "o aviso deveria ir para o resumo do job"
+ok "conferência: banco sem arquivo confirmado passa com aviso (mesmo sem as variáveis)"
+
+# Uma cópia que decifra, mas não é o que o banco diz (assinatura de PDF ausente), reprova.
+CHAVE_LIXO="$(nova_chave)"
+printf 'isto não é um PDF\n' | age --encrypt --recipients-file "$temp/destinatario-teste.age" \
+  >"$temp/lixo.age"
+b2 gravar "$temp/lixo.age" "arquivos/$CHAVE_LIXO.age"
+admin --dbname="$URL_DESTINO_ADMIN" >/dev/null <<SQL
+insert into arquivo (chave, nome_original, tipo, finalidade, tamanho_bytes, enviado_por)
+values ('$CHAVE_LIXO', 'lixo', 'application/pdf', 'documento', 20, (select min(id) from unidade));
+update arquivo set confirmado_em = now() where chave = '$CHAVE_LIXO';
+SQL
+esperar_falha "cópia sem a assinatura do tipo registrado reprova" "assinatura" conferir
 
 # --- 6. Os casos que têm de falhar ----------------------------------------------------------
 novo_destino

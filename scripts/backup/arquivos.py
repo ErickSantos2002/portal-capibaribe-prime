@@ -10,6 +10,10 @@ Comandos:
       para cada `arquivos/<chave>` do bucket de arquivos que ainda não está na cópia: baixa,
       cifra com `age` para os destinatários e envia `arquivos/<chave>.age`. Nunca apaga nem
       sobrescreve nada. Sem as variáveis, só avisa (sai com 0).
+  conferir --lista ARQUIVO [--identidade CHAVE_PRIVADA]
+      a lista (uma linha por arquivo confirmado no banco restaurado: chave, tipo e tamanho,
+      separados por tabulação) inteira tem cópia; um deles, ao acaso, decifra com o tamanho e
+      a assinatura do tipo registrado. Lista vazia: passa com aviso.
 
 Variáveis (só o NOME aparece em mensagens; nenhum valor é impresso). Cada grupo tem quatro:
 <GRUPO>_ENDPOINT, <GRUPO>_ACCESS_KEY_ID, <GRUPO>_SECRET_ACCESS_KEY e <GRUPO>_BUCKET.
@@ -25,6 +29,7 @@ import argparse
 import contextlib
 import os
 import re
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -37,6 +42,21 @@ COPIA = "COPIA_S3"
 CHAVE_ORIGEM = re.compile(r"^arquivos/([0-9a-f]{32})$")
 CHAVE_COPIA = re.compile(r"^arquivos/([0-9a-f]{32})\.age$")
 BLOCO = 1024 * 1024
+# Bytes que bastam para reconhecer os quatro tipos (o WEBP precisa de 12).
+BYTES_DA_ASSINATURA = 16
+
+
+def tipo_pelo_conteudo(inicio: bytes) -> str | None:
+    """Os mesmos bytes mágicos da conferência do envio (`api/app/servicos/arquivos.py`)."""
+    if inicio.startswith(b"%PDF-"):
+        return "application/pdf"
+    if inicio.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if inicio.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if len(inicio) >= 12 and inicio[:4] == b"RIFF" and inicio[8:12] == b"WEBP":
+        return "image/webp"
+    return None
 
 
 class Falha(Exception):
@@ -227,15 +247,123 @@ def copiar(destinatarios: str) -> int:
     return 0
 
 
+# --- conferir --------------------------------------------------------------------------------
+def ler_lista(caminho: str) -> list[tuple[str, str, int]]:
+    """`chave<TAB>tipo<TAB>tamanho` por linha (a saída do psql em conferir-arquivos.sh)."""
+    arquivos = []
+    with open(caminho, encoding="utf-8") as f:
+        for numero, linha in enumerate(f, 1):
+            if not linha.strip():
+                continue
+            partes = linha.rstrip("\n").split("\t")
+            if len(partes) != 3 or not re.fullmatch(r"[0-9a-f]{32}", partes[0]):
+                sys.exit(f"linha {numero} da lista fora do formato chave<TAB>tipo<TAB>tamanho")
+            arquivos.append((partes[0], partes[1], int(partes[2])))
+    return arquivos
+
+
+def decifrar_inicio(copia: Bucket, chave: str, identidade: str, temp: str) -> tuple[bytes, int]:
+    """Baixa a cópia cifrada e a decifra em fluxo: devolve o começo e o tamanho do conteúdo,
+    sem gravar o claro em lugar nenhum."""
+    cifrado = os.path.join(temp, f"{chave}.age")
+    copia.s3.download_file(copia.nome, f"arquivos/{chave}.age", cifrado)
+    age = subprocess.Popen(
+        ["age", "--decrypt", "--identity", identidade, cifrado],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    inicio, tamanho = b"", 0
+    while bloco := age.stdout.read(BLOCO):
+        if len(inicio) < BYTES_DA_ASSINATURA:
+            inicio = (inicio + bloco)[:BYTES_DA_ASSINATURA]
+        tamanho += len(bloco)
+    age.wait()
+    os.remove(cifrado)
+    if age.returncode != 0:
+        raise Falha(
+            f"não consegui decifrar a cópia de {chave} (chave privada errada ou cópia corrompida)"
+        )
+    return inicio, tamanho
+
+
+def conferir(lista: str, identidade: str | None) -> int:
+    arquivos = ler_lista(lista)
+    if not arquivos:
+        msg = "nenhum arquivo confirmado no banco restaurado: nada a conferir na cópia dos arquivos"
+        avisar(msg)
+        resumo("### Cópia dos arquivos", f"- :warning: {msg}")
+        return 0
+    if falta := faltando(COPIA):
+        sys.exit(
+            f"Há {len(arquivos)} arquivo(s) confirmado(s) no banco e faltam as variáveis da cópia "
+            f"({', '.join(falta)}): não dá para provar que estão protegidos."
+        )
+    if not identidade:
+        sys.exit("Falta a chave privada do age (BACKUP_AGE_KEY ou BACKUP_AGE_KEY_FILE).")
+
+    copia = abrir(COPIA)
+    na_copia = copia.listar("arquivos/")
+    sem_copia = [c for c, _, _ in arquivos if f"arquivos/{c}.age" not in na_copia]
+    # O age só acrescenta (cabeçalho e 16 bytes por bloco): menor ou igual é cópia truncada.
+    truncadas = [
+        c for c, _, t in arquivos if c not in sem_copia and na_copia[f"arquivos/{c}.age"] <= t
+    ]
+    if sem_copia:
+        log(f"ERRO: sem cópia: {', '.join(sem_copia)}")
+    if truncadas:
+        log(f"ERRO: cópia menor que o arquivo: {', '.join(truncadas)}")
+    if sem_copia or truncadas:
+        resumo(
+            "### Cópia dos arquivos",
+            f"- :x: sem cópia ou truncados: {len(sem_copia) + len(truncadas)}",
+        )
+        sys.exit(
+            f"A cópia dos arquivos está incompleta: {len(sem_copia)} sem cópia e "
+            f"{len(truncadas)} truncado(s), de {len(arquivos)} confirmado(s)."
+        )
+
+    chave, tipo, tamanho = secrets.SystemRandom().choice(arquivos)
+    log(f"conferindo ao acaso {chave}")
+    with tempfile.TemporaryDirectory(prefix="conferir-arquivos-") as temp:
+        os.chmod(temp, 0o700)
+        try:
+            inicio, decifrado = decifrar_inicio(copia, chave, identidade, temp)
+        except Falha as erro:
+            sys.exit(str(erro))
+        except Exception as erro:
+            sys.exit(f"Não consegui baixar a cópia de {chave}: {descrever(erro)}")
+    achado = tipo_pelo_conteudo(inicio)
+    if achado != tipo:
+        sys.exit(
+            f"A cópia de {chave} decifra, mas não tem a assinatura de {tipo} "
+            f"(achei {achado or 'nenhum tipo conhecido'})."
+        )
+    if decifrado != tamanho:
+        sys.exit(f"A cópia de {chave} decifra com {decifrado} bytes; o banco diz {tamanho}.")
+
+    linha = (
+        f"{len(arquivos)} arquivo(s) confirmado(s), todos com cópia; conferido ao acaso: "
+        f"{chave} ({tipo}, {tamanho} bytes) decifra com a assinatura certa"
+    )
+    log(f"conferência ok: {linha}")
+    resumo("### Cópia dos arquivos", f"- {linha}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = p.add_subparsers(dest="comando", required=True)
     c = sub.add_parser("copiar")
     c.add_argument("--destinatarios", required=True)
+    f = sub.add_parser("conferir")
+    f.add_argument("--lista", required=True)
+    f.add_argument("--identidade")
     args = p.parse_args(argv)
 
     if args.comando == "copiar":
         return copiar(args.destinatarios)
+    if args.comando == "conferir":
+        return conferir(args.lista, args.identidade)
     return 2
 
 
