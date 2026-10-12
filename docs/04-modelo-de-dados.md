@@ -144,11 +144,22 @@ Comissão e quando. Restrição: **um papel em vigor por tipo por unidade** (ín
 | Coluna | Tipo | Regra |
 |---|---|---|
 | `id` | bigint | PK |
-| `chave` | text | único. Caminho no serviço de armazenamento. |
-| `nome_original` | text | |
-| `tipo` | text | só `application/pdf`, `image/jpeg`, `image/png`, `image/webp` |
-| `tamanho_bytes` | integer | até 10 MB em aviso, 20 MB em documento (checado na aplicação) |
-| `enviado_por` / `enviado_em` | FK `unidade` / timestamptz | |
+| `chave` | text | único; 32 caracteres hexadecimais aleatórios, gerados pela API. O objeto mora em `envios/<chave>` até ser conferido e em `arquivos/<chave>` depois. **Nunca reaproveitada** (ADR-0011) |
+| `nome_original` | text | 1 a 200 caracteres, sem `/`, `\` nem caractere de controle. Só um rótulo: o objeto nunca usa esse nome |
+| `tipo` | text | só `application/pdf`, `image/jpeg`, `image/png`, `image/webp` (`CHECK`) |
+| `finalidade` | text | `aviso` ou `documento` (`CHECK`) |
+| `tamanho_bytes` | integer | de 1 byte a 20 MB, e até 10 MB quando `finalidade = 'aviso'` (`CHECK`) |
+| `enviado_por` / `enviado_em` | FK `unidade` / timestamptz | carimbada pelo banco |
+| `confirmado_em` | timestamptz | nulo = **pendente** (URL de envio dada, conteúdo ainda não conferido); preenchido pelo banco quando a API conferiu o conteúdo e publicou em `arquivos/` |
+
+- **Pendente** pode ter `tipo` e `tamanho_bytes` corrigidos (o que o servidor achou no arquivo)
+  e pode ser apagado (recusado, ou abandonado há mais de 1 dia).
+- **Confirmado não muda nem é apagado** (trigger `arquivo_confirmado`), como o objeto travado
+  no bucket.
+- **Até 50 arquivos por unidade a cada 24 horas** (trigger `arquivo_limite_dia`, que trava a
+  unidade para envios simultâneos contarem uns com os outros).
+
+Migração 0007 (M3). Detalhes de cada regra: `docs/superpowers/specs/m3-contrato.md`, seção 2.
 
 ### 3.3 Avisos
 
@@ -172,8 +183,12 @@ Comissão e quando. Restrição: **um papel em vigor por tipo por unidade** (ín
 
 A versão em vigor é a de maior número. "Editado em" aparece quando há mais de uma.
 
-**`aviso_anexo`** — (`aviso_id`, `versao`, `arquivo_id`), PK nas três. Anexo pertence à versão,
-então a versão antiga continua mostrando os anexos que tinha.
+**`aviso_anexo`** — (`aviso_id`, `versao`, `arquivo_id`), PK nas três, mais `ordem` (1 a 5,
+única por versão: **no máximo 5 anexos por versão**). Anexo pertence à versão, então a versão
+antiga continua mostrando os anexos que tinha. O trigger confere: arquivo confirmado, de
+finalidade `aviso`, nunca usado em documento nem em **outro** aviso (a correção do mesmo aviso
+repete os anexos); e a versão foi criada **na mesma transação**, então uma versão publicada
+nunca ganha nem perde anexo depois (RN-05).
 
 **`aviso_bloco`** — (`aviso_id`, `bloco_id`), PK nas duas. Só usado quando `para_todos = false`.
 
@@ -187,15 +202,22 @@ então a versão antiga continua mostrando os anexos que tinha.
 | Coluna | Tipo | Regra |
 |---|---|---|
 | `id` | bigint | PK |
-| `titulo` | text | |
-| `categoria` | enum `categoria_documento` | `convencao`, `regimento`, `ata`, `contrato`, `obra`, `outro` |
-| `data_documento` | date | data do documento, não do envio |
-| `acesso` | enum `nivel_acesso` | `publico`, `compradores`, `gestao` |
-| `criado_por` / `criado_em` | FK `unidade` / timestamptz | |
-| `arquivado_em` | timestamptz | |
+| `titulo` | text | 1 a 120 caracteres |
+| `categoria` | text (`CHECK`) | `convencao`, `regimento`, `ata`, `contrato`, `obra`, `orientacao`, `outro` |
+| `data_documento` | date | data do documento, não do envio; de 1990-01-01 a 2100-12-31 |
+| `acesso` | text (`CHECK`) | `publico`, `compradores`, `gestao` (RF-31) |
+| `criado_por` / `criado_em` | FK `unidade` / timestamptz | carimbada pelo banco |
+| `aviso_id` | FK `aviso`, única, nula | o aviso automático de "Avisar as unidades" (RF-33); só para `publico` ou `compradores` |
+| `arquivado_em` | timestamptz | nulo = na lista; arquivado não volta |
 
-**`documento_versao`** — (`documento_id`, `versao`) PK, `arquivo_id`, `enviada_por`,
-`enviada_em`. A maior versão é a atual (H-19).
+Categoria e nível são `text` com `CHECK`, não `enum`: acrescentar um valor é trocar um `CHECK`.
+Todo documento tem a versão 1 no commit (trigger adiado `documento_completo`). Título,
+categoria, data e acesso **não mudam**: publicou com o nível errado, arquiva e publica de novo.
+
+**`documento_versao`** — (`documento_id`, `versao`) PK, `arquivo_id` (único), `enviada_por`,
+`enviada_em`. Versões em sequência; a maior é a atual (H-19). O trigger confere que o arquivo
+está confirmado, é de finalidade `documento`, não está em nenhum aviso, e que o documento não
+está arquivado.
 
 ### 3.5 Enquetes
 
@@ -266,6 +288,9 @@ Regra importante não pode depender só da tela (RNF-13). Quando o banco consegu
 | Não editar enquete depois do 1º voto (H-20) | **Banco:** trigger em `enquete` e `enquete_opcao` |
 | Só vota quem está no destino | **Aplicação**, com teste |
 | Nada oficial é apagado (RN-05) | **Banco:** o usuário da aplicação **não tem permissão de DELETE** em `aviso`, `aviso_versao`, `documento`, `documento_versao`, `enquete`, `voto`, `historico` |
+| Arquivo publicado não muda nem some (ADR-0011) | **Banco:** trigger impede mudar ou apagar `arquivo` confirmado; `app` sem DELETE em `documento_versao` e `aviso_anexo`. **Bucket:** trava do R2 em `arquivos/` |
+| Arquivo é mesmo PDF ou foto (RNF-22) | **Aplicação:** a API confere os primeiros bytes depois do envio e apaga o que não é |
+| Documento de nível gestão só para a gestão (RF-31) | **Aplicação**, com teste (lista, documento e link dão 404 igual a inexistente) |
 | Histórico não é alterado (H-11) | **Banco:** sem permissão de UPDATE e DELETE em `historico` |
 | Nunca ficar sem administrador (H-09) | **Banco:** trigger impede retirar o último `admin` em vigor |
 | Login único e no padrão (RF-03) | **Banco:** `login` único, gerado a partir de bloco + número |

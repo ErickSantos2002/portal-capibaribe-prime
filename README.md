@@ -78,6 +78,22 @@ Notificações e e-mail (M2) ficam **desligados** sem as variáveis `PORTAL_VAPI
 novo: `uv run python -m app.comandos.gerar_chaves_vapid` (nunca grave a saída no repositório).
 Como o envio roda depois da resposta: [ADR-0010](docs/adr/0010-envio-em-segundo-plano.md).
 
+Arquivos (M3: documentos e anexos) ficam **desligados** sem as variáveis abaixo: as rotas que
+enviam ou abrem arquivo respondem 503 `arquivos_desligados` e o resto do Portal funciona igual.
+
+| Variável | Para quê |
+|---|---|
+| `PORTAL_ARQUIVOS_ENDPOINT` | `https://<conta>.r2.cloudflarestorage.com` (em desenvolvimento, um S3 falso local em `http://127.0.0.1:<porta>`) |
+| `PORTAL_ARQUIVOS_BUCKET` | o bucket **de arquivos** (`portal-capibaribe-arquivos`); nome com `backup` desliga os arquivos |
+| `PORTAL_ARQUIVOS_CHAVE_ID`, `PORTAL_ARQUIVOS_CHAVE_SECRETA` | a chave S3 **própria** da API, "Object Read & Write" só desse bucket |
+| `PORTAL_ARQUIVOS_REGIAO` | opcional; padrão `auto` (o único que o R2 aceita) |
+
+Nunca os `R2_*` do backup (outra chave, outro bucket, [ADR-0009](docs/adr/0009-backup-bucket-papel-e-chave.md)).
+A prévia da Vercel fica sem elas. Como o bucket é preparado (CORS, trava em `arquivos/`, ciclo
+de vida em `envios/`) e a cópia no Backblaze B2: `docs/superpowers/duvidas-m3.md` e
+[ADR-0011](docs/adr/0011-arquivos-protegidos-contra-perda.md). Um S3 falso para desenvolver:
+`uv run --with 'moto[server]' moto_server -p 9000` (exemplo comentado em `api/.env.example`).
+
 ## Versões
 
 A versão do Portal mora num lugar só, o `version` de `web/package.json`; o Vite a injeta no app

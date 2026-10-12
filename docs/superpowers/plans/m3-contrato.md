@@ -153,44 +153,42 @@ do `scripts/backup/s3.py`), pytest, `moto` (novo, só nos testes) · React 19, T
 `web/src/avisos/AvisoAberto.tsx`, `web/src/m3contrato.test.ts`, `vercel.json`,
 `web/testes/cabecalhos.test.ts`.
 
-- [ ] Testes falhando: limites e tipos iguais aos da API; dimensões reduzidas a 1920 px no lado
+- [x] Testes falhando: limites e tipos iguais aos da API; dimensões reduzidas a 1920 px no lado
   maior, sem aumentar; decisão de comprimir (só imagem; resultado maior → original); nome com
   a extensão nova; `enviarArquivo` recusa na tela tipo e tamanho, pede, faz o PUT sem
   `X-Portal` e sem cookie com o Content-Type devolvido, confirma, e transforma falha do PUT em
   `arquivo_nao_chegou`; funções de API dos documentos e dos anexos chamam a rota certa; os
   encaixes não mostram nada (menu sem Documentos, entrada sem link, aviso sem botão); a CSP
   libera o R2 só em `connect-src` e `img-src` (e `blob:` na imagem).
-- [ ] Implementar; commit.
+- [x] Implementar; commit.
 
 ### Tarefa 7: Documentos e dúvidas
 
 **Arquivos:** `docs/04-modelo-de-dados.md`, `docs/05-arquitetura.md`, `docs/07-roadmap.md`,
 `README.md`, `docs/superpowers/duvidas-m3.md`.
 
-- [ ] Modelo de dados com as colunas e regras novas; arquitetura (fluxo 6.2 com as rotas de
+- [x] Modelo de dados com as colunas e regras novas; arquitetura (fluxo 6.2 com as rotas de
   arquivo, CSP, backup dos arquivos, ADR-0011); roadmap (estado do M3); README (variáveis);
   dúvidas com os itens **[Erick]** e o passo a passo do R2 e do B2.
-- [ ] Suíte inteira e `pre-commit run --all-files`; commit.
+- [x] Suíte inteira e `pre-commit run --all-files`; commit.
 
 ---
 
-## Estado (07/10/2026, parada por desligamento do computador)
+## Estado (12/10/2026, onda do contrato concluída)
 
-Feito e commitado (Tarefas 1 a 5): ADR-0011, spec, migração 0007 e modelos, configuração,
-armazenamento, envio de arquivo pronto, rotas dos épicos em 501, campos novos dos avisos e
-tipos TS de arquivos, documentos e avisos. Último commit da Tarefa 5 rodou só os testes das
-áreas mudadas (192 API + 145 front); a suíte inteira passou no commit da Tarefa 4 (1251 API,
-403 vitest, 12 node).
+Tarefas 1 a 7 feitas e commitadas na branch `m3/contrato` (sem push, sem merge). A suíte
+inteira roda verde no último commit; contagens no relatório do agente e no `git log`.
 
-Para retomar:
-1. Subir o Postgres próprio: `docker run -d --name portal-pg-m3-contrato -e POSTGRES_PASSWORD=teste
-   -p 127.0.0.1:55473:5432 postgres:17` e rodar a suíte inteira com
-   `PORTAL_TESTE_ADMIN_URL=postgresql://postgres:teste@127.0.0.1:55473/postgres
-   PORTAL_TESTE_BANCO=portal_teste_m3_contrato uv run --frozen pytest` (confirmar a Tarefa 5).
-2. Tarefa 6 inteira (front comum `web/src/arquivos/{api,limites,comprimir,enviar}.ts` + teste,
-   `web/src/documentos/{api.ts,rotas.tsx,menu.ts,LinkDocumentosPublicos.tsx,DocumentoDoAviso.tsx}`,
-   encaixes em `rotas.tsx`, `casca/menu.ts`, `acesso/Entrar.tsx`, `avisos/AvisoAberto.tsx`,
-   resto do `m3contrato.test.ts`, CSP no `vercel.json` + `web/testes/cabecalhos.test.ts`).
-3. Tarefa 7 inteira (docs 04/05/07, README, `docs/superpowers/duvidas-m3.md` com os itens
-   [Erick]: bucket `portal-capibaribe-arquivos`, chave só dele, CORS, trava em `arquivos/`,
-   ciclo de vida de 1 dia em `envios/`, conta e bucket no B2, segredos do workflow).
+Na retomada de 12/10:
+- A suíte inteira acusou um teste antigo que não conhecia o campo `quantidade_anexos` da Tarefa
+  5 (`test_avisos_mural.py::test_item_do_mural`); corrigido em commit próprio.
+- Tarefa 6 em três commits: envio comum (`web/src/arquivos/`, com os limites conferidos contra
+  a API no `test_contrato.py`), funções de API dos documentos e do link do anexo
+  (`avisos/api.ts`, `linkDoAnexo`) e encaixes do épico A ligados mas vazios, e a CSP.
+- Tarefa 7: docs 04/05/07, README e `docs/superpowers/duvidas-m3.md` (12 itens e o passo a
+  passo do Erick para R2, B2, GitHub e Vercel). A spec perdeu o campo `metodo` do
+  `EnvioAutorizado`, que o código nunca teve (dúvida 11).
+
+Próximo passo (coordenador): revisão do contrato, respostas do Erick aos itens **[Erick]** de
+`duvidas-m3.md` (3, 5, 9 e o passo a passo) e a onda dos três épicos, cada um na própria
+worktree a partir desta branch, com o próprio banco de teste.

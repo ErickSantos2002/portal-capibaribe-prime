@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | v0.6 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 no ar como versão 1.3.0 (07/10/2026; quem publica recebe e e-mail opcional), falta o teste em aparelho; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.7 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 no ar como versão 1.3.0 (07/10/2026; quem publica recebe e e-mail opcional), falta o teste em aparelho; M3 com o contrato pronto (branch `m3/contrato`, ADR-0011); sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
@@ -196,7 +196,16 @@ comum; arquivo com extensão trocada (um `.exe` renomeado para `.pdf`) é recusa
 
 **Decidir neste marco:** o backup da ADR-0007 cobre só o banco, não os arquivos no R2. Antes de
 subir o primeiro documento real, definir como os arquivos ficam protegidos contra perda (nova
-ADR).
+ADR). **Decidido:** [ADR-0011](adr/0011-arquivos-protegidos-contra-perda.md), trava do R2 em
+`arquivos/` e cópia diária cifrada no Backblaze B2; a cópia é portão do primeiro documento real.
+
+**Situação:** onda 1 (contrato) pronta na branch `m3/contrato`, sem nada novo para o morador:
+migração 0007, camada de armazenamento, envio de arquivo com o conteúdo conferido no servidor
+(o `.exe` renomeado já é recusado e apagado), rotas dos épicos respondendo 501, envio e
+compressão no front, CSP com o R2. Próxima onda: três épicos em paralelo (A · documentos,
+B · anexos nos avisos, C · proteção dos arquivos). Antes do primeiro documento real, os itens
+**[Erick]** de `superpowers/duvidas-m3.md` (bucket, chaves, CORS, trava, ciclo de vida, conta
+no B2, segredos). Spec: `superpowers/specs/m3-contrato.md`.
 
 ### M4 · Enquetes
 

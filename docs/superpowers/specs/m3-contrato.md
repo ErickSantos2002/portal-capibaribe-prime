@@ -229,7 +229,7 @@ do corpo já são as de verdade. O que vale antes e depois dos épicos fica em
   `tipo` (`TipoArquivo`), `tamanho_bytes` (≥ 1), `finalidade` (`Finalidade`). Mensagens: "O
   Portal aceita PDF e fotos (JPEG, PNG ou WEBP)."; "O arquivo pode ter até 10 MB." (aviso) ou
   "até 20 MB." (documento).
-- `EnvioAutorizado`: `arquivo_id`, `url`, `metodo` (`"PUT"`), `content_type` (mandar
+- `EnvioAutorizado`: `arquivo_id`, `url`, `content_type` (o envio é sempre `PUT`; mandar
   exatamente este `Content-Type` no PUT, ou o R2 recusa a assinatura), `expira_em`.
 - `ArquivoEnviado`: `id`, `nome`, `tipo`, `tamanho_bytes` (o real). É também como o arquivo
   aparece no documento e no aviso.
