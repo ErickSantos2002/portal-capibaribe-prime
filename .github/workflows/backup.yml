@@ -2,9 +2,13 @@
 #
 # - Todo dia 03:00 em Recife (06:00 UTC): pg_dump pelo papel `backup` (só leitura) → age → bucket
 #   privado `portal-capibaribe-backups` no R2 → retenção 30 diários + 12 mensais.
+# - Logo depois, a cópia dos arquivos (ADR-0011): o que está em `arquivos/` no bucket de arquivos
+#   e ainda não está na cópia é cifrado com age e enviado a um bucket do Backblaze B2. Sem os
+#   segredos ARQUIVOS_R2_* e COPIA_S3_*, só avisa (o backup do banco não depende dela).
 # - Dia 2 de cada mês (e à mão, com "restaurar"): restaura o backup que acabou de ser feito num
 #   Postgres 17 descartável e confere 5 blocos, 320 unidades, tabelas, gatilhos, permissões e a
-#   migração (igual ao head do repositório).
+#   migração (igual ao head do repositório); e confere que todo arquivo confirmado nesse banco
+#   tem cópia no B2, decifrando um deles ao acaso.
 # - Falhou? O GitHub manda e-mail para quem tem o workflow (padrão das Actions).
 #
 # Nenhum script liga `set -x`; os segredos chegam só por variável de ambiente e o GitHub mascara
@@ -31,7 +35,7 @@ concurrency:
 
 jobs:
   backup:
-    name: pg_dump → age → R2
+    name: pg_dump → age → R2, e cópia dos arquivos → B2
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     outputs:
@@ -67,11 +71,31 @@ jobs:
         run: |
           objeto="$(scripts/backup/fazer-backup.sh)"
           echo "objeto=$objeto" >>"$GITHUB_OUTPUT"
+      # Depois do pg_dump: todo arquivo confirmado no banco do backup já está em `arquivos/`.
+      # Sem os segredos, avisa e passa; com eles, falha (e-mail) se algum arquivo não foi copiado.
+      # Só roda se o backup do banco passou (de propósito: sem dump de hoje, a falha dele já manda
+      # e-mail, e a cópia de amanhã pega o que faltou, porque é incremental).
+      # Tempo próprio, menor que o do job: uma primeira cópia longa para no meio (o próximo run
+      # continua de onde parou) sem estourar o job, e a restauração de teste do dia ainda roda.
+      - name: Cópia cifrada dos arquivos (B2)
+        timeout-minutes: 12
+        env:
+          ARQUIVOS_R2_ENDPOINT: ${{ secrets.ARQUIVOS_R2_ENDPOINT }}
+          ARQUIVOS_R2_ACCESS_KEY_ID: ${{ secrets.ARQUIVOS_R2_ACCESS_KEY_ID }}
+          ARQUIVOS_R2_SECRET_ACCESS_KEY: ${{ secrets.ARQUIVOS_R2_SECRET_ACCESS_KEY }}
+          ARQUIVOS_R2_BUCKET: ${{ secrets.ARQUIVOS_R2_BUCKET }}
+          COPIA_S3_ENDPOINT: ${{ secrets.COPIA_S3_ENDPOINT }}
+          COPIA_S3_ACCESS_KEY_ID: ${{ secrets.COPIA_S3_ACCESS_KEY_ID }}
+          COPIA_S3_SECRET_ACCESS_KEY: ${{ secrets.COPIA_S3_SECRET_ACCESS_KEY }}
+          COPIA_S3_BUCKET: ${{ secrets.COPIA_S3_BUCKET }}
+        run: scripts/backup/copiar-arquivos.sh
 
   restauracao:
     name: Restauração de teste (Postgres 17 temporário)
     needs: backup
-    if: needs.backup.outputs.restaurar == 'true'
+    # Roda também quando só a cópia dos arquivos falhou: o backup do banco subiu (há `objeto`) e
+    # a restauração dele continua valendo; a conferência da cópia, no fim, acusa o resto.
+    if: ${{ !cancelled() && needs.backup.outputs.objeto != '' && needs.backup.outputs.restaurar == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
@@ -131,3 +155,11 @@ jobs:
             echo "- 5 blocos, 320 unidades, tabelas, gatilhos e permissões conferidos"
             echo "- migração do backup igual ao head do repositório: \`$HEAD\`"
           } >>"$GITHUB_STEP_SUMMARY"
+      - name: Conferir a cópia dos arquivos (B2)
+        env:
+          BACKUP_AGE_KEY: ${{ secrets.BACKUP_AGE_KEY }}
+          COPIA_S3_ENDPOINT: ${{ secrets.COPIA_S3_ENDPOINT }}
+          COPIA_S3_ACCESS_KEY_ID: ${{ secrets.COPIA_S3_ACCESS_KEY_ID }}
+          COPIA_S3_SECRET_ACCESS_KEY: ${{ secrets.COPIA_S3_SECRET_ACCESS_KEY }}
+          COPIA_S3_BUCKET: ${{ secrets.COPIA_S3_BUCKET }}
+        run: scripts/backup/conferir-arquivos.sh --destino "$DESTINO_URL"
