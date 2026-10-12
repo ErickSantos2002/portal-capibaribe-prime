@@ -9,11 +9,13 @@ import { DocumentosPublicos } from './Publicos'
 
 export const rotasDocumentos: RouteObject[] = [
   { path: 'documentos/publicos', element: <DocumentosPublicos /> },
+  // U2: o documento aberto faz a própria guarda (sem entrar, o público abre; o resto pede
+  // para entrar e volta para cá depois).
+  { path: 'documentos/:id', element: <PaginaDocumento /> },
   {
     element: <ExigeUnidade />,
     children: [
       { path: 'documentos', element: <ListaDocumentos /> },
-      { path: 'documentos/:id', element: <PaginaDocumento /> },
       {
         element: <ExigeGestao />,
         children: [

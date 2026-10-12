@@ -63,7 +63,7 @@ export function ListaDocumentos({ arquivados = false }: { arquivados?: boolean }
           itens={itens}
           busca={busca}
           vazio={arquivados ? 'Nenhum documento arquivado.' : 'Nenhum documento publicado ainda.'}
-          item={(d) => <ItemDocumento key={d.id} documento={d} />}
+          item={(d) => <ItemDocumento key={d.id} documento={d} paraGestao={eu?.gestao} />}
         />
       )}
       {eu?.gestao && !arquivados && itens && (

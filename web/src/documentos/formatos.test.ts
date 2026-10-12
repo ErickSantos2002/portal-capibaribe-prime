@@ -5,11 +5,75 @@ import {
   agrupar,
   dataDoDocumento,
   filtrar,
+  avisoDaVersao,
+  avisoDoDocumentoNovo,
   hojeEmRecife,
+  problemaAoEscolher,
   tamanhoEmTexto,
   tipoEmTexto,
 } from './formatos'
 import type { DocumentoResumo } from './tipos'
+
+// Os mesmos textos que a API grava (api/testes/test_documentos_revisao.py): a prévia mostra o
+// aviso como ele vai sair.
+describe('prévia do aviso automático (U3, U13)', () => {
+  it('documento novo, com a linha da gestão e a categoria que combina', () => {
+    expect(avisoDoDocumentoNovo('Regimento interno', 'regimento', ' Leiam até sexta. ')).toEqual({
+      titulo: 'Documento novo: Regimento interno',
+      categoria: 'Geral',
+      texto:
+        'Um documento novo foi publicado no Portal: “Regimento interno”.\n\n' +
+        'Leiam até sexta.\n\n' +
+        'Ele fica guardado em Documentos, no menu do Portal, e o botão “Ver o documento”' +
+        ' deste aviso leva direto a ele.',
+    })
+    expect(avisoDoDocumentoNovo('Cronograma', 'obra', '').categoria).toBe('Obra')
+    expect(avisoDoDocumentoNovo('Ata', 'ata', '').categoria).toBe('Reunião')
+    expect(avisoDoDocumentoNovo('x'.repeat(120), 'outro', '').titulo).toHaveLength(120)
+  })
+
+  it('versão nova (o link do documento a API acrescenta, se souber o endereço)', () => {
+    expect(avisoDaVersao('Regimento', 'regimento', 2, '')).toEqual({
+      titulo: 'Documento atualizado: Regimento',
+      categoria: 'Geral',
+      texto:
+        'Saiu a versão 2 de um documento do Portal: “Regimento”.\n\n' +
+        'Ela fica guardada em Documentos, no menu do Portal.',
+    })
+  })
+})
+
+describe('arquivo na hora de escolher (U10)', () => {
+  const arquivo = (type: string, size: number, name = 'a') => ({ type, size, name })
+
+  it('aceita PDF e foto dentro do limite', () => {
+    expect(problemaAoEscolher(arquivo('application/pdf', 1000))).toBeNull()
+    // Foto grande é reduzida antes de enviar: o tamanho dela é conferido depois.
+    expect(problemaAoEscolher(arquivo('image/jpeg', 30 * 1024 * 1024))).toBeNull()
+  })
+
+  it('Word, planilha e outros: diz o que fazer', () => {
+    expect(problemaAoEscolher(arquivo('application/msword', 10, 'ata.doc'))).toMatch(
+      /^Arquivo do Word: salve como PDF/,
+    )
+    expect(problemaAoEscolher(arquivo('', 10, 'ata.DOCX'))).toMatch(/^Arquivo do Word/)
+    expect(problemaAoEscolher(arquivo('application/zip', 10, 'x.zip'))).toMatch(
+      /^O Portal aceita PDF e fotos/,
+    )
+  })
+
+  it('PDF grande demais: o tamanho e como reduzir', () => {
+    expect(problemaAoEscolher(arquivo('application/pdf', 25 * 1024 * 1024))).toMatch(
+      /^Este PDF tem 25 MB e o limite é 20 MB\. Para reduzir/,
+    )
+  })
+
+  it('arquivo vazio', () => {
+    expect(problemaAoEscolher(arquivo('application/pdf', 0))).toBe(
+      'O arquivo está vazio. Escolha outro.',
+    )
+  })
+})
 
 function doc(id: number, extra: Partial<DocumentoResumo> = {}): DocumentoResumo {
   return {

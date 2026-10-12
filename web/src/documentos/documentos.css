@@ -315,6 +315,88 @@
   overflow-wrap: anywhere;
 }
 
+/* ---------- revisão de UX ---------- */
+
+/* U17: no documento, o título do topo (fixo) fica em até 2 linhas; o inteiro está na folha. */
+.app:has(.doc-aberto) .topo h1 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.doc-titulo {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.doc-marca-publico {
+  background: var(--mata-suave);
+}
+
+.doc-marca-publico svg {
+  color: var(--mata);
+}
+
+.doc-confirmacao {
+  margin-top: 0;
+}
+
+.doc-rodape .botao {
+  margin-top: 12px;
+}
+
+.doc-versoes summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  margin: 20px 0 8px;
+  color: var(--mata);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.doc-versao-item .texto-link {
+  gap: 6px;
+}
+
+/* A prévia do aviso automático (U13): um cartão como o do mural, sem ser link. */
+.doc-previa {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px dashed var(--borda);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+}
+
+.doc-previa p {
+  margin: 0 0 8px;
+}
+
+.doc-previa p:last-child {
+  margin-bottom: 0;
+}
+
+.doc-previa-rotulo {
+  color: var(--tinta-suave);
+  font-size: 15px;
+}
+
+.doc-previa-categoria {
+  color: var(--mata);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.doc-previa-titulo {
+  font-size: 18px;
+  font-weight: 700;
+}
+
 @media (min-width: 600px) {
   .doc-lado {
     grid-template-columns: 1fr 1fr;

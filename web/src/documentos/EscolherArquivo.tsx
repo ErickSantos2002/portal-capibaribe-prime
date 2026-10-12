@@ -1,14 +1,15 @@
 // Épico A do M3 · o campo "Arquivo" de "Novo documento" e "Enviar nova versão": um botão grande
 // que abre os arquivos do aparelho e, depois de escolher, o nome e o tamanho do que vai.
 import { ACEITAR } from '../arquivos/limites'
-import { tamanhoEmTexto } from './formatos'
+import { problemaAoEscolher, tamanhoEmTexto } from './formatos'
 import { IconeDoc } from './pecas'
 
 interface Props {
   id: string
   arquivo: File | null
   erro?: string
-  escolher: (arquivo: File | null) => void
+  /** O arquivo escolhido (já conferido, U10) ou, se não serve, `null` e o que fazer. */
+  escolher: (arquivo: File | null, problema: string | null) => void
 }
 
 export function EscolherArquivo({ id, arquivo, erro, escolher }: Props) {
@@ -39,7 +40,10 @@ export function EscolherArquivo({ id, arquivo, erro, escolher }: Props) {
           aria-describedby={erro ? `${idDoErro} ${ajuda}` : ajuda}
           aria-invalid={!!erro}
           onChange={(e) => {
-            escolher(e.target.files?.[0] ?? null)
+            const escolhido = e.target.files?.[0]
+            if (!escolhido) return
+            const problema = problemaAoEscolher(escolhido)
+            escolher(problema ? null : escolhido, problema)
             // Escolher o mesmo arquivo de novo (depois de um erro) também conta.
             e.target.value = ''
           }}
@@ -53,7 +57,8 @@ export function EscolherArquivo({ id, arquivo, erro, escolher }: Props) {
         </p>
       )}
       <p className="ajuda" id={ajuda}>
-        PDF ou foto, até 20 MB. Foto grande é reduzida antes de enviar.
+        PDF ou foto, até 20 MB. Foto grande é reduzida antes de enviar. Se o documento tem várias
+        páginas, junte num PDF antes de enviar.
       </p>
     </div>
   )

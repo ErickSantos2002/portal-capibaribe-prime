@@ -2,7 +2,16 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Icone } from '../casca/Icone'
-import { agrupar, dataDoDocumento, filtrar } from './formatos'
+import { enderecoParaAbrir } from './api'
+import {
+  agrupar,
+  assuntoDe,
+  dataDoDocumento,
+  diaPorExtenso,
+  filtrar,
+  tamanhoEmTexto,
+  tipoEmTexto,
+} from './formatos'
 import type { DocumentoResumo } from './tipos'
 
 // Ícones que a casca não tem, no mesmo traço do `Icone` (2 px, 24×24). Desenho constante do
@@ -60,15 +69,27 @@ export function FalhaAoCarregar({ mensagem, tentar }: { mensagem: string; tentar
   )
 }
 
-/** Data, versão e (para a gestão) quem vê, embaixo do título. */
-export function LinhaDoDocumento({ documento }: { documento: DocumentoResumo }) {
+/** Data, versão, quando foi arquivado e, para a gestão, os selos de quem vê (U15, U16). */
+export function LinhaDoDocumento({
+  documento,
+  paraGestao = false,
+}: {
+  documento: DocumentoResumo
+  paraGestao?: boolean
+}) {
   return (
     <span className="linha-meta">
       <span>{dataDoDocumento(documento.data_documento)}</span>
       {documento.versao > 1 && <span>versão {documento.versao}</span>}
-      {documento.acesso === 'gestao' && (
+      {documento.arquivado_em && <span>arquivado em {diaPorExtenso(documento.arquivado_em)}</span>}
+      {paraGestao && documento.acesso === 'gestao' && (
         <span className="doc-marca">
           <Icone nome="cadeado" tamanho={16} /> só a gestão vê
+        </span>
+      )}
+      {paraGestao && documento.acesso === 'publico' && (
+        <span className="doc-marca doc-marca-publico">
+          <Icone nome="olho" tamanho={16} /> qualquer pessoa vê
         </span>
       )}
     </span>
@@ -76,15 +97,87 @@ export function LinhaDoDocumento({ documento }: { documento: DocumentoResumo }) 
 }
 
 /** Um documento da lista: leva ao documento aberto (H-18). */
-export function ItemDocumento({ documento }: { documento: DocumentoResumo }) {
+export function ItemDocumento({
+  documento,
+  paraGestao,
+}: {
+  documento: DocumentoResumo
+  paraGestao?: boolean
+}) {
   return (
     <Link className="item" to={`/documentos/${documento.id}`}>
       <h3>{documento.titulo}</h3>
       <span className="seta">
         <Icone nome="seta" />
       </span>
-      <LinhaDoDocumento documento={documento} />
+      <LinhaDoDocumento documento={documento} paraGestao={paraGestao} />
     </Link>
+  )
+}
+
+/** A "folha" do documento aberto: assunto, título inteiro (o do topo pode ser cortado, U17),
+ *  data, arquivo, versão e os botões. Também a do documento público aberto sem entrar (U2). */
+export function FolhaDoDocumento({ documento }: { documento: DocumentoResumo }) {
+  return (
+    <div className="doc-folha">
+      <p className="doc-assunto">
+        <Icone nome="documentos" tamanho={20} />
+        {assuntoDe(documento.categoria).nome}
+      </p>
+      <p className="doc-titulo">{documento.titulo}</p>
+      <p className="doc-data">Documento de {dataDoDocumento(documento.data_documento)}</p>
+      <p className="doc-arquivo">
+        {tipoEmTexto(documento.arquivo.tipo)}, {tamanhoEmTexto(documento.arquivo.tamanho_bytes)}
+      </p>
+      <p className="doc-versao suave">
+        Versão {documento.versao}, enviada em {diaPorExtenso(documento.atualizado_em)}
+      </p>
+      <div className="doc-botoes">
+        <BotoesDoArquivo id={documento.id} versao={documento.versao} />
+      </div>
+    </div>
+  )
+}
+
+/** U7: "Abrir" (outra aba) e "Baixar" (fica na tela) pelo endereço do Portal, que confere o
+ *  acesso e redireciona para um link novo a cada toque. `nome`: o que o leitor de tela ouve
+ *  depois do verbo (ex.: o título, na lista dos públicos). */
+export function BotoesDoArquivo({
+  id,
+  versao,
+  abrirTexto = 'Abrir o documento',
+  nome,
+}: {
+  id: number
+  versao: number
+  abrirTexto?: string
+  nome?: string
+}) {
+  const complemento = nome ? (
+    <>
+      {' '}
+      <span className="oculto">{nome}</span>
+    </>
+  ) : null
+  return (
+    <>
+      <a
+        className="botao"
+        href={enderecoParaAbrir(id, versao)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <IconeDoc nome="fora" />
+        {abrirTexto}
+        {complemento}{' '}
+        <span className="oculto">(abre em outra aba)</span>
+      </a>
+      <a className="botao leve" href={enderecoParaAbrir(id, versao, true)}>
+        <IconeDoc nome="baixar" />
+        Baixar
+        {complemento}
+      </a>
+    </>
   )
 }
 

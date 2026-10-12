@@ -1,5 +1,6 @@
 // Épico A do M3 · documentos na voz do morador: assuntos, quem vê, datas, tamanhos e a busca.
 // Pertence ao épico A.
+import { LIMITES, tipoAceito } from '../arquivos/limites'
 import type { TipoArquivo } from '../arquivos/tipos'
 import type { CategoriaDocumento, Data, DocumentoResumo, NivelAcesso } from './tipos'
 
@@ -118,6 +119,95 @@ export function tamanhoEmTexto(bytes: number): string {
 
 export function tipoEmTexto(tipo: TipoArquivo): string {
   return tipo === 'application/pdf' ? 'PDF' : 'Foto'
+}
+
+// --- o aviso automático (prévia; o texto de verdade é o da API, `servicos/documentos.py`) -------
+
+const LIMITE_TITULO_AVISO = 120
+// A categoria do aviso que combina com o assunto do documento (revisão UX, U13).
+const CATEGORIA_DO_AVISO: Partial<Record<CategoriaDocumento, string>> = {
+  obra: 'Obra',
+  ata: 'Reunião',
+}
+
+export interface PreviaDoAviso {
+  titulo: string
+  categoria: string
+  texto: string
+}
+
+function cortar(prefixo: string, titulo: string): string {
+  const completo = prefixo + titulo
+  if (completo.length <= LIMITE_TITULO_AVISO) return completo
+  return completo.slice(0, LIMITE_TITULO_AVISO - 1).trimEnd() + '…'
+}
+
+function paragrafos(...partes: string[]): string {
+  return partes.filter(Boolean).join('\n\n')
+}
+
+/** A linha da gestão como a API grava: uma linha só, sem espaços sobrando. */
+export function linhaDoAviso(nota: string): string {
+  return nota.split(/\s+/).filter(Boolean).join(' ')
+}
+
+export function avisoDoDocumentoNovo(
+  titulo: string,
+  categoria: CategoriaDocumento,
+  nota: string,
+): PreviaDoAviso {
+  return {
+    titulo: cortar('Documento novo: ', titulo),
+    categoria: CATEGORIA_DO_AVISO[categoria] ?? 'Geral',
+    texto: paragrafos(
+      `Um documento novo foi publicado no Portal: “${titulo}”.`,
+      linhaDoAviso(nota),
+      'Ele fica guardado em Documentos, no menu do Portal, e o botão “Ver o documento”' +
+        ' deste aviso leva direto a ele.',
+    ),
+  }
+}
+
+export function avisoDaVersao(
+  titulo: string,
+  categoria: CategoriaDocumento,
+  versao: number,
+  nota: string,
+): PreviaDoAviso {
+  return {
+    titulo: cortar('Documento atualizado: ', titulo),
+    categoria: CATEGORIA_DO_AVISO[categoria] ?? 'Geral',
+    texto: paragrafos(
+      `Saiu a versão ${versao} de um documento do Portal: “${titulo}”.`,
+      linhaDoAviso(nota),
+      'Ela fica guardada em Documentos, no menu do Portal.',
+    ),
+  }
+}
+
+// --- o arquivo, na hora de escolher (revisão UX, U10) ------------------------------------------
+
+const PALAVRA = /\.(docx?|odt|rtf)$/i
+
+/** O que impede o arquivo escolhido, com o que fazer, ou `null`. A foto pode passar do limite
+ *  aqui: ela é reduzida antes de enviar, e `enviarArquivo` confere o tamanho depois. */
+export function problemaAoEscolher(arquivo: Pick<File, 'type' | 'size' | 'name'>): string | null {
+  const ehPalavra = PALAVRA.test(arquivo.name) || /word|opendocument\.text/.test(arquivo.type)
+  if (ehPalavra) {
+    return 'Arquivo do Word: salve como PDF (no Word, “Salvar como” e escolha PDF) e escolha o PDF aqui.'
+  }
+  if (!tipoAceito(arquivo.type)) {
+    return 'O Portal aceita PDF e fotos (JPEG, PNG ou WEBP). Se for outro tipo, salve como PDF antes.'
+  }
+  if (arquivo.size < 1) return 'O arquivo está vazio. Escolha outro.'
+  if (arquivo.type === 'application/pdf' && arquivo.size > LIMITES.documento) {
+    return (
+      `Este PDF tem ${Math.ceil(arquivo.size / MB)} MB e o limite é ${LIMITES.documento / MB} MB. ` +
+      'Para reduzir, salve de novo com qualidade menor (“reduzir tamanho” no app de PDF) ou ' +
+      'divida em partes.'
+    )
+  }
+  return null
 }
 
 /** Tira acentos e maiúsculas, para a busca: "Convenção" → "convencao". */
