@@ -243,6 +243,28 @@ grep -q "COPIA_S3_ENDPOINT" "$temp/saida.txt" || reprovar "o aviso deveria citar
 grep -q "que-nao-aparece" "$temp/saida.txt" && reprovar "a saída mostrou o valor de uma variável"
 ok "configuração pela metade: avisa com os nomes, sem mostrar valor"
 
+# Bucket fora do ar ou inexistente: erro curto, sem traceback, sem endereço e sem nome de bucket.
+sem_rastro() { # descrição texto-que-não-pode-aparecer comando...
+  local descricao="$1" proibido="$2"
+  shift 2
+  if "$@" >"$temp/saida.txt" 2>&1; then
+    reprovar "$descricao: deveria falhar e passou"
+  fi
+  if grep -qE "Traceback|$proibido" "$temp/saida.txt"; then
+    cat "$temp/saida.txt" >&2
+    reprovar "$descricao: a saída mostrou traceback ou '$proibido'"
+  fi
+  grep -q "ERRO" "$temp/saida.txt" || reprovar "$descricao: sem a linha de ERRO"
+  ok "$descricao"
+}
+porta_fechada="$(porta_livre)"
+sem_rastro "bucket de arquivos fora do ar: erro curto, sem o endereço" "127.0.0.1:$porta_fechada" \
+  env "${VARS_ARQUIVOS[@]}" "${VARS_COPIA[@]}" ARQUIVOS_R2_ENDPOINT="http://127.0.0.1:$porta_fechada" \
+  "$pasta/copiar-arquivos.sh"
+sem_rastro "cópia com bucket inexistente: erro curto, sem o nome do bucket" "bucket-que-nao-existe" \
+  env "${VARS_ARQUIVOS[@]}" "${VARS_COPIA[@]}" COPIA_S3_BUCKET=bucket-que-nao-existe \
+  "$pasta/copiar-arquivos.sh"
+
 # Os arquivos publicados: um de cada tipo (o PDF passa de 8 MB: envio em partes), mais o que
 # a cópia tem de ignorar (o envio ainda não conferido e uma chave fora do padrão da API).
 nova_chave() { head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n'; }

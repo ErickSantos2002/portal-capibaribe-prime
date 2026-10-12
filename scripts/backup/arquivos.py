@@ -234,8 +234,19 @@ def primeira_linha(texto: str) -> str:
 
 
 def descrever(erro: Exception) -> str:
-    """Uma linha sobre o erro. As mensagens do boto3 e do age não trazem as chaves de acesso."""
-    return f"{type(erro).__name__}: {primeira_linha(str(erro))}"
+    """Uma linha sobre o erro, sem endpoint, nome de bucket nem caminho: o log de repositório
+    público é público. Só as nossas mensagens (`Falha`) vão inteiras."""
+    if isinstance(erro, Falha):
+        return primeira_linha(str(erro))
+    resposta = getattr(erro, "response", None)
+    if isinstance(resposta, dict) and "Error" in resposta:  # ClientError do boto3
+        codigo = resposta["Error"].get("Code", "?")
+        operacao = getattr(erro, "operation_name", "?")
+        return f"o bucket respondeu {codigo} em {operacao}"
+    if isinstance(erro, OSError) and erro.strerror:
+        return f"{type(erro).__name__}: {erro.strerror}"
+    # EndpointConnectionError e outros do botocore trazem a URL na mensagem: só o nome.
+    return type(erro).__name__
 
 
 # --- copiar ----------------------------------------------------------------------------------
@@ -570,13 +581,18 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--identidade", required=True)
     args = p.parse_args(argv)
 
-    if args.comando == "copiar":
-        return copiar(args.destinatarios)
-    if args.comando == "conferir":
-        return conferir(args.lista, args.identidade)
-    if args.comando == "restaurar":
-        return restaurar(args.identidade)
-    return 2
+    comandos = {
+        "copiar": lambda: copiar(args.destinatarios),
+        "conferir": lambda: conferir(args.lista, args.identidade),
+        "restaurar": lambda: restaurar(args.identidade),
+    }
+    try:
+        return comandos[args.comando]()
+    except Exception as erro:
+        # Listagem ou conexão que falhou fora do laço de cada arquivo: nada de traceback (que
+        # traz a URL do bucket) no log.
+        log(f"ERRO: {args.comando} parou: {descrever(erro)}")
+        return 1
 
 
 if __name__ == "__main__":
