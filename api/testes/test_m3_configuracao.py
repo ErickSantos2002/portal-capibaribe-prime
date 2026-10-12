@@ -96,6 +96,35 @@ def test_endpoint_so_https_sem_caminho(monkeypatch, caplog, endpoint):
     assert "PORTAL_ARQUIVOS_ENDPOINT" in caplog.text
 
 
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://conta-ficticia.r2.cloudflarestorage.com/portal-capibaribe-arquivos",
+        "https://conta-ficticia.r2.cloudflarestorage.com/portal-capibaribe-arquivos/",
+    ],
+)
+def test_endpoint_copiado_com_o_bucket_no_fim_vale_sem_o_caminho(monkeypatch, endpoint):
+    # É assim que a página do bucket no painel da Cloudflare mostra o endereço.
+    _ligar(monkeypatch, PORTAL_ARQUIVOS_ENDPOINT=endpoint)
+    config = configuracao.config_arquivos()
+    assert config is not None
+    assert config.endpoint == "https://conta-ficticia.r2.cloudflarestorage.com"
+
+
+@pytest.mark.parametrize(
+    "caminho",
+    ["/outro-bucket", "/portal-capibaribe-arquivos/envios", "/portal-capibaribe-arquivos-x"],
+)
+def test_endpoint_com_outro_caminho_continua_recusado(monkeypatch, caplog, caminho):
+    _ligar(
+        monkeypatch,
+        PORTAL_ARQUIVOS_ENDPOINT="https://conta-ficticia.r2.cloudflarestorage.com" + caminho,
+    )
+    with caplog.at_level(logging.WARNING):
+        assert configuracao.config_arquivos() is None
+    assert "PORTAL_ARQUIVOS_ENDPOINT" in caplog.text
+
+
 @pytest.mark.parametrize("endpoint", ["http://127.0.0.1:9000", "http://localhost:4566"])
 def test_endpoint_local_vale_em_desenvolvimento(monkeypatch, endpoint):
     _ligar(monkeypatch, PORTAL_ARQUIVOS_ENDPOINT=endpoint)

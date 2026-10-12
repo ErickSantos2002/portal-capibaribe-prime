@@ -350,7 +350,7 @@ enviam arquivo. É o mesmo princípio do M2: o Portal sobe antes de o bucket exi
 
 | Variável | Para quê | Sem ela |
 |---|---|---|
-| `PORTAL_ARQUIVOS_ENDPOINT` | `https://<conta>.r2.cloudflarestorage.com` (ou `http://127.0.0.1:<porta>` de um S3 falso em desenvolvimento) | arquivos desligados |
+| `PORTAL_ARQUIVOS_ENDPOINT` | `https://<conta>.r2.cloudflarestorage.com` (ou `http://127.0.0.1:<porta>` de um S3 falso em desenvolvimento). Com `/<bucket configurado>` no fim, como a página do bucket na Cloudflare mostra, o caminho é tirado; qualquer outro caminho desliga | arquivos desligados |
 | `PORTAL_ARQUIVOS_BUCKET` | o bucket **de arquivos** (`portal-capibaribe-arquivos`) | arquivos desligados |
 | `PORTAL_ARQUIVOS_CHAVE_ID`, `PORTAL_ARQUIVOS_CHAVE_SECRETA` | a chave S3 **própria** da API, "Object Read & Write" **só** desse bucket | arquivos desligados |
 | `PORTAL_ARQUIVOS_REGIAO` | opcional; padrão `auto` (o R2 aceita só isso) | padrão |

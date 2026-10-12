@@ -133,6 +133,19 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
   recusado normalmente). Quem usa a tela nunca faz dois PUTs; não vale um motivo novo no
   histórico nem uma frase nova para algo que só um ataque provoca.
 
+## 14. Endpoint com o nome do bucket no fim; `/api/saude` não muda
+- **Dúvida (revisão do contrato):** a página do bucket no painel da Cloudflare mostra
+  `https://<conta>.r2.cloudflarestorage.com/portal-capibaribe-arquivos`. Colado assim, o
+  endpoint era recusado e a API ficava em 503 com só um aviso no log.
+- **Decisão:** se o caminho do endpoint é exatamente `/<bucket configurado>` (com ou sem barra
+  no fim), ele é tirado; qualquer outro caminho continua desligando os arquivos.
+- **`/api/saude` não ganhou o estado dos arquivos.** Ela é a prova de vida da API e do banco, é
+  pública, e não mostra o push nem o e-mail, que seguem a mesma regra ("sem configuração,
+  desligado"). Mostrar só os arquivos seria incoerente, e mostrar os três diz a qualquer um
+  quais canais estão sem configuração. A conferência depois do deploy é o aviso
+  "arquivos desligados" nos logs da Vercel (passo D) ou o 503 `arquivos_desligados` no
+  primeiro envio.
+
 ---
 
 ## Passo a passo do Erick (antes do primeiro documento real) **[Erick]**

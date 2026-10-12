@@ -16,8 +16,9 @@ resto do Portal funciona igual. Por isso o M2 pode ir ao ar antes da conta do Gm
 
 - `PORTAL_ARQUIVOS_ENDPOINT`, `PORTAL_ARQUIVOS_BUCKET`, `PORTAL_ARQUIVOS_CHAVE_ID`,
   `PORTAL_ARQUIVOS_CHAVE_SECRETA` (M3): o bucket de arquivos do R2 e a chave própria da API,
-  só dele; `PORTAL_ARQUIVOS_REGIAO` opcional (`auto`). Sem elas, documentos e anexos não abrem
-  nem são enviados (503), e o resto funciona.
+  só dele; `PORTAL_ARQUIVOS_REGIAO` opcional (`auto`). O endpoint pode vir com `/<bucket>` no
+  fim (como o painel da Cloudflare mostra): esse caminho é tirado. Sem elas, documentos e
+  anexos não abrem nem são enviados (503), e o resto funciona.
 
 A chave pública VAPID não é variável: sai da privada, então as duas nunca ficam trocadas.
 
@@ -30,6 +31,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from functools import cache
+from urllib.parse import urlsplit, urlunsplit
 
 from py_vapid import Vapid
 
@@ -159,10 +161,15 @@ def _config_arquivos(
                 "PORTAL_ARQUIVOS_CHAVE_ID ou PORTAL_ARQUIVOS_CHAVE_SECRETA"
             )
         return None
+    # A página do bucket no painel da Cloudflare mostra o endereço com `/<bucket>` no fim. Esse
+    # caminho (e só ele) sai; o boto3 põe o bucket no caminho sozinho.
+    partes = urlsplit(endpoint)
+    if partes.path == "/" + bucket and not (partes.query or partes.fragment):
+        endpoint = urlunsplit(partes._replace(path=""))
     if not _ENDPOINT.match(endpoint):
         log.warning(
             "arquivos desligados: PORTAL_ARQUIVOS_ENDPOINT precisa ser https:// (ou a máquina "
-            "local), sem caminho"
+            "local), sem caminho (só o nome do bucket no fim é aceito)"
         )
         return None
     # A chave da API nunca enxerga os backups (ADR-0009): o bucket deles fica de fora.

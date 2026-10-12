@@ -83,7 +83,7 @@ enviam ou abrem arquivo respondem 503 `arquivos_desligados` e o resto do Portal 
 
 | Variável | Para quê |
 |---|---|
-| `PORTAL_ARQUIVOS_ENDPOINT` | `https://<conta>.r2.cloudflarestorage.com` (em desenvolvimento, um S3 falso local em `http://127.0.0.1:<porta>`) |
+| `PORTAL_ARQUIVOS_ENDPOINT` | `https://<conta>.r2.cloudflarestorage.com` (com `/<bucket>` no fim também vale; em desenvolvimento, um S3 falso local em `http://127.0.0.1:<porta>`) |
 | `PORTAL_ARQUIVOS_BUCKET` | o bucket **de arquivos** (`portal-capibaribe-arquivos`); nome com `backup` desliga os arquivos |
 | `PORTAL_ARQUIVOS_CHAVE_ID`, `PORTAL_ARQUIVOS_CHAVE_SECRETA` | a chave S3 **própria** da API, "Object Read & Write" só desse bucket |
 | `PORTAL_ARQUIVOS_REGIAO` | opcional; padrão `auto` (o único que o R2 aceita) |
