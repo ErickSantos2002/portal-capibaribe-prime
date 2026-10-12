@@ -73,7 +73,12 @@ jobs:
           echo "objeto=$objeto" >>"$GITHUB_OUTPUT"
       # Depois do pg_dump: todo arquivo confirmado no banco do backup já está em `arquivos/`.
       # Sem os segredos, avisa e passa; com eles, falha (e-mail) se algum arquivo não foi copiado.
+      # Só roda se o backup do banco passou (de propósito: sem dump de hoje, a falha dele já manda
+      # e-mail, e a cópia de amanhã pega o que faltou, porque é incremental).
+      # Tempo próprio, menor que o do job: uma primeira cópia longa para no meio (o próximo run
+      # continua de onde parou) sem estourar o job, e a restauração de teste do dia ainda roda.
       - name: Cópia cifrada dos arquivos (B2)
+        timeout-minutes: 12
         env:
           ARQUIVOS_R2_ENDPOINT: ${{ secrets.ARQUIVOS_R2_ENDPOINT }}
           ARQUIVOS_R2_ACCESS_KEY_ID: ${{ secrets.ARQUIVOS_R2_ACCESS_KEY_ID }}
