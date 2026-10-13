@@ -14,6 +14,8 @@ from app.rotas import (
     avisos,
     diagnostico,
     documentos,
+    enquetes,
+    enquetes_gestao,
     envios,
     push,
     recuperacao,
@@ -52,3 +54,7 @@ app.include_router(recuperacao.rotas)
 # épico B, ficam no roteador de avisos).
 app.include_router(arquivos.rotas)
 app.include_router(documentos.rotas)
+# M4 (spec do M4, seção 3): um roteador por épico, com o mesmo prefixo: votar e resultado (B) e
+# criar e gerir (A).
+app.include_router(enquetes.rotas)
+app.include_router(enquetes_gestao.rotas)

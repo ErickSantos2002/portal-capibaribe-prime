@@ -18,6 +18,13 @@ SEM_DADO = {
     "/api/documentos/{documento_id}/versoes/{versao}/link",
     "/api/avisos/{aviso_id}/anexos/{arquivo_id}/link",
 }
+# M4: 501 enquanto o épico B não implementa; depois, 200 (a lista) ou 404 (a enquete 1 não
+# existe neste teste). Os épicos não precisam mexer aqui.
+ENQUETES = {
+    "/api/enquetes",
+    "/api/enquetes/{enquete_id}",
+    "/api/enquetes/{enquete_id}/votantes",
+}
 # As rotas `…/abrir` são navegação: redirecionam (302/303) ou mostram a página de erro (404/503).
 # O redirecionamento também sai com `no-store`: o navegador não pode guardar o link assinado.
 ABRIR = {
@@ -45,10 +52,11 @@ def test_todo_get_da_api_sai_sem_cache(logar):
         "{documento_id}": "1",
         "{versao}": "1",
         "{arquivo_id}": "1",
+        "{enquete_id}": "1",
     }
     caminhos = _caminhos_get()
     assert "/api/avisos" in caminhos and "/api/avisos/{aviso_id}" in caminhos
-    assert set(caminhos) >= ABRIR
+    assert set(caminhos) >= ABRIR | ENQUETES
     for modelo in caminhos:
         caminho = modelo
         for marcador, valor in substituir.items():
@@ -58,6 +66,8 @@ def test_todo_get_da_api_sai_sem_cache(logar):
             esperados = {302, 303, 404, 503}
         elif modelo in SEM_DADO:
             esperados = {200, 404, 503}
+        elif modelo in ENQUETES:
+            esperados = {200, 404, 501}
         else:
             esperados = {200}
         assert resposta.status_code in esperados, (caminho, resposta.text)
