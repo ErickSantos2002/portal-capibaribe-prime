@@ -30,13 +30,22 @@ from app.esquemas.avisos import (
     CorrigirAviso,
     DestinoBloco,
     DocumentoDoAviso,
+    EnqueteDoAviso,
     Evento,
     Leitura,
     NovoAviso,
     VersaoAviso,
 )
 from app.esquemas.comum import UnidadeRef
-from app.modelos import Arquivo, Bloco, Documento, DocumentoVersao, Papel, Unidade
+from app.modelos import (
+    Arquivo,
+    Bloco,
+    Documento,
+    DocumentoVersao,
+    Enquete,
+    Papel,
+    Unidade,
+)
 from app.modelos.avisos import (
     ANEXOS_POR_VERSAO,
     Aviso,
@@ -350,6 +359,7 @@ def abrir(db: Session, logado: Logado, aviso_id: int) -> AvisoCompleto:
         leitura=_contagem(db, aviso) if logado.gestao else None,
         anexos=anexos[m.atual.versao],
         documento=_documento_do_aviso(db, logado, aviso.id),
+        enquete=_enquete_do_aviso(db, aviso.id),
     )
 
 
@@ -388,6 +398,16 @@ def _documento_do_aviso(db: Session, logado: Logado, aviso_id: int) -> Documento
         )
     ).one_or_none()
     return None if linha is None else DocumentoDoAviso(id=linha.id, titulo=linha.titulo)
+
+
+def _enquete_do_aviso(db: Session, aviso_id: int) -> EnqueteDoAviso | None:
+    """A enquete que gerou este aviso (H-13; spec do M4, seção 3.3), com a pergunta atual. O
+    aviso e a enquete têm o mesmo destino (a migração 0008 não deixa o destino mudar): quem
+    chegou até o aviso pode ver a enquete."""
+    linha = db.execute(
+        select(Enquete.id, Enquete.pergunta).where(Enquete.aviso_id == aviso_id)
+    ).one_or_none()
+    return None if linha is None else EnqueteDoAviso(id=linha.id, pergunta=linha.pergunta)
 
 
 def _gravar_leitura(db: Session, aviso_id: int, unidade_id: int) -> None:
@@ -614,7 +634,17 @@ def _restricao(erro: IntegrityError) -> str | None:
 
 
 def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -> None:
-    """Versão nova (H-15); a anterior fica como estava.
+    """Versão nova (H-15); a anterior fica como estava."""
+    gravar_correcao(db, logado, aviso_id, dados)
+    db.commit()
+
+
+def gravar_correcao(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -> int:
+    """Tudo do `corrigir`, menos o commit, e devolve a versão nova. O épico A do M4 usa para
+    corrigir o aviso automático na mesma transação que edita a enquete (spec do M4, seção 3.1);
+    quem chama fecha a transação. Não notifica de novo (correção nunca notificou). Os 409 do
+    banco (arquivado, corrigido agora) desfazem a transação inteira, inclusive o que quem chama
+    já tinha gravado.
 
     Sem trava de propósito: se duas pessoas corrigem ao mesmo tempo, a segunda bate na chave
     (aviso, versão) e recebe 409, em vez de sobrescrever a outra sem ver o que ela fez.
@@ -702,7 +732,7 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
         entidade_id=aviso.id,
         detalhes=detalhes,
     )
-    db.commit()
+    return versao
 
 
 def arquivar(db: Session, logado: Logado, aviso_id: int) -> None:

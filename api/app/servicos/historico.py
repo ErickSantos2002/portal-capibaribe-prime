@@ -48,6 +48,11 @@ class Acao(enum.StrEnum):
     documento_publicado = "documento_publicado"
     documento_versao_enviada = "documento_versao_enviada"
     documento_arquivado = "documento_arquivado"
+    # Enquetes (M4, épico A; spec do M4, seção 3.1): entidade `enquete`, com `{"pergunta",
+    # "opcoes": n, "multipla_escolha", "mostrar_resultado", "para_todos", "blocos"}`. O voto não
+    # vai para o histórico (dado sobre o comportamento das pessoas, sem uso).
+    enquete_criada = "enquete_criada"
+    enquete_editada = "enquete_editada"
 
 
 # Chaves que denunciam dado pessoal ou segredo. Comparação por "contém", em minúsculas.

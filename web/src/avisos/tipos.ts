@@ -85,12 +85,20 @@ export interface AvisoCompleto extends AvisoResumo {
   anexos: ArquivoEnviado[]
   /** M3 (RF-33): o documento que gerou este aviso, se a unidade pode vê-lo. */
   documento: DocumentoDoAviso | null
+  /** M4 (H-13): a enquete que gerou este aviso, com a pergunta atual. */
+  enquete: EnqueteDoAviso | null
 }
 
 /** O botão "Abrir o documento" do aviso automático (RF-33). */
 export interface DocumentoDoAviso {
   id: number
   titulo: string
+}
+
+/** O botão "Ir para a enquete" do aviso automático (M4, H-13). */
+export interface EnqueteDoAviso {
+  id: number
+  pergunta: string
 }
 
 export interface ListaAvisos {

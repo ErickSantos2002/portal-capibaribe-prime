@@ -257,5 +257,6 @@ function avisoCompleto(documento: DocumentoDoAvisoTipo | null): AvisoCompleto {
     leitura: null,
     anexos: [],
     documento,
+    enquete: null,
   }
 }

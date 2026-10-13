@@ -55,6 +55,7 @@ function completo(id: number, extra: Partial<AvisoCompleto> = {}): AvisoCompleto
     leitura: null,
     anexos: [],
     documento: null,
+    enquete: null,
     ...extra,
   }
 }

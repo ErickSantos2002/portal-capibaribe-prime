@@ -26,6 +26,7 @@ from app.esquemas import (
     avisos,
     comum,
     documentos,
+    enquetes,
     push,
     recuperacao,
 )
@@ -43,6 +44,8 @@ ARQUIVOS_TS = {
     # M3: comum (envio de arquivo) e épico A (documentos; os anexos do épico B estão em avisos).
     arquivos: WEB / "arquivos" / "tipos.ts",
     documentos: WEB / "documentos" / "tipos.ts",
+    # M4: comum aos dois épicos (criar e gerir, votar e resultado).
+    enquetes: WEB / "enquetes" / "tipos.ts",
 }
 BASES = {comum.Entrada, comum.Saida}
 # Apelidos de tipo do front que valem o tipo básico.

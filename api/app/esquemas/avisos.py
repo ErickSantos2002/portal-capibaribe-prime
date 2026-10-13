@@ -222,6 +222,13 @@ class DocumentoDoAviso(Saida):
     titulo: str
 
 
+class EnqueteDoAviso(Saida):
+    """O botão "Ir para a enquete" do aviso automático (M4, H-13; épico B desenha)."""
+
+    id: int
+    pergunta: str
+
+
 class AvisoCompleto(AvisoResumo):
     """`GET /api/avisos/{id}` (só lê) e respostas de publicar, corrigir, arquivar e fixar."""
 
@@ -235,6 +242,9 @@ class AvisoCompleto(AvisoResumo):
     # M3 (RF-33): o documento que gerou este aviso ("Avisar as unidades"), se a unidade pode
     # vê-lo e ele não está arquivado. Pronto desde o contrato.
     documento: DocumentoDoAviso | None
+    # M4 (H-13): a enquete que gerou este aviso, com a pergunta atual. Aviso e enquete têm o
+    # mesmo destino: quem vê o aviso vê a enquete. Pronto desde o contrato.
+    enquete: EnqueteDoAviso | None
 
 
 class ListaAvisos(Saida):
