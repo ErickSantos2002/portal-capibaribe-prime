@@ -17,6 +17,18 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.4.0',
+    data: '2026-10-12',
+    nome: 'Documentos e anexos',
+    itens: [
+      'Documentos do condomínio no Portal: em Documentos, no menu, você encontra a convenção, as atas e outros papéis, separados por assunto. Dá para abrir no celular ou baixar.',
+      'Alguns documentos são públicos: na tela de entrar, toque em "Ver documentos públicos", sem precisar de senha.',
+      'Os avisos agora podem trazer fotos e PDFs. Toque na foto para ver maior, ou no PDF para abrir.',
+      'Quem publica os documentos e os anexos é a Comissão e a administração do Portal.',
+      'A mensagem de confirmação (como "Aviso publicado.") agora fica na tela até você tocar em "Fechar".',
+    ],
+  },
+  {
     versao: '1.3.0',
     data: '2026-10-07',
     itens: [
