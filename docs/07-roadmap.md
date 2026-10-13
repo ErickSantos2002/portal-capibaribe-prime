@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | v0.8 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 fechado (versão 1.3.0; teste real em 13/10/2026); M3 no ar como versão 1.4.0 (13/10/2026, R2 configurado, Memorial Descritivo publicado), falta o teste em aparelho; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.8 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 fechado (versão 1.3.0; teste real em 13/10/2026); M3 fechado (versão 1.4.0, no ar e anunciado no grupo em 13/10/2026); sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | Teste do M3 em aparelho de verdade (abrir o Memorial no celular); anunciar a 1.4.0 no grupo |
+| **Próximo passo** | Acompanhar o uso de Documentos e anexos; escolher o próximo marco |
 
 ---
 
@@ -220,8 +220,13 @@ GPS, e a cópia dos arquivos no plano B. Spec: `superpowers/specs/m3-contrato.md
 1. ~~Passo a passo [Erick] do R2, GitHub e Vercel~~ feito em 13/10/2026.
 2. ~~Deploy, backup manual e envio de teste~~ feito em 13/10/2026: o Memorial Descritivo foi o
    primeiro documento real, e o backup copiou e decifrou ele certo.
-3. Teste em aparelho de verdade (Android e iPhone): abrir e baixar documento, foto e PDF do
-   aviso, recarregar a aba do PDF, publicar com foto tirada na hora.
+3. ~~Teste em aparelho de verdade~~ feito em 13/10/2026 num Android: o Memorial abriu no
+   celular, e uma foto tirada na hora num aviso novo virou WEBP de 107 KB e passou na
+   conferência. iPhone não foi conferido na tela.
+
+**Fechado em 13/10/2026.** Lição: o anexo é confirmado (vai para `arquivos/`, travado) ao
+anexar, não ao publicar; uma foto de teste anexada e não publicada fica guardada para sempre.
+Teste futuro de anexo: usar foto que possa ficar.
 
 ### Backlog sem data (do M3)
 
