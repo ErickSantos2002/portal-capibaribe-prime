@@ -32,7 +32,7 @@ export interface ArquivoEnviado {
   tamanho_bytes: number
 }
 
-/** Link curto (5 minutos) para abrir ou baixar: pedir na hora do toque, nunca guardar. */
+/** Link assinado (1 hora) para abrir ou baixar: pedir na hora do toque, nunca guardar. */
 export interface LinkDoArquivo {
   url: string
   expira_em: DataHora

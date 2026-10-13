@@ -185,7 +185,8 @@ def test_validades(arm):
     envio = arm.url_de_envio(CHAVE, "application/pdf", 1)
     leitura = arm.url_de_leitura(CHAVE, tipo="application/pdf", nome="a.pdf", baixar=False)
     assert _perto(envio.expira_em, timedelta(minutes=10))
-    assert _perto(leitura.expira_em, timedelta(minutes=5))
+    # Fechamento do M3: 1 hora, para recarregar a aba do PDF não dar o erro do R2.
+    assert _perto(leitura.expira_em, timedelta(hours=1))
 
 
 # --- R2 (S3) -----------------------------------------------------------------------------------
@@ -223,12 +224,12 @@ def test_url_de_leitura_forca_tipo_e_nome(s3):
     url = s3.url_de_leitura(CHAVE, tipo="application/pdf", nome="Ata de março", baixar=True).url
     partes, consulta = _partes(url)
     assert partes.path == f"/{BUCKET}/arquivos/{CHAVE}"
-    assert consulta["X-Amz-Expires"] == "300"
+    assert consulta["X-Amz-Expires"] == "3600"
     assert consulta["response-content-type"] == "application/pdf"
     assert consulta["response-content-disposition"] == disposicao(
         "Ata de março", "application/pdf", baixar=True
     )
-    assert consulta["response-cache-control"] == "private, max-age=300"
+    assert consulta["response-cache-control"] == "private, max-age=3600"
 
 
 def test_publicar_no_s3_se_o_envio_sumiu_e_objeto_ausente(s3):

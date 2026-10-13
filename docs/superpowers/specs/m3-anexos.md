@@ -110,7 +110,7 @@ vêm primeiro, em grade, e os PDFs depois, cada grupo na ordem dos anexos:
 - **Fotos**: grade de miniaturas (uma só: largura toda, 16:10; várias: 2 colunas no celular,
   3 no computador, 4:3), `object-fit: cover`. Cada uma é um `<button>` "Ver a foto <nome> em
   tamanho grande". O link é pedido quando a miniatura aparece (a `<img>` precisa dele) e de novo
-  se a imagem falhar (o link vale 5 minutos); falhou de novo: "Não deu para mostrar a foto." +
+  se a imagem falhar (o link valia 5 minutos; 1 hora desde o fechamento do M3); falhou de novo: "Não deu para mostrar a foto." +
   "Tentar de novo".
 - **Visualizador**: camada por cima da tela (`role="dialog"`, `aria-modal`, foco no "Fechar",
   Esc fecha, o foco volta à miniatura), a foto inteira (`object-fit: contain`), o nome e o

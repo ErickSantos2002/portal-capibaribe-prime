@@ -11,7 +11,8 @@ Avisos e documentos têm PDFs e imagens: estimativa de 1 a 3 GB em 2 anos. Docum
 
 ## Decisão
 Cloudflare R2, **um bucket privado**. Envio e download por **URLs assinadas** geradas pela API
-depois de conferir a permissão: envio válido por 10 minutos, download por 5 minutos. O navegador
+depois de conferir a permissão: envio válido por 10 minutos, download por 1 hora (eram 5 minutos
+até o fechamento do M3; ver ADR-0011, "Revisões"). O navegador
 fala direto com o R2. Imagens são comprimidas no navegador antes do envio (lado maior até
 1920 px, WEBP). Tipos aceitos: PDF, JPEG, PNG, WEBP, conferidos pelo conteúdo do arquivo.
 O mesmo R2 guarda os backups do banco (ADR-0007), numa pasta separada.

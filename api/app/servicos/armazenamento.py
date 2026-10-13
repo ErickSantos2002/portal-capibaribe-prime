@@ -33,10 +33,15 @@ from fastapi import Depends
 from app.configuracao import ConfigArquivos, config_arquivos
 
 VALIDADE_ENVIO = timedelta(minutes=10)
-VALIDADE_LEITURA = timedelta(minutes=5)
+# Fechamento do M3: 1 hora (eram 5 minutos). Depois do redirecionamento de `…/abrir`, o endereço
+# da aba do PDF é o link assinado; com 5 minutos, recarregar a aba mostrava o XML de erro do R2.
+# Quem copia o link do R2 tem 1 hora; o link do Portal (`…/abrir`) sempre gera um novo e confere
+# o acesso de novo (ADR-0011).
+VALIDADE_LEITURA = timedelta(hours=1)
 PASTA_ENVIOS = "envios/"
 PASTA_ARQUIVOS = "arquivos/"
-CACHE_DA_LEITURA = "private, max-age=300"
+# O navegador guarda o arquivo pelo tempo do link (o conteúdo em `arquivos/` nunca muda).
+CACHE_DA_LEITURA = f"private, max-age={int(VALIDADE_LEITURA.total_seconds())}"
 # Extensões de cada tipo aceito; a primeira é a que se acrescenta quando falta.
 EXTENSOES = {
     "application/pdf": (".pdf",),

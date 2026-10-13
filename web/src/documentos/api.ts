@@ -24,7 +24,7 @@ export const enviarNovaVersao = (id: number, dados: NovaVersaoDocumento) =>
 export const arquivarDocumento = (id: number) =>
   api.post<Documento>(`/api/documentos/${id}/arquivar`)
 
-/** Link de 5 minutos: pedir na hora do toque, nunca guardar. Funciona sem sessão para `publico`. */
+/** Link de 1 hora: pedir na hora do toque, nunca guardar. Funciona sem sessão para `publico`. */
 export const linkDaVersao = (id: number, versao: number, baixar = false) =>
   api.get<LinkDoArquivo>(`/api/documentos/${id}/versoes/${versao}/link`, {
     baixar: baixar || undefined,

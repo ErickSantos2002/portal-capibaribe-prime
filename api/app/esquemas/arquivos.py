@@ -103,7 +103,7 @@ class ArquivoEnviado(Saida):
 
 
 class LinkDoArquivo(Saida):
-    """Link curto (5 minutos) para abrir ou baixar. Pedido na hora do toque, nunca guardado."""
+    """Link assinado (1 hora) para abrir ou baixar. Pedido na hora do toque, nunca guardado."""
 
     url: str
     expira_em: datetime

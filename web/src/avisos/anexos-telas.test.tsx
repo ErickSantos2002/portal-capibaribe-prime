@@ -88,7 +88,7 @@ function api(sessao: Eu, rota: Rota) {
   return fetch
 }
 
-/** O link de 5 minutos de um anexo, como a API falsa devolve. */
+/** O link de 1 hora de um anexo, como a API falsa devolve. */
 function link(url: URL): Response | undefined {
   const achado = url.pathname.match(/^\/api\/avisos\/(\d+)\/anexos\/(\d+)\/link$/)
   if (!achado) return undefined

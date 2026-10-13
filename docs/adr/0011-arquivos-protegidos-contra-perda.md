@@ -117,3 +117,20 @@ Cobre o risco 3 e o resto do 2. Implementação: épico C do M3 (spec `m3-contra
 - **Guardar os arquivos no banco:** descartado na ADR-0004 (1 GB do Neon, banco lento).
 - **Não fazer nada até ter volume:** a decisão precisa estar pronta antes do primeiro documento
   real (roadmap); depois, o primeiro desastre seria a descoberta.
+
+## Revisões
+
+### 12/10/2026 · Link de leitura de 1 hora (fechamento do M3)
+- **Problema:** a tela abre documento e anexo pelas rotas `…/abrir`, que conferem o acesso e
+  redirecionam para um link assinado novo. Depois do redirecionamento, o endereço da aba do PDF
+  **é** o link assinado; com 5 minutos de validade, recarregar a aba (ou voltar a ela depois do
+  almoço) mostrava o XML de erro do R2, sem explicação nenhuma para o morador.
+- **Decisão (coordenador do M3):** o link de leitura vale **1 hora** (`VALIDADE_LEITURA` em
+  `api/app/servicos/armazenamento.py`; o `Cache-Control` do arquivo acompanha: `private,
+  max-age=3600`). O envio continua com 10 minutos.
+- **O que se aceita:** quem copia o endereço do R2 (não o do Portal) pode repassá-lo, e ele abre
+  por até 1 hora sem conferir quem é. O link do Portal (`…/abrir`) sempre confere o acesso e
+  gera um link novo, então é ele que a tela usa e que se compartilha. Documento de nível gestão
+  continua sem aparecer para quem não é da gestão (404 antes de gerar link).
+- **Alternativa descartada:** servir o arquivo pela própria API (o endereço da aba seria o do
+  Portal), porque a Vercel limita a resposta a 4,5 MB (ADR-0004) e o documento pode ter 20 MB.
