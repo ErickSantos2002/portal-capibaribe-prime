@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | v0.8 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 no ar como versão 1.3.0 (07/10/2026; quem publica recebe e e-mail opcional), falta o teste em aparelho; M3 implementado como versão 1.4.0 (12/10/2026), aguardando a configuração do R2 e o teste em aparelho; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.8 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 fechado (versão 1.3.0; teste real em 13/10/2026); M3 no ar como versão 1.4.0 (13/10/2026, R2 configurado, Memorial Descritivo publicado), falta o teste em aparelho; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | Configurar o R2 e os segredos do M3 (passo a passo em `superpowers/duvidas-m3.md`); teste do M2 e do M3 em Android e iPhone reais |
+| **Próximo passo** | Teste do M3 em aparelho de verdade (abrir o Memorial no celular); anunciar a 1.4.0 no grupo |
 
 ---
 
@@ -185,6 +185,12 @@ instalado, e não chega no Bloco 2; o link de recuperação expira em 1 hora e s
 **Atenção:** iPhone só recebe push com o Portal instalado na tela inicial (iOS 16.4+). Testar
 num iPhone de verdade antes de fechar; se ninguém da família tiver, pedir a um vizinho.
 
+**Fechado em 13/10/2026** com o primeiro aviso real para todos ("Visita à obra"): push 9 de 9
+entregues em 1 s (7 Google, 2 Apple) e e-mail 60 de 60 em 1 min 23 s, 0 falhas. Visto na tela
+num Android real, de outra pessoa da unidade do administrador. iPhone: a Apple aceitou as 2 entregas,
+mas ninguém conferiu a tela de um iPhone; fica como observação, não como pendência. O "não
+chega no Bloco 2" é coberto pelos testes automáticos (destinos por bloco).
+
 ### M3 · Documentos e anexos
 
 **Entra:** H-17 publicar documento · H-18 consultar (inclusive os públicos na tela de entrada)
@@ -211,10 +217,9 @@ caractere invisível, recado que fica até a pessoa fechar, todo JPEG regravado 
 GPS, e a cópia dos arquivos no plano B. Spec: `superpowers/specs/m3-contrato.md`.
 
 **Falta para fechar:**
-1. Os itens **[Erick]** de `superpowers/duvidas-m3.md` (passo a passo: bucket, chaves, CORS,
-   trava nos dois buckets, ciclo de vida, segredos do GitHub e variáveis da Vercel).
-2. Migração 0007 no Neon, deploy e um backup manual conferindo a cópia (passo D); envio de
-   teste (passo E).
+1. ~~Passo a passo [Erick] do R2, GitHub e Vercel~~ feito em 13/10/2026.
+2. ~~Deploy, backup manual e envio de teste~~ feito em 13/10/2026: o Memorial Descritivo foi o
+   primeiro documento real, e o backup copiou e decifrou ele certo.
 3. Teste em aparelho de verdade (Android e iPhone): abrir e baixar documento, foto e PDF do
    aviso, recarregar a aba do PDF, publicar com foto tirada na hora.
 
