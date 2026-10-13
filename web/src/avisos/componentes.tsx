@@ -3,6 +3,7 @@ import { Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { formatarData } from '../casca/formatar'
 import { Icone } from '../casca/Icone'
+import { quantosAnexos } from './anexos'
 import { infoDaCategoria } from './categorias'
 import {
   dataEmBloco,
@@ -14,6 +15,7 @@ import {
 } from './datas'
 import { analisar, trechos, type Bloco } from './formatacao'
 import { assinatura, blocosEmTexto, destinoEmTexto } from './formatos'
+import { IconeAnexo } from './IconesAnexo'
 import type { AvisoResumo, Categoria, Evento } from './tipos'
 
 /** Uma linha do aviso: texto, negrito e links http(s), tudo como elementos do React. */
@@ -194,6 +196,13 @@ function Meta({ aviso, arquivados, comData }: PropsMeta) {
       {comData && <span>{formatarData(aviso.publicado_em)}</span>}
       {!aviso.para_todos && <span>{blocosEmTexto(aviso.blocos)}</span>}
       {aviso.editado_em && <span>corrigido em {formatarData(aviso.editado_em)}</span>}
+      {/* M3, épico B: o clipe do protótipo, com quantos anexos a versão em vigor tem. */}
+      {aviso.quantidade_anexos > 0 && (
+        <span className="com-anexo">
+          <IconeAnexo nome="clipe" tamanho={18} />
+          {quantosAnexos(aviso.quantidade_anexos)}
+        </span>
+      )}
       {arquivados && aviso.arquivado_em && (
         <span>arquivado em {formatarData(aviso.arquivado_em)}</span>
       )}

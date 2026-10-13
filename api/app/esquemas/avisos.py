@@ -24,6 +24,9 @@ from app.esquemas.comum import (
 from app.modelos.avisos import EVENTO_ATE, EVENTO_DESDE, LIMITE_ONDE, LIMITE_TEXTO, LIMITE_TITULO
 
 NumeroDeBloco = Annotated[int, Field(ge=1, le=9)]
+# Id de linha do banco (`bigint`): fora disso, 422 em vez de erro do banco (revisão do épico B, C5).
+MAIOR_ID = 2**63 - 1
+IdDoBanco = Annotated[int, Field(ge=1, le=MAIOR_ID)]
 
 # `DIRECAO`, `INVISIVEIS` e `sem_invisiveis` moram em `comum.py` desde o M3 (o nome do arquivo
 # enviado usa as mesmas regras); continuam importáveis daqui.
@@ -131,7 +134,11 @@ class CorrigirAviso(Entrada):
     # M3 (épico B; spec do M3, seção 5.3): ids dos arquivos (`POST /api/arquivos`) da versão
     # nova, na ordem. Na correção, omitido (ou nulo) repete os anexos da versão em vigor e `[]`
     # tira todos; ao publicar (`NovoAviso` herda), omitido, nulo ou `[]` é sem anexo.
-    anexos: list[int] | None = None
+    anexos: list[IdDoBanco] | None = None
+    # M3 (épico B, revisão C2): a versão em vigor quando o formulário abriu. Se outra pessoa
+    # corrigiu depois, 409 `aviso_corrigido_agora` (o formulário velho apagaria o que ela fez).
+    # Omitida (cliente antigo), não confere. Só vale na correção; ao publicar é ignorada.
+    versao_base: int | None = Field(default=None, ge=1, le=32_767)
 
 
 class NovoAviso(CorrigirAviso):

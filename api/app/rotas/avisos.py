@@ -16,10 +16,10 @@ Rotas (atenção à ordem: as fixas antes de `/{aviso_id}`):
 - `PUT  /api/avisos/{aviso_id}/fixado`    → `AvisoCompleto` (`Gestao`)
 - `GET  /api/avisos/{aviso_id}/leitura`   → `Leitura` (`Gestao`)
 - `GET  /api/avisos/{aviso_id}/anexos/{arquivo_id}/link?baixar=` → `LinkDoArquivo`
-  (`UnidadeLogada`; M3, épico B: ainda 501)
+  (`UnidadeLogada`; M3, épico B)
 
-M3 (épico B; spec do M3, seção 5.3): publicar e corrigir **com** anexos ainda respondem 501;
-sem anexos (`[]`, ou omitido), tudo igual ao M1.
+M3 (épico B; spec do M3, seção 5.3, e `m3-anexos.md`): publicar e corrigir aceitam `anexos`
+(até 5 arquivos enviados por `POST /api/arquivos`); sem anexos, tudo igual ao M1.
 
 GET nunca altera nada: com `SameSite=Lax`, uma navegação vinda de outro site leva o cookie e
 escaparia da exigência de `X-Portal`. Por isso a leitura (H-16) é um POST à parte.
@@ -28,13 +28,16 @@ Modelos em `app/modelos/avisos.py`. O banco carimba as datas, exige versões em 
 confere no commit que o aviso tem versão 1 e destino (restrição `aviso_completo`).
 """
 
+import html
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Query
+from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.erros_api import em_construcao
+from app.erros_api import ErroApi
 from app.esquemas.arquivos import LinkDoArquivo
 from app.esquemas.avisos import (
+    MAIOR_ID,
     Alcance,
     AvisoCompleto,
     Busca,
@@ -84,8 +87,6 @@ def destinos(_: Gestao, db: Banco) -> Destinos:
 def publicar(
     dados: NovoAviso, logado: Gestao, db: Banco, tarefas: BackgroundTasks
 ) -> AvisoCompleto:
-    if dados.anexos:
-        raise em_construcao()
     aviso_id = servico.publicar(db, logado, dados)
     # H-13 (M2): push e e-mail saem depois da resposta (spec do M2, seção 5).
     notificacoes.agendar(tarefas, aviso_id)
@@ -104,8 +105,6 @@ def marcar_lido(aviso_id: int, logado: UnidadeLogada, db: Banco) -> None:
 
 @rotas.put("/{aviso_id}")
 def corrigir(aviso_id: int, dados: CorrigirAviso, logado: Gestao, db: Banco) -> AvisoCompleto:
-    if dados.anexos:
-        raise em_construcao()
     servico.corrigir(db, logado, aviso_id, dados)
     return servico.abrir(db, logado, aviso_id)
 
@@ -128,15 +127,56 @@ def leitura(aviso_id: int, logado: Gestao, db: Banco) -> Leitura:
     return servico.leitura(db, logado, aviso_id)
 
 
+# Ids das rotas dos anexos: fora do `bigint`, 422 (revisão do épico B, C5).
+IdNaRota = Annotated[int, Path(ge=1, le=MAIOR_ID)]
+
+
 @rotas.get("/{aviso_id}/anexos/{arquivo_id}/link")
 def link_do_anexo(
-    aviso_id: int,
-    arquivo_id: int,
+    aviso_id: IdNaRota,
+    arquivo_id: IdNaRota,
     logado: UnidadeLogada,
     db: Banco,
     bucket: Armazenado,
     baixar: bool = False,
 ) -> LinkDoArquivo:
     # M3, épico B: o aviso visível para a unidade e o arquivo anexo de alguma versão dele; senão
-    # 404 `aviso_nao_encontrado`. Depois, `arquivos.link_do_arquivo`.
-    raise em_construcao()
+    # 404 `aviso_nao_encontrado`. Sem bucket, 503 depois dessas conferências.
+    return servico.link_do_anexo(db, logado, aviso_id, arquivo_id, bucket, baixar=baixar)
+
+
+def _pagina_de_erro(erro: ErroApi) -> HTMLResponse:
+    """O erro numa página simples: quem abriu o anexo está numa aba nova (ou numa <img>), não na
+    tela do Portal, e um JSON não diria nada à Dona Socorro."""
+    mensagem = html.escape(erro.mensagem)
+    corpo = (
+        '<!doctype html><html lang="pt-BR"><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        "<title>Portal Capibaribe Prime</title>"
+        f"<h1>Não deu para abrir o arquivo</h1><p>{mensagem}</p>"
+        "<p>Feche esta aba e volte ao Portal.</p></html>"
+    )
+    return HTMLResponse(corpo, status_code=erro.status)
+
+
+# Fora do OpenAPI de propósito: as listas de rotas do contrato (`test_m3_rotas.py`,
+# `test_cache.py`) são comuns e não conhecem esta rota (dúvida 11 do épico B).
+@rotas.get("/{aviso_id}/anexos/{arquivo_id}/abrir", include_in_schema=False)
+def abrir_anexo(
+    aviso_id: IdNaRota,
+    arquivo_id: IdNaRota,
+    logado: UnidadeLogada,
+    db: Banco,
+    bucket: Armazenado,
+):
+    """Revisão do épico B, U12: a tela abre o anexo por aqui (`<img src>` e o botão do PDF numa
+    aba nova). A sessão vai no cookie da navegação; cada pedido confere quem vê e redireciona
+    para um link de 5 minutos **novo**: a foto e o PDF abrem mesmo com a página do aviso aberta há
+    horas. Limite (dúvida 11): depois do redirecionamento a aba mostra o endereço do R2, e
+    recarregar essa aba depois de 5 minutos ainda dá o erro do R2; tocar de novo no Portal
+    funciona. A resposta sai com `no-store`, como toda a API."""
+    try:
+        link = servico.link_do_anexo(db, logado, aviso_id, arquivo_id, bucket, baixar=False)
+    except ErroApi as erro:
+        return _pagina_de_erro(erro)
+    return RedirectResponse(link.url, status_code=302)

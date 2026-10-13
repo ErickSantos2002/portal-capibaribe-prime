@@ -9,6 +9,8 @@ import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
 import { DocumentoDoAviso } from '../documentos/DocumentoDoAviso'
+import { AnexosDoAviso } from './AnexosDoAviso'
+import { mudancaNosAnexos } from './anexos'
 import { abrirAviso, arquivarAviso, marcarLido, mudarFixado } from './api'
 import { comoErroDaApi, useCarga, useIdDoAviso } from './carregar'
 import {
@@ -64,6 +66,8 @@ function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCo
         texto={aviso.texto}
         avisos={<Situacao aviso={aviso} />}
       />
+      {/* M3, épico B: fotos e PDFs da versão em vigor. */}
+      <AnexosDoAviso avisoId={aviso.id} anexos={aviso.anexos.map((arquivo) => ({ arquivo }))} />
       {/* M3, épico A: o documento que gerou este aviso (RF-33). */}
       <DocumentoDoAviso documento={aviso.documento} />
       {eu?.gestao && <ParaAGestao aviso={aviso} trocar={trocar} />}
@@ -89,6 +93,13 @@ function Situacao({ aviso }: { aviso: AvisoCompleto }) {
           <Icone nome="editar" />
           <div className="avisos-versoes">
             <p>Corrigido em {formatarData(aviso.editado_em)}.</p>
+            {/* U6: a correção que mexeu nos anexos diz o quê. */}
+            {aviso.versoes_anteriores[0] && (
+              <MudancaNosAnexos
+                antes={aviso.versoes_anteriores[0].anexos}
+                depois={aviso.anexos}
+              />
+            )}
             <details>
               <summary>
                 {aviso.versoes_anteriores.length > 1
@@ -98,20 +109,37 @@ function Situacao({ aviso }: { aviso: AvisoCompleto }) {
               {aviso.versoes_anteriores.map((v) => (
                 <section key={v.versao} className={`avisos-versao cat-${v.categoria}`}>
                   <p className="suave">
-                    {v.versao === 1 ? 'Publicado' : 'Corrigido'} em {formatarData(v.criada_em)}:
+                    Assim era antes ({v.versao === 1 ? 'publicado' : 'corrigido'} em{' '}
+                    {formatarData(v.criada_em)}):
                   </p>
                   <RotuloCategoria categoria={v.categoria} />
                   <h2 className="avisos-versao-titulo">{v.titulo}</h2>
                   {v.evento && <QuadroEvento evento={v.evento} />}
                   <TextoDoAviso texto={v.texto} nivel={3} />
+                  <AnexosDoAviso
+                    avisoId={aviso.id}
+                    anexos={v.anexos.map((arquivo) => ({ arquivo }))}
+                  />
                 </section>
               ))}
             </details>
           </div>
         </div>
       )}
+      {aviso.editado_em && <p className="secao avisos-agora">Como está agora:</p>}
     </>
   )
+}
+
+function MudancaNosAnexos({
+  antes,
+  depois,
+}: {
+  antes: AvisoCompleto['anexos']
+  depois: AvisoCompleto['anexos']
+}) {
+  const frase = mudancaNosAnexos(antes, depois)
+  return frase ? <p>{frase}</p> : null
 }
 
 function ParaAGestao({

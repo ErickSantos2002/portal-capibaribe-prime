@@ -43,6 +43,12 @@ export const mudarFixado = (id: number, fixado: boolean) =>
 
 export const buscarLeitura = (id: number) => api.get<Leitura>(`/api/avisos/${id}/leitura`)
 
+/** M3 (épico B, revisão U12): o endereço do Portal que abre o anexo. A API confere a sessão
+ *  e redireciona para um link de 5 minutos novo a cada pedido: serve de `src` da foto e de
+ *  `href` do PDF: cada toque pede um link novo, mesmo com a página aberta há horas. */
+export const enderecoDoAnexo = (avisoId: number, arquivoId: number) =>
+  `/api/avisos/${avisoId}/anexos/${arquivoId}/abrir`
+
 /** M3 (épico B): link de 5 minutos de um anexo, de qualquer versão do aviso. Pedir na hora do
  *  toque, nunca guardar. */
 export const linkDoAnexo = (avisoId: number, arquivoId: number, baixar = false) =>

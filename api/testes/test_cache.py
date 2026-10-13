@@ -11,11 +11,6 @@ from testes.test_avisos_apoio import publicar
 
 pytestmark = pytest.mark.usefixtures("predio")
 
-# Rotas do contrato que ainda respondem 501 (spec do M3, seção 5). Cada épico tira daqui as
-# dele quando implementar: o épico A, as `/api/documentos…`; o épico B, a do link do anexo.
-EM_CONSTRUCAO: set[str] = {
-    "/api/avisos/{aviso_id}/anexos/{arquivo_id}/link",
-}
 # Rotas que dependem de um documento ou arquivo que este teste não cria: depois do épico, 404
 # (ou 503, sem bucket) também vale. O que este teste confere é o `no-store`.
 SEM_DADO = {
@@ -52,12 +47,7 @@ def test_todo_get_da_api_sai_sem_cache(logar):
         for marcador, valor in substituir.items():
             caminho = caminho.replace(marcador, valor)
         resposta = admin.get(caminho)
-        if modelo in EM_CONSTRUCAO:
-            esperados = {501}
-        elif modelo in SEM_DADO:
-            esperados = {200, 404, 503}
-        else:
-            esperados = {200}
+        esperados = {200, 404, 503} if modelo in SEM_DADO else {200}
         assert resposta.status_code in esperados, (caminho, resposta.text)
         assert resposta.headers.get("cache-control") == "no-store", caminho
 

@@ -17,10 +17,11 @@ from dataclasses import dataclass
 import psycopg
 from sqlalchemy import ColumnElement, exists, func, select, true
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.erros_api import ErroApi
+from app.esquemas.arquivos import ArquivoEnviado, LinkDoArquivo
 from app.esquemas.avisos import (
     AvisoCompleto,
     AvisoResumo,
@@ -35,10 +36,19 @@ from app.esquemas.avisos import (
     VersaoAviso,
 )
 from app.esquemas.comum import UnidadeRef
-from app.modelos import Bloco, Documento, Papel, Unidade
-from app.modelos.avisos import Aviso, AvisoBloco, AvisoLeitura, AvisoVersao
+from app.modelos import Arquivo, Bloco, Documento, DocumentoVersao, Papel, Unidade
+from app.modelos.avisos import (
+    ANEXOS_POR_VERSAO,
+    Aviso,
+    AvisoAnexo,
+    AvisoBloco,
+    AvisoLeitura,
+    AvisoVersao,
+)
 from app.seguranca.dependencias import Logado
 from app.servicos import notificacoes
+from app.servicos.armazenamento import Armazenamento
+from app.servicos.arquivos import arquivo_utilizavel, como_enviado, link_do_arquivo
 from app.servicos.historico import Acao, registrar
 from app.servicos.visibilidade import niveis_que_ve
 
@@ -72,6 +82,16 @@ def nao_encontrado() -> ErroApi:
         "aviso_nao_encontrado",
         "Não achamos este aviso. O link pode estar incompleto, ou ele é de outro bloco.",
     )
+
+
+def _anexo_recusado(mensagem: str) -> ErroApi:
+    """422 no campo `anexos`, no formato da validação (o front mostra embaixo do campo)."""
+    return ErroApi(
+        422, "dados_invalidos", mensagem, campos=[{"campo": "anexos", "mensagem": mensagem}]
+    )
+
+
+ENVIE_DE_NOVO = "Envie o arquivo de novo."
 
 
 def _bloco_inexistente(numero: int) -> ErroApi:
@@ -156,6 +176,8 @@ class _Montado:
     blocos: list[int]
     # Maior versão que a unidade abriu (None: nunca abriu).
     versao_lida: int | None
+    # Quantos anexos cada versão tem (versão → quantidade; sem anexo, ausente).
+    anexos_por_versao: dict[int, int]
 
     @property
     def lido(self) -> bool:
@@ -196,7 +218,14 @@ def _montar(db: Session, logado: Logado, avisos: Sequence[Aviso]) -> list[_Monta
             )
         )
     }
-    return [_Montado(a, versoes[a.id], blocos[a.id], lidas.get(a.id)) for a in avisos]
+    anexos: dict[int, dict[int, int]] = defaultdict(dict)
+    for aviso_id, versao, quantidade in db.execute(
+        select(AvisoAnexo.aviso_id, AvisoAnexo.versao, func.count())
+        .where(AvisoAnexo.aviso_id.in_(ids))
+        .group_by(AvisoAnexo.aviso_id, AvisoAnexo.versao)
+    ):
+        anexos[aviso_id][versao] = quantidade
+    return [_Montado(a, versoes[a.id], blocos[a.id], lidas.get(a.id), anexos[a.id]) for a in avisos]
 
 
 def _resumo(m: _Montado) -> dict:
@@ -216,8 +245,8 @@ def _resumo(m: _Montado) -> dict:
         "corrigido_desde_a_leitura": m.corrigido_desde_a_leitura,
         "categoria": m.atual.categoria,
         "evento_quando": m.atual.evento_quando,
-        # M3: o épico B conta os anexos da versão em vigor.
-        "quantidade_anexos": 0,
+        # M3 (épico B): o clipe no mural conta os anexos da versão em vigor.
+        "quantidade_anexos": m.anexos_por_versao.get(m.atual.versao, 0),
     }
 
 
@@ -283,10 +312,24 @@ def _contagem(db: Session, aviso: Aviso) -> ContagemLeitura:
     return ContagemLeitura(lidos=lidos, total=total)
 
 
+def _anexos_por_versao(db: Session, aviso_id: int) -> dict[int, list[ArquivoEnviado]]:
+    """Os anexos de cada versão do aviso, na ordem (uma consulta)."""
+    anexos: dict[int, list[ArquivoEnviado]] = defaultdict(list)
+    for versao, arquivo in db.execute(
+        select(AvisoAnexo.versao, Arquivo)
+        .join(Arquivo, Arquivo.id == AvisoAnexo.arquivo_id)
+        .where(AvisoAnexo.aviso_id == aviso_id)
+        .order_by(AvisoAnexo.versao, AvisoAnexo.ordem)
+    ):
+        anexos[versao].append(como_enviado(arquivo))
+    return anexos
+
+
 def abrir(db: Session, logado: Logado, aviso_id: int) -> AvisoCompleto:
     """O aviso inteiro. Só lê: quem grava a leitura é `marcar_lido`."""
     aviso = _buscar(db, logado, aviso_id)
     [m] = _montar(db, logado, [aviso])
+    anexos = _anexos_por_versao(db, aviso.id)
     return AvisoCompleto(
         **_resumo(m),
         texto=m.atual.texto,
@@ -299,16 +342,39 @@ def abrir(db: Session, logado: Logado, aviso_id: int) -> AvisoCompleto:
                 criada_em=v.criada_em,
                 categoria=Categoria(v.categoria),
                 evento=_evento(v),
-                # M3: o épico B lê os anexos de cada versão.
-                anexos=[],
+                # M3 (épico B): o "ver como era antes" mostra os anexos daquela versão.
+                anexos=anexos[v.versao],
             )
             for v in m.versoes[1:]
         ],
         leitura=_contagem(db, aviso) if logado.gestao else None,
-        # M3: o épico B lê os anexos da versão em vigor.
-        anexos=[],
+        anexos=anexos[m.atual.versao],
         documento=_documento_do_aviso(db, logado, aviso.id),
     )
+
+
+def link_do_anexo(
+    db: Session,
+    logado: Logado,
+    aviso_id: int,
+    arquivo_id: int,
+    armazenamento: Armazenamento | None,
+    *,
+    baixar: bool,
+) -> LinkDoArquivo:
+    """O link de um anexo de **qualquer** versão do aviso (o "ver como era antes" também abre).
+    Aviso que a unidade não vê, ou arquivo que não é anexo dele: 404 igual a aviso inexistente,
+    conferido antes do 503 (sem bucket), para não revelar nada a quem não vê."""
+    aviso = _buscar(db, logado, aviso_id)
+    arquivo = db.scalars(
+        select(Arquivo).where(
+            Arquivo.id == arquivo_id,
+            exists().where(AvisoAnexo.aviso_id == aviso.id, AvisoAnexo.arquivo_id == Arquivo.id),
+        )
+    ).one_or_none()
+    if arquivo is None:
+        raise nao_encontrado()
+    return link_do_arquivo(armazenamento, arquivo, baixar=baixar)
 
 
 def _documento_do_aviso(db: Session, logado: Logado, aviso_id: int) -> DocumentoDoAviso | None:
@@ -404,6 +470,7 @@ def gravar_publicacao(db: Session, logado: Logado, dados: NovoAviso) -> int:
     para o aviso automático nascer junto com o documento (RF-33), ou nenhum dos dois. Quem chama
     agenda as notificações depois do commit (`notificacoes.agendar`)."""
     blocos = [] if dados.para_todos else _ids_dos_blocos(db, dados.blocos)
+    anexos = _anexos_conferidos(db, logado, dados.anexos or [])
     assinatura = next(p for p in ORDEM_DA_ASSINATURA if p in logado.papeis)
     aviso = Aviso(
         publicado_por=logado.unidade_id,
@@ -425,24 +492,115 @@ def gravar_publicacao(db: Session, logado: Logado, dados: NovoAviso) -> int:
     )
     db.add_all(AvisoBloco(aviso_id=aviso.id, bloco_id=b) for b in blocos)
     db.flush()
+    _gravar_anexos(db, aviso.id, 1, anexos)
     _gravar_leitura(db, aviso.id, logado.unidade_id)
+    detalhes: dict = {
+        "titulo": dados.titulo,
+        "para_todos": dados.para_todos,
+        "blocos": [] if dados.para_todos else dados.blocos,
+        "fixado": dados.fixado,
+    }
+    # Só quando há anexo: o aviso sem anexo registra o mesmo que antes (dúvida 1 do épico B).
+    if anexos:
+        detalhes["anexos"] = len(anexos)
     registrar(
         db,
         Acao.aviso_publicado,
         unidade_id=logado.unidade_id,
         entidade="aviso",
         entidade_id=aviso.id,
-        detalhes={
-            "titulo": dados.titulo,
-            "para_todos": dados.para_todos,
-            "blocos": [] if dados.para_todos else dados.blocos,
-            "fixado": dados.fixado,
-        },
+        detalhes=detalhes,
     )
     # H-13 (M2): o pedido de notificar entra na mesma transação; a rota agenda o envio.
     notificacoes.registrar_publicacao(db, aviso.id)
     db.flush()
     return aviso.id
+
+
+def _em_uso_fora_do_aviso(db: Session, arquivo_id: int, aviso_id: int | None) -> bool:
+    """O arquivo já está num documento ou em outro aviso (a regra `arquivo_em_uso` do banco,
+    conferida antes para responder com a frase certa)."""
+    em_outro_aviso = select(AvisoAnexo.arquivo_id).where(AvisoAnexo.arquivo_id == arquivo_id)
+    if aviso_id is not None:
+        em_outro_aviso = em_outro_aviso.where(AvisoAnexo.aviso_id != aviso_id)
+    em_documento = select(DocumentoVersao.arquivo_id).where(
+        DocumentoVersao.arquivo_id == arquivo_id
+    )
+    return bool(db.scalar(select(exists(em_outro_aviso) | exists(em_documento))))
+
+
+def _ja_anexo_do_aviso(db: Session, arquivo_id: int, aviso_id: int | None) -> bool:
+    if aviso_id is None:
+        return False
+    return bool(
+        db.scalar(
+            select(
+                exists().where(AvisoAnexo.aviso_id == aviso_id, AvisoAnexo.arquivo_id == arquivo_id)
+            )
+        )
+    )
+
+
+def _anexos_conferidos(
+    db: Session, logado: Logado, ids: Sequence[int], aviso_id: int | None = None
+) -> list[int]:
+    """Os anexos pedidos, na ordem, depois das regras do épico B (spec `m3-anexos.md`, 2.1):
+    até 5, sem repetir; cada um enviado por esta unidade (confirmado, para aviso, sem uso fora
+    deste aviso) **ou**, na correção, já anexo de uma versão deste aviso (a correção feita por
+    outro membro da gestão repete os anexos). Qualquer outro caso: "Envie o arquivo de novo.",
+    sem dizer se o arquivo existe."""
+    if len(ids) > ANEXOS_POR_VERSAO:
+        raise _anexo_recusado("Até 5 anexos por aviso.")
+    if len(set(ids)) != len(ids):
+        raise _anexo_recusado("O mesmo arquivo foi escolhido duas vezes.")
+    for arquivo_id in ids:
+        if _ja_anexo_do_aviso(db, arquivo_id, aviso_id):
+            continue
+        utilizavel = arquivo_utilizavel(db, logado, arquivo_id, "aviso")
+        if utilizavel is None or _em_uso_fora_do_aviso(db, arquivo_id, aviso_id):
+            raise _anexo_recusado(ENVIE_DE_NOVO)
+    return list(ids)
+
+
+def _gravar_anexos(db: Session, aviso_id: int, versao: int, anexos: Sequence[int]) -> None:
+    """Os anexos entram na mesma transação da versão (o banco recusa depois). A corrida com
+    outro aviso usando o mesmo arquivo para no banco (`arquivo_em_uso`): mesma frase."""
+    if not anexos:
+        return
+    try:
+        # Trava os arquivos em ordem de id, com a mesma trava do gatilho (`for no key update`):
+        # dois pedidos com os mesmos arquivos em ordem diferente esperam um pelo outro em vez de
+        # travarem em cruz (deadlock; revisão do épico B, C1). O segundo vê `arquivo_em_uso`.
+        db.execute(
+            select(Arquivo.id)
+            .where(Arquivo.id.in_(anexos))
+            .order_by(Arquivo.id)
+            .with_for_update(key_share=True)
+        )
+        db.add_all(
+            AvisoAnexo(aviso_id=aviso_id, versao=versao, arquivo_id=arquivo_id, ordem=ordem)
+            for ordem, arquivo_id in enumerate(anexos, start=1)
+        )
+        db.flush()
+    except IntegrityError as erro:
+        if _restricao(erro) != "arquivo_em_uso":
+            raise
+        db.rollback()
+        raise _anexo_recusado(ENVIE_DE_NOVO) from erro
+    except OperationalError as erro:
+        # Deadlock que sobrar (com outra transação que trave em outra ordem): a mesma frase.
+        if not isinstance(erro.orig, psycopg.errors.DeadlockDetected):
+            raise
+        db.rollback()
+        raise _anexo_recusado(ENVIE_DE_NOVO) from erro
+
+
+def _corrigido_agora() -> ErroApi:
+    return ErroApi(
+        409,
+        "aviso_corrigido_agora",
+        "Outra pessoa corrigiu este aviso agora há pouco. Abra de novo e confira.",
+    )
 
 
 def _recusar_arquivado(aviso: Aviso, mensagem: str) -> None:
@@ -469,7 +627,20 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
         .order_by(AvisoVersao.versao.desc())
         .limit(1)
     ).one()
+    if dados.versao_base is not None and dados.versao_base != atual.versao:
+        raise _corrigido_agora()
     novas = _categoria_e_evento(dados)
+    em_vigor = list(
+        db.scalars(
+            select(AvisoAnexo.arquivo_id)
+            .where(AvisoAnexo.aviso_id == aviso.id, AvisoAnexo.versao == atual.versao)
+            .order_by(AvisoAnexo.ordem)
+        )
+    )
+    # M3 (épico B): omitido ou nulo repete os anexos da versão em vigor; `[]` tira todos.
+    anexos = (
+        em_vigor if dados.anexos is None else _anexos_conferidos(db, logado, dados.anexos, aviso.id)
+    )
     # Omitidos, categoria e evento ficam os da versão em vigor (revisão de código, achado 2).
     if "categoria" not in dados.model_fields_set:
         novas["categoria"] = atual.categoria
@@ -477,12 +648,21 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
         novas["evento_quando"] = atual.evento_quando
         novas["evento_onde"] = atual.evento_onde
     # Datas comparadas como instante (o mesmo horário em outro fuso não é mudança).
-    if (atual.titulo, atual.texto, atual.categoria, atual.evento_quando, atual.evento_onde) == (
+    # Trocar só os anexos (ou só a ordem deles) também é mudança.
+    if (
+        atual.titulo,
+        atual.texto,
+        atual.categoria,
+        atual.evento_quando,
+        atual.evento_onde,
+        em_vigor,
+    ) == (
         dados.titulo,
         dados.texto,
         novas["categoria"],
         novas["evento_quando"],
         novas["evento_onde"],
+        anexos,
     ):
         raise ErroApi(409, "sem_mudanca", "Nada mudou no aviso.")
     versao = atual.versao + 1
@@ -508,19 +688,19 @@ def corrigir(db: Session, logado: Logado, aviso_id: int, dados: CorrigirAviso) -
                 409, "aviso_arquivado", "Aviso arquivado não pode ser corrigido."
             ) from erro
         if restricao in ("aviso_versao_pkey", "aviso_versao_sequencia"):
-            raise ErroApi(
-                409,
-                "aviso_corrigido_agora",
-                "Outra pessoa corrigiu este aviso agora há pouco. Abra de novo e confira.",
-            ) from erro
+            raise _corrigido_agora() from erro
         raise
+    _gravar_anexos(db, aviso.id, versao, anexos)
+    detalhes: dict = {"versao": versao, "titulo": dados.titulo}
+    if anexos:
+        detalhes["anexos"] = len(anexos)
     registrar(
         db,
         Acao.aviso_corrigido,
         unidade_id=logado.unidade_id,
         entidade="aviso",
         entidade_id=aviso.id,
-        detalhes={"versao": versao, "titulo": dados.titulo},
+        detalhes=detalhes,
     )
     db.commit()
 

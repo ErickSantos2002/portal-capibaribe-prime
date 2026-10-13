@@ -391,6 +391,8 @@ describe('novo aviso (H-12)', () => {
       fixado: true,
       categoria: 'geral',
       evento: null,
+      // M3 (épico B): a lista de anexos vai sempre explícita.
+      anexos: [],
     })
   })
 })
@@ -416,6 +418,10 @@ describe('corrigir aviso (H-15)', () => {
       texto: 'Texto 5',
       categoria: 'geral',
       evento: null,
+      // M3 (épico B): a lista de anexos vai sempre explícita.
+      anexos: [],
+      // M3 (revisão C2): a versão em vigor quando o formulário abriu.
+      versao_base: 1,
     })
   })
 
@@ -989,6 +995,10 @@ describe('formulário: categoria, barra de marcas, "Ver como fica" e evento', ()
       texto: 'Texto 5',
       categoria: 'urgente',
       evento: null,
+      // M3 (épico B): a lista de anexos vai sempre explícita.
+      anexos: [],
+      // M3 (revisão C2): a versão em vigor quando o formulário abriu.
+      versao_base: 1,
     })
   })
 })
