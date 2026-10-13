@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Marco** | M3 · Documentos e anexos |
-| **Base** | [ADR-0011](../../adr/0011-arquivos-protegidos-contra-perda.md), ADR-0007, ADR-0009, `m3-contrato.md` (seções 9 e 10), `duvidas-m3.md` (seção C do passo a passo) |
+| **Base** | [ADR-0011](../../adr/0011-arquivos-protegidos-contra-perda.md), ADR-0007, ADR-0009, `m3-contrato.md` (seções 9 e 10), `duvidas-m3.md` (seção C do passo a passo; seção B desde o plano B, 12/10/2026) |
 | **Criado em** | 12/10/2026 |
 | **Plano** | `docs/superpowers/plans/m3-protecao.md` |
 | **Dúvidas** | `docs/superpowers/duvidas-m3-protecao.md` |

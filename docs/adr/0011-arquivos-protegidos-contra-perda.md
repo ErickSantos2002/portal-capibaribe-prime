@@ -1,8 +1,8 @@
-# ADR-0011 · Arquivos protegidos contra perda: trava no bucket e cópia diária cifrada fora da Cloudflare
+# ADR-0011 · Arquivos protegidos contra perda: trava no bucket e cópia diária cifrada
 
 | | |
 |---|---|
-| **Status** | Aceita |
+| **Status** | Aceita; **revista em 12/10/2026**: a cópia foi para o plano B (pasta `arquivos/` do bucket de backups, no R2), por escolha do Erick. Ver "Revisões" no fim |
 | **Data** | 07/10/2026 |
 | **Complementa** | [ADR-0004](0004-arquivos-r2.md) (arquivos no R2), [ADR-0007](0007-backup.md) e [ADR-0009](0009-backup-bucket-papel-e-chave.md) (backup do banco) |
 
@@ -134,3 +134,39 @@ Cobre o risco 3 e o resto do 2. Implementação: épico C do M3 (spec `m3-contra
   continua sem aparecer para quem não é da gestão (404 antes de gerar link).
 - **Alternativa descartada:** servir o arquivo pela própria API (o endereço da aba seria o do
   Portal), porque a Vercel limita a resposta a 4,5 MB (ADR-0004) e o documento pode ter 20 MB.
+
+### 12/10/2026 · Cópia no plano B: o bucket de backups, sem Backblaze (escolha do Erick)
+- **Decisão:** a cópia cifrada vai para a pasta `arquivos/` do bucket de backups que já existe
+  (`portal-capibaribe-backups`, no R2, o mesmo dos dumps do banco), em vez do Backblaze B2. Os
+  segredos `COPIA_S3_*` do workflow recebem os **mesmos valores** dos `R2_*` do backup do banco
+  (endpoint, chave, segredo e bucket), criados à parte para a troca futura ser só de segredos.
+  O script, a conferência do dia 2 e a restauração são os mesmos (só mudam as variáveis, como
+  esta ADR já previa).
+- **Por quê:** uma conta a menos para criar, guardar e lembrar (cadastro, tetos de gasto, chave
+  sem `deleteFiles` criada pela linha de comando com a chave mestra), num projeto mantido por
+  uma pessoa só.
+- **Risco aceito:** original e cópia ficam **na mesma conta da Cloudflare**. Perder a conta
+  (acesso perdido, suspensão) ou uma falha do próprio R2 leva os arquivos, a cópia e os backups
+  do banco juntos; o banco em si sobrevive no Neon, mas os documentos e anexos não voltariam. A
+  camada 2 deixa de cobrir o risco 3 do Contexto e passa a cobrir só o resto do risco 2 (um
+  engano que apague o **bucket de arquivos** inteiro ou tire a trava dele: a cópia está em outro
+  bucket, com trava própria).
+- **Trava também na cópia:** a chave `R2_*` do backup **tem** permissão de apagar (a retenção
+  de 30 diários + 12 mensais usa). A retenção só apaga nomes no padrão dos dumps
+  (`diarios/AAAA-MM-DD.dump.age`, `mensais/AAAA-MM.dump.age`; `scripts/backup/s3.py`), nunca
+  `arquivos/` (testado em `testar-ciclo.sh`), mas uma chave vazada ou um bug apagaria. Por isso
+  o bucket de backups ganha uma **trava (bucket lock) com retenção indefinida no prefixo
+  `arquivos/`**, como a do bucket de arquivos. A regra **não pode** cobrir `diarios/` nem
+  `mensais/` (a retenção pararia de funcionar).
+- **Versões:** o R2 não tem versões de objeto, então a restauração lê a listagem comum (o
+  `arquivos.py` cai para ela quando o bucket não tem `ListObjectVersions`; teste de unidade).
+  Sem versões, "nunca sobrescrever" vem da trava, de o script só enviar o que falta e do
+  `concurrency` do workflow.
+- **Espaço:** os 10 GB grátis do R2 agora somam os arquivos (1 a 3 GB em 2 anos), a cópia
+  cifrada (o mesmo tamanho: o `age` não comprime, e o cabeçalho tem centenas de bytes) e os
+  dumps (~1 GB): **3 a 7 GB**, o pior caso já estimado nas alternativas acima, com uns 3 GB de
+  folga. Acima de 10 GB o R2 cobra. Revisitar se os arquivos passarem de 3 GB.
+- **O B2 continua a alternativa futura** para voltar a cobrir o risco 3: criar a conta e o
+  bucket (o passo a passo antigo fica no histórico de `docs/superpowers/duvidas-m3.md`, commit
+  do contrato do M3), trocar os quatro `COPIA_S3_*`, e o próximo backup copia tudo de novo para
+  lá. Nada no código muda.

@@ -90,7 +90,7 @@ enviam ou abrem arquivo respondem 503 `arquivos_desligados` e o resto do Portal 
 
 Nunca os `R2_*` do backup (outra chave, outro bucket, [ADR-0009](docs/adr/0009-backup-bucket-papel-e-chave.md)).
 A prévia da Vercel fica sem elas. Como o bucket é preparado (CORS, trava em `arquivos/`, ciclo
-de vida em `envios/`) e a cópia no Backblaze B2: `docs/superpowers/duvidas-m3.md` e
+de vida em `envios/`) e a cópia cifrada no bucket de backups: `docs/superpowers/duvidas-m3.md` e
 [ADR-0011](docs/adr/0011-arquivos-protegidos-contra-perda.md). Um S3 falso para desenvolver:
 `uv run --with 'moto[server]' moto_server -p 9000` (exemplo comentado em `api/.env.example`).
 
@@ -119,25 +119,32 @@ Decisões: [ADR-0007](docs/adr/0007-backup.md) e [ADR-0009](docs/adr/0009-backup
 - **Disparar à mão:** `gh workflow run backup.yml -f restaurar=true` (backup + restauração de
   teste) ou `gh workflow run backup.yml` (só backup).
 - **Testar o ciclo inteiro localmente** (Postgres do passo 1 de "Rodar localmente", dois S3
-  falsos, nada de R2, B2 nem Neon): `scripts/backup/testes/testar-ciclo.sh`. Precisa de Docker,
+  falsos, nada de R2 nem Neon): `scripts/backup/testes/testar-ciclo.sh`. Precisa de Docker,
   `uv` e `age`; sem `pg_dump` 17 no PATH, usa o da imagem `postgres:17`. Cobre também a cópia,
   a conferência e a restauração dos arquivos.
 
-### Arquivos (cópia cifrada no Backblaze B2)
+### Arquivos (cópia cifrada no bucket de backups)
 
 Os documentos e anexos moram no bucket `portal-capibaribe-arquivos` (R2), em `arquivos/<chave>`,
-travados contra apagar e sobrescrever. O mesmo workflow, logo depois do `pg_dump`, copia para
-um bucket privado do **Backblaze B2** cada arquivo que ainda não está lá, cifrado com `age`
-(as mesmas chaves públicas de `scripts/backup/destinatarios.age`), como
-`arquivos/<chave>.age` (`scripts/backup/copiar-arquivos.sh`). A cópia só acrescenta: nunca
-apaga, nunca sobrescreve, e a chave do B2 nem tem permissão de apagar. No dia 2, a restauração
+travados contra apagar e sobrescrever. O mesmo workflow, logo depois do `pg_dump`, copia cada
+arquivo que ainda não está na cópia, cifrado com `age` (as mesmas chaves públicas de
+`scripts/backup/destinatarios.age`), como `arquivos/<chave>.age`
+(`scripts/backup/copiar-arquivos.sh`). **A cópia fica na pasta `arquivos/` do próprio bucket de
+backups** (`portal-capibaribe-backups`), ao lado de `diarios/` e `mensais/`: é o plano B da
+ADR-0011, escolhido em 12/10/2026 (sem uma conta no Backblaze; o risco aceito é a cópia ficar na
+mesma conta da Cloudflare). A cópia só acrescenta: nunca apaga, nunca sobrescreve, e a pasta
+`arquivos/` do bucket de backups tem trava própria (a chave do backup pode apagar, porque a
+retenção dos dumps usa; a retenção só mexe em `diarios/` e `mensais/`). No dia 2, a restauração
 de teste confere que todo arquivo confirmado no banco restaurado tem cópia e decifra um deles
 ao acaso (`scripts/backup/conferir-arquivos.sh`). Decisão: [ADR-0011](docs/adr/0011-arquivos-protegidos-contra-perda.md).
 
-- **Segredos:** `ARQUIVOS_R2_*` (chave só de leitura do bucket de arquivos) e `COPIA_S3_*` (o
-  B2), com os nomes da seção C de `docs/superpowers/duvidas-m3.md`. Sem eles, o passo só
-  avisa (aviso amarelo no resumo do run) e o backup do banco segue normal. Com arquivos
-  confirmados no banco e sem eles, a conferência do dia 2 reprova.
+- **Segredos:** `ARQUIVOS_R2_*` (chave só de leitura do bucket de arquivos) e `COPIA_S3_*`
+  (hoje, os **mesmos valores** dos `R2_*` do backup do banco), com os nomes da seção B do passo
+  a passo de `docs/superpowers/duvidas-m3.md`. Sem eles, o passo só avisa (aviso amarelo no
+  resumo do run) e o backup do banco segue normal. Com arquivos confirmados no banco e sem
+  eles, a conferência do dia 2 reprova.
+- **Espaço:** os 10 GB grátis do R2 somam arquivos, cópia (o mesmo tamanho) e dumps: 3 a 7 GB
+  no pior caso estimado para 2 anos (ADR-0011).
 - **Onde ver:** no resumo de cada run do `Backup`, a seção "Cópia dos arquivos" diz quantos
   foram copiados agora e quantos já estavam lá.
 
@@ -156,8 +163,8 @@ Para trocar:
    `age` aceita várias num arquivo só e usa a que servir): a conferência do dia 2 sorteia
    qualquer cópia, antiga ou nova. Na restauração à mão, o mesmo: um `chave.age` com as duas.
 4. Se a troca é porque a chave antiga **vazou**, isso não basta: as cópias antigas continuam
-   legíveis com ela. Recifrá-las exige um script que ainda não existe e apagar as versões
-   antigas à mão no B2 (com uma chave que tenha `deleteFiles`, que a do workflow não tem).
+   legíveis com ela. Recifrá-las exige um script que ainda não existe e apagar as cópias
+   antigas à mão (tirando antes a trava de `arquivos/` do bucket de backups, no painel).
 
 ### Restaurar num desastre (passo a passo)
 
@@ -193,9 +200,11 @@ e só então a aplicação passa a usá-lo.
 
 ### Restaurar os arquivos num desastre (passo a passo)
 
-Para quando o bucket de arquivos (ou a conta da Cloudflare) se perdeu. Os arquivos voltam da
-cópia no B2 para um bucket **novo**, decifrados, com os mesmos nomes (`arquivos/<chave>`); não
-precisa do banco. Se o banco também se perdeu, restaure-o primeiro (acima): é ele que diz quais
+Para quando o bucket de arquivos se perdeu (apagado, ou com a trava tirada e os objetos
+apagados). Os arquivos voltam da cópia em `arquivos/` do bucket de backups para um bucket
+**novo**, decifrados, com os mesmos nomes (`arquivos/<chave>`); não precisa do banco. Se a
+**conta da Cloudflare** se perdeu, a cópia foi junto (risco aceito no plano B da ADR-0011):
+não há de onde restaurar os arquivos. Se o banco também se perdeu, restaure-o primeiro (acima): é ele que diz quais
 arquivos cada documento usa, e os nomes batem.
 
 1. **Ferramentas:** `age` e `uv` (o script baixa o resto na primeira vez).
@@ -204,14 +213,14 @@ arquivos cada documento usa, e os nomes batem.
    Standard), com outro nome (ex.: `portal-capibaribe-arquivos-2`; nunca com "backup" no nome:
    o script recusa). Crie uma chave **Object Read & Write só desse bucket** (passo A.2): ela
    serve para restaurar e depois para a API.
-4. **Chave de leitura do B2:** o valor do segredo `COPIA_S3_*` do GitHub não pode ser lido de
-   volta; crie no site do B2 (Application Keys → Add a New Application Key) uma chave **Read
-   Only** só do bucket da cópia.
+4. **Chave de leitura da cópia:** o valor do segredo `COPIA_S3_*` do GitHub não pode ser lido
+   de volta; crie no R2 (como no passo A.2, outro Account API token) uma chave **Object Read
+   only** só do bucket `portal-capibaribe-backups`.
 5. **Restaurar** (da raiz do repositório, no fish; `read -s` pergunta sem mostrar nem gravar
    no histórico):
    ```sh
-   set -x COPIA_S3_ENDPOINT https://s3.<região>.backblazeb2.com
-   set -x COPIA_S3_BUCKET <bucket da cópia>
+   set -x COPIA_S3_ENDPOINT https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+   set -x COPIA_S3_BUCKET portal-capibaribe-backups
    read -s -x COPIA_S3_ACCESS_KEY_ID
    read -s -x COPIA_S3_SECRET_ACCESS_KEY
    set -x DESTINO_S3_ENDPOINT https://<ACCOUNT_ID>.r2.cloudflarestorage.com
@@ -223,10 +232,11 @@ arquivos cada documento usa, e os nomes batem.
    O fim diz `restaurados agora: N · já no destino: M · ...`. Se algum falhou (rede, por
    exemplo), rode de novo: ele pula o que já voltou. Pronto quando sai sem `ERRO`. Um aviso de
    "sem assinatura conhecida" quer dizer um objeto que não é PDF nem foto; ele volta como
-   `application/octet-stream`. O script usa as versões que o B2 guarda: uma cópia escondida
-   volta, e se a versão mais nova de uma cópia não decifrar, ele tenta as anteriores (o fim
-   conta "de versão anterior" e "estavam escondidos"). Ele recusa como destino a própria cópia
-   e qualquer bucket que já tenha `.age` em `arquivos/`.
+   `application/octet-stream`. O R2 não guarda versões de objeto: o script avisa "a cópia não
+   tem versões de objeto" e lê a listagem (numa cópia com versões, como o B2 de um dia, ele
+   também traz de volta uma cópia escondida e tenta as versões anteriores de uma que não
+   decifra). Ele recusa como destino a própria cópia, qualquer bucket com "backup" no nome e
+   qualquer bucket que já tenha `.age` em `arquivos/`.
 6. **Configurar o bucket novo** como o antigo: CORS, ciclo de vida de `envios/` e a trava de
    `arquivos/` (passos A.4 a A.6). A trava pode vir antes ou depois da restauração: ela não
    impede gravar objeto novo, só apagar e sobrescrever.
@@ -237,11 +247,12 @@ arquivos cada documento usa, e os nomes batem.
 8. **Backup:** troque os segredos `ARQUIVOS_R2_*` do GitHub para o bucket novo, com uma chave
    **só de leitura** dele (passo A.3). A cópia continua de onde estava: os nomes são os mesmos,
    então nada é copiado de novo.
-9. **Limpar:** `set -e` nas variáveis do passo 5 (ou feche o terminal) e apague a chave Read
-   Only do B2 do passo 4.
+9. **Limpar:** `set -e` nas variáveis do passo 5 (ou feche o terminal) e apague a chave de
+   leitura do passo 4.
 
-Se quem se perdeu foi o **B2**, nada precisa voltar: crie outro bucket e chave (passos B.2 e
-B.3), troque os segredos `COPIA_S3_*`, e o próximo backup copia tudo de novo.
+Se quem se perdeu foi a **cópia** (o bucket de backups), nada precisa voltar dos arquivos: crie
+o bucket de backups de novo (com a trava em `arquivos/`, passo A.7), troque os segredos `R2_*`
+e `COPIA_S3_*`, e o próximo backup copia tudo de novo.
 
 ## O primeiro administrador (produção)
 

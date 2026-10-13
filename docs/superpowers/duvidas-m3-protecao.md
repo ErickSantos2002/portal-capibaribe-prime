@@ -4,7 +4,14 @@ Decisões tomadas sem perguntar a ninguém durante o épico C ([ADR-0011](../adr
 spec `specs/m3-protecao.md`). **[Erick]** marca o que só o Erick pode confirmar ou fazer; o resto
 é decisão técnica, revisável na revisão do marco.
 
-## 1. Nomes dos segredos: os da seção C de `duvidas-m3.md`, sem mudança
+> **Fechamento do M3 (12/10/2026): plano B.** O Erick escolheu não criar a conta no Backblaze: a
+> cópia vai para a pasta `arquivos/` do bucket de backups do R2 (item 14). O que este arquivo
+> diz do B2 (região, chave sem `deleteFiles`, versões, tetos de gasto) vale para o dia em que a
+> cópia for para lá; hoje, o item 14 manda. As seções do passo a passo de `duvidas-m3.md`
+> mudaram de letra: os segredos do GitHub são a seção **B**, o fechamento a **D** e o envio de
+> teste a **E**.
+
+## 1. Nomes dos segredos: os da seção B (antes C) de `duvidas-m3.md`, sem mudança
 - `ARQUIVOS_R2_ENDPOINT`, `ARQUIVOS_R2_ACCESS_KEY_ID`, `ARQUIVOS_R2_SECRET_ACCESS_KEY`,
   `ARQUIVOS_R2_BUCKET`, `COPIA_S3_ENDPOINT`, `COPIA_S3_ACCESS_KEY_ID`,
   `COPIA_S3_SECRET_ACCESS_KEY`, `COPIA_S3_BUCKET`, e o `BACKUP_AGE_KEY` que já existe.
@@ -166,3 +173,37 @@ spec `specs/m3-protecao.md`). **[Erick]** marca o que só o Erick pode confirmar
   fazer uma vez com um bucket de ensaio, depois do envio de teste, para o passo a passo não ser
   lido pela primeira vez no dia do desastre. Apague o bucket de ensaio depois (ele não tem
   trava).
+
+## 14. Plano B: a cópia no bucket de backups (fechamento do M3, resposta do Erick)
+- **Decisão (Erick, 12/10/2026):** sem Backblaze. Os quatro `COPIA_S3_*` recebem os mesmos
+  valores dos `R2_*` do backup do banco; a cópia fica em `arquivos/` do bucket
+  `portal-capibaribe-backups`, ao lado dos dumps. ADR-0011, seção "Revisões".
+- **Conferido no código e no teste:**
+  - origem e cópia na **mesma conta** (o mesmo endpoint, buckets diferentes): nada no script
+    depende de endpoints diferentes; `mesmo_bucket` compara endpoint **e** bucket;
+  - a cópia **no mesmo bucket dos dumps**: o script só lista e escreve em `arquivos/`, e só
+    considera `arquivos/<32 hex>.age`; a retenção (`s3.py reter`) só lista `diarios/` e
+    `mensais/` e só apaga nomes no padrão dos dumps;
+  - a restauração recusa destino com "backup" no nome (o bucket de backups nunca é destino) e
+    destino igual à cópia.
+  - `testar-ciclo.sh` ganhou a seção 8 (3 verificações, 49 no total): a cópia no bucket de
+    backups não muda nenhum objeto de `diarios/`, `mensais/` nem de outra pasta; a retenção
+    rodada logo depois não apaga nenhuma cópia; e a restauração a partir dele devolve os
+    arquivos iguais num bucket novo.
+- **O R2 não tem versões de objeto:** o `ListObjectVersions` não aparece na lista de operações
+  do R2 (a de `PutBucketVersioning` diz "não implementado"; documentação da Cloudflare,
+  12/10/2026). A restauração listava por versões (item 9b) e falharia no R2. Agora, se o bucket
+  responde `NotImplemented` (ou `MethodNotAllowed`) a essa listagem, ela usa a listagem comum e
+  baixa sem `VersionId`; outro erro continua aparecendo (testes de unidade
+  `versoes_num_bucket_sem_versionamento`, `versoes_com_outro_erro_do_bucket_nao_esconde_o_erro`
+  e `restaurar_um_sem_versao_baixa_sem_version_id`). **Só o R2 de verdade prova** o código que
+  ele devolve; o `moto` aceita a listagem por versões mesmo sem versionamento, por isso o caso
+  fica no teste de unidade. Se o R2 responder outro código, a restauração falha com a mensagem
+  curta do `descrever()`, e o ajuste é acrescentar o código em `SEM_VERSOES`.
+- **Trava:** a chave `R2_*` pode apagar (a retenção usa), então o passo A.7 de `duvidas-m3.md`
+  põe uma trava indefinida só no prefixo `arquivos/` do bucket de backups. Com ela, "nunca
+  sobrescrever" (item 8) fica garantido pelo próprio R2, e não só pelo script.
+- **Itens que mudam de sentido:** o 2 (região: o endpoint do R2 dá `auto`), o 5 (custo: a
+  listagem e o GET parcial são operações do R2, dentro do grátis; não há teto de gasto como no
+  B2), o 9b (versões: ver acima) e o 13 (o que só o Actions prova: agora é a chave `R2_*` na
+  cópia e a chave só de leitura do bucket de arquivos).
