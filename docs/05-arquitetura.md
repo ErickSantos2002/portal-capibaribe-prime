@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | v0.1 |
+| **Status** | v0.2 — M3 implementado: documentos, anexos, rotas `…/abrir`, link de 1 hora, cópia dos arquivos no bucket de backups |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 02/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `04-modelo-de-dados.md` v0.1 |
@@ -38,16 +38,14 @@ flowchart LR
     api --> push --> cel
     api --> gmail
     gh -->|"pg_dump"| neon
-    gh -->|"guarda backup"| r2
-    b2[("Backblaze B2<br/>cópia cifrada dos arquivos")]
-    gh -->|"copia arquivos/ (cifrado)"| b2
+    gh -->|"guarda backup e a cópia cifrada de arquivos/"| r2
 ```
 
 **Um endereço só** (`*.vercel.app`) serve a tela e a API (`/api/...`). Com isso o cookie de sessão
 fica no mesmo domínio, e não é preciso liberar acesso entre domínios (CORS).
 
-**Arquivos não passam pela API.** A API confere a permissão e devolve uma URL assinada, válida
-por poucos minutos, e o navegador envia ou baixa direto do R2. Isso é obrigatório: a Vercel
+**Arquivos não passam pela API.** A API confere a permissão e devolve uma URL assinada (envio:
+10 minutos; leitura: 1 hora), e o navegador envia ou baixa direto do R2. Isso é obrigatório: a Vercel
 recusa requisições acima de 4,5 MB, e um anexo pode ter 10 MB.
 
 ## 2. Componentes
@@ -62,7 +60,7 @@ recusa requisições acima de 4,5 MB, e um anexo pode ter 10 MB.
 | Login | Senha própria (Argon2id) + sessão em cookie | Decisão de conta por unidade com `mudar123` | 0005 |
 | Notificação | Web Push (VAPID) + e-mail pelo Gmail | Push é grátis e nativo do PWA; e-mail é complemento | 0006 |
 | Backup | GitHub Actions: `pg_dump` diário, cifrado, para um bucket R2 só de backups | O Neon grátis só guarda 6 h de histórico | 0007, 0009 |
-| Proteção dos arquivos | Trava do R2 em `arquivos/` + cópia diária cifrada no Backblaze B2 (plano grátis), pelo mesmo workflow `Backup` | Arquivo oficial é para sempre; perder a conta da Cloudflare não pode levar os arquivos | 0011 |
+| Proteção dos arquivos | Trava do R2 em `arquivos/` + cópia diária cifrada na pasta `arquivos/` (também travada) do bucket de backups, pelo mesmo workflow `Backup` (plano B, 12/10/2026) | Arquivo oficial é para sempre. Risco aceito: perder a conta da Cloudflare leva os arquivos e a cópia (o B2 fica como alternativa futura) | 0011 |
 | Domínio | `*.vercel.app`, sem domínio próprio | Decisão de custo zero (02/10/2026) | 0008 |
 
 ## 3. Organização do repositório
@@ -94,9 +92,10 @@ portal-capibaribe-prime/
 | Roubo de sessão | Cookie `HttpOnly`, `Secure`, `SameSite=Lax`; token guardado só como hash | ADR-0005 |
 | Requisição forjada de outro site (CSRF) | `SameSite=Lax` + toda alteração exige um cabeçalho próprio que outro site não consegue enviar | ADR-0005 |
 | Unidade comum acessar função de gestão | Permissão checada **no servidor** em toda rota de gestão (RNF-13), com teste para cada rota | API |
-| Download de documento de gestão por link vazado | Bucket privado; URL assinada válida por 5 minutos, gerada só após checar permissão (sem permissão: 404 igual a inexistente) | ADR-0004 |
+| Download de documento de gestão por link vazado | Bucket privado; URL assinada válida por 1 hora (eram 5 minutos; recarregar a aba do PDF dava erro), gerada só após checar permissão (sem permissão: 404 igual a inexistente). A tela usa o link do Portal (`…/abrir`), que confere de novo a cada visita | ADR-0004, ADR-0011 |
 | Arquivo malicioso | Só PDF, JPEG, PNG e WEBP; a API confere os primeiros bytes **depois** do envio e apaga o que não é (um `.exe` renomeado para `.pdf` é recusado); o link de leitura força o tipo conferido e o `Content-Disposition` | ADR-0004 |
-| Arquivo apagado ou sobrescrito (bug, chave vazada, engano no painel) | Trava do R2 em `arquivos/` (retenção indefinida); a API só apaga em `envios/`; cópia diária cifrada no B2 com chave sem permissão de apagar | ADR-0011 |
+| Arquivo apagado ou sobrescrito (bug, chave vazada, engano no painel) | Trava do R2 em `arquivos/` (retenção indefinida); a API só apaga em `envios/`; cópia diária cifrada em `arquivos/` do bucket de backups, com trava própria (a chave do backup pode apagar dumps, não a cópia) | ADR-0011 |
+| Número gigante no lugar de um id (erro 500, vazamento de detalhe do banco) | Todo id de caminho, query e corpo é `bigint` validado (`IdBanco`): fora da faixa, 422; teste que varre todas as rotas do OpenAPI | API |
 | Injeção de script em avisos | Texto do aviso é texto puro com quebras de linha (sem HTML); política de conteúdo (CSP) restritiva: `default-src 'self'`, e o único endereço de terceiros é o do R2 (`https://*.r2.cloudflarestorage.com`), só em `connect-src` (o envio) e `img-src` (a foto do anexo, mais `blob:` para a prévia). O teste de cabeçalhos garante isso | Front + cabeçalhos (`vercel.json`) |
 | Apagar dado oficial (bug ou invasão) | Usuário do banco da aplicação **sem permissão de DELETE** nas tabelas oficiais | Banco (modelo, seção 4) |
 | Senha ou chave no repositório | Segredos só nas variáveis de ambiente da Vercel e do GitHub; `.gitignore` bloqueia `.env` | Repositório |
@@ -118,8 +117,7 @@ entrega.
 | Neon · armazenamento | 1 GB por projeto | < 100 MB em 2 anos | Grande |
 | Neon · computação | 100 CU-hora/mês, desliga após 5 min parado | ~20 CU-hora/mês | Boa |
 | Neon · histórico para restaurar | 6 horas | — | **Insuficiente → backup próprio (ADR-0007)** |
-| R2 · armazenamento | 10 GB | 1 a 3 GB em 2 anos + backups (~1 GB) | Boa |
-| Backblaze B2 · armazenamento | 10 GB (sem cartão no cadastro, conferido em 12/10/2026) | a cópia cifrada dos arquivos: 1 a 3 GB em 2 anos | Boa |
+| R2 · armazenamento | 10 GB | 1 a 3 GB de arquivos em 2 anos + a cópia cifrada deles (o mesmo tamanho, plano B da ADR-0011) + backups (~1 GB): 3 a 7 GB | Média: revisitar se os arquivos passarem de 3 GB |
 | R2 · operações | 1 mi escrita / 10 mi leitura por mês | milhares | Grande |
 | Gmail · envio | ~500 e-mails/dia | No pior caso, um aviso para todas as unidades com e-mail: ≤ 320 | Boa, com atenção |
 
@@ -161,17 +159,34 @@ seção 4):
    e-mails em seguida (ADR-0010). Inscrição que o serviço de push diz não existir mais é
    removida.
 
-Para abrir um anexo ou documento, a tela pede o link **na hora do toque**
-(`GET …/link`): a API confere quem pode ver e devolve uma URL de leitura de 5 minutos, com o tipo
-e o nome forçados. Sem as variáveis `PORTAL_ARQUIVOS_*`, essas rotas respondem 503 e o resto do
-Portal funciona igual.
+Para abrir um anexo ou documento, a tela aponta para o **link do Portal**, não para o R2:
+`GET /api/documentos/{id}/versoes/{versao}/abrir` (`?baixar=true` para baixar) e
+`GET /api/avisos/{id}/anexos/{arquivo_id}/abrir` (também o `src` da foto). A cada visita (toque,
+aba nova, link copiado, página aberta há horas) a API confere quem pode ver e **redireciona
+(302)** para uma URL de leitura nova, de **1 hora**, com o tipo e o nome forçados; recarregar a
+aba do PDF dentro dessa hora funciona. Sem acesso: o documento volta para a página dele no
+Portal ("não achamos" ou "entrar"); o anexo mostra uma página simples com a frase do erro. As
+rotas `GET …/link` (JSON com `url` e `expira_em`) continuam para quem precisa do endereço. Sem as
+variáveis `PORTAL_ARQUIVOS_*`, as rotas de arquivo respondem 503 (ou levam de volta à página do
+documento com o aviso) e o resto do Portal funciona igual.
+
+Rotas novas do M3 (contrato completo: `docs/superpowers/specs/m3-contrato.md`, seção 5):
+`POST /api/arquivos` e `POST /api/arquivos/{id}/confirmar` (envio, só a gestão);
+`GET /api/documentos`, `GET /api/documentos/publicos` (sem sessão), `GET /api/documentos/{id}`,
+`POST /api/documentos`, `POST /api/documentos/{id}/versoes`, `POST /api/documentos/{id}/arquivar`,
+`GET /api/documentos/{id}/versoes/{versao}/link` e `…/abrir`; nos avisos, `anexos` ao publicar e
+corrigir, `GET /api/avisos/{id}/anexos/{arquivo_id}/link` e `…/abrir`.
 
 ### 6.2.1 Proteção dos arquivos (ADR-0011)
 - No R2: trava (*bucket lock*) em `arquivos/` com retenção indefinida e regra de ciclo de vida
   que apaga o que ficar mais de 1 dia em `envios/`.
-- Todo dia, o workflow `Backup` copia o que falta de `arquivos/` para um bucket privado do
-  Backblaze B2, cifrado com `age`, com chave que não pode apagar; no dia 2 de cada mês, a
-  restauração de teste confere que todo arquivo confirmado tem cópia e decifra um deles.
+- Todo dia, o workflow `Backup` copia o que falta de `arquivos/` para a pasta `arquivos/` do
+  bucket de backups (plano B, 12/10/2026), cifrado com `age`; essa pasta tem trava própria,
+  porque a chave do backup pode apagar (a retenção dos dumps usa, só em `diarios/` e
+  `mensais/`). No dia 2 de cada mês, a restauração de teste confere que todo arquivo confirmado
+  tem cópia e decifra um deles. Restaurar num desastre: README, "Restaurar os arquivos num
+  desastre". Perder a conta da Cloudflare leva arquivos e cópia juntos (risco aceito; o B2 é a
+  alternativa futura, só trocando segredos).
 
 ### 6.3 Votar (H-21)
 1. `PUT /api/enquetes/{id}/voto` com as opções.

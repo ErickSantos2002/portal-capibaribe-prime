@@ -44,6 +44,10 @@ GitHub, Vercel) antes do primeiro documento real.
   troca o corpo e apaga a própria seção de `api/testes/test_m3_em_construcao.py`.
 - **Por quê:** o que vale antes e depois dos épicos (quem pode chamar o quê) fica testado
   desde já em `test_m3_rotas.py`, e nenhum épico edita arquivo comum.
+- **Fechamento do M3 (12/10/2026):** os épicos trocaram todos os 501; o
+  `test_m3_em_construcao.py` foi apagado no merge. As rotas `…/abrir` que os épicos A e B
+  criaram fora do OpenAPI entraram no contrato (spec, seção 5, e as listas de
+  `test_m3_rotas.py` e `test_cache.py`).
 
 ## 3. Categoria nova: "Orientação" · respondida
 - **Dúvida:** o modelo de dados tinha `convencao`, `regimento`, `ata`, `contrato`, `obra` e

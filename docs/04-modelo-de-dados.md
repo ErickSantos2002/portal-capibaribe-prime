@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | v0.1 |
+| **Status** | v0.2 — M3 implementado (documentos e anexos, migração 0007) |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 02/10/2026 |
 | **Base** | `03-historias.md` v0.1 (somente E1) |
@@ -220,6 +220,12 @@ categoria, data e acesso **não mudam**: publicou com o nível errado, arquiva e
 está confirmado, é de finalidade `documento`, não está em nenhum aviso, e que o documento não
 está arquivado.
 
+`documento.aviso_id` guarda **um** aviso: o da criação. O aviso de uma versão nova ("Documento
+atualizado: …", opcional) sai sem o botão "Ver o documento", porque ligar mais avisos ao
+documento pede outra coluna ou tabela (ex.: `aviso_id` em `documento_versao`); está no backlog
+do roadmap. Ids de todas as tabelas são `bigint`: a API recusa com 422 qualquer id fora dessa
+faixa, antes de chegar ao banco (fechamento do M3).
+
 ### 3.5 Enquetes
 
 **`enquete`** (H-20)
@@ -311,9 +317,11 @@ Inventário completo da E1. Se um dado não está aqui, o sistema não guarda.
 | Descrição do aparelho | `sessao.aparelho` | A unidade reconhecer e desconectar aparelhos | A própria unidade | Ao encerrar a sessão |
 | Endereço de push | `inscricao_push` | Entregar notificação | Ninguém (uso técnico) | Ao encerrar a sessão |
 | Código do IP (HMAC, não o IP) | `entrada_tentativa.ip_hash` (revisão do M1, migração 0003) | Bloquear quem tenta adivinhar a senha de uma unidade | Ninguém (uso técnico) | 15 minutos depois da última tentativa ou do fim do bloqueio |
+| Documentos e anexos enviados (o conteúdo e o nome do arquivo) | `arquivo` (`nome_original`) + bucket de arquivos e a cópia cifrada (M3) | Documentos do condomínio e fotos ou PDFs dos avisos; só a gestão envia | Quem vê o documento ou o aviso (o nome da foto só a gestão) | Nunca, de propósito (ADR-0011); tirar por obrigação (ex.: LGPD) é manual: arquivar e apagar os objetos à mão |
 
 **Não guardamos:** CPF, RG, contrato, renda, endereço IP no banco (só o código acima), localização, nem o conteúdo de
-votos trocados. A unidade e o login (`1101`) não são dado pessoal sozinhos, porque identificam um
+votos trocados. A foto JPEG é regravada no celular antes do envio, o que tira os metadados (EXIF),
+inclusive a localização do GPS (fechamento do M3; PNG e WEBP só quando grandes). A unidade e o login (`1101`) não são dado pessoal sozinhos, porque identificam um
 apartamento e não uma pessoa. Viram dado pessoal junto com o nome do responsável, por isso o nome
 só aparece para a própria unidade e para a gestão.
 
@@ -330,7 +338,7 @@ Para dimensionar o plano gratuito no documento de arquitetura.
 | `voto` | ~15 mil | ~50 enquetes × 320 |
 | `historico` | ~20 mil | |
 | **Banco inteiro** | **< 100 MB** | folgado em qualquer plano gratuito |
-| **Arquivos** | **1 a 3 GB** | PDFs da obra e imagens. **É aqui que o limite gratuito aperta**, o que justifica comprimir imagens no envio. |
+| **Arquivos** | **1 a 3 GB** | PDFs da obra e imagens. **É aqui que o limite gratuito aperta**, o que justifica comprimir imagens no envio. Desde o plano B da ADR-0011, a cópia cifrada (o mesmo tamanho) também fica no R2: arquivos + cópia + dumps = 3 a 7 GB dos 10 GB. |
 
 ## 7. Carga inicial
 

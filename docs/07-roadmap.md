@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Status** | v0.7 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 no ar como versão 1.3.0 (07/10/2026; quem publica recebe e e-mail opcional), falta o teste em aparelho; M3 com o contrato pronto (branch `m3/contrato`, ADR-0011); sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
+| **Status** | v0.8 — M0 e M1 fechados (M1 anunciado no grupo em 06/10/2026); M2 no ar como versão 1.3.0 (07/10/2026; quem publica recebe e e-mail opcional), falta o teste em aparelho; M3 implementado como versão 1.4.0 (12/10/2026), aguardando a configuração do R2 e o teste em aparelho; sem prazos; documento vivo: muda a cada marco fechado e a cada opinião do grupo |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | Teste do M2 em Android e iPhone reais; fechar o M2 |
+| **Próximo passo** | Configurar o R2 e os segredos do M3 (passo a passo em `superpowers/duvidas-m3.md`); teste do M2 e do M3 em Android e iPhone reais |
 
 ---
 
@@ -60,7 +60,7 @@ flowchart LR
 | **M0** ✅ | Esqueleto: repositório, CI, Vercel + Neon, banco com as 320 unidades |
 | **M1** ✅ | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real**, anunciado em 06/10/2026 |
 | **M2** | Notificação no celular, e-mail e "esqueci a senha" |
-| **M3** | Documentos e anexos nos avisos (Cloudflare R2) |
+| **M3** | Documentos e anexos nos avisos (Cloudflare R2). Implementado (1.4.0); falta configurar o R2 e testar em aparelho |
 | **M4** | Enquetes com um voto por unidade |
 | **M5** | Acessibilidade real, ajustes, medição e balanço da E1 |
 | **E2** | Histórias escritas quando a entrega se aproximar; código antes das chaves |
@@ -197,15 +197,40 @@ comum; arquivo com extensão trocada (um `.exe` renomeado para `.pdf`) é recusa
 **Decidir neste marco:** o backup da ADR-0007 cobre só o banco, não os arquivos no R2. Antes de
 subir o primeiro documento real, definir como os arquivos ficam protegidos contra perda (nova
 ADR). **Decidido:** [ADR-0011](adr/0011-arquivos-protegidos-contra-perda.md), trava do R2 em
-`arquivos/` e cópia diária cifrada no Backblaze B2; a cópia é portão do primeiro documento real.
+`arquivos/` e cópia diária cifrada; a cópia é portão do primeiro documento real. **Revisto em
+12/10/2026 (Erick):** plano B, a cópia fica na pasta `arquivos/` do bucket de backups (também
+travada), sem conta no Backblaze; risco aceito: perder a conta da Cloudflare leva os arquivos e
+a cópia juntos.
 
-**Situação:** onda 1 (contrato) pronta na branch `m3/contrato`, sem nada novo para o morador:
-migração 0007, camada de armazenamento, envio de arquivo com o conteúdo conferido no servidor
-(o `.exe` renomeado já é recusado e apagado), rotas dos épicos respondendo 501, envio e
-compressão no front, CSP com o R2. Próxima onda: três épicos em paralelo (A · documentos,
-B · anexos nos avisos, C · proteção dos arquivos). Antes do primeiro documento real, os itens
-**[Erick]** de `superpowers/duvidas-m3.md` (bucket, chaves, CORS, trava, ciclo de vida, conta
-no B2, segredos). Spec: `superpowers/specs/m3-contrato.md`.
+**Situação: implementado, versão 1.4.0 (12/10/2026).** Contrato (migração
+0007, envio com o conteúdo conferido no servidor: o `.exe` renomeado é recusado e apagado), os
+três épicos (A · documentos, B · anexos nos avisos, C · cópia cifrada dos arquivos) e o
+fechamento técnico: rotas `…/abrir` no contrato, link de leitura de 1 hora (recarregar a aba do
+PDF não dá mais erro), id fora do `bigint` dá 422 em todo o Portal, título do aviso sem
+caractere invisível, recado que fica até a pessoa fechar, todo JPEG regravado para não levar o
+GPS, e a cópia dos arquivos no plano B. Spec: `superpowers/specs/m3-contrato.md`.
+
+**Falta para fechar:**
+1. Os itens **[Erick]** de `superpowers/duvidas-m3.md` (passo a passo: bucket, chaves, CORS,
+   trava nos dois buckets, ciclo de vida, segredos do GitHub e variáveis da Vercel).
+2. Migração 0007 no Neon, deploy e um backup manual conferindo a cópia (passo D); envio de
+   teste (passo E).
+3. Teste em aparelho de verdade (Android e iPhone): abrir e baixar documento, foto e PDF do
+   aviso, recarregar a aba do PDF, publicar com foto tirada na hora.
+
+### Backlog sem data (do M3)
+
+Itens que a revisão do M3 levantou e que não entraram, por ordem de quem pesa mais para o
+morador. Cada um entra num marco quando alguém pedir ou quando o marco tocar no assunto.
+
+| O quê | Por quê ficou | De onde veio |
+|---|---|---|
+| Fontes em `rem` no Portal todo | Hoje as fontes estão em `px`, e o tamanho de letra escolhido no celular não aumenta o texto do Portal. Mexe em todo o `estilo.css`: precisa de uma rodada própria, conferida tela a tela | Revisão UX do épico A (U18) |
+| Botão "Ver o documento" também no aviso da versão nova (e o "o que mudou" no documento) | `documento.aviso_id` guarda só o aviso da criação; ligar mais avisos ao documento pede migração (`aviso_id` em `documento_versao`, ou uma tabela) | Revisão UX do épico A (U3) |
+| Várias fotos num documento só | Hoje é um arquivo por versão; a ajuda diz para juntar as páginas num PDF | Revisão UX do épico A (U6) |
+| Porcentagem no envio do arquivo | O `fetch` não informa o progresso do envio; pede trocar por `XMLHttpRequest` | Épico B (dúvida 3) |
+| Uma pergunta só de "Sair sem publicar?" | Documentos e avisos têm cada um a sua (`window.confirm` e um diálogo próprio) | Revisão do épico A (U5) |
+| Cópia dos arquivos fora da Cloudflare (Backblaze B2) | Plano B escolhido para ter uma conta a menos; o B2 volta a cobrir a perda da conta, só trocando segredos | ADR-0011, revisão de 12/10/2026 |
 
 ### M4 · Enquetes
 

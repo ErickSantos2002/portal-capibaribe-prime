@@ -21,7 +21,7 @@ resto é decisão técnica que pode ser revista na revisão do marco.
 - **Para o coordenador:** se o épico A também precisar de clipe/PDF, vale mover os desenhos para
   o `Icone` no fechamento do marco.
 
-## 3. Envio sem porcentagem
+## 3. Envio sem porcentagem · movido para o roadmap
 - **Dúvida:** "progresso do envio" pede uma porcentagem, mas o `enviarArquivo` (comum) usa
   `fetch`, que não informa quanto já subiu.
 - **Decisão:** cada arquivo mostra "Enviando…" com uma barra animada (sem número), um de cada
@@ -29,6 +29,7 @@ resto é decisão técnica que pode ser revista na revisão do marco.
 - **Se quiser porcentagem:** é trocar o PUT do `web/src/arquivos/enviar.ts` por
   `XMLHttpRequest` (que tem `upload.onprogress`) e aceitar um `aoProgredir`; arquivo comum,
   fica para o coordenador.
+- **Fechamento do M3 (coordenador, 12/10/2026):** no backlog sem data do roadmap.
 
 ## 4. Ordem dos anexos é a da escolha
 - **Dúvida:** o banco guarda a `ordem` (1 a 5); a tela poderia deixar reordenar.
@@ -76,7 +77,7 @@ resto é decisão técnica que pode ser revista na revisão do marco.
 
 ## Revisão independente (código e UX)
 
-## 11. Rota `…/anexos/{arquivo_id}/abrir` (U12): mudança de contrato dentro do épico
+## 11. Rota `…/anexos/{arquivo_id}/abrir` (U12): mudança de contrato dentro do épico · resolvido no fechamento
 - **Dúvida:** o link de 5 minutos aberto numa aba nova vence; recarregar a aba mostrava o XML
   de erro do R2.
 - **Decisão:** `GET /api/avisos/{aviso_id}/anexos/{arquivo_id}/abrir`, com a mesma regra do
@@ -102,6 +103,9 @@ resto é decisão técnica que pode ser revista na revisão do marco.
   `servico.link…` dentro de `try`, `RedirectResponse(link.url, 302)`; `ErroApi` →
   `_pagina_de_erro(erro)` (HTML com `html.escape` na mensagem). O `…/link` fica para quem quer
   o JSON (`baixar=true`).
+- **Fechamento do M3 (coordenador, 12/10/2026):** a rota entrou no OpenAPI, em `test_m3_rotas.py`, `test_cache.py` e
+  `test_avisos_permissoes.py` (a lista de rotas com sessão). O link de leitura vale **1 hora**:
+  recarregar a aba do PDF dentro dessa hora funciona (ADR-0011, "Revisões").
 
 ## 12. `versao_base` na correção (C2): mudança de contrato dentro do épico
 - `CorrigirAviso.versao_base: int | None` (1 a 32.767; espelho em `web/src/avisos/tipos.ts`,

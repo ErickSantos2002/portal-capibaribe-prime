@@ -4,7 +4,7 @@ Decisões tomadas sem perguntar a ninguém durante o épico A. Cada item: a dúv
 decidido e por quê. **[Erick]** marca o que só o Erick pode confirmar (regra do condomínio,
 preferência dele); o resto é decisão técnica que pode ser revista na revisão do marco.
 
-## 1. "Avisar os apartamentos" vem marcado **[Erick]**
+## 1. "Avisar os apartamentos" vem marcado · respondida
 - **Dúvida:** a API tem `avisar_unidades = false` por padrão; o protótipo (testado com os
   vizinhos) mostra a caixa já marcada.
 - **Decisão:** a tela segue o protótipo: marcada. Some quando "Quem pode ver" é "Só a gestão".
@@ -13,6 +13,8 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
 - **Por quê:** documento novo que as unidades podem ver quase sempre merece aviso (é o caso do
   RF-33), e o texto explica a consequência antes de publicar.
 - **Confirmar:** se a Comissão prefere a caixa desmarcada (aí é trocar um `useState(true)`).
+- **Resposta do Erick (12/10/2026):** fica assim: marcada no documento novo, desmarcada na
+  versão nova (item 13).
 
 ## 2. Texto do aviso automático
 - **Decisão:** título "Documento novo: <título>" (cortado em 120 letras com "…"), categoria
@@ -92,15 +94,19 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
 
 # Revisão independente (código e UX) · o que mudou e o que ficou para o coordenador
 
-## 11. Título sem nenhum invisível (C3) · a regra deveria ir para o comum
+## 11. Título sem nenhum invisível (C3) · resolvido no fechamento
 - **Decisão:** `validar_titulo` (e a linha do aviso) recusam, além da regra comum, as categorias
   Unicode Zl, Zp e Cf (U+2028, U+2029, U+061C, U+180E, U+00AD…) e os preenchimentos do Hangul
   (U+115F, U+1160, U+3164, U+FFA0). O ZWJ (U+200D) continua aceito, como na regra comum (emojis
   compostos).
 - **Pendência do coordenador:** a mesma regra em `app/esquemas/comum.py` (`sem_invisiveis`),
   para o título do aviso, o nome do arquivo e o resto. O épico A não edita o comum.
+- **Fechamento do M3 (coordenador, 12/10/2026):** a regra virou `sem_invisivel_nenhum` em `app/esquemas/comum.py` e vale
+  para o título do documento e o do aviso (publicar e corrigir), com testes em
+  `test_avisos_esquemas.py`. O nome do arquivo e o local do evento seguem a regra comum de antes
+  (`sem_controle` + `sem_invisiveis`): o nome vem do aparelho e quase nunca é digitado.
 
-## 12. "Abrir" e "Baixar" pelo Portal: rota nova `GET .../versoes/{versao}/abrir` (U7)
+## 12. "Abrir" e "Baixar" pelo Portal: rota nova `GET .../versoes/{versao}/abrir` (U7) · resolvido no fechamento
 - **Mudança de contrato:** `GET /api/documentos/{documento_id}/versoes/{versao}/abrir?baixar=`
   responde **302** para um link assinado novo (confere quem vê a cada visita; sem sessão, só o
   público). Sem acesso ou inexistente: 302 para `/documentos/{id}` (a página diz "não achamos"
@@ -122,8 +128,13 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
   OpenAPI e no teste comum (o épico B recebeu a mesma sugestão para os anexos, com
   `GET /api/avisos/{id}/anexos/{arquivo_id}/abrir`: o formato é o mesmo).
 - Some com isso a aba aberta antes do pedido (item 6): o `href` abre a aba no próprio toque.
+- **Fechamento do M3 (coordenador, 12/10/2026):** as duas rotas `…/abrir` (esta e a do anexo) entraram no OpenAPI, em
+  `test_m3_rotas.py`, `test_cache.py` (302/303 ou 404/503, com `no-store` também no
+  redirecionamento) e no spec do contrato. O link de leitura passou a valer **1 hora**
+  (`VALIDADE_LEITURA`; ADR-0011, "Revisões"): recarregar a aba do PDF dentro de 1 hora
+  funciona; o link do Portal sempre gera um novo.
 
-## 13. Aviso da versão nova sem o botão "Ver o documento" (U3) · pendência do coordenador
+## 13. Aviso da versão nova sem o botão "Ver o documento" (U3) · movido para o roadmap
 - **Decisão:** "Enviar nova versão" ganhou "Avisar os apartamentos" (**desmarcado**) e "O que
   mudou (se quiser)". O aviso sai com título "Documento atualizado: <título>" e o texto "Saiu
   a versão N de um documento do Portal: “<título>”." + a linha + "Ela fica guardada em
@@ -133,6 +144,8 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
   `app` não tem UPDATE nele; o botão do aviso vem desse campo. Ligar mais avisos ao documento
   pede migração (uma coluna `aviso_id` em `documento_versao`, ou uma tabela), o que o épico não
   faz. O "o que mudou" também não aparece no documento, só no aviso, pelo mesmo motivo.
+- **Fechamento do M3 (coordenador, 12/10/2026):** sem migração no M3; foi para o backlog sem data do roadmap (`07-roadmap.md`,
+  "Backlog sem data (do M3)"), e o modelo de dados registra o limite (seção 3.4).
 
 ## 14. A resposta se perdeu: 409 `arquivo_em_uso` diz onde está (U1)
 - **Mudança de contrato:** quando o arquivo (que a própria unidade enviou) já está num
@@ -148,17 +161,23 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
   pode escrever uma linha para o aviso, e a tela mostra a prévia (categoria, título e texto,
   os mesmos que a API grava; os dois lados têm teste com o mesmo texto).
 
-## 16. Recado que some e fonte em px (U9, U18) · pendências do coordenador
+## 16. Recado que some e fonte em px (U9, U18) · U9 resolvido, U18 no roadmap
 - **U9:** o recado da casca (`useRecado`, comum) some em 2,6 s; não mexi. No documento, depois
   de publicar ou enviar versão, fica uma confirmação fixa ("Pronto: o documento foi publicado.
   Ele já aparece em Documentos. O aviso saiu no mural."), até sair da tela.
 - **U18:** as fontes do Portal inteiro estão em px (`estilo.css`, comum); a CSS do épico seguiu
   o padrão. Trocar por `rem` é decisão do coordenador para o Portal todo.
+- **Fechamento do M3 (coordenador, 12/10/2026):** **U9:** o recado da casca não some mais sozinho: fica até a pessoa tocar
+  em "Fechar" (44 px, fora da região de status) ou trocar de tela, para sucesso e erro, anunciado
+  pelo `aria-live` (`casca/RecadoProvider.tsx`, testes em `casca/recado.test.tsx`). **U18:** não
+  convertido agora; está no backlog do roadmap (fontes em `rem` no Portal todo).
 
 ## 17. Outras decisões da revisão
 - **C1/C2:** número fora do tipo do banco (versão acima de 32767, id acima de bigint, zero)
   responde **422** `dados_invalidos`, não 404 nem 500, nas rotas e no `arquivo_id` do épico. O
-  mesmo ajuste nas rotas de avisos e arquivos é do coordenador.
+  mesmo ajuste nas rotas de avisos e arquivos é do coordenador. **Fechamento do M3 (coordenador, 12/10/2026):** tipo comum `IdBanco`
+  (`esquemas/comum.py`) em todo id de caminho, query e corpo do Portal; teste que varre o
+  OpenAPI (`test_ids_do_banco.py`).
 - **C4:** a resposta de "Enviar nova versão" é o documento como ficou **na versão que o pedido
   criou** (versões até ela), mesmo que outra tenha chegado logo depois.
 - **Histórico:** `documento_versao_enviada` passou a ter `{"versao": n, "avisou": bool}` (a
@@ -172,9 +191,11 @@ preferência dele); o resto é decisão técnica que pode ser revista na revisã
 - **U5:** sair de "Novo documento" ou "Enviar nova versão" com algo escrito, arquivo escolhido
   ou no meio do envio pergunta antes (`window.confirm`, a pergunta nativa, que o leitor de tela
   e o celular conhecem) e, ao fechar a aba, o `beforeunload`. Solução do próprio épico
-  (`documentos/confirmarSaida.ts`); o épico B fez a dele no aviso: vale unificar depois.
+  (`documentos/confirmarSaida.ts`); o épico B fez a dele no aviso: vale unificar depois (no
+  backlog do roadmap desde o fechamento).
 - **U6:** a ajuda do arquivo diz "Se o documento tem várias páginas, junte num PDF antes de
-  enviar.". Várias fotos num documento só não foi feito (fica para quando a Comissão pedir).
+  enviar.". Várias fotos num documento só não foi feito (fica para quando a Comissão pedir; no
+  backlog do roadmap).
 - **U10:** o arquivo é conferido na hora de escolher, com o que fazer: Word ("salve como PDF"),
   outro tipo, vazio, PDF acima de 20 MB (com o tamanho e como reduzir). Foto grande passa,
   porque é reduzida antes de enviar. Trocar o arquivo limpa o erro de antes.
