@@ -18,7 +18,7 @@ export const VERSAO: string = __VERSAO__
 export const NOVIDADES: Novidade[] = [
   {
     versao: '1.4.0',
-    data: '2026-10-12',
+    data: '2026-10-13',
     nome: 'Documentos e anexos',
     itens: [
       'Documentos do condomínio no Portal: em Documentos, no menu, você encontra a convenção, as atas e outros papéis, separados por assunto. Dá para abrir no celular ou baixar.',
