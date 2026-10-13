@@ -34,6 +34,11 @@ ADMIN_URL = os.environ.get(
 PAPEIS = {"dono": "dono-teste", "app": "app-teste"}
 BANCO = os.environ.get("PORTAL_TESTE_BANCO", "portal_teste")
 TABELAS = [
+    "voto_opcao",
+    "voto",
+    "enquete_bloco",
+    "enquete_opcao",
+    "enquete",
     "aviso_anexo",
     "documento_versao",
     "documento",

@@ -44,6 +44,11 @@ def test_upgrade_downgrade_upgrade(banco_vazio):
         "documento",
         "documento_versao",
         "aviso_anexo",
+        "enquete",
+        "enquete_opcao",
+        "enquete_bloco",
+        "voto",
+        "voto_opcao",
     }
 
     rodar_alembic(banco_vazio, "upgrade", "head")
@@ -303,4 +308,38 @@ def test_funcoes_de_trigger_da_0007_com_search_path_fixo(banco_vazio):
     funcoes = _funcoes(banco_vazio)
     assert set(funcoes) >= FUNCOES_DA_0007
     for nome in FUNCOES_DA_0007:
+        assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome
+
+
+NOVAS_DA_0008 = {"enquete", "enquete_opcao", "enquete_bloco", "voto", "voto_opcao"}
+FUNCOES_DA_0008 = {
+    "enquete_conferir",
+    "enquete_conferir_completa",
+    "enquete_opcao_conferir",
+    "enquete_opcao_conferir_completa",
+    "enquete_bloco_conferir",
+    "voto_conferir",
+    "voto_conferir_completo",
+    "voto_opcao_conferir",
+}
+
+
+def test_downgrade_da_0008_volta_a_0007(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "0007")
+    funcoes_da_0007 = _funcoes(banco_vazio)
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0008
+    rodar_alembic(banco_vazio, "downgrade", "0007")
+    assert not NOVAS_DA_0008 & _tabelas(banco_vazio)
+    # Nada da 0008 fica para trás (funções de trigger incluídas).
+    assert _funcoes(banco_vazio) == funcoes_da_0007
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0008
+
+
+def test_funcoes_de_trigger_da_0008_com_search_path_fixo(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    funcoes = _funcoes(banco_vazio)
+    assert set(funcoes) >= FUNCOES_DA_0008
+    for nome in FUNCOES_DA_0008:
         assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome

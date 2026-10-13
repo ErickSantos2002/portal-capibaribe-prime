@@ -9,6 +9,7 @@ from app.modelos.arquivos import Arquivo
 from app.modelos.avisos import Aviso, AvisoAnexo, AvisoBloco, AvisoLeitura, AvisoVersao
 from app.modelos.base import Base
 from app.modelos.documentos import Documento, DocumentoVersao
+from app.modelos.enquetes import Enquete, EnqueteBloco, EnqueteOpcao, Voto, VotoOpcao
 from app.modelos.notificacoes import (
     Canal,
     InscricaoPush,
@@ -30,6 +31,9 @@ __all__ = [
     "Canal",
     "Documento",
     "DocumentoVersao",
+    "Enquete",
+    "EnqueteBloco",
+    "EnqueteOpcao",
     "EntradaTentativa",
     "Erro",
     "Historico",
@@ -41,4 +45,6 @@ __all__ = [
     "TokenRecuperacao",
     "Unidade",
     "UnidadePapel",
+    "Voto",
+    "VotoOpcao",
 ]
