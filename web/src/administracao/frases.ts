@@ -114,6 +114,11 @@ export function oQueFez(item: ItemHistorico): string {
     }
     case 'documento_arquivado':
       return 'arquivou um documento'
+    // M4 (spec do M4, seção 3.1). O voto não vai para o histórico.
+    case 'enquete_criada':
+      return 'criou uma enquete'
+    case 'enquete_editada':
+      return 'editou uma enquete'
     case 'carga_inicial':
       return 'criou os blocos e as unidades'
     case 'dados_ficticios':

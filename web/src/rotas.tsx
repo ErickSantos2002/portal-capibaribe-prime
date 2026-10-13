@@ -7,6 +7,7 @@ import { rotasAvisos } from './avisos/rotas'
 import { NaoEncontrado } from './casca/guardas'
 import { Raiz } from './casca/Raiz'
 import { rotasDocumentos } from './documentos/rotas'
+import { rotasEnquetes } from './enquetes/rotas'
 import { rotasNotificacoes } from './notificacoes/rotas'
 import { rotasRecuperacao } from './recuperacao/rotas'
 
@@ -23,6 +24,9 @@ export const rotas: RouteObject[] = [
       ...rotasRecuperacao,
       // M3: épico A (documentos; os anexos do épico B ficam nas rotas dos avisos).
       ...rotasDocumentos,
+      // M4: épico A (criar e gerir) e épico B (votar e resultado), juntados em
+      // `enquetes/rotas.tsx`.
+      ...rotasEnquetes,
       { path: '*', element: <NaoEncontrado /> },
     ],
   },

@@ -9,6 +9,7 @@ import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { Tela } from '../casca/Tela'
 import { DocumentoDoAviso } from '../documentos/DocumentoDoAviso'
+import { EnqueteDoAviso } from '../enquetes/votar/EnqueteDoAviso'
 import { AnexosDoAviso } from './AnexosDoAviso'
 import { mudancaNosAnexos } from './anexos'
 import { abrirAviso, arquivarAviso, marcarLido, mudarFixado } from './api'
@@ -70,6 +71,8 @@ function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCo
       <AnexosDoAviso avisoId={aviso.id} anexos={aviso.anexos.map((arquivo) => ({ arquivo }))} />
       {/* M3, épico A: o documento que gerou este aviso (RF-33). */}
       <DocumentoDoAviso documento={aviso.documento} />
+      {/* M4, épico B: a enquete que gerou este aviso (H-13). */}
+      <EnqueteDoAviso enquete={aviso.enquete} />
       {eu?.gestao && <ParaAGestao aviso={aviso} trocar={trocar} />}
     </article>
   )
