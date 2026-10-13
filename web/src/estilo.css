@@ -963,8 +963,32 @@ input.apto {
 }
 
 .recado.on {
+  /* Fechamento do M3: o recado fica até a pessoa fechar, então o botão precisa receber o toque. */
+  display: flex;
+  align-items: center;
+  gap: 12px;
   opacity: 1;
   transform: none;
+  pointer-events: auto;
+}
+
+.recado-texto {
+  flex: 1;
+  margin: 0;
+}
+
+.recado-fechar {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--papel);
+  border-radius: var(--r-medio);
+  background: transparent;
+  color: var(--papel);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .vazio {

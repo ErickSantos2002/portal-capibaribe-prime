@@ -320,7 +320,7 @@ describe('aviso aberto', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Arquivar de vez' }))
     expect(await screen.findByText(/Arquivado em 6 de novembro/)).toBeTruthy()
     await waitFor(() =>
-      expect(document.querySelector('.recado')?.textContent).toBe('Aviso arquivado.'),
+      expect(document.querySelector('.recado-texto')?.textContent).toBe('Aviso arquivado.'),
     )
     expect(chamadas(fetch, 'POST', '/api/avisos/5/arquivar')).toHaveLength(1)
     expect(screen.queryByRole('link', { name: 'Corrigir aviso' })).toBeNull()
@@ -380,7 +380,7 @@ describe('novo aviso (H-12)', () => {
     await waitFor(() => expect(roteador.state.location.pathname).toBe('/avisos'))
     // O recado chega à tela seguinte (a casca o lê do estado da navegação).
     await waitFor(() =>
-      expect(document.querySelector('.recado')?.textContent).toBe('Aviso publicado.'),
+      expect(document.querySelector('.recado-texto')?.textContent).toBe('Aviso publicado.'),
     )
     const [, init] = chamadas(fetch, 'POST', '/api/avisos')[0]
     expect(JSON.parse(String(init?.body))).toEqual({
@@ -410,7 +410,7 @@ describe('corrigir aviso (H-15)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }))
     await waitFor(() => expect(roteador.state.location.pathname).toBe('/avisos/5'))
     await waitFor(() =>
-      expect(document.querySelector('.recado')?.textContent).toBe('Aviso corrigido.'),
+      expect(document.querySelector('.recado-texto')?.textContent).toBe('Aviso corrigido.'),
     )
     const [, init] = chamadas(fetch, 'PUT', '/api/avisos/5')[0]
     expect(JSON.parse(String(init?.body))).toEqual({
