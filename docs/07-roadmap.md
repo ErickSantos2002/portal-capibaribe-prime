@@ -6,7 +6,7 @@
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | Acompanhar o uso de Documentos e anexos; escolher o próximo marco |
+| **Próximo passo** | M4 · Enquetes: contrato primeiro (tabelas, migração 0008, formato da API) |
 
 ---
 
@@ -59,8 +59,8 @@ flowchart LR
 |---|---|
 | **M0** ✅ | Esqueleto: repositório, CI, Vercel + Neon, banco com as 320 unidades |
 | **M1** ✅ | Entrar, primeiro acesso, mural de avisos e painel de adesão. **Primeiro uso real**, anunciado em 06/10/2026 |
-| **M2** | Notificação no celular, e-mail e "esqueci a senha" |
-| **M3** | Documentos e anexos nos avisos (Cloudflare R2). Implementado (1.4.0); falta configurar o R2 e testar em aparelho |
+| **M2** ✅ | Notificação no celular, e-mail e "esqueci a senha" (1.2.0 e 1.3.0) |
+| **M3** ✅ | Documentos e anexos nos avisos (Cloudflare R2), versão 1.4.0 |
 | **M4** | Enquetes com um voto por unidade |
 | **M5** | Acessibilidade real, ajustes, medição e balanço da E1 |
 | **E2** | Histórias escritas quando a entrega se aproximar; código antes das chaves |
