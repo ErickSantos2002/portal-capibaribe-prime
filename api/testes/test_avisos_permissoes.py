@@ -34,6 +34,8 @@ ROTAS_DE_LEITURA = [
     ("POST", "/api/avisos/{id}/lido", None),
     # M3, épico B: o link curto de um anexo (spec do M3, seção 5.3).
     ("GET", "/api/avisos/{id}/anexos/{arquivo_id}/link", None),
+    # Fechamento do M3: a rota de navegação do anexo entrou no OpenAPI (a sessão é a mesma).
+    ("GET", "/api/avisos/{id}/anexos/{arquivo_id}/abrir", None),
 ]
 
 
@@ -105,7 +107,7 @@ def test_toda_rota_de_avisos_esta_nas_listas_de_permissao():
         (metodo, caminho.replace("{id}", "{aviso_id}"))
         for metodo, caminho, _ in ROTAS_DE_GESTAO + ROTAS_DE_LEITURA
     }
-    assert len(no_app) == 13
+    assert len(no_app) == 14
     assert no_app == testadas
 
 

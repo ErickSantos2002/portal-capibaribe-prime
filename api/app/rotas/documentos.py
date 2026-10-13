@@ -13,6 +13,8 @@ Rotas (as fixas antes de `/{documento_id}`):
 - `POST /api/documentos/{documento_id}/arquivar`         → `Documento` (`Gestao`)
 - `GET  /api/documentos/{documento_id}/versoes/{versao}/link?baixar=` → `LinkDoArquivo`
   (sessão opcional: sem sessão, só documento `publico`)
+- `GET  /api/documentos/{documento_id}/versoes/{versao}/abrir?baixar=` → 302 para um link novo
+  (mesma regra do `link`; sem acesso, 302 para a página do documento no Portal)
 
 Quem vê o quê: `app.servicos.visibilidade.niveis_que_ve`, e arquivado só para a gestão. Fora
 disso, 404 igual a documento inexistente.
@@ -110,13 +112,18 @@ def link(
     return servico.link(db, logado, documento_id, versao, bucket, baixar=baixar)
 
 
-# Revisão UX, U7: o "Abrir" e o "Baixar" da tela apontam para cá, não para o link assinado
-# (que vence em 5 minutos). Cada visita (toque, nova aba, link copiado) confere o acesso de
-# novo e redireciona para um link novo; recarregar a aba do PDF depois do redirecionamento
-# continua no link assinado (dúvidas do épico A, item 12). Sem acesso, ou com os arquivos
-# desligados, volta para a página do documento no Portal. Fica fora do OpenAPI: é navegação
-# do navegador, não JSON. `no-store` vem do middleware comum.
-@rotas.get("/{documento_id}/versoes/{versao}/abrir", include_in_schema=False)
+# Revisão UX, U7: o "Abrir" e o "Baixar" da tela apontam para cá, não para o link assinado.
+# Cada visita (toque, nova aba, link copiado) confere o acesso de novo e redireciona para um
+# link novo, de 1 hora; recarregar a aba do PDF depois do redirecionamento usa o link assinado,
+# que vale 1 hora (fechamento do M3; dúvidas do épico A, item 12). Sem acesso, ou com os
+# arquivos desligados, volta para a página do documento no Portal. É navegação do navegador, não
+# JSON, mas está no OpenAPI desde o fechamento do M3 (é parte do contrato). `no-store` vem do
+# middleware comum.
+@rotas.get(
+    "/{documento_id}/versoes/{versao}/abrir",
+    response_class=RedirectResponse,
+    status_code=302,
+)
 def abrir_arquivo(
     documento_id: IdDocumento,
     versao: NumeroDaVersao,

@@ -1,9 +1,8 @@
 """Contrato das rotas do M3 (spec do M3, seção 5): o que vale antes **e depois** dos épicos.
 
 Sessão, permissão, CSRF, validação dos corpos, os campos novos dos avisos e o `documento` do
-aviso ficam aqui e **não** são apagados pelos épicos. Os testes de 501 `em_construcao`, que os
-épicos apagam, estão em `test_m3_em_construcao.py`. O envio de arquivo (pronto) está em
-`test_m3_arquivos.py`.
+aviso ficam aqui. Os 501 `em_construcao` da onda do contrato sumiram com os épicos (o arquivo
+deles foi apagado no merge). O envio de arquivo está em `test_m3_arquivos.py`.
 """
 
 import pytest
@@ -38,11 +37,14 @@ ROTAS_PUBLICAS = [
     ("GET", "/api/documentos/publicos", None),
     ("GET", "/api/documentos/{id}/versoes/{id}/link", None),
 ]
+# Navegação do navegador (fechamento do M3): redireciona para um link assinado novo a cada visita.
+ABRIR_DOCUMENTO = ("GET", "/api/documentos/{documento_id}/versoes/{versao}/abrir")
 ENVIO = [
     ("POST", "/api/arquivos", None),
     ("POST", "/api/arquivos/{id}/confirmar", None),
 ]
 ANEXO = ("GET", "/api/avisos/{aviso_id}/anexos/{arquivo_id}/link")
+ABRIR_ANEXO = ("GET", "/api/avisos/{aviso_id}/anexos/{arquivo_id}/abrir")
 
 
 def _url(caminho: str) -> str:
@@ -68,7 +70,7 @@ def test_rotas_do_m3_declaradas():
     }
     esperadas = {(m, c.replace("{id}", "{documento_id}")) for m, c in esperadas}
     esperadas |= {(m, c.replace("{id}", "{arquivo_id}")) for m, c, _ in ENVIO}
-    esperadas.add(ANEXO)
+    esperadas |= {ANEXO, ABRIR_DOCUMENTO, ABRIR_ANEXO}
     assert no_app == esperadas
 
 

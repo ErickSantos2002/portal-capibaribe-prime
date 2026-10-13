@@ -17,6 +17,8 @@ Rotas (atenção à ordem: as fixas antes de `/{aviso_id}`):
 - `GET  /api/avisos/{aviso_id}/leitura`   → `Leitura` (`Gestao`)
 - `GET  /api/avisos/{aviso_id}/anexos/{arquivo_id}/link?baixar=` → `LinkDoArquivo`
   (`UnidadeLogada`; M3, épico B)
+- `GET  /api/avisos/{aviso_id}/anexos/{arquivo_id}/abrir` → 302 para um link novo, ou página
+  HTML com o erro (`UnidadeLogada`; M3, épico B)
 
 M3 (épico B; spec do M3, seção 5.3, e `m3-anexos.md`): publicar e corrigir aceitam `anexos`
 (até 5 arquivos enviados por `POST /api/arquivos`); sem anexos, tudo igual ao M1.
@@ -159,9 +161,14 @@ def _pagina_de_erro(erro: ErroApi) -> HTMLResponse:
     return HTMLResponse(corpo, status_code=erro.status)
 
 
-# Fora do OpenAPI de propósito: as listas de rotas do contrato (`test_m3_rotas.py`,
-# `test_cache.py`) são comuns e não conhecem esta rota (dúvida 11 do épico B).
-@rotas.get("/{aviso_id}/anexos/{arquivo_id}/abrir", include_in_schema=False)
+# No OpenAPI e nas listas do contrato (`test_m3_rotas.py`, `test_cache.py`) desde o fechamento
+# do M3 (dúvida 11 do épico B).
+@rotas.get(
+    "/{aviso_id}/anexos/{arquivo_id}/abrir",
+    response_class=RedirectResponse,
+    status_code=302,
+    responses={404: {"description": "Página HTML com a frase do erro"}},
+)
 def abrir_anexo(
     aviso_id: IdNaRota,
     arquivo_id: IdNaRota,
@@ -171,10 +178,10 @@ def abrir_anexo(
 ):
     """Revisão do épico B, U12: a tela abre o anexo por aqui (`<img src>` e o botão do PDF numa
     aba nova). A sessão vai no cookie da navegação; cada pedido confere quem vê e redireciona
-    para um link de 5 minutos **novo**: a foto e o PDF abrem mesmo com a página do aviso aberta há
-    horas. Limite (dúvida 11): depois do redirecionamento a aba mostra o endereço do R2, e
-    recarregar essa aba depois de 5 minutos ainda dá o erro do R2; tocar de novo no Portal
-    funciona. A resposta sai com `no-store`, como toda a API."""
+    para um link **novo**: a foto e o PDF abrem mesmo com a página do aviso aberta há horas.
+    Depois do redirecionamento a aba mostra o endereço do R2, que vale 1 hora (fechamento do M3):
+    recarregar essa aba dentro de 1 hora funciona; depois disso, tocar de novo no Portal. A
+    resposta sai com `no-store`, como toda a API."""
     try:
         link = servico.link_do_anexo(db, logado, aviso_id, arquivo_id, bucket, baixar=False)
     except ErroApi as erro:

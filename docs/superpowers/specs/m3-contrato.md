@@ -250,6 +250,13 @@ do corpo já são as de verdade. O que vale antes e depois dos épicos fica em
 `api/testes/test_m3_rotas.py`; os testes de 501 ficam em `api/testes/test_m3_em_construcao.py`
 (o épico troca o corpo da função e apaga a própria seção de lá).
 
+**Fechamento do M3 (coordenador):** os épicos trocaram os 501 pelo código de verdade e o
+`test_m3_em_construcao.py` foi apagado no merge. As rotas de navegação `…/abrir` (dos épicos A e
+B, nascidas fora do OpenAPI) entraram no OpenAPI, nas tabelas abaixo e nas listas de
+`test_m3_rotas.py` e `test_cache.py` (302/303 ou 404/503, sempre com `no-store`, inclusive no
+redirecionamento). Elas existem porque o link assinado tem prazo: a tela aponta para o Portal, e
+cada visita confere o acesso e gera um link novo.
+
 ### 5.1 Comum · Envio de arquivo (`app/rotas/arquivos.py`, pronto)
 
 | Rota | Quem | Corpo | Resposta | Erros |
@@ -283,6 +290,7 @@ do corpo já são as de verdade. O que vale antes e depois dos épicos fica em
 | `POST /api/documentos/{documento_id}/versoes` | `Gestao` | `NovaVersaoDocumento` | 201 `Documento` | 404, 409 `documento_arquivado`, 409 `arquivo_em_uso`, 422 |
 | `POST /api/documentos/{documento_id}/arquivar` | `Gestao` | — | 200 `Documento` | 404 |
 | `GET /api/documentos/{documento_id}/versoes/{versao}/link?baixar=` | sessão opcional | — | 200 `LinkDoArquivo` | 404 `documento_nao_encontrado`, 503 |
+| `GET /api/documentos/{documento_id}/versoes/{versao}/abrir?baixar=` | sessão opcional | — | 302 para um link assinado novo | 302 para `/documentos/{id}` (sem acesso ou inexistente) ou `/documentos/{id}?erro=arquivos_desligados`; 422 (id fora do tipo) |
 
 - **Quem vê o quê** (`app/servicos/visibilidade.py`, `niveis_que_ve(logado)`, pronto): sem
   sessão (ou com a sessão restrita do primeiro acesso), só `publico`; unidade comum, `publico`
@@ -331,6 +339,7 @@ Campos novos (já no contrato; preenchidos pelo épico B, menos `documento`):
 | Rota | Quem | Resposta | Erros |
 |---|---|---|---|
 | `GET /api/avisos/{aviso_id}/anexos/{arquivo_id}/link?baixar=` | `UnidadeLogada` | 200 `LinkDoArquivo` | 404 `aviso_nao_encontrado` (aviso que a unidade não vê, ou arquivo que não é anexo de nenhuma versão dele), 503 |
+| `GET /api/avisos/{aviso_id}/anexos/{arquivo_id}/abrir` | `UnidadeLogada` | 302 para um link assinado novo | página HTML com a frase do erro (404, 503); 401 JSON sem sessão; 422 |
 
 - Regras do épico: no máximo 5 anexos, sem repetir (422 "Até 5 anexos por aviso." e "O mesmo
   arquivo foi escolhido duas vezes."); cada id é um arquivo confirmado, de finalidade `aviso`,
