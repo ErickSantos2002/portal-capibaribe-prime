@@ -6,6 +6,7 @@
 Rodado pelo `testar-ciclo.sh`; sozinho: `uv run --frozen --script testar_arquivos_unidade.py`.
 Sai com 1 se algum falhar."""
 
+import contextlib
 import importlib.util
 import os
 import subprocess
@@ -99,6 +100,86 @@ def mesmo_bucket_com_endpoint_escrito_diferente():
     )
     assert arquivos.mesmo_bucket("http://127.0.0.1:9000", "b", "http://127.0.0.1:9000/", "b")
     assert arquivos.mesmo_bucket("http://localhost", "b", "http://localhost:80", "b")
+
+
+class _ErroDoBucket(Exception):
+    """Imita o `ClientError` do botocore (tem `.response`), sem importar o boto3 aqui."""
+
+    def __init__(self, codigo: str):
+        super().__init__(codigo)
+        self.response = {"Error": {"Code": codigo}}
+
+
+class _S3SemVersoes:
+    """Um S3 como o R2: lista (`list_objects_v2`), mas não tem versões de objeto."""
+
+    def __init__(self, objetos: dict[str, int]):
+        self.objetos = objetos
+
+    def get_paginator(self, operacao: str):
+        if operacao == "list_object_versions":
+            raise _ErroDoBucket("NotImplemented")
+        objetos = self.objetos
+
+        class _Paginador:
+            def paginate(self, Bucket: str, Prefix: str):  # noqa: N803 (nome do boto3)
+                return [
+                    {
+                        "Contents": [
+                            {"Key": k, "Size": t}
+                            for k, t in objetos.items()
+                            if k.startswith(Prefix)
+                        ]
+                    }
+                ]
+
+        return _Paginador()
+
+
+@teste
+def versoes_num_bucket_sem_versionamento():
+    # Plano B da ADR-0011 (12/10/2026): a cópia fica no bucket de backups do R2, que não tem
+    # versões de objeto. A restauração lê a listagem e baixa sem `VersionId`.
+    bucket = arquivos.Bucket(
+        _S3SemVersoes({f"arquivos/{HEX}.age": 300, "diarios/2026-10-12.dump.age": 9}),
+        "portal-capibaribe-backups",
+        "https://conta.r2.cloudflarestorage.com",
+    )
+    versoes, escondidas = bucket.versoes("arquivos/")
+    assert versoes == {f"arquivos/{HEX}.age": [None]}, versoes
+    assert escondidas == set()
+
+
+@teste
+def versoes_com_outro_erro_do_bucket_nao_esconde_o_erro():
+    class _S3Fora(_S3SemVersoes):
+        def get_paginator(self, operacao: str):
+            raise _ErroDoBucket("NoSuchBucket")
+
+    bucket = arquivos.Bucket(_S3Fora({}), "x", "https://conta.r2.cloudflarestorage.com")
+    try:
+        bucket.versoes("arquivos/")
+    except _ErroDoBucket as erro:
+        assert erro.response["Error"]["Code"] == "NoSuchBucket"
+    else:
+        raise AssertionError("o erro do bucket sumiu")
+
+
+@teste
+def restaurar_um_sem_versao_baixa_sem_version_id():
+    pedidos = []
+
+    class _S3:
+        def download_file(self, bucket, chave, arquivo, ExtraArgs=None):  # noqa: N803
+            pedidos.append(ExtraArgs)
+            raise RuntimeError("parar aqui")
+
+    copia = arquivos.Bucket(
+        _S3(), "portal-capibaribe-backups", "https://conta.r2.cloudflarestorage.com"
+    )
+    with tempfile.TemporaryDirectory() as temp, contextlib.suppress(RuntimeError):
+        arquivos.restaurar_um(copia, copia, HEX, [None], "identidade", temp)
+    assert pedidos == [None], pedidos
 
 
 falhas = 0

@@ -3,12 +3,13 @@
 # - Todo dia 03:00 em Recife (06:00 UTC): pg_dump pelo papel `backup` (só leitura) → age → bucket
 #   privado `portal-capibaribe-backups` no R2 → retenção 30 diários + 12 mensais.
 # - Logo depois, a cópia dos arquivos (ADR-0011): o que está em `arquivos/` no bucket de arquivos
-#   e ainda não está na cópia é cifrado com age e enviado a um bucket do Backblaze B2. Sem os
+#   e ainda não está na cópia é cifrado com age e enviado à cópia: hoje a pasta `arquivos/` do
+#   próprio bucket de backups, travada (plano B da ADR-0011, escolhido em 12/10/2026). Sem os
 #   segredos ARQUIVOS_R2_* e COPIA_S3_*, só avisa (o backup do banco não depende dela).
 # - Dia 2 de cada mês (e à mão, com "restaurar"): restaura o backup que acabou de ser feito num
 #   Postgres 17 descartável e confere 5 blocos, 320 unidades, tabelas, gatilhos, permissões e a
 #   migração (igual ao head do repositório); e confere que todo arquivo confirmado nesse banco
-#   tem cópia no B2, decifrando um deles ao acaso.
+#   tem cópia, decifrando um deles ao acaso.
 # - Falhou? O GitHub manda e-mail para quem tem o workflow (padrão das Actions).
 #
 # Nenhum script liga `set -x`; os segredos chegam só por variável de ambiente e o GitHub mascara
@@ -35,7 +36,7 @@ concurrency:
 
 jobs:
   backup:
-    name: pg_dump → age → R2, e cópia dos arquivos → B2
+    name: pg_dump → age → R2, e cópia cifrada dos arquivos
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     outputs:
@@ -77,7 +78,7 @@ jobs:
       # e-mail, e a cópia de amanhã pega o que faltou, porque é incremental).
       # Tempo próprio, menor que o do job: uma primeira cópia longa para no meio (o próximo run
       # continua de onde parou) sem estourar o job, e a restauração de teste do dia ainda roda.
-      - name: Cópia cifrada dos arquivos (B2)
+      - name: Cópia cifrada dos arquivos
         timeout-minutes: 12
         env:
           ARQUIVOS_R2_ENDPOINT: ${{ secrets.ARQUIVOS_R2_ENDPOINT }}
@@ -155,7 +156,7 @@ jobs:
             echo "- 5 blocos, 320 unidades, tabelas, gatilhos e permissões conferidos"
             echo "- migração do backup igual ao head do repositório: \`$HEAD\`"
           } >>"$GITHUB_STEP_SUMMARY"
-      - name: Conferir a cópia dos arquivos (B2)
+      - name: Conferir a cópia dos arquivos
         env:
           BACKUP_AGE_KEY: ${{ secrets.BACKUP_AGE_KEY }}
           COPIA_S3_ENDPOINT: ${{ secrets.COPIA_S3_ENDPOINT }}

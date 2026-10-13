@@ -6,8 +6,8 @@
 #   scripts/backup/restaurar-arquivos.sh
 #
 # Variáveis:
-#   COPIA_S3_*     a cópia no B2 (_ENDPOINT, _ACCESS_KEY_ID, _SECRET_ACCESS_KEY e _BUCKET);
-#                  basta uma chave de leitura
+#   COPIA_S3_*     a cópia (_ENDPOINT, _ACCESS_KEY_ID, _SECRET_ACCESS_KEY e _BUCKET): hoje o
+#                  bucket de backups do R2 (plano B da ADR-0011); basta uma chave de leitura
 #   DESTINO_S3_*   o bucket novo (_ENDPOINT, _ACCESS_KEY_ID, _SECRET_ACCESS_KEY e _BUCKET), com
 #                  chave de leitura e escrita; nome sem "backup"
 #   BACKUP_AGE_KEY_FILE ou BACKUP_AGE_KEY   a chave privada do age (a cópia offline do dono)

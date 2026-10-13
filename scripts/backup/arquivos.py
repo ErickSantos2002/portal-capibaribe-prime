@@ -2,7 +2,8 @@
 # requires-python = "==3.12.*"
 # dependencies = ["boto3==1.43.108"]
 # ///
-"""Proteção dos arquivos (ADR-0011): cópia cifrada do bucket de arquivos num segundo provedor.
+"""Proteção dos arquivos (ADR-0011): cópia cifrada do bucket de arquivos em outro bucket (hoje,
+plano B: a pasta `arquivos/` do bucket de backups do R2; o B2 fica como alternativa futura).
 Uso: `uv run --frozen --script arquivos.py <comando>` (as dependências vêm de arquivos.py.lock).
 
 Comandos:
@@ -22,7 +23,8 @@ Comandos:
 Variáveis (só o NOME aparece em mensagens; nenhum valor é impresso). Cada grupo tem quatro:
 <GRUPO>_ENDPOINT, <GRUPO>_ACCESS_KEY_ID, <GRUPO>_SECRET_ACCESS_KEY e <GRUPO>_BUCKET.
   ARQUIVOS_R2_*   o bucket de arquivos do Portal (chave só de leitura)
-  COPIA_S3_*      a cópia (Backblaze B2; chave sem deleteFiles)
+  COPIA_S3_*      a cópia: hoje os mesmos valores dos R2_* do backup do banco (pasta arquivos/
+                  do bucket de backups, com trava); num outro provedor, uma chave sem apagar
   DESTINO_S3_*    o bucket novo de um desastre (só `restaurar`)
   <GRUPO>_REGIAO  opcional; padrão: a região de `s3.<região>.backblazeb2.com`, senão "auto"
 
@@ -41,6 +43,8 @@ import tempfile
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+# Códigos de quem não tem `ListObjectVersions` (o R2 não tem versões de objeto em 12/10/2026).
+SEM_VERSOES = frozenset({"NotImplemented", "NotImplementedError", "MethodNotAllowed"})
 ORIGEM = "ARQUIVOS_R2"
 COPIA = "COPIA_S3"
 DESTINO = "DESTINO_S3"
@@ -175,19 +179,29 @@ class Bucket:
             chaves |= {o["Key"]: o["Size"] for o in pagina.get("Contents", [])}
         return chaves
 
-    def versoes(self, prefixo: str) -> tuple[dict[str, list[str]], set[str]]:
+    def versoes(self, prefixo: str) -> tuple[dict[str, list[str | None]], set[str]]:
         """Chave → VersionIds da mais nova para a mais velha (sem os marcadores de remoção), e as
-        chaves cuja versão mais nova é um marcador (escondidas: o "hide" do B2)."""
+        chaves cuja versão mais nova é um marcador (escondidas: o "hide" do B2).
+
+        Bucket sem versões de objeto (o R2, no plano B da ADR-0011: a cópia no bucket de
+        backups): a listagem comum, com uma "versão" `None` por chave (baixa sem `VersionId`)."""
         versoes: dict[str, list[tuple[str, str]]] = {}
         escondidas: set[str] = set()
-        for pagina in self.s3.get_paginator("list_object_versions").paginate(
-            Bucket=self.nome, Prefix=prefixo
-        ):
-            for v in pagina.get("Versions", []):
-                versoes.setdefault(v["Key"], []).append((v["LastModified"], v["VersionId"]))
-            for m in pagina.get("DeleteMarkers", []):
-                if m.get("IsLatest"):
-                    escondidas.add(m["Key"])
+        try:
+            for pagina in self.s3.get_paginator("list_object_versions").paginate(
+                Bucket=self.nome, Prefix=prefixo
+            ):
+                for v in pagina.get("Versions", []):
+                    versoes.setdefault(v["Key"], []).append((v["LastModified"], v["VersionId"]))
+                for m in pagina.get("DeleteMarkers", []):
+                    if m.get("IsLatest"):
+                        escondidas.add(m["Key"])
+        except Exception as erro:
+            codigo = (getattr(erro, "response", None) or {}).get("Error", {}).get("Code")
+            if codigo not in SEM_VERSOES:
+                raise
+            log("a cópia não tem versões de objeto (R2): restauração pela listagem")
+            return {k: [None] for k in self.listar(prefixo)}, set()
         ordenadas = {
             k: [vid for _, vid in sorted(lista, key=lambda x: x[0], reverse=True)]
             for k, lista in versoes.items()
@@ -468,7 +482,12 @@ def conferir(lista: str, identidade: str | None) -> int:
 
 # --- restaurar -------------------------------------------------------------------------------
 def restaurar_um(
-    copia: Bucket, destino: Bucket, chave: str, versoes: list[str], identidade: str, temp: str
+    copia: Bucket,
+    destino: Bucket,
+    chave: str,
+    versoes: list[str | None],
+    identidade: str,
+    temp: str,
 ) -> tuple[bool, int]:
     """Decifra a versão mais nova da cópia que decifrar (a mais nova pode estar estragada; o B2
     guarda as anteriores) e a envia ao destino. O claro fica só no diretório temporário 700 e é
@@ -479,7 +498,10 @@ def restaurar_um(
     try:
         for pulada, versao in enumerate(versoes):
             copia.s3.download_file(
-                copia.nome, f"arquivos/{chave}.age", cifrado, ExtraArgs={"VersionId": versao}
+                copia.nome,
+                f"arquivos/{chave}.age",
+                cifrado,
+                ExtraArgs={"VersionId": versao} if versao is not None else None,
             )
             decifrado = subprocess.run(
                 ["age", "--decrypt", "--identity", identidade, "--output", claro, cifrado],
@@ -514,7 +536,7 @@ def restaurar(identidade: str) -> int:
     if mesmo_bucket(copia.endpoint, copia.nome, destino.endpoint, destino.nome):
         sys.exit(
             "O destino é a própria cópia (DESTINO_S3_* = COPIA_S3_*): os arquivos seriam gravados "
-            "em claro no B2. Use um bucket NOVO de arquivos."
+            "em claro junto da cópia. Use um bucket NOVO de arquivos."
         )
     # Pelas versões, não só pela listagem: o escondido e a versão anterior de uma cópia
     # estragada também voltam.

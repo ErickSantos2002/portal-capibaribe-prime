@@ -3,8 +3,9 @@
 #   banco de teste (migração + carga) → papel backup → fazer-backup.sh → S3 falso (moto)
 #   → retenção com datas simuladas → restaurar.sh → verificações; e os casos que TÊM de falhar.
 #   Também a proteção dos arquivos (ADR-0011): cópia cifrada do bucket de arquivos para um
-#   segundo S3 falso (o papel do Backblaze B2), conferência na restauração e restauração dos
-#   arquivos para um bucket novo.
+#   segundo S3 falso (com versões, como o Backblaze B2 do plano A), conferência na restauração e
+#   restauração dos arquivos para um bucket novo; e o plano B escolhido (a cópia na pasta
+#   arquivos/ do bucket de backups, no mesmo S3 falso da Cloudflare, sem tocar nos dumps).
 #
 # Uso (da raiz do repositório):
 #   scripts/backup/testes/testar-ciclo.sh
@@ -169,7 +170,8 @@ s3t "$R2_ENDPOINT" "$R2_BUCKET" criar
 BUCKET_ARQUIVOS=portal-capibaribe-arquivos BUCKET_COPIA=portal-capibaribe-copia-arquivos
 s3t "$R2_ENDPOINT" "$BUCKET_ARQUIVOS" criar
 s3t "$B2_ENDPOINT" "$BUCKET_COPIA" criar
-# Como o bucket do B2 ("Keep all versions", passo B.2): reenviar ou esconder não perde a versão.
+# Como um bucket do B2 com "Keep all versions" (plano A da ADR-0011): reenviar ou esconder não
+# perde a versão.
 s3t "$B2_ENDPOINT" "$BUCKET_COPIA" versionar
 arq() { s3t "$R2_ENDPOINT" "$BUCKET_ARQUIVOS" "$@"; }
 b2() { s3t "$B2_ENDPOINT" "$BUCKET_COPIA" "$@"; }
@@ -576,6 +578,53 @@ esperar_falha "restauração dos arquivos recusa destino que já tem cópias .ag
   restaurar_arquivos "$BUCKET_NOVO-3"
 [[ "$(s3t "$R2_ENDPOINT" "$BUCKET_NOVO-3" listar arquivos/ | wc -l)" == 1 ]] ||
   reprovar "a restauração recusada gravou no destino"
+
+# --- 8. Plano B da ADR-0011: a cópia na pasta arquivos/ do bucket de backups ----------------
+# Escolha do Erick (12/10/2026): sem Backblaze, os COPIA_S3_* recebem os mesmos valores dos R2_*
+# do backup do banco. Origem e cópia na mesma conta (mesmo endpoint, buckets diferentes), e a
+# cópia no mesmo bucket dos dumps: nada pode se misturar com diarios/ e mensais/.
+VARS_COPIA_BACKUPS=(COPIA_S3_ENDPOINT="$R2_ENDPOINT" COPIA_S3_ACCESS_KEY_ID=teste
+  COPIA_S3_SECRET_ACCESS_KEY=teste COPIA_S3_BUCKET="$R2_BUCKET" COPIA_S3_REGIAO=us-east-1)
+bkp() { s3t "$R2_ENDPOINT" "$R2_BUCKET" "$@"; }
+{ bkp listar diarios/; bkp listar mensais/; bkp listar outra-pasta/; } >"$temp/dumps-antes.txt"
+env "${VARS_ARQUIVOS[@]}" "${VARS_COPIA_BACKUPS[@]}" "$pasta/copiar-arquivos.sh" >"$temp/saida.txt" 2>&1 || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a cópia no bucket de backups falhou"
+}
+grep -q "copiados agora: 5 · já na cópia: 0 · ignorados (fora do padrão): 1" "$temp/saida.txt" || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a cópia no bucket de backups deveria contar 5 copiados e 1 ignorado"
+}
+bkp listar arquivos/ | awk '{print $1}' | sort >"$temp/na-copia.txt"
+printf 'arquivos/%s.age\n' "${CHAVES[@]}" "$CHAVE_NOVA" | sort >"$temp/esperado.txt"
+diff -u "$temp/esperado.txt" "$temp/na-copia.txt" >&2 ||
+  reprovar "o bucket de backups deveria ter só as 5 cópias em arquivos/"
+{ bkp listar diarios/; bkp listar mensais/; bkp listar outra-pasta/; } >"$temp/dumps-depois.txt"
+cmp -s "$temp/dumps-antes.txt" "$temp/dumps-depois.txt" || reprovar "a cópia mexeu nos dumps"
+ok "plano B: a cópia vai para arquivos/ do bucket de backups, sem tocar nos dumps"
+
+# A retenção dos dumps (que tem permissão de apagar) nunca chega em arquivos/.
+s3 reter --diarios 1 --mensais 1 >/dev/null 2>&1 || reprovar "a retenção falhou"
+bkp listar arquivos/ | awk '{print $1}' | sort >"$temp/na-copia.txt"
+diff -u "$temp/esperado.txt" "$temp/na-copia.txt" >&2 || reprovar "a retenção apagou uma cópia de arquivo"
+ok "plano B: a retenção dos dumps não apaga as cópias dos arquivos"
+
+s3t "$R2_ENDPOINT" "$BUCKET_NOVO-4" criar
+env "${VARS_COPIA_BACKUPS[@]}" DESTINO_S3_ENDPOINT="$R2_ENDPOINT" DESTINO_S3_ACCESS_KEY_ID=teste \
+  DESTINO_S3_SECRET_ACCESS_KEY=teste DESTINO_S3_BUCKET="$BUCKET_NOVO-4" DESTINO_S3_REGIAO=us-east-1 \
+  BACKUP_AGE_KEY="$(cat "$temp/chave-teste.age")" "$pasta/restaurar-arquivos.sh" >"$temp/saida.txt" 2>&1 || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a restauração a partir do bucket de backups falhou"
+}
+grep -q "restaurados agora: 5 · já no destino: 0" "$temp/saida.txt" || {
+  cat "$temp/saida.txt" >&2
+  reprovar "a restauração a partir do bucket de backups deveria restaurar as 5"
+}
+for i in 0 1 2 3; do
+  s3t "$R2_ENDPOINT" "$BUCKET_NOVO-4" ler "arquivos/${CHAVES[$i]}" "$temp/restaurado"
+  cmp -s "$temp/restaurado" "$temp/originais/$i" || reprovar "plano B: o arquivo $i não voltou igual"
+done
+ok "plano B: os arquivos voltam da cópia no bucket de backups para um bucket novo"
 
 # --- Limpeza ---------------------------------------------------------------------------------
 admin -c "drop database if exists $DESTINO with (force)" -c "drop database if exists $ORIGEM with (force)"
