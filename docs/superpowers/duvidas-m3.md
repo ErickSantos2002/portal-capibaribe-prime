@@ -100,7 +100,7 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
   (num `<iframe>` ou `<object>`) exigiria liberar o R2 também em `frame-src`/`object-src`;
   ninguém pediu isso, e o épico B mostra o PDF como botão.
 
-## 9. Foto pequena vai com os metadados do celular **[Erick]**
+## 9. Foto pequena vai com os metadados do celular · respondida
 - **Dúvida:** a compressão (seção 4 da spec) regrava em WEBP só a foto com o lado maior acima
   de 1920 px (ou a menor que passa do limite do destino, desde a revisão do contrato).
   Regravar descarta os metadados (EXIF), inclusive a localização do GPS; a foto menor e leve
@@ -111,6 +111,14 @@ Backblaze B2, GitHub, Vercel) antes do primeiro documento real.
   (PNG de print com texto fica pior em WEBP com perda).
 - **Confirmar:** se prefere que toda foto seja regravada, para nunca levar localização. É uma
   linha em `web/src/arquivos/comprimir.ts` (o teste "foto pequena vai como está" muda junto).
+- **Resposta do Erick (12/10/2026):** regravar **todo JPEG**, mesmo pequeno e dentro do limite,
+  com as mesmas dimensões, só para tirar os metadados (inclusive o GPS). PNG e WEBP seguem a
+  regra de antes (só se grande ou acima do limite). **Feito no fechamento do M3**
+  (`comprimir.ts` e testes em `web/src/arquivos/arquivos.test.ts`): o JPEG regravado vai mesmo
+  se ficar maior que o original; se passar do limite, a tela recusa pelo tamanho, como qualquer
+  arquivo. Se o navegador não conseguir regravar (raro), o original vai como está. Celular que
+  fotografa em HEIC: o Portal não aceita HEIC (só PDF, JPEG, PNG e WEBP); o iPhone costuma converter para
+  JPEG ao escolher a foto no navegador, e aí ela passa por esta regra.
 
 ## 10. Recusa na tela vira `ErroDaApi` `dados_invalidos`, campo `arquivo`
 - **Decisão:** `enviarArquivo` recusa tipo fora da lista, arquivo vazio e tamanho acima do

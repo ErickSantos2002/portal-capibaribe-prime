@@ -142,7 +142,8 @@ class Armazenamento(Protocol):
     def url_de_envio(self, chave: str, tipo: str, tamanho: int) -> UrlAssinada: ...
         # PUT em envios/<chave>, assinado com o Content-Type e o Content-Length, 10 minutos
     def url_de_leitura(self, chave: str, *, tipo: str, nome: str, baixar: bool) -> UrlAssinada: ...
-        # GET em arquivos/<chave>, vale 5 minutos; força Content-Type e Content-Disposition
+        # GET em arquivos/<chave>, vale 1 hora (eram 5 minutos; fechamento do M3, ADR-0011,
+        # "Revisões"); força Content-Type e Content-Disposition
     def envio_recebido(self, chave: str) -> EnvioRecebido | None: ...  # HEAD; None = não chegou
     def inicio_do_envio(self, chave: str, n: int = 16, *, etag: str) -> bytes: ...
         # GET com Range e If-Match; ETag diferente → EnvioMudou
@@ -181,7 +182,7 @@ class Armazenamento(Protocol):
 - Leitura: `ResponseContentType` = o tipo conferido; `ResponseContentDisposition` =
   `inline` (abrir no celular) ou `attachment` (baixar), com `filename*=UTF-8''…` e um nome
   ASCII de reserva, com a extensão do tipo se faltar; `ResponseCacheControl: private,
-  max-age=300`.
+  max-age=3600` (o mesmo tempo do link).
 
 ## 4. Envio de arquivo (pronto nesta onda)
 
@@ -229,8 +230,13 @@ tela                          API                                   R2
   navegador não grava WEBP, JPEG 0,85, com fundo branco no lugar da transparência); a foto
   menor que isso, mas acima do limite do destino (um print PNG de 12 MB para um aviso), é
   regravada com as mesmas dimensões. Se o resultado ficar maior que o original, vai o original
-  (e a tela recusa pelo tamanho, se for o caso). PDF vai como está. A compressão acontece **antes** do pedido (o tamanho declarado
-  já é o comprimido) e troca a extensão do nome (`foto.jpg` → `foto.webp`).
+  (e a tela recusa pelo tamanho, se for o caso). **JPEG é sempre regravado** (resposta do Erick
+  em 12/10/2026, dúvida 9), mesmo pequeno e dentro do limite, com as mesmas dimensões: regravar
+  tira os metadados (EXIF), inclusive o GPS. Vai o regravado mesmo se ficar maior que o
+  original; se passar do limite, a tela recusa pelo tamanho. Só vai o original se o navegador
+  não conseguir regravar (o servidor confere o conteúdo de qualquer jeito). PNG e WEBP seguem a
+  regra de antes. PDF vai como está. A compressão acontece **antes** do pedido (o tamanho
+  declarado já é o comprimido) e troca a extensão do nome (`foto.jpg` → `foto.webp`).
 
 ## 5. Contrato da API
 
@@ -316,7 +322,7 @@ cada visita confere o acesso e gera um link novo.
   mais nova para a mais antiga, sem a atual) + `aviso_id`. `VersaoDocumento`: `versao`,
   `enviada_em`, `arquivo`. `ListaDocumentos`: `itens`, na ordem `data_documento` desc, depois
   `id` desc (a tela agrupa por categoria e busca pelo título, como o protótipo).
-- `LinkDoArquivo`: `url`, `expira_em` (5 minutos). A tela abre a `url` (nova aba) ou baixa
+- `LinkDoArquivo`: `url`, `expira_em` (1 hora desde o fechamento do M3; eram 5 minutos). A tela abre a `url` (nova aba) ou baixa
   (`baixar=true`). O link é pedido **na hora do toque**, nunca guardado.
 - Histórico (`Acao`, já criadas): `documento_publicado` (entidade `documento`, `{"versao": 1,
   "acesso", "categoria", "avisou": bool}`), `documento_versao_enviada` (`{"versao": n}`),

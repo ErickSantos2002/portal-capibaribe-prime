@@ -88,11 +88,47 @@ describe('compressão de foto (ADR-0004)', () => {
     expect(f.medir).not.toHaveBeenCalled()
   })
 
-  it('foto pequena vai como está', async () => {
+  it('PNG ou WEBP pequeno vai como está', async () => {
+    for (const [nome, tipo] of [
+      ['print.png', 'image/png'],
+      ['foto.webp', 'image/webp'],
+    ]) {
+      const foto = arquivo(nome, tipo)
+      const f = ferramentas(1600, 1200, new Blob(['x'], { type: 'image/webp' }))
+      await expect(comprimir(foto, f)).resolves.toBe(foto)
+      expect(f.regravar).not.toHaveBeenCalled()
+    }
+  })
+
+  // Resposta do Erick (12/10/2026, dúvida 9 do M3): todo JPEG é regravado, mesmo pequeno, para
+  // não levar a localização do GPS (EXIF) junto. As dimensões ficam as mesmas.
+  it('JPEG pequeno é regravado com as mesmas dimensões, para tirar os metadados', async () => {
+    const foto = arquivo('foto.jpg', 'image/jpeg', 5000)
+    const f = ferramentas(1600, 1200, new Blob([new Uint8Array(900)], { type: 'image/webp' }))
+    const saida = await comprimir(foto, f)
+    expect(f.regravar).toHaveBeenCalledWith(foto, 1600, 1200, 'image/webp', 0.82)
+    expect([saida.name, saida.type, saida.size]).toEqual(['foto.webp', 'image/webp', 900])
+  })
+
+  it('JPEG regravado maior que o original: vai o regravado mesmo assim (sem GPS)', async () => {
+    const foto = arquivo('foto.jpeg', 'image/jpeg', 500)
+    const f = ferramentas(800, 600, new Blob([new Uint8Array(800)], { type: 'image/webp' }))
+    const saida = await comprimir(foto, f)
+    expect([saida.name, saida.size]).toEqual(['foto.webp', 800])
+  })
+
+  it('JPEG grande regravado maior que o original: também vai o regravado', async () => {
+    const foto = arquivo('foto.jpg', 'image/jpeg', 500)
+    const f = ferramentas(4000, 3000, new Blob([new Uint8Array(800)], { type: 'image/webp' }))
+    const saida = await comprimir(foto, f)
+    expect(f.regravar).toHaveBeenCalledWith(foto, 1920, 1440, 'image/webp', 0.82)
+    expect(saida.size).toBe(800)
+  })
+
+  it('JPEG que o navegador não consegue regravar vai como está (o servidor confere)', async () => {
     const foto = arquivo('foto.jpg', 'image/jpeg')
-    const f = ferramentas(1600, 1200, new Blob(['x'], { type: 'image/webp' }))
+    const f = ferramentas(1600, 1200, null)
     await expect(comprimir(foto, f)).resolves.toBe(foto)
-    expect(f.regravar).not.toHaveBeenCalled()
   })
 
   it('foto grande vira WEBP 0,82 em 1920 px, com o nome novo', async () => {
@@ -135,8 +171,8 @@ describe('compressão de foto (ADR-0004)', () => {
     await expect(comprimir(foto, f, LIMITES.aviso)).resolves.toBe(foto)
   })
 
-  it('foto pequena dentro do limite continua indo como está', async () => {
-    const foto = arquivo('foto.jpg', 'image/jpeg', 2 * MB)
+  it('foto pequena dentro do limite continua indo como está (PNG)', async () => {
+    const foto = arquivo('print.png', 'image/png', 2 * MB)
     const f = ferramentas(1600, 1200, new Blob(['x'], { type: 'image/webp' }))
     await expect(comprimir(foto, f, LIMITES.aviso)).resolves.toBe(foto)
     expect(f.regravar).not.toHaveBeenCalled()

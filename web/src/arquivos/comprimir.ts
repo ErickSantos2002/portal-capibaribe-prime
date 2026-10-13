@@ -2,8 +2,13 @@
 // Foto com o lado maior acima de 1920 px é reduzida para 1920 px e regravada em WEBP (0,82); se
 // o navegador não grava WEBP, JPEG (0,85, com fundo branco no lugar da transparência). Foto
 // menor, mas acima do limite do destino (um print PNG pesado), é regravada com as mesmas
-// dimensões. Se o resultado ficar maior, vai o original. PDF vai como está. Arquivo comum: os
-// épicos usam, não editam.
+// dimensões. Se o resultado ficar maior, vai o original. PDF vai como está.
+//
+// JPEG é sempre regravado (resposta do Erick, 12/10/2026, dúvida 9 do M3), mesmo pequeno e
+// dentro do limite, com as mesmas dimensões: regravar descarta os metadados (EXIF), inclusive a
+// localização do GPS, que a foto do celular traz. Vai o regravado mesmo se ficar maior; se passar
+// do limite, a tela recusa pelo tamanho, como qualquer outro. Só vai o original se o navegador não
+// conseguir regravar.
 import type { TipoArquivo } from './tipos'
 
 export const LADO_MAXIMO = 1920
@@ -96,13 +101,16 @@ export async function comprimir(
   limite = Infinity,
 ): Promise<File> {
   if (!arquivo.type.startsWith('image/')) return arquivo
+  const semGps = arquivo.type === 'image/jpeg'
   try {
     const { largura, altura } = await ferramentas.medir(arquivo)
-    if (Math.max(largura, altura) <= LADO_MAXIMO && arquivo.size <= limite) return arquivo
+    const cabe = Math.max(largura, altura) <= LADO_MAXIMO && arquivo.size <= limite
+    if (cabe && !semGps) return arquivo
     const novo = dimensoesReduzidas(largura, altura)
     const reduzido =
       (await regravarComo(arquivo, ferramentas, novo.largura, novo.altura, 'image/webp', 0.82)) ??
       (await regravarComo(arquivo, ferramentas, novo.largura, novo.altura, 'image/jpeg', 0.85))
+    if (reduzido && semGps) return reduzido
     return reduzido && reduzido.size < arquivo.size ? reduzido : arquivo
   } catch {
     return arquivo
