@@ -12,6 +12,7 @@ bucket falhar na confirmação (o arquivo continua pendente). Regras em `app/ser
 from fastapi import APIRouter, Depends
 
 from app.esquemas.arquivos import ArquivoEnviado, EnvioAutorizado, PedirEnvio
+from app.esquemas.comum import IdBanco
 from app.seguranca.dependencias import Banco, Gestao, exige_cabecalho_portal
 from app.servicos import arquivos as servico
 from app.servicos.armazenamento import Armazenado
@@ -26,5 +27,5 @@ def pedir(dados: PedirEnvio, logado: Gestao, db: Banco, bucket: Armazenado) -> E
 
 
 @rotas.post("/{arquivo_id}/confirmar")
-def confirmar(arquivo_id: int, logado: Gestao, db: Banco, bucket: Armazenado) -> ArquivoEnviado:
+def confirmar(arquivo_id: IdBanco, logado: Gestao, db: Banco, bucket: Armazenado) -> ArquivoEnviado:
     return servico.confirmar_envio(db, logado, arquivo_id, bucket)

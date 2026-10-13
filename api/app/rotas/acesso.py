@@ -18,7 +18,7 @@ from app.esquemas.acesso import (
     PrimeiroAcesso,
     TrocarSenha,
 )
-from app.esquemas.comum import Eu
+from app.esquemas.comum import Eu, IdBanco
 from app.seguranca.dependencias import (
     Banco,
     SessaoQualquer,
@@ -101,7 +101,7 @@ def trocar_senha(
 
 @rotas.delete("/api/minha-unidade/aparelhos/{sessao_id}", status_code=204)
 def desconectar_aparelho(
-    sessao_id: int, logado: UnidadeLogada, resposta: Response, db: Banco
+    sessao_id: IdBanco, logado: UnidadeLogada, resposta: Response, db: Banco
 ) -> None:
     acesso.desconectar_aparelho(db, logado, sessao_id)
     db.commit()

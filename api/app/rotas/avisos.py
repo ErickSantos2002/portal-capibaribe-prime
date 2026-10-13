@@ -33,13 +33,12 @@ confere no commit que o aviso tem versão 1 e destino (restrição `aviso_comple
 import html
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Path, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.erros_api import ErroApi
 from app.esquemas.arquivos import LinkDoArquivo
 from app.esquemas.avisos import (
-    MAIOR_ID,
     Alcance,
     AvisoCompleto,
     Busca,
@@ -50,7 +49,9 @@ from app.esquemas.avisos import (
     ListaAvisos,
     MudarFixado,
     NovoAviso,
+    NumeroDeBloco,
 )
+from app.esquemas.comum import IdBanco
 from app.seguranca.dependencias import Banco, Gestao, UnidadeLogada, exige_cabecalho_portal
 from app.servicos import avisos as servico
 from app.servicos import notificacoes
@@ -76,7 +77,7 @@ def nao_lidos(logado: UnidadeLogada, db: Banco) -> ContagemNaoLidos:
 
 
 @rotas.get("/alcance")
-def alcance(_: Gestao, db: Banco, blocos: Annotated[list[int], Query()] = []) -> Alcance:  # noqa: B006
+def alcance(_: Gestao, db: Banco, blocos: Annotated[list[NumeroDeBloco], Query()] = []) -> Alcance:  # noqa: B006
     return Alcance(unidades=servico.alcance(db, sorted(set(blocos))))
 
 
@@ -96,41 +97,42 @@ def publicar(
 
 
 @rotas.get("/{aviso_id}")
-def abrir(aviso_id: int, logado: UnidadeLogada, db: Banco) -> AvisoCompleto:
+def abrir(aviso_id: IdBanco, logado: UnidadeLogada, db: Banco) -> AvisoCompleto:
     return servico.abrir(db, logado, aviso_id)
 
 
 @rotas.post("/{aviso_id}/lido", status_code=204)
-def marcar_lido(aviso_id: int, logado: UnidadeLogada, db: Banco) -> None:
+def marcar_lido(aviso_id: IdBanco, logado: UnidadeLogada, db: Banco) -> None:
     servico.marcar_lido(db, logado, aviso_id)
 
 
 @rotas.put("/{aviso_id}")
-def corrigir(aviso_id: int, dados: CorrigirAviso, logado: Gestao, db: Banco) -> AvisoCompleto:
+def corrigir(aviso_id: IdBanco, dados: CorrigirAviso, logado: Gestao, db: Banco) -> AvisoCompleto:
     servico.corrigir(db, logado, aviso_id, dados)
     return servico.abrir(db, logado, aviso_id)
 
 
 @rotas.post("/{aviso_id}/arquivar")
-def arquivar(aviso_id: int, logado: Gestao, db: Banco) -> AvisoCompleto:
+def arquivar(aviso_id: IdBanco, logado: Gestao, db: Banco) -> AvisoCompleto:
     servico.arquivar(db, logado, aviso_id)
     db.expire_all()
     return servico.abrir(db, logado, aviso_id)
 
 
 @rotas.put("/{aviso_id}/fixado")
-def mudar_fixado(aviso_id: int, dados: MudarFixado, logado: Gestao, db: Banco) -> AvisoCompleto:
+def mudar_fixado(aviso_id: IdBanco, dados: MudarFixado, logado: Gestao, db: Banco) -> AvisoCompleto:
     servico.mudar_fixado(db, logado, aviso_id, dados.fixado)
     return servico.abrir(db, logado, aviso_id)
 
 
 @rotas.get("/{aviso_id}/leitura")
-def leitura(aviso_id: int, logado: Gestao, db: Banco) -> Leitura:
+def leitura(aviso_id: IdBanco, logado: Gestao, db: Banco) -> Leitura:
     return servico.leitura(db, logado, aviso_id)
 
 
-# Ids das rotas dos anexos: fora do `bigint`, 422 (revisão do épico B, C5).
-IdNaRota = Annotated[int, Path(ge=1, le=MAIOR_ID)]
+# Ids das rotas dos anexos: fora do `bigint`, 422 (revisão do épico B, C5); desde o fechamento do
+# M3, o tipo comum, em toda rota com id.
+IdNaRota = IdBanco
 
 
 @rotas.get("/{aviso_id}/anexos/{arquivo_id}/link")

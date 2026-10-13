@@ -26,8 +26,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Path
 from fastapi.responses import RedirectResponse
 
 from app.esquemas.arquivos import LinkDoArquivo
+from app.esquemas.comum import IdBanco
 from app.esquemas.documentos import (
-    MAIOR_ID,
     Documento,
     ListaDocumentos,
     NovaVersaoDocumento,
@@ -45,7 +45,7 @@ from app.servicos import notificacoes
 from app.servicos.armazenamento import Armazenado
 
 # Revisão de código, C1 e C2: fora do tipo do banco (bigint, smallint) é 422, não erro 500.
-IdDocumento = Annotated[int, Path(ge=1, le=MAIOR_ID)]
+IdDocumento = IdBanco
 NumeroDaVersao = Annotated[int, Path(ge=1, le=32767)]
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).

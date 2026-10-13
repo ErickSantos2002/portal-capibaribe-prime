@@ -9,10 +9,17 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import AfterValidator, Field, ValidationInfo, field_validator
+from pydantic import AfterValidator, ValidationInfo, field_validator
 
 from app.esquemas.arquivos import ArquivoEnviado
-from app.esquemas.comum import MSG_CONTROLE, Entrada, Saida, sem_controle, sem_invisiveis
+from app.esquemas.comum import (
+    MSG_CONTROLE,
+    Entrada,
+    IdBanco,
+    Saida,
+    sem_controle,
+    sem_invisiveis,
+)
 from app.modelos.documentos import (
     DATA_DOCUMENTO_ATE,
     DATA_DOCUMENTO_DESDE,
@@ -93,9 +100,8 @@ def validar_nota(nota: str | None) -> str | None:
 
 
 LIMITE_NOTA_DO_AVISO = 300
-# Ids do banco são bigint (C2): fora disso, 422 em vez de erro 500 do banco.
-MAIOR_ID = 2**63 - 1
-IdDoBanco = Annotated[int, Field(ge=1, le=MAIOR_ID)]
+# Ids do banco são bigint (C2): fora disso, 422 em vez de erro 500 do banco. O tipo é o comum.
+IdDoBanco = IdBanco
 TituloDocumento = Annotated[str, AfterValidator(validar_titulo)]
 DataDocumento = Annotated[date, AfterValidator(validar_data)]
 NotaDoAviso = Annotated[str | None, AfterValidator(validar_nota)]

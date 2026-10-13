@@ -9,7 +9,7 @@ Fica fora de `app/rotas/avisos.py` para os épicos do M2 não precisarem mexer l
 from fastapi import APIRouter, Depends
 from sqlalchemy import case, select
 
-from app.esquemas.comum import EnvioDoAviso, EnviosDoAviso
+from app.esquemas.comum import EnvioDoAviso, EnviosDoAviso, IdBanco
 from app.modelos import Aviso, Canal, NotificacaoEnvio
 from app.seguranca.dependencias import Banco, Gestao, exige_cabecalho_portal
 from app.servicos.avisos import nao_encontrado
@@ -20,7 +20,7 @@ _ORDEM = case({Canal.push.value: 0, Canal.email.value: 1}, value=NotificacaoEnvi
 
 
 @rotas.get("/{aviso_id}/envios")
-def envios(aviso_id: int, _: Gestao, db: Banco) -> EnviosDoAviso:
+def envios(aviso_id: IdBanco, _: Gestao, db: Banco) -> EnviosDoAviso:
     if db.get(Aviso, aviso_id) is None:
         raise nao_encontrado()
     linhas = db.scalars(

@@ -15,7 +15,9 @@ from app.esquemas.arquivos import ArquivoEnviado
 from app.esquemas.comum import (
     DIRECAO,
     INVISIVEIS,
+    MAIOR_ID,
     Entrada,
+    IdBanco,
     Saida,
     UnidadeRef,
     sem_controle,
@@ -25,12 +27,12 @@ from app.modelos.avisos import EVENTO_ATE, EVENTO_DESDE, LIMITE_ONDE, LIMITE_TEX
 
 NumeroDeBloco = Annotated[int, Field(ge=1, le=9)]
 # Id de linha do banco (`bigint`): fora disso, 422 em vez de erro do banco (revisão do épico B, C5).
-MAIOR_ID = 2**63 - 1
-IdDoBanco = Annotated[int, Field(ge=1, le=MAIOR_ID)]
+# O tipo é o comum (`IdBanco`); `MAIOR_ID` e `IdDoBanco` continuam importáveis daqui.
+IdDoBanco = IdBanco
 
 # `DIRECAO`, `INVISIVEIS` e `sem_invisiveis` moram em `comum.py` desde o M3 (o nome do arquivo
 # enviado usa as mesmas regras); continuam importáveis daqui.
-_REEXPORTADOS = (DIRECAO, INVISIVEIS, sem_invisiveis)
+_REEXPORTADOS = (DIRECAO, INVISIVEIS, MAIOR_ID, sem_invisiveis)
 
 
 def validar_titulo(titulo: str) -> str:

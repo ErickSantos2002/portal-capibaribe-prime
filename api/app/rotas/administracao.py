@@ -27,6 +27,7 @@ from app.esquemas.administracao import (
     Situacao,
     UnidadeAdmin,
 )
+from app.esquemas.comum import IdBanco
 from app.seguranca.dependencias import Admin, Banco, Gestao, exige_cabecalho_portal
 from app.servicos import administracao as servico
 
@@ -92,7 +93,7 @@ def retirar_papel(login: str, papel: PapelGerenciavel, logado: Admin, db: Banco)
 def historico(
     _: Admin,
     db: Banco,
-    antes_de: Annotated[int | None, Query(ge=1)] = None,
+    antes_de: Annotated[IdBanco | None, Query()] = None,
     limite: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginaHistorico:
     return servico.historico(db, antes_de, limite)

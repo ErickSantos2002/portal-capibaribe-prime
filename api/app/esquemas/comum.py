@@ -6,7 +6,9 @@ Cada esquema tem um espelho em TypeScript (`web/src/api/tipos.ts` para estes); o
 
 import unicodedata
 from datetime import datetime
+from typing import Annotated
 
+from annotated_types import Ge, Le
 from pydantic import BaseModel, ConfigDict
 
 from app.modelos import Canal, Papel, SituacaoEnvio
@@ -21,6 +23,8 @@ __all__ = [
     "EnviosDoAviso",
     "Entrada",
     "ErroResposta",
+    "IdBanco",
+    "MAIOR_ID",
     "Eu",
     "Papel",
     "SituacaoEnvio",
@@ -31,6 +35,12 @@ __all__ = [
 ]
 
 MSG_CONTROLE = "Tem um caractere invisível no texto. Apague e escreva de novo."
+
+# Ids das tabelas são `bigint`. Número maior chegava ao Postgres e virava erro 500 (revisões dos
+# épicos do M3, C1/C2/C5; fechamento do M3 para o Portal todo). `Ge`/`Le` em vez de `Field` ou
+# `Path`: o mesmo tipo serve no caminho, na query e no corpo, e aparece no OpenAPI.
+MAIOR_ID = 2**63 - 1
+IdBanco = Annotated[int, Ge(1), Le(MAIOR_ID)]
 
 
 def sem_controle(texto: str, *, permitidos: str = "") -> str:
