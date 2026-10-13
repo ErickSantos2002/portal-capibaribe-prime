@@ -6,7 +6,7 @@
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 04/10/2026 |
 | **Base** | `02-requisitos.md` v0.2, `03-historias.md` v0.1, `05-arquitetura.md` v0.1, `06-prototipo.md` v0.2 |
-| **Próximo passo** | M4 · Enquetes: contrato primeiro (tabelas, migração 0008, formato da API) |
+| **Próximo passo** | M4 · Enquetes: contrato pronto (migração 0008, formato da API); depois, os épicos A (criar e gerir) e B (votar e resultado) em paralelo |
 
 ---
 
@@ -251,6 +251,12 @@ teste que tenta burlar cada uma direto no banco.
 
 **Pronto quando:** dois celulares da mesma unidade votando ao mesmo tempo resultam em um voto
 só; a primeira enquete real da Comissão roda no Portal.
+
+**Situação: contrato pronto** (branch `m4/contrato`, sem deploy): migração 0008 com as três
+regras garantidas pelo banco e testes que tentam burlar cada uma direto no banco (inclusive dois
+votos simultâneos da mesma unidade: um voto só), rotas dos épicos respondendo 501, tipos e
+encaixes no front. Spec: `superpowers/specs/m4-contrato.md`; dúvidas:
+`superpowers/duvidas-m4.md`.
 
 ### M5 · Fechamento da E1
 

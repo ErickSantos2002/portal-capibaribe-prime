@@ -189,9 +189,19 @@ corrigir, `GET /api/avisos/{id}/anexos/{arquivo_id}/link` e `…/abrir`.
   alternativa futura, só trocando segredos).
 
 ### 6.3 Votar (H-21)
-1. `PUT /api/enquetes/{id}/voto` com as opções.
-2. A API confere destino e papel; o banco garante prazo e um voto por unidade (trigger e PK).
-3. Numa transação: grava/atualiza `voto` e troca as linhas de `voto_opcao`.
+1. `PUT /api/enquetes/{id}/voto` com as opções (votar e trocar são a mesma chamada).
+2. A API confere destino e papel (fora do destino: 404 igual a inexistente); o banco garante
+   prazo, destino e um voto por unidade (triggers e PK).
+3. Numa transação, nesta ordem: `insert into voto … on conflict do update` (trava a linha da
+   unidade), apaga e insere as linhas de `voto_opcao`. Dois celulares da mesma unidade ao mesmo
+   tempo: o segundo espera o primeiro e troca o voto; fica um voto só, o último (H-21).
+
+Rotas do M4 (contrato completo: `docs/superpowers/specs/m4-contrato.md`, seção 3):
+`GET /api/enquetes`, `GET /api/enquetes/{id}`, `PUT /api/enquetes/{id}/voto` (qualquer unidade
+que já entrou), `GET /api/enquetes/{id}/votantes` (gestão: quem votou, nunca em quê),
+`POST /api/enquetes` e `PUT /api/enquetes/{id}` (gestão; editar só antes do 1º voto). Criar a
+enquete cria o aviso automático na mesma transação (H-13) e notifica como qualquer aviso; o
+aviso aberto traz o campo `enquete` para o botão "Ir para a enquete".
 
 ## 7. Ambientes
 

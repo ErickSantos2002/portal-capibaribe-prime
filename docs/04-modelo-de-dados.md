@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | v0.2 — M3 implementado (documentos e anexos, migração 0007) |
+| **Status** | v0.3 — M4 em andamento (enquetes, migração 0008 no contrato) |
 | **Autor** | Erick Santos Dantas |
 | **Criado em** | 02/10/2026 |
 | **Base** | `03-historias.md` v0.1 (somente E1) |
@@ -228,36 +228,51 @@ faixa, antes de chegar ao banco (fechamento do M3).
 
 ### 3.5 Enquetes
 
+Migração 0008 (contrato do M4: `docs/superpowers/specs/m4-contrato.md`, seção 2).
+
 **`enquete`** (H-20)
 
 | Coluna | Tipo | Regra |
 |---|---|---|
 | `id` | bigint | PK |
-| `pergunta` | text | |
-| `multipla_escolha` | boolean | |
-| `encerra_em` | timestamptz | precisa ser no futuro ao criar |
-| `resultado` | enum `exibicao_resultado` | `durante`, `so_no_fim` |
-| `para_todos` | boolean | `false` = só os blocos em `enquete_bloco` |
-| `criada_por` / `criada_em` | FK `unidade` / timestamptz | |
-| `aviso_id` | FK `aviso` | o aviso automático gerado ao publicar |
+| `pergunta` | text | 1 a 200 caracteres |
+| `multipla_escolha` | boolean | padrão `false` (escolha única) |
+| `mostrar_resultado` | text | `durante` (padrão) ou `so_no_fim` (RF-23). `text` com `CHECK`, não `enum`, como as categorias |
+| `encerra_em` | timestamptz | no futuro e em até 366 dias, ao criar e ao editar (trigger); sempre depois de `criada_em` |
+| `para_todos` | boolean | `false` = só os blocos em `enquete_bloco`. Não muda |
+| `criada_por` / `criada_em` | FK `unidade` / timestamptz | carimbada pelo banco |
+| `editada_em` | timestamptz | nula até a 1ª edição; carimbada pelo banco |
+| `aviso_id` | FK `aviso` | **obrigatória e única**: o aviso automático (H-13), na mesma transação. Não muda |
 
-**`enquete_opcao`** — `id` PK, `enquete_id`, `texto`, `ordem`. De 2 a 10 por enquete.
+Completa no commit: de 2 a 10 opções e, se não é para todos, pelo menos um bloco. Depois do 1º
+voto ou do encerramento, **nada muda** (nem as opções). O `app` só altera pergunta, tipo de
+escolha, "mostrar resultado" e término, e não apaga.
 
-**`enquete_bloco`** — (`enquete_id`, `bloco_id`), PK nas duas.
+**`enquete_opcao`** — `id` PK, `enquete_id`, `texto` (1 a 100, único na enquete), `ordem`
+(1 a 10, única na enquete). De 2 a 10 por enquete. Editar = apagar e inserir de novo, só sem voto
+e com a enquete aberta.
+
+**`enquete_bloco`** — (`enquete_id`, `bloco_id`), PK nas duas. Só na transação que cria a
+enquete, e nunca numa enquete para todos.
 
 **`voto`** — a participação da unidade (H-21)
 
 | Coluna | Tipo | Regra |
 |---|---|---|
 | `enquete_id` + `unidade_id` | bigint + bigint | **PK composta → um voto por unidade (RN-01)** |
-| `votado_em` | timestamptz | atualizado quando o voto é trocado |
+| `votado_em` | timestamptz | carimbada pelo banco; atualizada quando o voto é trocado |
 
-**`voto_opcao`** — (`enquete_id`, `unidade_id`, `opcao_id`), PK nas três. Uma linha por opção
-marcada; escolha única tem exatamente uma.
+Só com a enquete aberta (relógio do banco na hora da gravação) e só de unidade do destino. Sem
+DELETE: o voto é trocado, nunca retirado.
 
-Trocar o voto substitui as linhas de `voto_opcao` dentro de uma transação. **O conteúdo de votos
-anteriores não é guardado**: o que vale é o último (H-21), e guardar escolhas antigas só criaria
-dado sobre o comportamento das pessoas, sem uso.
+**`voto_opcao`** — (`enquete_id`, `unidade_id`, `opcao_id`), PK nas três; chave estrangeira
+para `voto` e para a opção **da mesma enquete**. Uma linha por opção marcada; escolha única tem
+exatamente uma (conferido no commit).
+
+Trocar o voto substitui as linhas de `voto_opcao` dentro de uma transação, depois de gravar o
+`voto` com `on conflict do update` (que trava a linha: dois celulares da mesma unidade ao mesmo
+tempo dão um voto só). **O conteúdo de votos anteriores não é guardado**: o que vale é o último
+(H-21), e guardar escolhas antigas só criaria dado sobre o comportamento das pessoas, sem uso.
 
 ### 3.6 Histórico
 
@@ -291,10 +306,12 @@ Regra importante não pode depender só da tela (RNF-13). Quando o banco consegu
 | Regra | Onde |
 |---|---|
 | Um voto por unidade (RN-01) | **Banco:** PK `voto (enquete_id, unidade_id)` |
-| Não votar após o encerramento (H-21) | **Banco:** trigger compara `now()` com `encerra_em` |
-| Não editar enquete depois do 1º voto (H-20) | **Banco:** trigger em `enquete` e `enquete_opcao` |
-| Só vota quem está no destino | **Aplicação**, com teste |
-| Nada oficial é apagado (RN-05) | **Banco:** o usuário da aplicação **não tem permissão de DELETE** em `aviso`, `aviso_versao`, `documento`, `documento_versao`, `enquete`, `voto`, `historico` |
+| Não votar após o encerramento (H-21) | **Banco:** triggers em `voto` e `voto_opcao` comparam o relógio do banco (`clock_timestamp()`) com `encerra_em` |
+| Não editar enquete depois do 1º voto (H-20) | **Banco:** triggers em `enquete` e `enquete_opcao`; a edição trava a enquete e o voto a pede `for share`, então editar e votar ao mesmo tempo não passam juntos |
+| Enquete encerrada não muda (RF-25) | **Banco:** as mesmas triggers, mesmo sem voto |
+| Só vota quem está no destino | **Banco** (trigger em `voto`) e **aplicação** (404 para quem não vê, com teste) |
+| Voto com as opções certas | **Banco:** opção da mesma enquete (chave estrangeira composta); escolha única = uma opção (trigger no commit) |
+| Nada oficial é apagado (RN-05) | **Banco:** o usuário da aplicação **não tem permissão de DELETE** em `aviso`, `aviso_versao`, `documento`, `documento_versao`, `enquete`, `enquete_bloco`, `voto`, `historico` |
 | Arquivo publicado não muda nem some (ADR-0011) | **Banco:** trigger impede mudar ou apagar `arquivo` confirmado; `app` sem DELETE em `documento_versao` e `aviso_anexo`. **Bucket:** trava do R2 em `arquivos/` |
 | Arquivo é mesmo PDF ou foto (RNF-22) | **Aplicação:** a API confere os primeiros bytes depois do envio e apaga o que não é |
 | Documento de nível gestão só para a gestão (RF-31) | **Aplicação**, com teste (lista, documento e link dão 404 igual a inexistente) |
