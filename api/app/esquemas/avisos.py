@@ -22,6 +22,7 @@ from app.esquemas.comum import (
     UnidadeRef,
     sem_controle,
     sem_invisiveis,
+    sem_invisivel_nenhum,
 )
 from app.modelos.avisos import EVENTO_ATE, EVENTO_DESDE, LIMITE_ONDE, LIMITE_TEXTO, LIMITE_TITULO
 
@@ -36,8 +37,8 @@ _REEXPORTADOS = (DIRECAO, INVISIVEIS, MAIOR_ID, sem_invisiveis)
 
 
 def validar_titulo(titulo: str) -> str:
-    sem_controle(titulo)
-    sem_invisiveis(titulo)
+    # Fechamento do M3: a regra endurecida do título do documento (comum), não só a do M1.
+    sem_invisivel_nenhum(titulo)
     titulo = titulo.strip()
     if not titulo:
         raise ValueError("Escreva o título do aviso.")

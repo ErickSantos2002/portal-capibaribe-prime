@@ -4,7 +4,6 @@ Espelho TypeScript: `web/src/documentos/tipos.ts`. O arquivo de cada versão já
 conferido pela rota comum (`POST /api/arquivos`); aqui só vai o id dele.
 """
 
-import unicodedata
 from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated
@@ -13,12 +12,10 @@ from pydantic import AfterValidator, ValidationInfo, field_validator
 
 from app.esquemas.arquivos import ArquivoEnviado
 from app.esquemas.comum import (
-    MSG_CONTROLE,
     Entrada,
     IdBanco,
     Saida,
-    sem_controle,
-    sem_invisiveis,
+    sem_invisivel_nenhum,
 )
 from app.modelos.documentos import (
     DATA_DOCUMENTO_ATE,
@@ -47,28 +44,9 @@ class NivelAcesso(StrEnum):
     gestao = "gestao"
 
 
-# Revisão de código do épico A, C3: além da regra comum (`sem_controle`, `sem_invisiveis`),
-# nada que pareça vazio ou quebre a linha sem aparecer: separador de linha e de parágrafo (Zl,
-# Zp), todo caractere de formatação (Cf, ex.: U+061C, U+180E, hífen invisível U+00AD) e os
-# "preenchimentos" do Hangul, que são letras mas não desenham nada. O ZWJ (U+200D) fica, como
-# na regra comum: os emojis de família e de profissão usam. Dúvidas do épico A, item 11: a mesma
-# regra deveria ir para o comum.
-_CATEGORIAS_INVISIVEIS = frozenset({"Zl", "Zp", "Cf"})
-_PREENCHIMENTOS = frozenset("ᅟᅠㅤﾠ")
-_ZWJ = "‍"
-
-
-def sem_invisivel_nenhum(texto: str) -> str:
-    sem_controle(texto)
-    sem_invisiveis(texto)
-    for caractere in texto:
-        if caractere == _ZWJ:
-            continue
-        if caractere in _PREENCHIMENTOS or (
-            unicodedata.category(caractere) in _CATEGORIAS_INVISIVEIS
-        ):
-            raise ValueError(MSG_CONTROLE)
-    return texto
+# A regra endurecida do título (revisão do épico A, C3) mora em `comum.py` desde o fechamento do
+# M3 (vale também para o título do aviso); continua importável daqui.
+_REEXPORTADOS = (sem_invisivel_nenhum,)
 
 
 def validar_titulo(titulo: str) -> str:
