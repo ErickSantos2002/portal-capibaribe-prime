@@ -54,6 +54,10 @@ def test_pergunta_e_opcoes_sem_espacos_nas_pontas_e_brancas_descartadas():
             "A data de término já passou. Escolha uma data no futuro.",
         ),
         ({"encerra_em": _daqui(days=367)}, "A enquete pode durar até 1 ano."),
+        # Folga da API sobre o banco (366 dias e "no futuro" pelo relógio do banco): o que a API
+        # aceita, o banco aceita (revisão do contrato, achado 6).
+        ({"encerra_em": _daqui(days=365, hours=1)}, "A enquete pode durar até 1 ano."),
+        ({"encerra_em": _daqui(minutes=30)}, "Escolha um término daqui a pelo menos 1 hora."),
         ({"para_todos": False}, "Escolha pelo menos um bloco, ou Todos os blocos."),
     ],
 )
@@ -103,7 +107,13 @@ def test_votar_recusa(opcoes, mensagem):
     assert mensagem in _mensagens(erro.value)
 
 
-@pytest.mark.parametrize("opcoes", [[0], [2**63], ["a"], list(range(1, 12))])
+def test_votar_mais_de_dez_em_portugues():
+    with pytest.raises(ValidationError) as erro:
+        Votar(opcoes=list(range(1, 12)))
+    assert _mensagens(erro.value) == ["Escolha no máximo 10 opções."]
+
+
+@pytest.mark.parametrize("opcoes", [[0], [2**63], ["a"]])
 def test_votar_ids_validos(opcoes):
     with pytest.raises(ValidationError):
         Votar(opcoes=opcoes)

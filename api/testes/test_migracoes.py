@@ -321,7 +321,16 @@ FUNCOES_DA_0008 = {
     "voto_conferir",
     "voto_conferir_completo",
     "voto_opcao_conferir",
+    "voto_marca_a_enquete",
+    "aviso_bloco_da_enquete",
 }
+
+
+def _app_muda_numero_da_unidade(url: str) -> bool:
+    with psycopg.connect(url) as con:
+        return con.execute(
+            "select has_column_privilege('app', 'public.unidade', 'numero', 'UPDATE')"
+        ).fetchone()[0]
 
 
 def test_downgrade_da_0008_volta_a_0007(banco_vazio):
@@ -329,10 +338,13 @@ def test_downgrade_da_0008_volta_a_0007(banco_vazio):
     funcoes_da_0007 = _funcoes(banco_vazio)
     rodar_alembic(banco_vazio, "upgrade", "head")
     assert _tabelas(banco_vazio) >= NOVAS_DA_0008
+    assert not _app_muda_numero_da_unidade(banco_vazio)
     rodar_alembic(banco_vazio, "downgrade", "0007")
     assert not NOVAS_DA_0008 & _tabelas(banco_vazio)
-    # Nada da 0008 fica para trás (funções de trigger incluídas).
+    # Nada da 0008 fica para trás (funções de trigger incluídas), e o UPDATE em `unidade` volta
+    # a ser o da 0001 (a tabela inteira).
     assert _funcoes(banco_vazio) == funcoes_da_0007
+    assert _app_muda_numero_da_unidade(banco_vazio)
     rodar_alembic(banco_vazio, "upgrade", "head")
     assert _tabelas(banco_vazio) >= NOVAS_DA_0008
 

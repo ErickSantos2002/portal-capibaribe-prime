@@ -179,6 +179,45 @@ def test_aviso_automatico_aponta_para_a_enquete(logar, engine_app, predio):
     assert aberto["enquete"]["pergunta"] == "Qual o melhor horário?"
 
 
+def test_botao_da_enquete_so_para_quem_esta_no_destino(logar, engine_app, engine_superusuario):
+    """Revisão do contrato, achado 6: o banco não deixa o aviso ter outro destino; se mesmo assim
+    acontecer (correção à mão), o aviso não mostra a pergunta a quem não vê a enquete."""
+    aviso = publicar(logar(COMISSAO), para_todos=False, blocos=[2])
+    with engine_app.begin() as con:
+        enquete = con.execute(
+            text(
+                "insert into enquete (pergunta, encerra_em, para_todos, criada_por, aviso_id)"
+                " select 'Só do Bloco 2?', now() + interval '7 days', false, publicado_por, id"
+                " from aviso where id = :a returning id"
+            ),
+            {"a": aviso["id"]},
+        ).scalar_one()
+        for ordem, opcao in enumerate(("Sim", "Não"), start=1):
+            con.execute(
+                text("insert into enquete_opcao (enquete_id, texto, ordem) values (:e, :t, :o)"),
+                {"e": enquete, "t": opcao, "o": ordem},
+            )
+        con.execute(
+            text(
+                "insert into enquete_bloco (enquete_id, bloco_id)"
+                " select :e, id from bloco where numero = 2"
+            ),
+            {"e": enquete},
+        )
+    # À mão, sem as triggers: o aviso passa a ir também para o Bloco 1.
+    with engine_superusuario.begin() as con:
+        con.execute(text("set local session_replication_role = replica"))
+        con.execute(
+            text(
+                "insert into aviso_bloco (aviso_id, bloco_id)"
+                " select :a, id from bloco where numero = 1"
+            ),
+            {"a": aviso["id"]},
+        )
+    assert logar(COMUM).get(f"/api/avisos/{aviso['id']}").json()["enquete"] is None
+    assert logar(COMISSAO).get(f"/api/avisos/{aviso['id']}").json()["enquete"]["id"] == enquete
+
+
 def _logado(predio):
     from app.modelos import Papel
     from app.seguranca.dependencias import Logado

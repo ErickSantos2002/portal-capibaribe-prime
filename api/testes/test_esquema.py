@@ -38,18 +38,23 @@ def test_login_gerado_pelo_banco(engine_app):
         assert _login(con, u) == "1101"
 
 
-def test_login_ignora_valor_mandado_pela_aplicacao(engine_app):
+def test_login_ignora_valor_mandado_pela_aplicacao(engine_app, engine_dono):
     with engine_app.begin() as con:
         u = _unidade(con, _bloco(con, 1), "007", login="9999")
         assert _login(con, u) == "1007"
+    # Desde a 0008 o `app` nem pode mudar o login (UPDATE em `unidade` só por coluna); o
+    # `dono` pode tentar, e a trigger ignora.
+    with engine_dono.begin() as con:
         con.execute(text("update unidade set login = 'xyz' where id = :u"), {"u": u})
         assert _login(con, u) == "1007"
 
 
-def test_login_acompanha_troca_de_numero_do_bloco(engine_app):
+def test_login_acompanha_troca_de_numero_do_bloco(engine_app, engine_dono):
     with engine_app.begin() as con:
         b = _bloco(con, 1)
         u = _unidade(con, b, "204")
+    # Renumerar bloco é correção do `dono` (H-10; o `app` só muda nome e `ativo` desde a 0008).
+    with engine_dono.begin() as con:
         con.execute(text("update bloco set numero = 3 where id = :b"), {"b": b})
         assert _login(con, u) == "3204"
 

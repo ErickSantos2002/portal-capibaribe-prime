@@ -15,7 +15,13 @@ from psycopg.errors import InsufficientPrivilege
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import DBAPIError, IntegrityError, ProgrammingError
 
-from testes.apoio import criar_bloco, criar_unidade, restricao
+from testes.apoio import restricao
+from testes.apoio_m4 import (
+    criar_enquete,
+    opcoes_da_enquete,
+    votar,
+    votos_da_enquete,
+)
 
 pytestmark = pytest.mark.usefixtures("banco_limpo")
 
@@ -24,109 +30,6 @@ pytestmark = pytest.mark.usefixtures("banco_limpo")
 def engine(request, engine_app, engine_dono) -> Engine:
     """As tentativas de burlar rodam com os dois papéis."""
     return engine_app if request.param == "app" else engine_dono
-
-
-@pytest.fixture
-def ids(engine_app) -> dict[str, int]:
-    """Bloco 1 com a unidade `u` (ativada) e `u2`; bloco 2 com `v`."""
-    with engine_app.begin() as con:
-        b1, b2 = criar_bloco(con, 1), criar_bloco(con, 2)
-        ativada = {
-            "precisa_trocar_senha": False,
-            "ativada_em": "2026-10-01",
-            "responsavel_nome": "Fictício",
-            "celular": "81900000001",
-        }
-        u = criar_unidade(con, b1, "101", **ativada)
-        u2 = criar_unidade(con, b1, "102", **ativada)
-        v = criar_unidade(con, b2, "201", **ativada)
-    return {"b1": b1, "b2": b2, "u": u, "u2": u2, "v": v}
-
-
-def _aviso(con, unidade: int) -> int:
-    a = con.execute(
-        text(
-            "insert into aviso (publicado_por, publicado_como, para_todos)"
-            " values (:u, 'comissao', true) returning id"
-        ),
-        {"u": unidade},
-    ).scalar_one()
-    con.execute(
-        text(
-            "insert into aviso_versao (aviso_id, versao, titulo, texto, criada_por)"
-            " values (:a, 1, 'Enquete nova', 'Vote', :u)"
-        ),
-        {"a": a, "u": unidade},
-    )
-    return a
-
-
-def _enquete(
-    con,
-    autor: int,
-    *,
-    opcoes: tuple[str, ...] = ("Terça à noite", "Quinta à noite", "Sábado de manhã"),
-    blocos: tuple[int, ...] = (),
-    multipla: bool = False,
-    encerra: str = "now() + interval '7 days'",
-    pergunta: str = "Qual o melhor dia para a reunião?",
-    para_todos: bool | None = None,
-) -> int:
-    """Cria a enquete inteira na transação de `con` (aviso, enquete, opções, blocos)."""
-    enquete = con.execute(
-        text(
-            "insert into enquete (pergunta, multipla_escolha, mostrar_resultado, encerra_em,"
-            f" para_todos, criada_por, aviso_id) values (:p, :m, 'durante', {encerra},"
-            " :todos, :u, :a) returning id"
-        ),
-        {
-            "p": pergunta,
-            "m": multipla,
-            "todos": (not blocos) if para_todos is None else para_todos,
-            "u": autor,
-            "a": _aviso(con, autor),
-        },
-    ).scalar_one()
-    for ordem, texto in enumerate(opcoes, start=1):
-        con.execute(
-            text("insert into enquete_opcao (enquete_id, texto, ordem) values (:e, :t, :o)"),
-            {"e": enquete, "t": texto, "o": ordem},
-        )
-    for bloco in blocos:
-        con.execute(
-            text("insert into enquete_bloco (enquete_id, bloco_id) values (:e, :b)"),
-            {"e": enquete, "b": bloco},
-        )
-    return enquete
-
-
-def _opcoes(con, enquete: int) -> list[int]:
-    return list(
-        con.execute(
-            text("select id from enquete_opcao where enquete_id = :e order by ordem"),
-            {"e": enquete},
-        ).scalars()
-    )
-
-
-def _votar(con, enquete: int, unidade: int, *opcoes: int) -> None:
-    """A gravação do voto como o épico B faz (spec, seção 2.6)."""
-    con.execute(
-        text(
-            "insert into voto (enquete_id, unidade_id) values (:e, :u)"
-            " on conflict (enquete_id, unidade_id) do update set votado_em = excluded.votado_em"
-        ),
-        {"e": enquete, "u": unidade},
-    )
-    con.execute(
-        text("delete from voto_opcao where enquete_id = :e and unidade_id = :u"),
-        {"e": enquete, "u": unidade},
-    )
-    for opcao in opcoes:
-        con.execute(
-            text("insert into voto_opcao (enquete_id, unidade_id, opcao_id) values (:e, :u, :o)"),
-            {"e": enquete, "u": unidade, "o": opcao},
-        )
 
 
 def _vencer(engine: Engine, enquete: int) -> None:
@@ -148,42 +51,12 @@ def _recusado(engine: Engine, nome: str, comando: str, **parametros) -> None:
     assert restricao(erro.value) == nome, erro.value
 
 
-@pytest.fixture
-def aberta(engine_app, ids) -> dict[str, int]:
-    with engine_app.begin() as con:
-        e = _enquete(con, ids["u"])
-        a, b, c = _opcoes(con, e)
-    return {**ids, "e": e, "a": a, "b": b, "c": c}
-
-
-@pytest.fixture
-def votada(engine_app, aberta) -> dict[str, int]:
-    with engine_app.begin() as con:
-        _votar(con, aberta["e"], aberta["u"], aberta["a"])
-    return aberta
-
-
-def _votos(engine: Engine, enquete: int) -> list[tuple[int, list[int]]]:
-    with engine.connect() as con:
-        return [
-            (u, list(o))
-            for u, o in con.execute(
-                text(
-                    "select v.unidade_id, array_agg(o.opcao_id order by o.opcao_id)"
-                    " from voto v join voto_opcao o using (enquete_id, unidade_id)"
-                    " where v.enquete_id = :e group by v.unidade_id order by v.unidade_id"
-                ),
-                {"e": enquete},
-            )
-        ]
-
-
 # --- a enquete -----------------------------------------------------------------------------------
 
 
 def test_datas_da_enquete_sao_do_banco(engine_app, ids):
     with engine_app.begin() as con:
-        e = _enquete(con, ids["u"])
+        e = criar_enquete(con, ids["u"])
         linha = con.execute(
             text("select criada_em = now(), editada_em from enquete where id = :e"), {"e": e}
         ).one()
@@ -193,21 +66,21 @@ def test_datas_da_enquete_sao_do_banco(engine_app, ids):
 @pytest.mark.parametrize("opcoes", [("Só uma",), ()])
 def test_enquete_precisa_de_duas_opcoes_no_commit(engine, ids, opcoes):
     with pytest.raises(DBAPIError) as erro, engine.begin() as con:
-        _enquete(con, ids["u"], opcoes=opcoes)
+        criar_enquete(con, ids["u"], opcoes=opcoes)
     assert restricao(erro.value) == "enquete_completa"
 
 
 def test_onze_opcoes_recusadas(engine, ids):
     with pytest.raises(DBAPIError) as erro, engine.begin() as con:
-        _enquete(con, ids["u"], opcoes=tuple(f"Opção {n}" for n in range(1, 12)))
+        criar_enquete(con, ids["u"], opcoes=tuple(f"Opção {n}" for n in range(1, 12)))
     # A 11ª é recusada já na inserção (pela trigger ou pelo CHECK da ordem).
     assert restricao(erro.value) in {"enquete_opcoes", "enquete_opcao_ordem"}
 
 
 def test_dez_opcoes_passam(engine_app, ids):
     with engine_app.begin() as con:
-        e = _enquete(con, ids["u"], opcoes=tuple(f"Opção {n}" for n in range(1, 11)))
-        assert len(_opcoes(con, e)) == 10
+        e = criar_enquete(con, ids["u"], opcoes=tuple(f"Opção {n}" for n in range(1, 11)))
+        assert len(opcoes_da_enquete(con, e)) == 10
 
 
 @pytest.mark.parametrize(
@@ -225,26 +98,26 @@ def test_dez_opcoes_passam(engine_app, ids):
 )
 def test_campos_da_enquete(engine, ids, troca, nome):
     with pytest.raises(DBAPIError) as erro, engine.begin() as con:
-        _enquete(con, ids["u"], **troca)
+        criar_enquete(con, ids["u"], **troca)
     assert restricao(erro.value) == nome
 
 
 def test_mostrar_resultado_so_os_dois_valores(engine_app, ids):
     with pytest.raises(IntegrityError) as erro, engine_app.begin() as con:
-        e = _enquete(con, ids["u"])
+        e = criar_enquete(con, ids["u"])
         con.execute(text("update enquete set mostrar_resultado = 'nunca' where id = :e"), {"e": e})
     assert restricao(erro.value) == "enquete_mostrar_resultado"
 
 
 def test_enquete_por_bloco_precisa_de_bloco(engine, ids):
     with pytest.raises(DBAPIError) as erro, engine.begin() as con:
-        _enquete(con, ids["u"], para_todos=False)
+        criar_enquete(con, ids["u"], para_todos=False)
     assert restricao(erro.value) == "enquete_completa"
 
 
 def test_enquete_para_todos_nao_tem_bloco(engine, ids):
     with pytest.raises(DBAPIError) as erro, engine.begin() as con:
-        e = _enquete(con, ids["u"])
+        e = criar_enquete(con, ids["u"])
         con.execute(
             text("insert into enquete_bloco (enquete_id, bloco_id) values (:e, :b)"),
             {"e": e, "b": ids["b1"]},
@@ -254,7 +127,7 @@ def test_enquete_para_todos_nao_tem_bloco(engine, ids):
 
 def test_destino_so_na_criacao(engine, ids):
     with engine.begin() as con:
-        e = _enquete(con, ids["u"], blocos=(ids["b1"],))
+        e = criar_enquete(con, ids["u"], blocos=(ids["b1"],))
     _recusado(
         engine,
         "enquete_destino_fechado",
@@ -274,13 +147,13 @@ def test_aviso_obrigatorio_e_unico(engine_app, engine_dono, ids):
             {"u": ids["u"]},
         )
     with engine_app.begin() as con:
-        e = _enquete(con, ids["u"])
+        e = criar_enquete(con, ids["u"])
         aviso = con.execute(
             text("select aviso_id from enquete where id = :e"), {"e": e}
         ).scalar_one()
     # Uma enquete por aviso (o `app` nem pode mudar o `aviso_id`; o `dono` bate na unicidade).
     with pytest.raises(IntegrityError), engine_dono.begin() as con:
-        outra = _enquete(con, ids["u"])
+        outra = criar_enquete(con, ids["u"])
         con.execute(
             text("update enquete set aviso_id = :a where id = :e"), {"a": aviso, "e": outra}
         )
@@ -335,8 +208,8 @@ def test_segundo_voto_da_unidade_recusado(engine, votada):
 
 def test_trocar_o_voto_vale_o_ultimo(engine_app, votada):
     with engine_app.begin() as con:
-        _votar(con, votada["e"], votada["u"], votada["c"])
-    assert _votos(engine_app, votada["e"]) == [(votada["u"], [votada["c"]])]
+        votar(con, votada["e"], votada["u"], votada["c"])
+    assert votos_da_enquete(engine_app, votada["e"]) == [(votada["u"], [votada["c"]])]
 
 
 def test_escolha_unica_com_duas_opcoes_recusada_no_commit(engine, votada):
@@ -362,29 +235,29 @@ def test_voto_sem_opcao_recusado_no_commit(engine, aberta):
 
 def test_multipla_escolha_aceita_varias(engine_app, ids):
     with engine_app.begin() as con:
-        e = _enquete(con, ids["u"], multipla=True)
-        a, b, c = _opcoes(con, e)
-        _votar(con, e, ids["u"], a, c)
-    assert _votos(engine_app, e) == [(ids["u"], [a, c])]
+        e = criar_enquete(con, ids["u"], multipla=True)
+        a, b, c = opcoes_da_enquete(con, e)
+        votar(con, e, ids["u"], a, c)
+    assert votos_da_enquete(engine_app, e) == [(ids["u"], [a, c])]
 
 
 def test_opcao_de_outra_enquete_recusada(engine, aberta):
     with engine.begin() as con:
-        outra = _enquete(con, aberta["u"])
-        [alheia, *_] = _opcoes(con, outra)
+        outra = criar_enquete(con, aberta["u"])
+        [alheia, *_] = opcoes_da_enquete(con, outra)
     with pytest.raises(IntegrityError), engine.begin() as con:
-        _votar(con, aberta["e"], aberta["u"], alheia)
+        votar(con, aberta["e"], aberta["u"], alheia)
 
 
 def test_voto_fora_do_destino_recusado(engine, ids):
     with engine.begin() as con:
-        e = _enquete(con, ids["u"], blocos=(ids["b1"],))
-        [a, *_] = _opcoes(con, e)
+        e = criar_enquete(con, ids["u"], blocos=(ids["b1"],))
+        [a, *_] = opcoes_da_enquete(con, e)
     with pytest.raises(DBAPIError) as erro, engine.begin() as con:
-        _votar(con, e, ids["v"], a)
+        votar(con, e, ids["v"], a)
     assert restricao(erro.value) == "voto_fora_do_destino"
     with engine.begin() as con:
-        _votar(con, e, ids["u2"], a)
+        votar(con, e, ids["u2"], a)
 
 
 def test_dois_celulares_da_mesma_unidade_ao_mesmo_tempo(engine_app, aberta):
@@ -396,7 +269,7 @@ def test_dois_celulares_da_mesma_unidade_ao_mesmo_tempo(engine_app, aberta):
         try:
             with engine_app.begin() as con:
                 barreira.wait()
-                _votar(con, aberta["e"], aberta["u"], opcao)
+                votar(con, aberta["e"], aberta["u"], opcao)
                 time.sleep(espera)
         except BaseException as erro:  # noqa: BLE001
             erros.append(erro)
@@ -410,20 +283,20 @@ def test_dois_celulares_da_mesma_unidade_ao_mesmo_tempo(engine_app, aberta):
     for fio in fios:
         fio.join()
     assert erros == []
-    [(unidade, opcoes)] = _votos(engine_app, aberta["e"])
+    [(unidade, opcoes)] = votos_da_enquete(engine_app, aberta["e"])
     assert unidade == aberta["u"] and opcoes in ([aberta["a"]], [aberta["b"]])
 
 
 def test_mesma_unidade_multipla_escolha_nao_mistura(engine_app, ids):
     with engine_app.begin() as con:
-        e = _enquete(con, ids["u"], multipla=True)
-        a, b, c = _opcoes(con, e)
+        e = criar_enquete(con, ids["u"], multipla=True)
+        a, b, c = opcoes_da_enquete(con, e)
     barreira = threading.Barrier(2)
 
     def celular(*opcoes: int) -> None:
         with engine_app.begin() as con:
             barreira.wait()
-            _votar(con, e, ids["u"], *opcoes)
+            votar(con, e, ids["u"], *opcoes)
 
     fios = [
         threading.Thread(target=celular, args=(a, b)),
@@ -433,7 +306,7 @@ def test_mesma_unidade_multipla_escolha_nao_mistura(engine_app, ids):
         fio.start()
     for fio in fios:
         fio.join()
-    [(_, opcoes)] = _votos(engine_app, e)
+    [(_, opcoes)] = votos_da_enquete(engine_app, e)
     assert opcoes in ([a, b], [c])
 
 
@@ -443,7 +316,7 @@ def test_mesma_unidade_multipla_escolha_nao_mistura(engine_app, ids):
 def test_voto_depois_do_prazo_recusado(engine, engine_superusuario, aberta):
     _vencer(engine_superusuario, aberta["e"])
     with pytest.raises(DBAPIError) as erro, engine.begin() as con:
-        _votar(con, aberta["e"], aberta["u"], aberta["a"])
+        votar(con, aberta["e"], aberta["u"], aberta["a"])
     assert restricao(erro.value) == "enquete_encerrada"
 
 
@@ -463,7 +336,7 @@ def test_troca_depois_do_prazo_recusada(engine, engine_superusuario, votada):
         u=votada["u"],
         o=votada["b"],
     )
-    assert _votos(engine, votada["e"]) == [(votada["u"], [votada["a"]])]
+    assert votos_da_enquete(engine, votada["e"]) == [(votada["u"], [votada["a"]])]
 
 
 def test_encerrada_sem_voto_nao_reabre(engine, engine_superusuario, aberta):
@@ -526,7 +399,7 @@ def test_editar_com_voto_em_andamento_espera_e_e_recusado(engine_app, aberta):
     fio = threading.Thread(target=editar)
     fio.start()
     with engine_app.begin() as con:
-        _votar(con, aberta["e"], aberta["u"], aberta["a"])
+        votar(con, aberta["e"], aberta["u"], aberta["a"])
         votou.set()
         time.sleep(0.4)
         assert resultado == []  # a edição está esperando

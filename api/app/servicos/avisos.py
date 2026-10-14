@@ -43,6 +43,7 @@ from app.modelos import (
     Documento,
     DocumentoVersao,
     Enquete,
+    EnqueteBloco,
     Papel,
     Unidade,
 )
@@ -359,7 +360,7 @@ def abrir(db: Session, logado: Logado, aviso_id: int) -> AvisoCompleto:
         leitura=_contagem(db, aviso) if logado.gestao else None,
         anexos=anexos[m.atual.versao],
         documento=_documento_do_aviso(db, logado, aviso.id),
-        enquete=_enquete_do_aviso(db, aviso.id),
+        enquete=_enquete_do_aviso(db, logado, aviso.id),
     )
 
 
@@ -400,13 +401,19 @@ def _documento_do_aviso(db: Session, logado: Logado, aviso_id: int) -> Documento
     return None if linha is None else DocumentoDoAviso(id=linha.id, titulo=linha.titulo)
 
 
-def _enquete_do_aviso(db: Session, aviso_id: int) -> EnqueteDoAviso | None:
-    """A enquete que gerou este aviso (H-13; spec do M4, seção 3.3), com a pergunta atual. O
-    aviso e a enquete têm o mesmo destino (a migração 0008 não deixa o destino mudar): quem
-    chegou até o aviso pode ver a enquete."""
-    linha = db.execute(
-        select(Enquete.id, Enquete.pergunta).where(Enquete.aviso_id == aviso_id)
-    ).one_or_none()
+def _enquete_do_aviso(db: Session, logado: Logado, aviso_id: int) -> EnqueteDoAviso | None:
+    """A enquete que gerou este aviso (H-13; spec do M4, seção 3.3), com a pergunta atual, se a
+    unidade pode vê-la. O banco garante que o aviso e a enquete têm o mesmo destino (0008); a
+    conferência aqui é a segunda trava: a pergunta nunca aparece fora do destino da enquete."""
+    consulta = select(Enquete.id, Enquete.pergunta).where(Enquete.aviso_id == aviso_id)
+    if not logado.gestao:
+        do_bloco = exists(
+            select(EnqueteBloco.enquete_id)
+            .join(Bloco, Bloco.id == EnqueteBloco.bloco_id)
+            .where(EnqueteBloco.enquete_id == Enquete.id, Bloco.numero == logado.bloco)
+        )
+        consulta = consulta.where(Enquete.para_todos | do_bloco)
+    linha = db.execute(consulta).one_or_none()
     return None if linha is None else EnqueteDoAviso(id=linha.id, pergunta=linha.pergunta)
 
 

@@ -33,8 +33,13 @@ LIMITE_PERGUNTA = 200
 LIMITE_OPCAO = 100
 MIN_OPCOES = 2
 MAX_OPCOES = 10
-# O banco aceita o término até 366 dias à frente (ano bissexto); a tela fala em "1 ano".
-DURACAO_MAXIMA = timedelta(days=366)
+# O banco aceita o término no futuro e até 366 dias à frente, pelo relógio dele. A API pede mais
+# (de 1 hora a 365 dias, pelo relógio dela): o que a API aceita, o banco aceita, mesmo com os
+# relógios um pouco diferentes e o tempo entre a conferência e a gravação (revisão do contrato,
+# achado 6). A tela fala em "1 ano".
+DURACAO_MAXIMA_BANCO = timedelta(days=366)
+DURACAO_MAXIMA = timedelta(days=365)
+DURACAO_MINIMA = timedelta(hours=1)
 # RF-23, na ordem do formulário; `durante` é o padrão.
 MOSTRAR_RESULTADO = ("durante", "so_no_fim")
 
@@ -66,6 +71,8 @@ class Enquete(Base):
     criada_em: Mapped[datetime] = mapped_column(server_default=func.now())
     # Carimbada pelo banco a cada edição (antes do 1º voto).
     editada_em: Mapped[datetime | None] = mapped_column(server_onupdate=FetchedValue())
+    # Gravada pelo primeiro voto (trigger); daí em diante nada muda na enquete.
+    primeiro_voto_em: Mapped[datetime | None] = mapped_column(server_onupdate=FetchedValue())
     # O aviso automático (H-13), criado na mesma transação.
     aviso_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("aviso.id"), unique=True)
 
@@ -119,9 +126,15 @@ class VotoOpcao(Base):
 
     __tablename__ = "voto_opcao"
     __table_args__ = (
-        ForeignKeyConstraint(["enquete_id", "unidade_id"], ["voto.enquete_id", "voto.unidade_id"]),
         ForeignKeyConstraint(
-            ["enquete_id", "opcao_id"], ["enquete_opcao.enquete_id", "enquete_opcao.id"]
+            ["enquete_id", "unidade_id"],
+            ["voto.enquete_id", "voto.unidade_id"],
+            name="voto_opcao_do_voto",
+        ),
+        ForeignKeyConstraint(
+            ["enquete_id", "opcao_id"],
+            ["enquete_opcao.enquete_id", "enquete_opcao.id"],
+            name="voto_opcao_da_enquete",
         ),
         Index("voto_opcao_opcao", "enquete_id", "opcao_id"),
     )

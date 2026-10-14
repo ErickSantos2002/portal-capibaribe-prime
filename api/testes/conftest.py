@@ -25,7 +25,8 @@ from sqlalchemy import Engine, create_engine, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 
-from testes.apoio import rodar_alembic
+from testes.apoio import criar_bloco, criar_unidade, rodar_alembic
+from testes.apoio_m4 import criar_enquete, opcoes_da_enquete, votar
 
 ADMIN_URL = os.environ.get(
     "PORTAL_TESTE_ADMIN_URL", "postgresql://postgres:teste@127.0.0.1:55432/postgres"
@@ -248,3 +249,38 @@ def banco_limpo(url_dono: str) -> None:
     with psycopg.connect(url_dono, autocommit=True) as con:
         tabelas = sql.SQL(", ").join(sql.Identifier(t) for t in TABELAS)
         con.execute(sql.SQL("truncate {} restart identity cascade").format(tabelas))
+
+
+# --- enquetes (M4): os testes de banco das três regras ---------------------------------------
+
+
+@pytest.fixture
+def ids(engine_app) -> dict[str, int]:
+    """Bloco 1 com a unidade `u` (ativada) e `u2`; bloco 2 com `v`."""
+    with engine_app.begin() as con:
+        b1, b2 = criar_bloco(con, 1), criar_bloco(con, 2)
+        ativada = {
+            "precisa_trocar_senha": False,
+            "ativada_em": "2026-10-01",
+            "responsavel_nome": "Fictício",
+            "celular": "81900000001",
+        }
+        u = criar_unidade(con, b1, "101", **ativada)
+        u2 = criar_unidade(con, b1, "102", **ativada)
+        v = criar_unidade(con, b2, "201", **ativada)
+    return {"b1": b1, "b2": b2, "u": u, "u2": u2, "v": v}
+
+
+@pytest.fixture
+def aberta(engine_app, ids) -> dict[str, int]:
+    with engine_app.begin() as con:
+        e = criar_enquete(con, ids["u"])
+        a, b, c = opcoes_da_enquete(con, e)
+    return {**ids, "e": e, "a": a, "b": b, "c": c}
+
+
+@pytest.fixture
+def votada(engine_app, aberta) -> dict[str, int]:
+    with engine_app.begin() as con:
+        votar(con, aberta["e"], aberta["u"], aberta["a"])
+    return aberta

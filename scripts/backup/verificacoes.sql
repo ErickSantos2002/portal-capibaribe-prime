@@ -76,6 +76,12 @@ begin
        and not has_table_privilege('app', 'public.unidade', 'SELECT') then
         raise exception 'o papel app perdeu o SELECT em unidade na restauração';
     end if;
+    -- Desde a 0008 o app só muda algumas colunas de `unidade` (nunca o bloco: voto fora do
+    -- destino). O dump leva as permissões por coluna; aqui se confere que vieram.
+    if to_regrole('app') is not null and versao >= '0008'
+       and has_column_privilege('app', 'public.unidade', 'bloco_id', 'UPDATE') then
+        raise exception 'o papel app pode mudar o bloco de uma unidade (permissão da 0008 perdida)';
+    end if;
     -- A trava da migração 0001 (sem tabela temporária) é do banco, não do dump: o
     -- restaurar.sh a reaplica. Aqui se confere que reaplicou.
     if to_regrole('app') is not null

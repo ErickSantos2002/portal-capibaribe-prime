@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi import Response
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
 from app.modelos import Sessao, Unidade
@@ -101,7 +102,7 @@ def test_trocar_senha_encerra_todas_e_abre_uma_nova(engine_app, predio):
 
 
 def test_app_nao_forja_data_da_sessao_nem_da_troca_de_senha(engine_app, predio):
-    # Sessão com data no futuro sobreviveria à troca de senha: o banco carimba as duas datas.
+    # Sessão com data no futuro sobreviveria à troca de senha: o banco carimba a data dela.
     with Session(engine_app) as db:
         db.add(
             Sessao(
@@ -110,19 +111,18 @@ def test_app_nao_forja_data_da_sessao_nem_da_troca_de_senha(engine_app, predio):
                 criada_em=datetime(2099, 1, 1, tzinfo=UTC),
             )
         )
+        db.commit()
+        criada = db.scalars(select(Sessao.criada_em)).one()
+        agora = db.scalars(select(func.now())).one()
+    assert abs(agora - criada) < timedelta(minutes=1)
+    # A data da troca de senha nem chega na trigger: desde a 0008 o `app` não tem UPDATE nessa
+    # coluna (permissões em `unidade` por coluna).
+    with Session(engine_app) as db, pytest.raises(ProgrammingError, match="permission denied"):
         db.execute(
             update(Unidade)
             .where(Unidade.id == predio[COMUM])
             .values(senha_trocada_em=datetime(2001, 1, 1, tzinfo=UTC))
         )
-        db.commit()
-        criada = db.scalars(select(Sessao.criada_em)).one()
-        trocada = db.scalars(
-            select(Unidade.senha_trocada_em).where(Unidade.id == predio[COMUM])
-        ).one()
-        agora = db.scalars(select(func.now())).one()
-    assert abs(agora - criada) < timedelta(minutes=1)
-    assert trocada.year != 2001
 
 
 def test_cookie_com_os_atributos_da_adr():

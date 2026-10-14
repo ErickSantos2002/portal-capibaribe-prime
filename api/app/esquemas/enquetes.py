@@ -14,6 +14,7 @@ from app.esquemas.avisos import NumeroDeBloco
 from app.esquemas.comum import Entrada, IdBanco, Saida, UnidadeRef, sem_invisivel_nenhum
 from app.modelos.enquetes import (
     DURACAO_MAXIMA,
+    DURACAO_MINIMA,
     LIMITE_OPCAO,
     LIMITE_PERGUNTA,
     MAX_OPCOES,
@@ -73,6 +74,8 @@ def validar_encerramento(quando: datetime) -> datetime:
         raise ValueError("A enquete pode durar até 1 ano.")
     if quando <= agora:
         raise ValueError("A data de término já passou. Escolha uma data no futuro.")
+    if quando < agora + DURACAO_MINIMA:
+        raise ValueError("Escolha um término daqui a pelo menos 1 hora.")
     return quando
 
 
@@ -116,13 +119,15 @@ class Votar(Entrada):
     """`PUT /api/enquetes/{id}/voto` (H-21, épico B): votar e trocar o voto são a mesma coisa.
     Mais de uma opção numa enquete de escolha única: a API recusa com 422 (e o banco também)."""
 
-    opcoes: list[IdBanco] = Field(max_length=MAX_OPCOES)
+    opcoes: list[IdBanco]
 
     @field_validator("opcoes")
     @classmethod
     def _opcoes(cls, opcoes: list[int]) -> list[int]:
         if not opcoes:
             raise ValueError("Escolha uma opção.")
+        if len(opcoes) > MAX_OPCOES:
+            raise ValueError(f"Escolha no máximo {MAX_OPCOES} opções.")
         if len(set(opcoes)) < len(opcoes):
             raise ValueError("A mesma opção foi escolhida duas vezes.")
         return opcoes
