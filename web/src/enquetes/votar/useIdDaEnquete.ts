@@ -4,5 +4,5 @@ import { useParams } from 'react-router'
 /** O `:id` do endereço, ou nulo se não for um número (link quebrado). */
 export function useIdDaEnquete(): number | null {
   const { id } = useParams()
-  return id && /^\d{1,15}$/.test(id) ? Number(id) : null
+  return id && /^[1-9]\d{0,14}$/.test(id) ? Number(id) : null
 }

@@ -7,6 +7,7 @@ import { Carregando, FalhaAoCarregar } from '../../avisos/componentes'
 import { ordemDaGrade } from '../../avisos/formatos'
 import { useRecado } from '../../casca/contextoRecado'
 import { useSessao } from '../../casca/contextoSessao'
+import { Icone } from '../../casca/Icone'
 import { Tela } from '../../casca/Tela'
 import { abrirEnquete, votantes as buscarVotantes } from '../api'
 import { caminhoEnquete } from '../caminhos'
@@ -26,12 +27,24 @@ function QuaisVotaram({ id }: { id: number }) {
     () => Promise.all([abrirEnquete(id), buscarVotantes(id)]),
     [id],
   )
-  if (carga.situacao === 'erro' && carga.erro.status === 404) {
+  if (carga.situacao === 'erro' && [404, 422].includes(carga.erro.status)) {
     return <EnqueteNaoEncontrada mensagem={carga.erro.mensagem} />
   }
   return (
     <Tela titulo="Quais apartamentos votaram" voltar={caminhoEnquete(id)}>
-      {carga.situacao === 'erro' ? (
+      {carga.situacao === 'erro' && carga.erro.codigo === 'votantes_so_no_fim' ? (
+        // Revisão, ponto 1: no "durante" aberto, a lista só sai no fim. Não é falha: tentar
+        // de novo não muda nada.
+        <>
+          <div className="aviso-caixa info">
+            <Icone nome="cadeado" />
+            <p>{carga.erro.mensagem}</p>
+          </div>
+          <Link className="botao leve" to={caminhoEnquete(id)}>
+            Voltar para a enquete
+          </Link>
+        </>
+      ) : carga.situacao === 'erro' ? (
         <FalhaAoCarregar mensagem={carga.erro.mensagem} tentar={recarregar} />
       ) : carga.situacao === 'carregando' ? (
         <Carregando />

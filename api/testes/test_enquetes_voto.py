@@ -10,12 +10,23 @@ import threading
 import time
 from datetime import timedelta
 
+import psycopg
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from app.servicos import enquetes as servico
+from testes.apoio import restricao, rodar_alembic
 from testes.apoio_m4 import votos_da_enquete
-from testes.test_enquetes_voto_apoio import ADMIN, COMISSAO, COMUM, nova, vencer
+from testes.conftest import BANCO, apagar_banco, garantir_papeis, recriar_banco, url_para
+from testes.test_enquetes_voto_apoio import (
+    ADMIN,
+    COMISSAO,
+    COMUM,
+    nova,
+    vencer,
+    votar_no_banco,
+)
 
 pytestmark = pytest.mark.usefixtures("predio")
 
@@ -242,3 +253,72 @@ def test_dois_celulares_escolha_unica(logar, engine_app, predio, monkeypatch):
     assert [r.status_code for r in respostas] == [200, 200], [r.text for r in respostas]
     [(_, opcoes)] = votos_da_enquete(engine_app, criada.id)
     assert opcoes in ([a], [b])
+
+
+# --- revisão do épico B -------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("opcao", [True, "1", 1.0])
+def test_id_da_opcao_e_inteiro_estrito(logar, engine_app, predio, opcao):
+    """Revisão, ponto 7: `true`, `"1"` e `1.0` não viram a opção 1."""
+    criada = nova(engine_app, predio)
+    resposta = _votar(logar(COMUM), criada.id, opcao)
+    assert _erro(resposta) == (422, "dados_invalidos")
+    assert votos_da_enquete(engine_app, criada.id) == []
+
+
+def _desativar(engine_dono, login: str) -> None:
+    with engine_dono.begin() as con:
+        con.execute(text("update unidade set ativa = false where login = :l"), {"l": login})
+
+
+def test_banco_recusa_voto_de_unidade_desativada(engine_app, engine_dono, predio):
+    """Revisão, ponto 3 (migração 0009): só a sessão barrava; o banco, como `app`, aceitava."""
+    criada = nova(engine_app, predio)
+    _desativar(engine_dono, COMUM)
+    with pytest.raises(DBAPIError) as erro:
+        votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[0])
+    assert restricao(erro.value) == "voto_fora_do_destino"
+    assert votos_da_enquete(engine_app, criada.id) == []
+
+
+def test_banco_recusa_troca_de_unidade_desativada(engine_app, engine_dono, predio):
+    criada = nova(engine_app, predio)
+    votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[0])
+    _desativar(engine_dono, COMUM)
+    with pytest.raises(DBAPIError) as erro:
+        votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[1])
+    assert restricao(erro.value) == "voto_fora_do_destino"
+    assert votos_da_enquete(engine_app, criada.id) == [(predio[COMUM], [criada.opcoes[0]])]
+
+
+def test_desativada_no_meio_do_voto_e_4xx(logar, engine_dono, engine_app, predio, monkeypatch):
+    """A sessão ainda valia quando a requisição entrou; o banco recusa e a API traduz (não 500)."""
+    criada = nova(engine_app, predio)
+    original = servico._gravar_voto
+
+    def desativa_antes(db, *args):
+        _desativar(engine_dono, COMUM)
+        return original(db, *args)
+
+    monkeypatch.setattr(servico, "_gravar_voto", desativa_antes)
+    assert _erro(_votar(logar(COMUM), criada.id, criada.opcoes[0])) == (403, "fora_do_destino")
+
+
+def test_migracao_0009_volta_e_vai():
+    """O downgrade da 0009 devolve a regra da 0008 (sem a conferência de unidade ativa)."""
+    nome = f"{BANCO}_0009"
+    garantir_papeis()
+    recriar_banco(nome)
+    url = url_para("dono", nome)
+    corpo = "select prosrc from pg_proc where proname = 'voto_conferir'"
+    try:
+        rodar_alembic(url, "upgrade", "head")
+        with psycopg.connect(url) as con:
+            assert "ativa" in con.execute(corpo).fetchone()[0]
+        rodar_alembic(url, "downgrade", "0008")
+        with psycopg.connect(url) as con:
+            assert "ativa" not in con.execute(corpo).fetchone()[0]
+        rodar_alembic(url, "upgrade", "head")
+    finally:
+        apagar_banco(nome)

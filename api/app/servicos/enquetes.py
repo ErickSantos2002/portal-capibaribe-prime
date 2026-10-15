@@ -74,6 +74,17 @@ def _enquete_mudou() -> ErroApi:
     )
 
 
+def _votantes_so_no_fim() -> ErroApi:
+    return ErroApi(
+        409,
+        "votantes_so_no_fim",
+        "Nesta enquete o resultado aparece durante a votação, então a lista de quem votou só"
+        " aparece quando ela terminar (senão daria para saber em quê cada apartamento votou)."
+        " Para acompanhar quem falta durante a votação, crie a enquete com o resultado"
+        " “só no fim”.",
+    )
+
+
 def _so_uma() -> ErroApi:
     return ErroApi(
         422, "dados_invalidos", MSG_SO_UMA, campos=[{"campo": "opcoes", "mensagem": MSG_SO_UMA}]
@@ -123,9 +134,16 @@ def _blocos(db: Session, ids: Sequence[int]) -> dict[int, list[int]]:
     return por_enquete
 
 
+def _votaram(enquete: Enquete):
+    return select(Voto.unidade_id).where(Voto.enquete_id == enquete.id)
+
+
 def _unidades_do_destino(enquete: Enquete):
-    """Ids das unidades ativas que a enquete alcança (o total da participação)."""
-    consulta = select(Unidade.id).where(Unidade.ativa)
+    """Ids da base da participação: as unidades do destino ativas agora **ou** que votaram
+    (revisão, ponto 2). Quem votou e depois foi desativado continua contando, no "votaram" e no
+    total; quem saiu sem votar sai da conta. Assim "votaram" nunca passa do total, o resultado
+    de uma enquete terminada não muda (RF-25) e a lista de votantes soma o total."""
+    consulta = select(Unidade.id).where(Unidade.ativa | Unidade.id.in_(_votaram(enquete)))
     if not enquete.para_todos:
         consulta = consulta.where(
             Unidade.bloco_id.in_(
@@ -220,7 +238,7 @@ def _montar(db: Session, logado: Logado, enquete: Enquete) -> EnqueteSaida:
     destino = _unidades_do_destino(enquete).subquery()
     participacao = Participacao(
         votaram=db.scalar(
-            select(func.count()).select_from(Voto).where(Voto.enquete_id == enquete.id)
+            select(func.count()).select_from(destino).where(destino.c.id.in_(_votaram(enquete)))
         )
         or 0,
         total=db.scalar(select(func.count()).select_from(destino)) or 0,
@@ -243,18 +261,22 @@ def abrir(db: Session, logado: Logado, enquete_id: int) -> EnqueteSaida:
 
 
 def votantes(db: Session, logado: Logado, enquete_id: int) -> Votantes:
-    """Quais apartamentos votaram (H-22), nunca em quê. Quem votou e depois saiu do destino ou
-    foi desativado continua em `votaram`."""
+    """Quais apartamentos votaram (H-22), nunca em quê. Sobre a mesma base da participação:
+    quem votou e depois foi desativado continua em `votaram`; os três grupos somam o total.
+
+    No "durante", só depois do fim (revisão, ponto 1): com a contagem por opção ao vivo, duas
+    olhadas (antes e depois de um apartamento entrar na lista) diriam em quê ele votou."""
     enquete = _buscar(db, logado, enquete_id)
-    votaram_ids = select(Voto.unidade_id).where(Voto.enquete_id == enquete.id)
-    votaram = db.scalars(
-        select(Unidade.login).where(Unidade.id.in_(votaram_ids)).order_by(Unidade.login)
-    ).all()
-    faltam = db.execute(
-        select(Unidade.login, Unidade.ativada_em.is_not(None))
-        .where(Unidade.id.in_(_unidades_do_destino(enquete)), Unidade.id.not_in(votaram_ids))
+    if enquete.mostrar_resultado == MostrarResultado.durante and enquete.encerra_em > _agora():
+        raise _votantes_so_no_fim()
+    base = _unidades_do_destino(enquete)
+    linhas = db.execute(
+        select(Unidade.login, Unidade.ativada_em.is_not(None), Unidade.id.in_(_votaram(enquete)))
+        .where(Unidade.id.in_(base))
         .order_by(Unidade.login)
     ).all()
+    votaram = [login for login, _, votou in linhas if votou]
+    faltam = [(login, entrou) for login, entrou, votou in linhas if not votou]
     return Votantes(
         votaram=[UnidadeRef.de_login(login) for login in votaram],
         entraram_sem_votar=[UnidadeRef.de_login(login) for login, entrou in faltam if entrou],

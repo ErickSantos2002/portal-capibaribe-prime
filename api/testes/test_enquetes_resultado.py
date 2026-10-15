@@ -153,7 +153,9 @@ def test_participacao_com_unidade_desativada_depois(logar, engine_app, engine_do
             text("update unidade set ativa = false where login in ('1203', '1204')"),
         )
     enquete = _ok(logar(ADMIN).get(f"/api/enquetes/{criada.id}"))
-    assert enquete["participacao"] == {"votaram": 1, "total": UNIDADES_POR_BLOCO - 2}
+    # Revisão, ponto 2: quem votou e saiu continua na base (63 = 62 ativas + a que votou), e o
+    # 1204, que saiu sem votar, não conta mais.
+    assert enquete["participacao"] == {"votaram": 1, "total": UNIDADES_POR_BLOCO - 1}
     assert enquete["opcoes"][0]["votos"] == 1
 
 
@@ -216,7 +218,7 @@ def test_pode_editar_so_gestao_aberta_e_sem_voto(logar, engine_app, engine_super
 
 
 def test_votantes_sem_dizer_em_que(logar, engine_app, predio):
-    criada = nova(engine_app, predio, blocos=(1,))
+    criada = nova(engine_app, predio, blocos=(1,), so_no_fim=True)
     votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[2])
     votantes = _ok(logar(COMISSAO).get(f"/api/enquetes/{criada.id}/votantes"))
     assert votantes["votaram"] == [{"login": COMUM, "bloco": 1, "apartamento": "203"}]
@@ -230,7 +232,7 @@ def test_votantes_sem_dizer_em_que(logar, engine_app, predio):
 
 
 def test_votantes_inclui_quem_votou_e_foi_desativado(logar, engine_app, engine_dono, predio):
-    criada = nova(engine_app, predio, blocos=(1,))
+    criada = nova(engine_app, predio, blocos=(1,), so_no_fim=True)
     votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[0])
     with engine_dono.begin() as con:
         con.execute(text("update unidade set ativa = false where login = '1203'"))
@@ -249,3 +251,61 @@ def test_votantes_de_enquete_inexistente_404(logar):
 def test_votantes_so_para_a_gestao(logar, engine_app, predio):
     criada = nova(engine_app, predio)
     assert logar(COMUM).get(f"/api/enquetes/{criada.id}/votantes").status_code == 403
+
+
+# --- revisão do épico B -------------------------------------------------------------------------
+
+
+def test_participacao_nunca_passa_do_total(logar, engine_app, engine_dono, predio):
+    """Revisão, ponto 2: votaram e desativadas depois davam "1 de 1" (o admin, que não votou,
+    era o único da base) e mais de 100%."""
+    criada = nova(engine_app, predio, blocos=(1,))
+    votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[0])
+    with engine_dono.begin() as con:
+        outra = con.execute(text("select id from unidade where login = '1102'")).scalar_one()
+    votar_no_banco(engine_app, criada.id, outra, criada.opcoes[0])
+    with engine_dono.begin() as con:
+        con.execute(
+            text("update unidade set ativa = false where login like '1%' and login <> :a"),
+            {"a": ADMIN},
+        )
+    participacao = _ok(logar(ADMIN).get(f"/api/enquetes/{criada.id}"))["participacao"]
+    # A base: o admin (ativo, não votou) e as duas que votaram e saíram.
+    assert participacao == {"votaram": 2, "total": 3}
+
+
+def test_votantes_somam_o_total_da_participacao(logar, engine_app, engine_dono, predio):
+    criada = nova(engine_app, predio, blocos=(1,), so_no_fim=True)
+    votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[0])
+    with engine_dono.begin() as con:
+        con.execute(text("update unidade set ativa = false where login in ('1203', '1204')"))
+    comissao = logar(COMISSAO)
+    total = _ok(comissao.get(f"/api/enquetes/{criada.id}"))["participacao"]
+    votantes = _ok(comissao.get(f"/api/enquetes/{criada.id}/votantes"))
+    todos = votantes["votaram"] + votantes["entraram_sem_votar"] + votantes["nao_entraram"]
+    assert len(votantes["votaram"]) == total["votaram"]
+    assert len(todos) == total["total"]
+
+
+def test_votantes_no_durante_so_depois_do_fim(logar, engine_app, engine_superusuario, predio):
+    """Revisão, ponto 1: no "durante", a contagem ao vivo menos a contagem de antes, cruzada com
+    quem entrou na lista, diz em quê cada apartamento votou. A lista só sai no fim."""
+    criada = nova(engine_app, predio)
+    votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[2])
+    comissao = logar(COMISSAO)
+    resposta = comissao.get(f"/api/enquetes/{criada.id}/votantes")
+    assert resposta.status_code == 409
+    corpo = resposta.json()
+    assert corpo["codigo"] == "votantes_so_no_fim"
+    assert "só no fim" in corpo["mensagem"]
+    assert COMUM not in resposta.text
+    vencer(engine_superusuario, criada.id)
+    votantes = _ok(comissao.get(f"/api/enquetes/{criada.id}/votantes"))
+    assert [u["login"] for u in votantes["votaram"]] == [COMUM]
+
+
+def test_votantes_no_so_no_fim_aberta(logar, engine_app, predio):
+    criada = nova(engine_app, predio, so_no_fim=True)
+    votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[2])
+    votantes = _ok(logar(COMISSAO).get(f"/api/enquetes/{criada.id}/votantes"))
+    assert [u["login"] for u in votantes["votaram"]] == [COMUM]

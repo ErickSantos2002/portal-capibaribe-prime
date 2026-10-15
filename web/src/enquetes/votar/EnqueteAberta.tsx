@@ -42,7 +42,19 @@ export function PaginaEnquete() {
 function EnqueteAberta({ id }: { id: number }) {
   const { eu } = useSessao()
   const [carga, recarregar, trocar] = useCarga(() => abrirEnquete(id), [id])
-  if (carga.situacao === 'erro' && carga.erro.status === 404) {
+
+  // Revisão, ponto 5: a tela parada (celular no bolso) não sabe do voto trocado no outro
+  // aparelho. Ao voltar para ela, busca a enquete de novo.
+  useEffect(() => {
+    function aoVoltar() {
+      if (document.visibilityState === 'visible') recarregar()
+    }
+    document.addEventListener('visibilitychange', aoVoltar)
+    return () => document.removeEventListener('visibilitychange', aoVoltar)
+  }, [recarregar])
+
+  // 422 é id fora do que o banco guarda: para quem abriu o link, é a mesma enquete que não existe.
+  if (carga.situacao === 'erro' && [404, 422].includes(carga.erro.status)) {
     return <EnqueteNaoEncontrada mensagem={carga.erro.mensagem} />
   }
   // Enquanto recarrega (depois de "a enquete mudou"), a tela de antes continua, com o erro.
@@ -122,18 +134,36 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
   const [acabouDeVotar, setAcabouDeVotar] = useState(false)
+  const [mudouEmOutroAparelho, setMudouEmOutroAparelho] = useState(false)
+  // Para onde o foco vai depois de votar: a confirmação ou o erro. `vez` faz o mesmo alvo
+  // receber o foco de novo (dois erros iguais seguidos).
+  const [foco, setFoco] = useState<{ alvo: 'confirmacao' | 'erro'; vez: number } | null>(null)
   const confirmacao = useRef<HTMLElement>(null)
+  const alerta = useRef<HTMLDivElement>(null)
   const jaVotou = enquete.meu_voto.length > 0
   const mesma =
     escolha.length === enquete.meu_voto.length && escolha.every((o) => enquete.meu_voto.includes(o))
   const tipo = enquete.multipla_escolha ? 'checkbox' : 'radio'
 
+  // O voto gravado mudou sem ter sido por este formulário (outro celular da mesma unidade):
+  // a escolha acompanha, para o botão não "trocar" para o que já está gravado, e a tela avisa.
+  const chave = enquete.meu_voto.join(',')
+  const [vistoPorUltimo, setVistoPorUltimo] = useState(chave)
+  if (chave !== vistoPorUltimo) {
+    setVistoPorUltimo(chave)
+    setEscolha(enquete.meu_voto)
+    setAcabouDeVotar(false)
+    setMudouEmOutroAparelho(true)
+  }
+
   useEffect(() => {
-    if (acabouDeVotar) confirmacao.current?.focus()
-  }, [acabouDeVotar, enquete])
+    if (foco?.alvo === 'confirmacao') confirmacao.current?.focus()
+    if (foco?.alvo === 'erro') alerta.current?.focus()
+  }, [foco])
 
   function marcar(opcao: number, marcada: boolean) {
     setErro('')
+    setMudouEmOutroAparelho(false)
     if (!enquete.multipla_escolha) setEscolha([opcao])
     else setEscolha((antes) => (marcada ? [...antes, opcao] : antes.filter((o) => o !== opcao)))
   }
@@ -143,15 +173,21 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
     if (escolha.length === 0 || mesma || enviando) return
     setEnviando(true)
     setErro('')
+    // Revisão, ponto 4: o "Voto registrado." de antes não fica ao lado do erro desta troca.
+    setAcabouDeVotar(false)
+    setMudouEmOutroAparelho(false)
     const ordem = enquete.opcoes.map((o) => o.id).filter((o) => escolha.includes(o))
     try {
       const nova = await votar(enquete.id, { opcoes: ordem })
       setEscolha(nova.meu_voto)
+      setVistoPorUltimo(nova.meu_voto.join(','))
       setAcabouDeVotar(true)
+      setFoco((f) => ({ alvo: 'confirmacao', vez: (f?.vez ?? 0) + 1 }))
       trocar(nova)
     } catch (e) {
       const falha = comoErroDaApi(e)
       setErro(falha.mensagem)
+      setFoco((f) => ({ alvo: 'erro', vez: (f?.vez ?? 0) + 1 }))
       // A enquete mudou (ou terminou) desde que a tela abriu: mostra a de agora.
       if (['enquete_mudou', 'enquete_encerrada', 'voto_mudou_agora'].includes(falha.codigo)) {
         if (falha.codigo === 'enquete_mudou') setEscolha([])
@@ -164,6 +200,12 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
 
   return (
     <>
+      {mudouEmOutroAparelho && (
+        <div className="aviso-caixa atencao enq-mudou">
+          <Icone nome="info" />
+          <p>O voto do seu apartamento foi trocado em outro aparelho.</p>
+        </div>
+      )}
       {jaVotou && (
         <section
           className="aviso-caixa info enq-confirmacao"
@@ -197,7 +239,7 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
           ))}
         </fieldset>
         {erro && (
-          <div className="aviso-caixa erro" role="alert">
+          <div className="aviso-caixa erro" role="alert" tabIndex={-1} ref={alerta}>
             <Icone nome="alerta" />
             <p>{erro}</p>
           </div>
@@ -284,14 +326,27 @@ function ParaAGestao({ enquete }: { enquete: Enquete }) {
       <h2 className="secao" id="enq-gestao">
         Para a Comissão
       </h2>
-      <Link className="enq-cartao" to={caminhoVotantes(enquete.id)}>
-        <Icone nome="enquetes" tamanho={28} />
-        <span>
-          <b>Quais apartamentos votaram</b>
-          <span className="ajuda">Sem mostrar o voto de ninguém</span>
-        </span>
-        <Icone nome="seta" />
-      </Link>
+      {/* Revisão, ponto 1: no "durante" aberto, a lista de quem votou, cruzada com a contagem
+          ao vivo, diria em quê cada apartamento votou. A API também recusa. */}
+      {enquete.mostrar_resultado === 'durante' && !enquete.encerrada ? (
+        <div className="aviso-caixa info">
+          <Icone nome="cadeado" />
+          <p>
+            Nesta enquete o resultado aparece durante a votação, então a lista de quem votou só
+            aparece quando ela terminar. Para acompanhar quem falta durante a votação, crie a
+            enquete com o resultado “só no fim”.
+          </p>
+        </div>
+      ) : (
+        <Link className="enq-cartao" to={caminhoVotantes(enquete.id)}>
+          <Icone nome="enquetes" tamanho={28} />
+          <span>
+            <b>Quais apartamentos votaram</b>
+            <span className="ajuda">Sem mostrar o voto de ninguém</span>
+          </span>
+          <Icone nome="seta" />
+        </Link>
+      )}
       {enquete.pode_editar && (
         <Link className="enq-cartao" to={caminhoEditarEnquete(enquete.id)}>
           <Icone nome="editar" tamanho={28} />

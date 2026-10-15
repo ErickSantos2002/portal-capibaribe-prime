@@ -309,7 +309,7 @@ Regra importante não pode depender só da tela (RNF-13). Quando o banco consegu
 | Não votar após o encerramento (H-21) | **Banco:** triggers em `voto` e `voto_opcao` comparam o relógio do banco (`clock_timestamp()`) com `encerra_em` |
 | Não editar enquete depois do 1º voto (H-20) | **Banco:** triggers em `enquete` e `enquete_opcao`; a edição trava a enquete e o voto a pede `for share`, então editar e votar ao mesmo tempo não passam juntos |
 | Enquete encerrada não muda (RF-25) | **Banco:** as mesmas triggers, mesmo sem voto |
-| Só vota quem está no destino | **Banco** (trigger em `voto`) e **aplicação** (404 para quem não vê, com teste) |
+| Só vota quem está no destino (e unidade ativa, desde a 0009) | **Banco** (trigger em `voto`) e **aplicação** (404 para quem não vê, com teste) |
 | Voto com as opções certas | **Banco:** opção da mesma enquete (chave estrangeira composta); escolha única = uma opção (trigger no commit) |
 | Nada oficial é apagado (RN-05) | **Banco:** o usuário da aplicação **não tem permissão de DELETE** em `aviso`, `aviso_versao`, `documento`, `documento_versao`, `enquete`, `enquete_bloco`, `voto`, `historico` |
 | Arquivo publicado não muda nem some (ADR-0011) | **Banco:** trigger impede mudar ou apagar `arquivo` confirmado; `app` sem DELETE em `documento_versao` e `aviso_anexo`. **Bucket:** trava do R2 em `arquivos/` |

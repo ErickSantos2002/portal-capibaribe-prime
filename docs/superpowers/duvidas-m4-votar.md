@@ -119,3 +119,72 @@ técnica ou de tela que pode ser revista na revisão do marco. Spec: `specs/m4-v
 - **Corrigido pelo que se viu:** "seu voto" quebrando em duas linhas e colando no texto da
   opção; link da pergunta em azul padrão na tela de votantes; botão desativado sem explicação
   (item 6).
+
+## Revisão independente (pontos 1 a 7)
+
+Cada ponto ganhou um teste de regressão que falhava antes da correção (API em
+`test_enquetes_resultado.py` e `test_enquetes_voto.py`, seção "revisão do épico B"; front em
+`votar/votar.test.tsx`, bloco "revisão do épico B").
+
+### 16. No "durante", a lista de quem votou só sai no fim · [Erick]
+- **O que a revisão provou:** no "durante", a gestão vê a contagem por opção ao vivo **e** a lista
+  de quem votou. Basta olhar as duas antes e depois de um apartamento votar: o apartamento que
+  entrou na lista é o mesmo voto que subiu numa opção. Com a enquete parada (pouca gente votando
+  por vez, o normal num condomínio), isso diz em quê cada apartamento votou, o que o Portal
+  promete não dizer ("quais votaram, nunca em quê", H-22).
+- **Decisão (do coordenador, a confirmar com o Erick):** no "durante", enquanto aberta,
+  `GET …/votantes` responde 409 `votantes_so_no_fim`, com a explicação e a saída ("crie a
+  enquete com o resultado só no fim"). No "só no fim" (aberta ou terminada) e no "durante"
+  terminado, a lista continua: no primeiro não há contagem para cruzar; no segundo, ninguém
+  vota mais, e a contagem final não diz a ordem. Na tela, o cartão "Quais apartamentos votaram"
+  dá lugar à mesma explicação; o link antigo da lista também a mostra (sem "Tentar de novo").
+- **Confirmar:** se a Comissão aceita não cobrar participação nominal nas enquetes "durante"
+  (o número de quem votou continua aparecendo sempre).
+- **Recado ao coordenador (épico A):** o formulário "Nova enquete" deveria dizer isso na escolha
+  "durante" (ex.: "Com o resultado durante a votação, a lista de quem votou só aparece no fim.").
+  É arquivo do épico A; não editei.
+
+### 17. Participação: a base é "ativas do destino ou que votaram"
+- **O que a revisão provou:** `votaram` contava todo voto e `total` só as ativas; unidade que
+  votou e foi desativada dava mais de 100% ou "1 de 1" (o admin, que não votou, sozinho na base).
+- **Decisão:** as duas contas usam a mesma base: as unidades do destino que estão ativas agora
+  **ou** que votaram nesta enquete. Quem votou e saiu continua contando no "votaram" e no total;
+  quem saiu sem votar sai das duas. Assim `votaram <= total` sempre, os votos por opção de uma
+  enquete terminada não mudam (RF-25; dúvida 13 do contrato) e a lista de votantes usa a mesma
+  base: os três grupos somam o total, e quem votou e foi desativado aparece em "Votaram".
+- **Por quê, e não "só ativas" como a revisão sugeriu:** com "só ativas" no `votaram`, o voto de
+  quem saiu continuaria nas barras (o resultado não muda) mas não no "N de M votaram", e as
+  porcentagens das opções (sobre quem votou, item 2) poderiam passar de 100%.
+
+### 18. Banco recusa voto de unidade desativada (migração 0009)
+- **Decisão:** a 0009 troca só a função `voto_conferir`: votar ou trocar o voto de unidade com
+  `ativa = false` é recusado com a regra `voto_fora_do_destino` (unidade desativada não está no
+  destino de nenhuma enquete). Reaproveitar o nome evita mexer no `enquetes_banco` comum, que já
+  traduz essa regra para 403. Unidade que não existe continua com a chave estrangeira. O
+  downgrade devolve a função da 0008. Nenhuma tabela nova: as verificações do backup não mudam.
+- **Aplicar:** `cd api && uv run --env-file .env alembic upgrade head` (a partir da 0008).
+
+### 19. Troca que falha não diz "Voto registrado." e o foco fica no erro
+- **Decisão:** enviar apaga o "Voto registrado." de antes; o erro recebe o foco (e o mantém
+  quando a enquete recarrega depois de `enquete_mudou`). A confirmação só recebe o foco depois de
+  um voto que deu certo.
+
+### 20. Voto trocado em outro celular, com a tela parada
+- **Decisão:** a enquete é buscada de novo quando a página volta a ficar visível
+  (`visibilitychange`). Se o voto gravado mudou e não foi por esta tela, a escolha acompanha o
+  voto de agora (o botão não fica "Trocar voto" para o que já está gravado) e aparece "O voto do
+  seu apartamento foi trocado em outro aparelho.". Some quando a pessoa marca outra opção.
+
+### 21. Id inválido no endereço
+- **Decisão:** `/^[1-9]\d{0,14}$/`; `/enquetes/0`, `00`, 16 dígitos ou letras vão direto para
+  "Enquete não encontrada", sem chamar a API. Se a API responder 422 a um id, a tela é a mesma.
+
+### 22. Id da opção é inteiro estrito
+- **Decisão:** `Votar.opcoes` é `list[Annotated[IdBanco, Strict()]]`: `true`, `"1"` e `1.0` dão
+  422. Mexi só na classe `Votar` (e no import do `Strict`, na linha de import do pydantic).
+
+### 23. Fora da lista da revisão (anotado, não corrigido)
+- Os prints foram refeitos com a 0009 e a regra do item 16 (o 10 agora é de uma enquete "só no fim"; o 10b mostra o "durante" aberto).
+- Durante a suíte do front, um teste de outro épico (`avisos/anexos-telas.test.tsx`, uma vez; e
+  um do acesso, outra vez) falhou por tempo e passou nas duas rodadas seguintes: lentidão da
+  máquina com outro agente rodando, não deste épico.

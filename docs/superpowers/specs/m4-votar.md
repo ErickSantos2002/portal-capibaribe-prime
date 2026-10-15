@@ -19,9 +19,8 @@ As rotas só traduzem HTTP; as regras ficam no serviço. Nada de migração, mod
 - **Lista**: abertas primeiro (a que termina antes no topo), depois as encerradas (a que terminou
   por último no topo); empate pelo `id` desc. `ja_votou` da unidade logada.
 - **Enquete**: opções na ordem; `votos` contados no banco (`count` por opção) e nulos para todos
-  (inclusive a gestão) enquanto é "só no fim" e está aberta; `participacao.votaram` = votos
-  gravados (inclusive de unidade desativada depois), `participacao.total` = unidades ativas do
-  destino agora; `pode_votar` = aberta e o bloco da unidade no destino; `pode_editar` = gestão,
+  (inclusive a gestão) enquanto é "só no fim" e está aberta; participação sobre uma base só:
+  as unidades do destino ativas agora ou que votaram (`votaram <= total`; revisão, dúvida 17); `pode_votar` = aberta e o bloco da unidade no destino; `pode_editar` = gestão,
   aberta e `primeiro_voto_em` nulo.
 - **Votar** (`PUT …/voto`), nesta ordem: enquete visível (404) → aberta (409
   `enquete_encerrada`) → no destino (403 `fora_do_destino`) → todas as opções são desta enquete
@@ -30,8 +29,8 @@ As rotas só traduzem HTTP; as regras ficam no serviço. Nada de migração, mod
   conflict do update`, `delete`, `insert`), `commit`. Erro do banco: `rollback` e
   `enquetes_banco.traduzir` (nunca 500 numa regra conhecida). Responde a `Enquete` relida
   depois do commit.
-- **Votantes** (só gestão): `votaram` (toda unidade com voto, por login), e as unidades ativas do
-  destino sem voto, separadas em `entraram_sem_votar` (`ativada_em` preenchida) e
+- **Votantes** (só gestão; no "durante", só depois do fim: 409 `votantes_so_no_fim`, dúvida 16):
+  sobre a mesma base da participação, `votaram` (por login), e as que não votaram, separadas em `entraram_sem_votar` (`ativada_em` preenchida) e
   `nao_entraram`. Nunca em quê.
 
 ## 2. Front (`web/src/enquetes/votar/**`)

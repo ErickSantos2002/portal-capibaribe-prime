@@ -54,6 +54,16 @@ function enquete(extra: Partial<Enquete> = {}): Enquete {
   }
 }
 
+/** "Só no fim" e aberta: os votos vêm nulos. */
+function soNoFim(extra: Partial<Enquete> = {}): Enquete {
+  return enquete({
+    mostrar_resultado: 'so_no_fim',
+    resultado_visivel: false,
+    opcoes: enquete().opcoes.map((o) => ({ ...o, votos: null })),
+    ...extra,
+  })
+}
+
 const COMUM = eu()
 const COMISSAO = eu(['comissao'], false, '2304')
 
@@ -376,7 +386,7 @@ describe('para a Comissão', () => {
   it('"Quais apartamentos votaram" e "Editar" enquanto ninguém votou', async () => {
     apiFalsa({
       'GET /api/acesso/eu': json(200, COMISSAO),
-      'GET /api/enquetes/7': json(200, enquete({ pode_editar: true })),
+      'GET /api/enquetes/7': json(200, soNoFim({ pode_editar: true })),
     })
     abrir('/enquetes/7')
     const votantes = await screen.findByRole('link', { name: /Quais apartamentos votaram/ })
@@ -389,7 +399,7 @@ describe('para a Comissão', () => {
   it('sem "Editar" depois do primeiro voto; o morador não vê nada disso', async () => {
     apiFalsa({
       'GET /api/acesso/eu': json(200, COMISSAO),
-      'GET /api/enquetes/7': json(200, enquete({ pode_editar: false })),
+      'GET /api/enquetes/7': json(200, soNoFim({ pode_editar: false })),
     })
     abrir('/enquetes/7')
     await screen.findByRole('link', { name: /Quais apartamentos votaram/ })
@@ -467,5 +477,119 @@ describe('para a Comissão', () => {
     apiFalsa({ 'GET /api/acesso/eu': json(200, COMUM) })
     abrir('/enquetes/7/votantes')
     expect(await screen.findByRole('heading', { name: 'Sem permissão' })).toBeTruthy()
+  })
+})
+
+// --- revisão do épico B -------------------------------------------------------------------------
+
+describe('revisão do épico B', () => {
+  it('ponto 1: no "durante" aberto, a gestão não tem a lista de votantes, e a tela diz por quê', async () => {
+    apiFalsa({
+      'GET /api/acesso/eu': json(200, COMISSAO),
+      'GET /api/enquetes/7': json(200, enquete()),
+    })
+    abrir('/enquetes/7')
+    expect(
+      await screen.findByText(
+        'Nesta enquete o resultado aparece durante a votação, então a lista de quem votou só aparece quando ela terminar. Para acompanhar quem falta durante a votação, crie a enquete com o resultado “só no fim”.',
+      ),
+    ).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /Quais apartamentos votaram/ })).toBeNull()
+  })
+
+  it('ponto 1: no "durante" terminado, a lista volta', async () => {
+    apiFalsa({
+      'GET /api/acesso/eu': json(200, COMISSAO),
+      'GET /api/enquetes/7': json(200, enquete({ encerrada: true, pode_votar: false })),
+    })
+    abrir('/enquetes/7')
+    expect(await screen.findByRole('link', { name: /Quais apartamentos votaram/ })).toBeTruthy()
+  })
+
+  it('ponto 1: link antigo da lista no "durante" mostra o motivo, não um erro genérico', async () => {
+    apiFalsa({
+      'GET /api/acesso/eu': json(200, COMISSAO),
+      'GET /api/enquetes/7': json(200, enquete()),
+      'GET /api/enquetes/7/votantes': json(409, {
+        codigo: 'votantes_so_no_fim',
+        mensagem: 'A lista de quem votou só aparece quando a enquete terminar.',
+      }),
+    })
+    abrir('/enquetes/7/votantes')
+    expect(
+      await screen.findByText('A lista de quem votou só aparece quando a enquete terminar.'),
+    ).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Voltar para a enquete' }).getAttribute('href')).toBe('/enquetes/7')
+  })
+
+  it('ponto 4: troca que falha não diz "Voto registrado." e o foco fica no erro', async () => {
+    let vez = 0
+    let leitura = 0
+    apiFalsa({
+      'GET /api/acesso/eu': json(200, COMUM),
+      'GET /api/enquetes/7': () =>
+        json(200, leitura++ === 0 ? enquete() : enquete({ meu_voto: [21], ja_votou: true })),
+      'PUT /api/enquetes/7/voto': () =>
+        vez++ === 0
+          ? json(200, enquete({ meu_voto: [21], ja_votou: true }))
+          : json(409, {
+              codigo: 'enquete_mudou',
+              mensagem: 'A enquete mudou agora há pouco. Abra de novo e confira as opções.',
+            }),
+    })
+    abrir('/enquetes/7')
+    fireEvent.click(await screen.findByRole('radio', { name: 'Terça à noite' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Votar' }))
+    await screen.findByText(/Voto registrado/)
+    fireEvent.click(screen.getByRole('radio', { name: 'Quinta à noite' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Trocar voto' }))
+    const alerta = await screen.findByRole('alert')
+    await waitFor(() => expect(leitura).toBe(2))
+    await waitFor(() => expect(document.activeElement).toBe(alerta))
+    expect(screen.getByRole('region', { name: 'Seu voto' }).textContent).not.toContain('Voto registrado')
+  })
+
+  it('ponto 5: voltar para a tela recarrega e avisa do voto trocado em outro celular', async () => {
+    let leitura = 0
+    apiFalsa({
+      'GET /api/acesso/eu': json(200, COMUM),
+      'GET /api/enquetes/7': () =>
+        json(200, enquete({ meu_voto: leitura++ === 0 ? [21] : [23], ja_votou: true })),
+    })
+    abrir('/enquetes/7')
+    await screen.findByRole('region', { name: 'Seu voto' })
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(
+      await screen.findByText('O voto do seu apartamento foi trocado em outro aparelho.'),
+    ).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Seu voto' }).textContent).toContain('Sábado de manhã')
+    expect((screen.getByRole('radio', { name: 'Sábado de manhã' }) as HTMLInputElement).checked).toBe(true)
+    expect(screen.getByText('Para trocar o voto, escolha outra opção.')).toBeTruthy()
+  })
+
+  it('ponto 5: o próprio voto não vira aviso de "outro aparelho"', async () => {
+    apiFalsa({
+      'GET /api/acesso/eu': json(200, COMUM),
+      'GET /api/enquetes/7': json(200, enquete()),
+      'PUT /api/enquetes/7/voto': json(200, enquete({ meu_voto: [22], ja_votou: true })),
+    })
+    abrir('/enquetes/7')
+    fireEvent.click(await screen.findByRole('radio', { name: 'Quinta à noite' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Votar' }))
+    await screen.findByText(/Voto registrado/)
+    expect(screen.queryByText(/outro aparelho/)).toBeNull()
+  })
+
+  it.each(['0', '00', '1234567890123456', 'abc'])('ponto 6: /enquetes/%s é "Enquete não encontrada"', async (id) => {
+    // A API de verdade responde 422 a um id fora do bigint (não 404).
+    const chamadas = apiFalsa({
+      'GET /api/acesso/eu': json(200, COMUM),
+      [`GET /api/enquetes/${id}`]: json(422, { codigo: 'dados_invalidos', mensagem: 'Confira os dados.' }),
+    })
+    abrir(`/enquetes/${id}`)
+    expect(await screen.findByRole('heading', { name: 'Enquete não encontrada' })).toBeTruthy()
+    expect(chamadas.some((c) => c.caminho.startsWith('/api/enquetes/'))).toBe(false)
   })
 })
