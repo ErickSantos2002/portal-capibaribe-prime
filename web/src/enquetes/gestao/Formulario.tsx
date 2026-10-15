@@ -34,12 +34,16 @@ const RESULTADO: { valor: MostrarResultado; nome: string; explicacao: string }[]
   {
     valor: 'durante',
     nome: 'Durante a votação',
-    explicacao: 'Quem abre a enquete já vê como está ficando.',
+    // Revisão do épico B: com a contagem ao vivo, a lista de quem votou entregaria o voto de
+    // cada apartamento; por isso ela só aparece no fim (dúvidas do épico A, item 18).
+    explicacao:
+      'Todos veem a contagem enquanto votam. A lista de quais apartamentos votaram só aparece quando a enquete terminar.',
   },
   {
     valor: 'so_no_fim',
     nome: 'Só quando terminar',
-    explicacao: 'Até o fim, todos veem só quantos votaram. Nem a Comissão vê os votos antes.',
+    explicacao:
+      'Ninguém vê a contagem antes do fim, nem a Comissão. Enquanto isso, a Comissão acompanha quais apartamentos ainda faltam votar.',
   },
 ]
 

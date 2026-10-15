@@ -181,3 +181,19 @@ do marco. **[Coordenador]** marca o que precisa de um arquivo comum.
   espelho `FIM_DE_FRASE` em `web/src/avisos/formatos.ts` ganharam `”’»` (ponto 5: o link da
   pergunta entre aspas curvas levava o `”` junto). Testes dos dois lados nos arquivos do épico
   (`test_enquetes_gestao_revisao.py`, `gestao/links.test.ts`).
+
+## 18. "Quando mostrar o resultado" explica a lista de quem votou · [Erick]
+- **Dúvida:** a revisão do épico B mostrou que, no "durante", a gestão deduzia em quê cada
+  apartamento votou cruzando a contagem ao vivo com a lista "Quais apartamentos votaram".
+- **Decisão (do coordenador, vinda da revisão do épico B):** no "durante", enquanto a enquete
+  está aberta, a lista de quem votou não aparece (só quando termina); no "só no fim", aparece o
+  tempo todo. O formulário (nova e editar) explica isso junto de cada escolha:
+  - **Durante a votação:** "Todos veem a contagem enquanto votam. A lista de quais apartamentos
+    votaram só aparece quando a enquete terminar."
+  - **Só quando terminar:** "Ninguém vê a contagem antes do fim, nem a Comissão. Enquanto isso, a
+    Comissão acompanha quais apartamentos ainda faltam votar."
+- O texto do aviso automático continua coerente ("O resultado aparece durante a votação." / "O
+  resultado só aparece quando a enquete terminar."): ele fala do resultado, não da lista, que é
+  só da gestão. Não mudou.
+- **Confirmar:** se a Comissão aceita não ver quem votou no "durante" até o fim (para cobrar
+  participação, a escolha é o "só no fim").

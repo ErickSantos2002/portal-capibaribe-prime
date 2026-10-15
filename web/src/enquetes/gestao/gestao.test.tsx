@@ -174,6 +174,19 @@ describe('nova enquete', () => {
     ).toBeTruthy()
   })
 
+  it('revisão do épico B: cada escolha do resultado explica a lista de quem votou', async () => {
+    apiDaGestao()
+    abrir('/enquetes/nova')
+    const durante = await screen.findByRole('radio', { name: /Durante a votação/ })
+    expect(durante.closest('label')?.textContent).toContain(
+      'Todos veem a contagem enquanto votam. A lista de quais apartamentos votaram só aparece quando a enquete terminar.',
+    )
+    const noFim = screen.getByRole('radio', { name: /Só quando terminar/ })
+    expect(noFim.closest('label')?.textContent).toContain(
+      'Ninguém vê a contagem antes do fim, nem a Comissão. Enquanto isso, a Comissão acompanha quais apartamentos ainda faltam votar.',
+    )
+  })
+
   it('a unidade comum não vê o formulário', async () => {
     apiFalsa({ 'GET /api/acesso/eu': json(200, eu()) })
     abrir('/enquetes/nova')
