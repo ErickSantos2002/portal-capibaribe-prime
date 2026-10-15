@@ -168,7 +168,13 @@ def test_aviso_automatico_aponta_para_a_enquete(logar, engine_app, predio):
     enquete = _enquete_do_aviso(engine_app, predio, aviso["id"])
     for login in (COMUM, COMISSAO):
         aberto = logar(login).get(f"/api/avisos/{aviso['id']}").json()
-        assert aberto["enquete"] == {"id": enquete, "pergunta": "Qual o melhor dia?"}
+        # Ajustes do M4, ponto 11: o cartão também diz se a enquete terminou.
+        assert {k: aberto["enquete"][k] for k in ("id", "pergunta", "encerrada")} == {
+            "id": enquete,
+            "pergunta": "Qual o melhor dia?",
+            "encerrada": False,
+        }
+        assert aberto["enquete"]["encerra_em"]
     # A pergunta é a atual: editada antes do 1º voto, o botão acompanha.
     with engine_app.begin() as con:
         con.execute(
