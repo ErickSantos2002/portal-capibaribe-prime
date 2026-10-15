@@ -158,10 +158,13 @@ Cada ponto ganhou um teste de regressão que falhava antes da correção (API em
 
 ### 18. Banco recusa voto de unidade desativada (migração 0009)
 - **Decisão:** a 0009 troca só a função `voto_conferir`: votar ou trocar o voto de unidade com
-  `ativa = false` é recusado com a regra `voto_fora_do_destino` (unidade desativada não está no
-  destino de nenhuma enquete). Reaproveitar o nome evita mexer no `enquetes_banco` comum, que já
-  traduz essa regra para 403. Unidade que não existe continua com a chave estrangeira. O
-  downgrade devolve a função da 0008. Nenhuma tabela nova: as verificações do backup não mudam.
+  `ativa = false` é recusado com a regra própria `voto_de_unidade_inativa`, que o
+  `enquetes_banco` traduz para 403 `unidade_inativa` ("Este apartamento foi desativado no Portal
+  e não vota mais. Fale com a administração."). A primeira versão reaproveitava
+  `voto_fora_do_destino`, e a frase falava do bloco errado (revisão de integração; corrigido nos
+  ajustes, item 25, com a 0009 ainda fora de produção). Unidade que não existe continua com a
+  chave estrangeira. O downgrade devolve a função da 0008. Nenhuma tabela nova: as verificações
+  do backup não mudam.
 - **Aplicar:** `cd api && uv run --env-file .env alembic upgrade head` (a partir da 0008).
 
 ### 19. Troca que falha não diz "Voto registrado." e o foco fica no erro
@@ -188,3 +191,59 @@ Cada ponto ganhou um teste de regressão que falhava antes da correção (API em
 - Durante a suíte do front, um teste de outro épico (`avisos/anexos-telas.test.tsx`, uma vez; e
   um do acesso, outra vez) falhou por tempo e passou nas duas rodadas seguintes: lentidão da
   máquina com outro agente rodando, não deste épico.
+
+## Ajustes das revisões finais do M4 (integração A × B e usabilidade)
+
+Cada ponto ganhou um teste de regressão que falhava antes da correção: API em
+`api/testes/test_m4_ajustes.py`; front em `votar/ajustes.test.tsx`, `gestao/ajustes.test.tsx`,
+`casca/ajustes-m4.test.tsx`; regras de CSS em `web/testes/estilo-m4.test.ts`.
+
+### 24. "Quais apartamentos votaram" não promete sigilo que não tem · [Erick]
+- **O que a revisão mostrou:** o cartão dizia "Sem mostrar o voto de ninguém", e a tela "nunca em
+  quê". Quando todos escolhem a mesma opção (ou quase ninguém votou e o resultado aparece), a
+  lista de quem votou somada ao resultado diz o voto de cada apartamento.
+- **Decisão:** frase honesta. No cartão: "Mostra quem votou, não em quê. Quando todos escolhem a
+  mesma opção, dá para saber."; na tela: "Mostra quem votou, não em quê. Mas, quando todos
+  escolhem a mesma opção, dá para saber o voto de cada um."
+- **Alternativa (não feita):** esconder a lista abaixo de um mínimo de votos (ex.: menos de 5),
+  ou enquanto todos os votos estiverem numa opção só. Protege mais, mas a Comissão perde a
+  cobrança nominal justamente no começo da enquete, quando ela mais ajuda.
+- **Confirmar:** se a frase basta ou se vale o mínimo de votos.
+
+### 25. Costura com o épico A
+- **Trocar o tipo de escolha recria as opções** (ids novos), como a pergunta: a tela aberta da
+  múltipla que virou única recebia 422 e ficava presa com caixas de marcar; agora recebe 409
+  `enquete_mudou` e recarrega. E, por garantia, **todo 422 do voto também recarrega**.
+- **A escolha de antes não sobrevive ao recarregar:** fica só com os ids que ainda existem; se
+  não sobrar nenhum (ou sobrar mais de um numa única), volta ao voto gravado ou fica vazia, com o
+  botão desligado e a dica.
+- **`voto_mudou_agora`** não culpa mais "outro aparelho" (também acontece quando a gestão edita
+  no meio do voto): "A enquete ou o voto do seu apartamento mudou agora há pouco. Confira e vote
+  de novo."
+- **`/enquetes/0/editar`** usa o `useIdDaEnquete` daqui; 404 e 422 vão para "Enquete não
+  encontrada" (aqui também: 422 mostra a frase padrão, não "Confira os dados enviados.").
+
+### 26. Telas (revisão de usabilidade)
+- "Você ainda não trocou o voto. Toque em **Trocar voto** para valer." acima do botão, numa região
+  `aria-live` educada que já existe (vazia, não ocupa espaço).
+- Legenda depois do voto: "Quer trocar? Escolha outra opção." (única) / "Quer trocar? Marque ou
+  desmarque e toque em Trocar voto." (múltipla); a dica do botão parado na múltipla: "Para trocar
+  o voto, marque ou desmarque uma opção."
+- Porcentagem maior que 0 e que arredonda para 0: "menos de 1%" (barras, `aria-valuetext` e
+  participação, aqui e na tela de votantes). A largura da barra usa a conta exata.
+- Na múltipla, com o resultado visível: "Cada apartamento pode marcar mais de uma opção, então a
+  soma das porcentagens pode passar de 100%." ("pode": com um voto só, a soma dá 100).
+- Terminada: selo de texto "Mais votada" (no empate, em todas), além da cor.
+- Lista de quem falta em ordem crescente, por bloco e apartamento (na tela e no texto copiado;
+  `ordemCrescente` daqui, o `ordemDaGrade` dos avisos ficou como estava). No computador, 8 por
+  linha e cada andar começa a linha (`enq-andar-novo`).
+- "Seu apartamento ainda não votou" em selo ipê (fundo ipê-suave, borda ipê, texto na tinta: o
+  ipê puro como texto não chega a 4,5:1 no claro). O contador na aba ficou no backlog
+  (`docs/07-roadmap.md`).
+- Quem não vota (gestão fora do destino) vê "Vai até …".
+- O cartão do aviso vem logo depois do cabeçalho (antes do "Corrigido em…" e do texto) e diz o
+  estado: "Aberta · vai até …" / "Terminou · ver o resultado". Para isso, `EnqueteDoAviso`
+  ganhou `encerra_em` e `encerrada` (esquema comum, com o `encerrada` pelo relógio da API).
+- **Conferência visual:** o roteiro da revisão de usabilidade (Playwright próprio, Chrome
+  headless, API 8168 e Vite 5168, banco `portal_dev` num container só dos ajustes), em 390 e
+  1280 px, claro e escuro. Uma seleção está em `docs/superpowers/prints/m4-ajustes/`.

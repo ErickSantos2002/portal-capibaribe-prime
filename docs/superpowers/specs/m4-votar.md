@@ -39,16 +39,23 @@ As rotas só traduzem HTTP; as regras ficam no serviço. Nada de migração, mod
 |---|---|
 | `menu.ts` | "Enquetes" para toda unidade, logo depois de "Avisos" |
 | `rotas.tsx` | `/enquetes` e `/enquetes/:id` atrás de `ExigeUnidade`; `/enquetes/:id/votantes` atrás de `ExigeGestao` |
-| `Lista.tsx` | "Abertas" e "Terminadas"; selo "Seu apartamento ainda não votou" (aberta e `ja_votou` falso, se a unidade está no destino); "Vai até …" / "Terminou em …"; botão flutuante "Nova enquete" (gestão) para `/enquetes/nova` |
+| `Lista.tsx` | "Abertas" e "Terminadas"; selo "Seu apartamento ainda não votou" na cor de atenção (ipê), aberta e `ja_votou` falso, se a unidade está no destino; "Vai até …" / "Terminou em …"; botão flutuante "Nova enquete" (gestão) para `/enquetes/nova` |
 | `EnqueteAberta.tsx` | pergunta; "O voto vale pelo apartamento X do Bloco Y. Dá para trocar até …"; confirmação no lugar ("Seu apartamento já votou em …. Se escolher outra, vale a nova."); opções grandes (rádio na escolha única, caixa na múltipla); "Votar" / "Trocar voto"; resultado em barras com "N votos, P%"; "só no fim": só a participação e quando o resultado aparece; terminada: "Terminou em …. O resultado não muda mais."; RN-03 em toda enquete; para a gestão: "Quais apartamentos votaram" e, se `pode_editar`, "Editar" (`/enquetes/:id/editar`) |
-| `Votantes.tsx` | "N de M apartamentos votaram (P%)", e os grupos "Votaram", "Entrou, mas não votou", "Ainda não entrou no Portal", por bloco, com "Copiar a lista" de quem falta |
-| `EnqueteDoAviso.tsx` | o cartão "Ir para a enquete" com a pergunta, no aviso automático |
+| `Votantes.tsx` | "N de M apartamentos votaram (P%)", e os grupos "Votaram", "Entrou, mas não votou", "Ainda não entrou no Portal", por bloco, em ordem crescente (no computador, 8 por linha e cada andar começa a linha), com "Copiar a lista" de quem falta (na mesma ordem) |
+| `EnqueteDoAviso.tsx` | o cartão "Ir para a enquete" com a pergunta e o estado ("Aberta · vai até …" / "Terminou · ver o resultado"), logo depois do cabeçalho do aviso automático, antes do texto |
 | `formatos.ts` | datas na voz do morador ("10 de novembro, às 20h"), porcentagem, ordem da lista |
 | `enquetes.css` | barras, opções e cartões; tokens do `estilo.css` (mata, ipê) |
 
 Voto óbvio e difícil de errar: o botão só fica ativo com a escolha feita (na troca, só se a
 escolha mudou); erro do servidor aparece no lugar, acima do botão, e a escolha não se perde.
 Depois de votar, a tela troca pela `Enquete` da resposta e o foco vai para a confirmação.
+
+Ajustes das revisões finais do M4 (dúvidas do B, itens 24 a 26): um 422 do voto também recarrega
+a enquete; ao recarregar, a escolha fica só com as opções que ainda existem (senão, o voto
+gravado); escolha diferente do voto gravado mostra "Você ainda não trocou o voto. Toque em
+**Trocar voto** para valer." (`aria-live` educado); depois do voto, a legenda vira "Quer trocar?
+…"; quem não vota vê "Vai até …"; porcentagem entre 0 e 1 é "menos de 1%"; na múltipla, uma
+linha explica a soma acima de 100%; terminada, a mais votada ganha o selo "Mais votada".
 
 ## 3. Testes
 

@@ -249,7 +249,8 @@ Respostas:
 
 ### 3.3 No aviso (pronto nesta onda)
 
-`AvisoCompleto` ganha `enquete: EnqueteDoAviso | None` (`id`, `pergunta`): a enquete que gerou
+`AvisoCompleto` ganha `enquete: EnqueteDoAviso | None` (`id`, `pergunta` e, desde os ajustes do
+M4, `encerra_em` e `encerrada`, para o cartão dizer "Terminou · ver o resultado"): a enquete que gerou
 este aviso (H-13), para o botão "Ir para a enquete". Como o aviso e a enquete têm o mesmo
 destino, quem vê o aviso vê a enquete. Serviço: `app/servicos/avisos.py`
 (`_enquete_do_aviso`).

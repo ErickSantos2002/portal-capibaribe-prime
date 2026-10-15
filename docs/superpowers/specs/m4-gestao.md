@@ -43,7 +43,7 @@ Resposta 201 `EnqueteGravada` (`id`, `aviso_id`).
   - <opção 1>
   - <opção 2>
 
-  Dá para votar até <dd/mm/aaaa>, às <H>h<MM> (horário de Recife). <escolha>
+  Dá para votar até <quando> (horário de Recife). <escolha>
   Vale um voto por apartamento, e dá para trocar o voto até o fim. <resultado>
 
   > Enquete é consulta. Não tem valor legal de votação em assembleia.
@@ -51,6 +51,9 @@ Resposta 201 `EnqueteGravada` (`id`, `aviso_id`).
   O botão “Ir para a enquete”, neste aviso, leva direto a ela.
   ```
 
+  `<quando>`: por extenso, como a tela da enquete: "16 de outubro, às 20h", "às 19h30"; em
+  outro ano que o atual, com o ano ("5 de janeiro de 2027, às 12h"). API: `quando_em_texto`;
+  front: `quandoTermina` (ajustes do M4, ponto 16).
   `<escolha>`: "Pode marcar mais de uma opção." (múltipla) ou "Marque uma opção." (única).
   `<resultado>`: "O resultado aparece durante a votação." ou "O resultado só aparece quando a
   enquete terminar."
@@ -70,8 +73,9 @@ tela carregou; `null` se nunca editada). Revisão independente: dúvidas 7, 9, 1
    mostrar): 409 `sem_mudanca` "Nada mudou na enquete."
 5. O término mudou e fica a menos de 1 hora: 422 no campo `encerra_em`. Término igual passa.
 6. `UPDATE` da enquete **sempre**: o banco carimba `editada_em` e confere de novo voto e prazo.
-   Se a **pergunta** ou as **opções** mudaram, apaga e insere todas as opções de novo, na ordem
-   (ids novos: um voto da tela antiga é recusado); senão, ficam as mesmas.
+   Se a **pergunta**, as **opções** ou o **tipo de escolha** mudaram, apaga e insere todas as
+   opções de novo, na ordem (ids novos: um voto da tela antiga é 409 `enquete_mudou` e a tela
+   recarrega; ajustes do M4, ponto 1); senão, ficam as mesmas.
 7. Corrige o aviso com `avisos.gravar_correcao` (título e texto novos; categoria, evento e
    anexos ficam), **sem notificar**. Se o título e o texto do aviso ficariam iguais, não corrige.
    Se o aviso foi arquivado, não corrige (dúvida 4).
@@ -92,6 +96,10 @@ tela carregou; `null` se nunca editada). Revisão independente: dúvidas 7, 9, 1
   certo. Sair com algo escrito pergunta antes (como "Novo aviso").
 - Depois de publicar ou salvar: vai para `/enquetes/{id}` (tela do épico B) com o recado
   "Enquete publicada. O aviso saiu no mural." / "Enquete atualizada. O aviso foi corrigido."
+- `/enquetes/:id/editar` usa o `useIdDaEnquete` do épico B (`^[1-9]\d{0,14}$`) e a mesma tela
+  "Enquete não encontrada" para id inválido, 404 e 422 (ajustes do M4, ponto 5).
+- O erro geral some quando os campos que o causaram são corrigidos; o erro da API que não é de
+  campo continua (ajustes do M4, ponto 9).
 - Editar carrega a enquete com `abrirEnquete` (rota do épico B) e manda o `editada_em` dela como
   `editada_em_base`. Sem `pode_editar`, mostra por quê (terminou, ou já tem voto) e o link para a
   enquete, sem formulário. 409 ao salvar (`enquete_com_voto`, `enquete_encerrada`) mostra a frase

@@ -242,6 +242,7 @@ morador. Cada um entra num marco quando alguém pedir ou quando o marco tocar no
 | Porcentagem no envio do arquivo | O `fetch` não informa o progresso do envio; pede trocar por `XMLHttpRequest` | Épico B (dúvida 3) |
 | Uma pergunta só de "Sair sem publicar?" | Documentos e avisos têm cada um a sua (`window.confirm` e um diálogo próprio) | Revisão do épico A (U5) |
 | Cópia dos arquivos fora da Cloudflare (Backblaze B2) | Plano B escolhido para ter uma conta a menos; o B2 volta a cobrir a perda da conta, só trocando segredos | ADR-0011, revisão de 12/10/2026 |
+| Contador de enquetes por votar na aba "Enquetes" (como o número de avisos não lidos) | Pede uma rota de contagem e o encaixe no menu; a lista já diz "Seu apartamento ainda não votou" | Revisão de usabilidade do M4 (item 16) |
 
 ### M4 · Enquetes
 

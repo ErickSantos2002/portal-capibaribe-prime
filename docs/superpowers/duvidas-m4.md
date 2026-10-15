@@ -149,3 +149,18 @@ Os agentes dos épicos registram as próprias dúvidas em `duvidas-m4-gestao.md`
   sobra).
 - **Por quê:** "nada de voto depois do prazo" sem exceção de milissegundos; fica fácil de
   explicar e de testar.
+
+## 16. Ajustes das revisões finais (peças comuns)
+- **Recado no fluxo da página:** a caixa visível vai, por portal, para uma linha própria dentro
+  do topo de cada tela (`.recado-lugar`), que fica preso no alto: o topo cresce, nada fica por
+  cima do título ou do conteúdo, e a caixa continua à vista ao rolar. A região de status
+  (`role="status"`) ficou no `RecadoProvider`, sempre montada e escondida da vista; a frase da
+  caixa sai da árvore de acessibilidade (seria lida duas vezes). Testes de outras telas que
+  procuravam o recado por texto passaram a usar `esperarRecado` (`acesso/apoioDeTeste.ts`). Vale
+  para avisos, documentos, unidade e administração (conferido nos prints).
+- **Botão desligado:** fundo e texto próprios (`--desligado-fundo`, `--desligado-tinta`, nos dois
+  temas; texto acima de 4,5:1), em vez de só transparência, que no escuro deixava o verde quase
+  igual ao ligado. Vale para todo `.botao` desligado (inclusive "Publicando…", que fica cinza).
+- **0009** ganhou regra própria (`voto_de_unidade_inativa` → 403 `unidade_inativa`); a 0009
+  ainda não foi aplicada em produção, então foi editada no lugar (sem migração nova).
+- **`EnqueteDoAviso`** ganhou `encerra_em` e `encerrada` (esquema e tipo comuns).

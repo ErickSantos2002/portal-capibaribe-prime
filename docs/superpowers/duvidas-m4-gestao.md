@@ -76,8 +76,11 @@ do marco. **[Coordenador]** marca o que precisa de um arquivo comum.
     banco (a opção não é mais da enquete) e não cai numa pergunta que o morador nunca viu
     ("Aprovar R$ 1.000?" virando "Aprovar R$ 10.000?" com o mesmo "Sim").
   - **Só as opções mudaram:** apaga e insere de novo, como antes.
-  - **Pergunta e opções iguais** (mudou o tipo de escolha, o término ou quando mostrar): as opções
-    ficam, com os mesmos ids.
+  - **Pergunta e opções iguais** (mudou o término ou quando mostrar): as opções ficam, com os
+    mesmos ids.
+  - **O tipo de escolha mudou** (ajustes do M4, ponto 1): recria também. Com os mesmos ids, a
+    tela aberta da múltipla que virou única mandava duas opções e recebia 422, sem saber que a
+    enquete mudou; com ids novos, recebe 409 `enquete_mudou` e recarrega.
   - Em todos os casos a enquete recebe o `UPDATE`, para o banco carimbar `editada_em` e conferir
     de novo voto e prazo.
 - **Por quê:** a primeira versão só recriava se o texto das opções mudasse, e a revisão mostrou
@@ -197,3 +200,18 @@ do marco. **[Coordenador]** marca o que precisa de um arquivo comum.
   só da gestão. Não mudou.
 - **Confirmar:** se a Comissão aceita não ver quem votou no "durante" até o fim (para cobrar
   participação, a escolha é o "só no fim").
+
+## 19. Ajustes das revisões finais do M4
+- **Data do aviso automático por extenso** ("Dá para votar até 16 de outubro, às 20h (horário de
+  Recife)."; com minutos, "às 19h30"; em outro ano, com o ano), igual à tela da enquete. API:
+  `quando_em_texto` (o ano de referência é o de quando o aviso é gerado); prévia do formulário:
+  `textoDoAviso(rascunho, agora)` usa o `quandoTermina` do épico B. Teste dos dois lados.
+- **Id do endereço:** `/enquetes/0/editar` e companhia vão para "Enquete não encontrada" sem
+  chamar a API (o `useIdDaEnquete` do épico B); 404 e 422 da API também.
+- **Erro geral** guarda os campos que o causaram e some quando todos forem corrigidos; o da API
+  sem campo (ex.: `tente_de_novo`) continua até o próximo envio.
+- **Espaço entre o dia e a hora** no celular (`gap` de 18 px entre as linhas) e antes de "Quando
+  mostrar o resultado".
+- **Não mudou (decisões):** "Corrigido" no aviso de uma enquete editada antes do 1º voto (regra
+  de transparência dos avisos); encerrar/cancelar (dúvida [Erick] do contrato, item 9);
+  `navigate replace` depois de salvar.
