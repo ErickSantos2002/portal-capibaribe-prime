@@ -1,8 +1,8 @@
 """Épico B do M4 · Votar e resultado (H-21, H-22). Pertence ao épico B.
 
-Contrato: `docs/superpowers/specs/m4-contrato.md`, seção 3. Esquemas em
-`app/esquemas/enquetes.py`. Nesta onda, todas respondem 501 `em_construcao`; sessão, permissão,
-CSRF e validação do corpo já são as de verdade.
+Contrato: `docs/superpowers/specs/m4-contrato.md`, seção 3; spec do épico:
+`docs/superpowers/specs/m4-votar.md`. Esquemas em `app/esquemas/enquetes.py`; regras em
+`app/servicos/enquetes.py`.
 
 Rotas (o roteador do épico A, `enquetes_gestao.py`, tem o mesmo prefixo; os caminhos não se
 cruzam):
@@ -18,10 +18,10 @@ gravado na ordem da seção 2.6 do spec (dois celulares da mesma unidade = um vo
 
 from fastapi import APIRouter, Depends
 
-from app.erros_api import em_construcao
 from app.esquemas.comum import IdBanco
 from app.esquemas.enquetes import Enquete, ListaEnquetes, Votantes, Votar
 from app.seguranca.dependencias import Banco, Gestao, UnidadeLogada, exige_cabecalho_portal
+from app.servicos import enquetes as servico
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(prefix="/api/enquetes", dependencies=[Depends(exige_cabecalho_portal)])
@@ -29,19 +29,19 @@ rotas = APIRouter(prefix="/api/enquetes", dependencies=[Depends(exige_cabecalho_
 
 @rotas.get("")
 def listar(logado: UnidadeLogada, db: Banco) -> ListaEnquetes:
-    raise em_construcao()
+    return ListaEnquetes(itens=servico.listar(db, logado))
 
 
 @rotas.get("/{enquete_id}")
 def abrir(enquete_id: IdBanco, logado: UnidadeLogada, db: Banco) -> Enquete:
-    raise em_construcao()
+    return servico.abrir(db, logado, enquete_id)
 
 
 @rotas.put("/{enquete_id}/voto")
 def votar(enquete_id: IdBanco, dados: Votar, logado: UnidadeLogada, db: Banco) -> Enquete:
-    raise em_construcao()
+    return servico.votar(db, logado, enquete_id, dados)
 
 
 @rotas.get("/{enquete_id}/votantes")
 def votantes(enquete_id: IdBanco, logado: Gestao, db: Banco) -> Votantes:
-    raise em_construcao()
+    return servico.votantes(db, logado, enquete_id)

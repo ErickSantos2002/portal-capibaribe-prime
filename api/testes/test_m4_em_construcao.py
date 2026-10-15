@@ -7,7 +7,7 @@ arquivo. O que vale antes e depois dos épicos (sessão, permissão, CSRF, valid
 
 import pytest
 
-from testes.conftest import ADMIN, COMISSAO, COMUM
+from testes.conftest import ADMIN, COMISSAO
 from testes.test_m4_rotas import EDITAR_ENQUETE, NOVA_ENQUETE
 
 pytestmark = pytest.mark.usefixtures("predio")
@@ -34,20 +34,3 @@ def test_a_criar_enquete(logar):
 
 def test_a_editar_enquete(logar):
     _501(logar(ADMIN).put("/api/enquetes/1", json=EDITAR_ENQUETE))
-
-
-# --- épico B · votar e resultado ---------------------------------------------------------------
-
-
-@pytest.mark.parametrize("caminho", ["/api/enquetes", "/api/enquetes/1"])
-def test_b_lista_e_enquete(logar, caminho):
-    _501(logar(COMUM).get(caminho))
-
-
-def test_b_votar(logar):
-    _501(logar(COMUM).put("/api/enquetes/1/voto", json={"opcoes": [1]}))
-    _501(logar(COMISSAO).put("/api/enquetes/1/voto", json={"opcoes": [1, 2]}))
-
-
-def test_b_votantes(logar):
-    _501(logar(COMISSAO).get("/api/enquetes/1/votantes"))
