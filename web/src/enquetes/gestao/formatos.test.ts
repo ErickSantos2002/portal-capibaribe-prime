@@ -95,3 +95,60 @@ describe('conferir antes de enviar (as frases da API)', () => {
     })
   })
 })
+
+// --- revisão independente do épico A ------------------------------------------------------------
+
+describe('revisão: Unicode como a API', () => {
+  it('ponto 6: "é" e "e + acento" são a mesma opção', () => {
+    expect(conferir(rascunho({ opcoes: ['Café', 'Café'] }), AGORA)).toEqual({
+      opcoes: 'Duas opções estão iguais.',
+    })
+    expect(opcoesLimpas(['Café ', 'Chá'])).toEqual(['Café', 'Chá'])
+  })
+
+  it('ponto 6: opção ou pergunta sem letra nem número', () => {
+    expect(conferir(rascunho({ opcoes: ['Sim', '́́'] }), AGORA)).toEqual({
+      opcoes: 'Cada opção precisa ter letras ou números.',
+    })
+    expect(conferir(rascunho({ opcoes: ['Sim', '?!'] }), AGORA)).toEqual({
+      opcoes: 'Cada opção precisa ter letras ou números.',
+    })
+    expect(conferir(rascunho({ pergunta: '́?' }), AGORA)).toEqual({
+      pergunta: 'Escreva a pergunta com letras ou números.',
+    })
+  })
+
+  it('ponto 7: o título corta por letra, sem partir o emoji', () => {
+    const titulo = tituloDoAviso('x'.repeat(104) + '🎉🎉🎉 resto da pergunta')
+    expect(Array.from(titulo)).toHaveLength(120)
+    expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(titulo)).toBe(false)
+    expect(titulo.endsWith('🎉…')).toBe(true)
+  })
+
+  it('ponto 7: a pergunta conta emoji como uma letra, até 200', () => {
+    expect(conferir(rascunho({ pergunta: 'Qual ' + '🎉'.repeat(195) }), AGORA)).toEqual({})
+    expect(conferir(rascunho({ pergunta: 'Qual? ' + '🎉'.repeat(195) }), AGORA)).toEqual({
+      pergunta: 'A pergunta pode ter até 200 letras.',
+    })
+  })
+
+  it('ponto 8: "Straße" e "STRASSE" são a mesma opção, como no casefold', () => {
+    expect(conferir(rascunho({ opcoes: ['Straße', 'STRASSE'] }), AGORA)).toEqual({
+      opcoes: 'Duas opções estão iguais.',
+    })
+  })
+})
+
+describe('revisão, ponto 4: na edição, o término igual não pede 1 hora', () => {
+  const perto = { dia: '2026-10-14', hora: '12:30' }
+
+  it('término igual ao gravado passa, mesmo a 30 minutos do fim', () => {
+    expect(conferir(rascunho(perto), AGORA, perto)).toEqual({})
+  })
+
+  it('término mudado continua pedindo 1 hora', () => {
+    expect(conferir(rascunho({ ...perto, hora: '12:40' }), AGORA, perto)).toEqual({
+      termino: 'Escolha um término daqui a pelo menos 1 hora.',
+    })
+  })
+})

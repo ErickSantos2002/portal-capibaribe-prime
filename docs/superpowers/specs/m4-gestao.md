@@ -59,18 +59,23 @@ Resposta 201 `EnqueteGravada` (`id`, `aviso_id`).
 
 ### 1.3 Editar (`PUT /api/enquetes/{id}`, `Gestao`)
 
+Corpo `EditarEnquete`, tudo obrigatório (sem padrão), com `editada_em_base` (o `editada_em` que a
+tela carregou; `null` se nunca editada). Revisão independente: dúvidas 7, 9, 11, 15 e 16.
+
 1. Busca a enquete **com trava** (`for update`). Não existe: 404 `enquete_nao_encontrada`.
 2. Já tem voto (`primeiro_voto_em`): 409 `enquete_com_voto`. Já terminou: 409
    `enquete_encerrada` (a trava espera um voto em andamento; quem chega depois vê a coluna).
-3. Nada mudou (pergunta, opções na ordem, tipo de escolha, término como instante, quando
+3. `editada_em_base` diferente do `editada_em` gravado: 409 `enquete_mudou` (outra pessoa editou).
+4. Nada mudou (pergunta, opções na ordem, tipo de escolha, término como instante, quando
    mostrar): 409 `sem_mudanca` "Nada mudou na enquete."
-4. `UPDATE` da enquete **sempre** (mesmo se só as opções mudaram): o banco carimba
-   `editada_em` e confere de novo voto e prazo. Se as opções mudaram, apaga e insere de novo, na
-   ordem; se não, ficam as mesmas (com os mesmos ids: a tela de quem está votando não quebra).
-5. Corrige o aviso com `avisos.gravar_correcao` (título e texto novos; categoria, evento e
-   anexos ficam), **sem notificar**. Se o título e o texto do aviso ficariam iguais (ex.: só o
-   segundo do término mudou), não corrige. Se o aviso foi arquivado, não corrige (dúvida 4).
-6. Histórico `enquete_editada` (os mesmos campos da criação), commit, 200 `EnqueteGravada`.
+5. O término mudou e fica a menos de 1 hora: 422 no campo `encerra_em`. Término igual passa.
+6. `UPDATE` da enquete **sempre**: o banco carimba `editada_em` e confere de novo voto e prazo.
+   Se a **pergunta** ou as **opções** mudaram, apaga e insere todas as opções de novo, na ordem
+   (ids novos: um voto da tela antiga é recusado); senão, ficam as mesmas.
+7. Corrige o aviso com `avisos.gravar_correcao` (título e texto novos; categoria, evento e
+   anexos ficam), **sem notificar**. Se o título e o texto do aviso ficariam iguais, não corrige.
+   Se o aviso foi arquivado, não corrige (dúvida 4).
+8. Histórico `enquete_editada` (os mesmos campos da criação), commit, 200 `EnqueteGravada`.
 
 ## 2. Front (`web/src/enquetes/gestao/`)
 
@@ -87,9 +92,13 @@ Resposta 201 `EnqueteGravada` (`id`, `aviso_id`).
   certo. Sair com algo escrito pergunta antes (como "Novo aviso").
 - Depois de publicar ou salvar: vai para `/enquetes/{id}` (tela do épico B) com o recado
   "Enquete publicada. O aviso saiu no mural." / "Enquete atualizada. O aviso foi corrigido."
-- Editar carrega a enquete com `abrirEnquete` (rota do épico B). Sem `pode_editar`, mostra por
-  quê (terminou, ou já tem voto) e o link para a enquete, sem formulário. 409 ao salvar
-  (`enquete_com_voto`, `enquete_encerrada`) mostra a frase e o mesmo link.
+- Editar carrega a enquete com `abrirEnquete` (rota do épico B) e manda o `editada_em` dela como
+  `editada_em_base`. Sem `pode_editar`, mostra por quê (terminou, ou já tem voto) e o link para a
+  enquete, sem formulário. 409 ao salvar (`enquete_com_voto`, `enquete_encerrada`) mostra a frase
+  e o mesmo link; `enquete_mudou` mostra a frase e "Abrir a versão nova". Acima do botão, a linha
+  fixa "Salvar reescreve o texto do aviso desta enquete."
+- Pergunta e opções em NFC, contadas por letra (code point), e recusadas sem letra nem número,
+  como a API.
 - CSS próprio: `web/src/enquetes/gestao/gestao.css`, com os tokens do Portal.
 
 ## 3. Fora deste épico

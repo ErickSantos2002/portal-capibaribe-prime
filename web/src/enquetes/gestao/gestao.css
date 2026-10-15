@@ -229,3 +229,7 @@ textarea.enq-pergunta {
     transition: none;
   }
 }
+
+.enq-reescreve {
+  margin-top: 18px;
+}

@@ -34,7 +34,9 @@ def corpo(**troca: Any) -> dict[str, Any]:
 
 
 def edicao(**troca: Any) -> dict[str, Any]:
+    """O corpo de editar: tudo obrigatório, e `editada_em_base` nulo (enquete nunca editada)."""
     dados = {k: v for k, v in corpo().items() if k != "para_todos"}
+    dados.update(multipla_escolha=False, mostrar_resultado="durante", editada_em_base=None)
     return {**dados, **troca}
 
 
@@ -303,9 +305,10 @@ def test_historico_da_edicao(logar, engine_app, predio, agendados):
 
 
 def test_opcoes_iguais_mantem_os_ids(logar, engine_app, agendados):
+    """Mesma pergunta e mesmas opções: os ids ficam (a pergunta nova recria; ver a revisão)."""
     gravada = criar(logar)
     antes = _opcoes(engine_app, gravada["id"])
-    resposta = editar(logar, gravada["id"], pergunta="Qual o melhor dia?")
+    resposta = editar(logar, gravada["id"], mostrar_resultado="so_no_fim")
     assert resposta.status_code == 200, resposta.text
     assert _opcoes(engine_app, gravada["id"]) == antes
 

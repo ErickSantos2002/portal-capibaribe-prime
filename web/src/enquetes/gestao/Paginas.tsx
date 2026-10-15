@@ -54,7 +54,16 @@ function EditarEnquete({ id }: { id: number }) {
         <Carregando />
       ) : enquete.pode_editar ? (
         <FormularioEnquete
-          modo={{ tipo: 'editar', id, paraTodos: enquete.para_todos, blocos: enquete.blocos }}
+          // Versão nova carregada (outra pessoa editou): o formulário começa de novo com ela.
+          key={enquete.editada_em ?? 'nunca'}
+          modo={{
+            tipo: 'editar',
+            id,
+            paraTodos: enquete.para_todos,
+            blocos: enquete.blocos,
+            editadaEm: enquete.editada_em,
+            recarregar,
+          }}
           inicial={rascunhoDe(enquete)}
         />
       ) : (

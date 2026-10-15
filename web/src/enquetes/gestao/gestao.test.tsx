@@ -235,6 +235,7 @@ describe('editar enquete', () => {
       multipla_escolha: false,
       encerra_em: `${DIA_DO_TERMINO}T20:30:00-03:00`,
       mostrar_resultado: 'durante',
+      editada_em_base: null,
     })
     expect(roteador.state.location.state).toMatchObject({
       recado: 'Enquete atualizada. O aviso foi corrigido.',
@@ -287,5 +288,56 @@ describe('editar enquete', () => {
     })
     abrir('/enquetes/7/editar')
     expect(await screen.findByText(/Não achamos esta página/)).toBeTruthy()
+  })
+
+  // --- revisão independente do épico A ----------------------------------------------------------
+
+  it('ponto 2: manda o editada_em que carregou, e o 409 oferece abrir a versão nova', async () => {
+    const editada = '2026-10-14T13:00:00.123456Z'
+    let carregou = 0
+    const chamadas = apiDaGestao({
+      'GET /api/enquetes/7': () => {
+        carregou += 1
+        return json(200, enquete({ editada_em: editada }))
+      },
+      'PUT /api/enquetes/7': json(409, {
+        codigo: 'enquete_mudou',
+        mensagem: 'Outra pessoa editou esta enquete agora há pouco. Abra de novo para ver a versão nova antes de mudar.',
+      }),
+    })
+    abrir('/enquetes/7/editar')
+    await screen.findByLabelText('Pergunta')
+    escrever('Pergunta', 'Outra pergunta?')
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    const alerta = await screen.findByRole('alert')
+    expect(alerta.textContent).toContain('Outra pessoa editou esta enquete')
+    expect(enviados(chamadas, 'PUT')[0].corpo).toMatchObject({ editada_em_base: editada })
+    fireEvent.click(within(alerta).getByRole('button', { name: 'Abrir a versão nova' }))
+    await waitFor(() => expect(carregou).toBe(2))
+  })
+
+  it('ponto 3: a edição avisa que salvar reescreve o aviso; a criação não', async () => {
+    apiDaGestao({ 'GET /api/enquetes/7': json(200, enquete()) })
+    abrir('/enquetes/7/editar')
+    expect(await screen.findByText('Salvar reescreve o texto do aviso desta enquete.')).toBeTruthy()
+    cleanup()
+    apiDaGestao()
+    abrir('/enquetes/nova')
+    await screen.findByLabelText('Pergunta')
+    expect(screen.queryByText('Salvar reescreve o texto do aviso desta enquete.')).toBeNull()
+  })
+
+  it('ponto 4: perto do fim, corrige a pergunta sem mexer no término', async () => {
+    const daqui30 = new Date(Date.now() + 30 * 60 * 1000)
+    daqui30.setUTCSeconds(0, 0)
+    const chamadas = apiDaGestao({
+      'GET /api/enquetes/7': json(200, enquete({ encerra_em: daqui30.toISOString() })),
+      'PUT /api/enquetes/7': json(200, { id: 7, aviso_id: 9 }),
+    })
+    abrir('/enquetes/7/editar')
+    await screen.findByLabelText('Pergunta')
+    escrever('Pergunta', 'Qual o melhor dia? (corrigido)')
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    await waitFor(() => expect(enviados(chamadas, 'PUT')).toHaveLength(1))
   })
 })

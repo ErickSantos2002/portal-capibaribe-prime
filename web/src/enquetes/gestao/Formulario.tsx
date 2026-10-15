@@ -14,8 +14,7 @@ import type { MostrarResultado } from '../tipos'
 import {
   conferir,
   destinoEmTexto,
-  LIMITE_OPCAO,
-  LIMITE_PERGUNTA,
+  limpo,
   MAX_OPCOES,
   MIN_OPCOES,
   opcoesLimpas,
@@ -46,6 +45,8 @@ const RESULTADO: { valor: MostrarResultado; nome: string; explicacao: string }[]
 
 // Erros da API que dizem respeito à enquete inteira: a frase e o link para ela.
 const SEM_EDICAO = new Set(['enquete_com_voto', 'enquete_encerrada'])
+// Revisão, ponto 2: outra pessoa editou depois que a tela abriu.
+const MUDOU = 'enquete_mudou'
 
 const CAMPOS_DA_API: Record<string, Campo> = {
   pergunta: 'pergunta',
@@ -207,7 +208,16 @@ function PreviaDoAviso({ rascunho, editando }: { rascunho: Rascunho; editando: b
 
 type Modo =
   | { tipo: 'nova' }
-  | { tipo: 'editar'; id: number; paraTodos: boolean; blocos: number[] }
+  | {
+      tipo: 'editar'
+      id: number
+      paraTodos: boolean
+      blocos: number[]
+      /** O `editada_em` da enquete carregada: vai como `editada_em_base` (revisão, ponto 2). */
+      editadaEm: string | null
+      /** Carrega a versão nova, quando outra pessoa editou antes (409 `enquete_mudou`). */
+      recarregar: () => void
+    }
 
 export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rascunho }) {
   const navegar = useNavigate()
@@ -216,7 +226,11 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
   const opcoes = useChaves(inicial.opcoes.length)
   const [blocos, setBlocos] = useState<number[]>([])
   const [erros, setErros] = useState<Erros>({})
-  const [geral, setGeral] = useState<{ mensagem: string; semEdicao: boolean } | null>(null)
+  const [geral, setGeral] = useState<{
+    mensagem: string
+    semEdicao: boolean
+    mudou: boolean
+  } | null>(null)
   const [enviando, setEnviando] = useState(false)
   const focarNaUltima = useRef(false)
   const lista = useRef<HTMLOListElement>(null)
@@ -261,20 +275,26 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
   async function enviar(evento: FormEvent) {
     evento.preventDefault()
     if (enviando) return
-    const encontrados = conferir(rascunho)
+    // Na edição, o término que já estava gravado não pede de novo "pelo menos 1 hora".
+    const encontrados = conferir(
+      rascunho,
+      new Date(),
+      editando ? { dia: inicial.dia, hora: inicial.hora } : undefined,
+    )
     setErros(encontrados)
     const mensagens = Object.values(encontrados)
     if (mensagens.length > 0) {
       setGeral({
         mensagem: mensagens.length === 1 ? mensagens[0] : 'Confira os campos marcados.',
         semEdicao: false,
+        mudou: false,
       })
       return
     }
     setGeral(null)
     setEnviando(true)
     const corpo = {
-      pergunta: rascunho.pergunta.trim(),
+      pergunta: limpo(rascunho.pergunta),
       opcoes: opcoesLimpas(rascunho.opcoes),
       multipla_escolha: rascunho.multipla,
       encerra_em: paraIso(rascunho.dia, rascunho.hora),
@@ -283,7 +303,7 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
     try {
       const gravada =
         modo.tipo === 'editar'
-          ? await editarEnquete(modo.id, corpo)
+          ? await editarEnquete(modo.id, { ...corpo, editada_em_base: modo.editadaEm })
           : await criarEnquete({ ...corpo, para_todos: blocos.length === 0, blocos })
       liberar()
       navegar(caminhoEnquete(gravada.id), {
@@ -303,7 +323,11 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
       }
       if (erro.codigo === 'bloco_inexistente') campos.blocos ??= erro.mensagem
       setErros(campos)
-      setGeral({ mensagem: erro.mensagem, semEdicao: SEM_EDICAO.has(erro.codigo) })
+      setGeral({
+        mensagem: erro.mensagem,
+        semEdicao: SEM_EDICAO.has(erro.codigo),
+        mudou: erro.codigo === MUDOU,
+      })
       setEnviando(false)
     }
   }
@@ -321,6 +345,11 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
                 Ver a enquete
               </Link>
             )}
+            {geral.mudou && modo.tipo === 'editar' && (
+              <button type="button" className="texto-link" onClick={modo.recarregar}>
+                Abrir a versão nova
+              </button>
+            )}
           </ErroGeral>
         )}
 
@@ -334,7 +363,6 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.preventDefault()
           }}
-          maxLength={LIMITE_PERGUNTA}
           onChange={(e) => mudar({ pergunta: e.target.value.replace(/\s*\n\s*/g, ' ') }, 'pergunta')}
           aria-invalid={!!erros.pergunta}
           aria-describedby={erros.pergunta ? 'enq-pergunta-erro' : 'enq-pergunta-ajuda'}
@@ -358,7 +386,6 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
                   type="text"
                   aria-label={`Opção ${i + 1}`}
                   value={rascunho.opcoes[i] ?? ''}
-                  maxLength={LIMITE_OPCAO}
                   onChange={(e) => mudarOpcao(i, e.target.value)}
                   aria-invalid={!!erros.opcoes}
                   className={erros.opcoes ? 'campo-erro' : undefined}
@@ -476,6 +503,12 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
         </div>
 
         <PreviaDoAviso rascunho={rascunho} editando={editando} />
+
+        {editando && (
+          // Revisão, ponto 3: a enquete é a fonte da verdade; uma correção feita à mão no aviso
+          // fica só nas versões anteriores dele.
+          <p className="ajuda enq-reescreve">Salvar reescreve o texto do aviso desta enquete.</p>
+        )}
 
         <button className="botao enq-enviar" type="submit" disabled={enviando}>
           {editando

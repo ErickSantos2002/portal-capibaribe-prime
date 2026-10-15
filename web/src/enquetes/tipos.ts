@@ -6,19 +6,31 @@ import type { DataHora, UnidadeRef } from '../api/tipos'
 /** Quando o resultado aparece (RF-23). */
 export type MostrarResultado = 'durante' | 'so_no_fim'
 
-/** `PUT /api/enquetes/{id}` (épico A): só enquanto ninguém votou. Destino não muda. */
+/** `PUT /api/enquetes/{id}` (épico A): só enquanto ninguém votou. Destino não muda. Tudo
+ *  obrigatório (revisão do épico A, ponto 9: campo esquecido não volta ao padrão). */
 export interface EditarEnquete {
   pergunta: string
   /** De 2 a 10, na ordem; as em branco são descartadas pela API. */
   opcoes: string[]
-  multipla_escolha?: boolean
-  /** Com fuso; no futuro, até 1 ano. */
+  multipla_escolha: boolean
+  /** Com fuso; no futuro, até 1 ano. "Pelo menos 1 hora" só se mudou. */
   encerra_em: DataHora
-  mostrar_resultado?: MostrarResultado
+  mostrar_resultado: MostrarResultado
+  /** O `editada_em` da `Enquete` que a tela carregou (nulo se nunca editada). Outra pessoa
+   *  editou depois: 409 `enquete_mudou` (revisão, ponto 2). */
+  editada_em_base: DataHora | null
 }
 
-/** `POST /api/enquetes` (H-20, épico A). */
-export interface NovaEnquete extends EditarEnquete {
+/** `POST /api/enquetes` (H-20, épico A). Os mesmos campos do formulário, com padrões, e o
+ *  destino (não herda de `EditarEnquete`, que tem a `editada_em_base`). */
+export interface NovaEnquete {
+  pergunta: string
+  /** De 2 a 10, na ordem; as em branco são descartadas pela API. */
+  opcoes: string[]
+  multipla_escolha?: boolean
+  /** Com fuso; no futuro, entre 1 hora e 1 ano. */
+  encerra_em: DataHora
+  mostrar_resultado?: MostrarResultado
   para_todos: boolean
   /** Números dos blocos; só vale com `para_todos` falso. */
   blocos?: number[]

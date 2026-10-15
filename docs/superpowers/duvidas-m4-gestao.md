@@ -48,13 +48,16 @@ do marco. **[Coordenador]** marca o que precisa de um arquivo comum.
   recusar a edição prenderia a enquete com um erro de digitação para sempre. O aviso aberto
   continua mostrando a pergunta atual no botão (`enquete` do aviso é lido na hora).
 
-## 5. A edição sobrescreve o texto do aviso
+## 5. A edição reescreve o texto do aviso, e a tela avisa
 - **Dúvida:** se alguém corrigiu o aviso automático à mão (acrescentou uma linha), editar a
   enquete apaga essa linha?
-- **Decisão:** sim: a correção do aviso usa o texto gerado de novo (título e texto); categoria,
-  evento e anexos que a pessoa pôs ficam. A versão anterior continua em "versões anteriores".
+- **Decisão (do coordenador, depois da revisão independente, ponto 3):** sim. A enquete é a
+  fonte da verdade: a correção do aviso usa o texto gerado de novo (título e texto); categoria,
+  evento e anexos ficam, e o texto manual continua nas versões anteriores do aviso. A tela de
+  editar diz isso numa linha fixa, logo acima de "Salvar alterações": "Salvar reescreve o texto
+  do aviso desta enquete."
 - **Por quê:** o aviso precisa dizer a pergunta, as opções e o prazo novos, e juntar texto à mão
-  com texto gerado não tem regra boa. Nada se perde (RN-05).
+  com texto gerado não tem regra boa. Nada se perde (RN-05), e quem edita fica sabendo antes.
 
 ## 6. Mudança que não muda o aviso não gera versão nova dele
 - **Dúvida:** `gravar_correcao` recusa com `sem_mudanca` quando título e texto ficam iguais. Isso
@@ -64,14 +67,21 @@ do marco. **[Coordenador]** marca o que precisa de um arquivo comum.
   enquete." (o término comparado como instante; opções com espaço sobrando contam como iguais,
   porque a API já tira os espaços).
 
-## 7. Opções iguais mantêm os ids
-- **Dúvida:** editar é "apagar e inserir de novo" as opções (contrato). E quando a pessoa só
-  mudou a pergunta?
-- **Decisão:** só apaga e insere se a lista de opções (textos, na ordem) mudou. Mas a enquete
-  sempre recebe o `UPDATE` (mesmo quando só as opções mudam), para o banco carimbar `editada_em`
-  e conferir de novo voto e prazo.
-- **Por quê:** com os mesmos ids, a tela de quem está prestes a votar (B) não recebe
-  `enquete_mudou` à toa.
+## 7. Quando as opções são recriadas (ids novos)
+- **Dúvida:** editar é "apagar e inserir de novo" as opções (contrato). E quando só a pergunta
+  muda, ou só o tipo de escolha?
+- **Decisão (revista depois da revisão independente, ponto 1):**
+  - **A pergunta mudou:** recria **todas** as opções, com ids novos, mesmo que os textos sejam
+    os mesmos. Um voto mandado de uma tela aberta antes (com os ids velhos) é recusado pelo
+    banco (a opção não é mais da enquete) e não cai numa pergunta que o morador nunca viu
+    ("Aprovar R$ 1.000?" virando "Aprovar R$ 10.000?" com o mesmo "Sim").
+  - **Só as opções mudaram:** apaga e insere de novo, como antes.
+  - **Pergunta e opções iguais** (mudou o tipo de escolha, o término ou quando mostrar): as opções
+    ficam, com os mesmos ids.
+  - Em todos os casos a enquete recebe o `UPDATE`, para o banco carimbar `editada_em` e conferir
+    de novo voto e prazo.
+- **Por quê:** a primeira versão só recriava se o texto das opções mudasse, e a revisão mostrou
+  o voto da tela velha valendo para a pergunta nova.
 
 ## 8. Editar trava a enquete e espera o voto em andamento
 - **Dúvida:** foco de revisão 2 do contrato, agora pela API.
@@ -79,13 +89,20 @@ do marco. **[Coordenador]** marca o que precisa de um arquivo comum.
   gravando, espera; depois vê `primeiro_voto_em` preenchido e responde 409 `enquete_com_voto`.
   Teste com duas conexões de verdade (`test_editar_espera_o_voto_em_andamento_e_e_recusada`).
 
-## 9. Duas pessoas da gestão editando ao mesmo tempo: vale a última
+## 9. Duas pessoas da gestão editando ao mesmo tempo: a segunda recebe 409
 - **Dúvida:** o aviso tem `versao_base` para não sobrescrever a correção de outra pessoa; a
-  `EditarEnquete` do contrato não tem campo parecido.
-- **Decisão:** vale a última edição (a trava põe as duas em fila; a segunda grava por cima).
-- **Por quê:** a enquete só é editável antes do 1º voto, em geral minutos depois de criada, e
-  pela mesma pessoa. Um campo novo mudaria o esquema comum. Se virar problema, o caminho é um
-  `editada_em_base` no corpo, como o `versao_base` do aviso.
+  `EditarEnquete` do contrato não tinha campo parecido, e a primeira versão deixava valer a
+  última edição (a revisão independente mostrou a segunda apagando as opções que a primeira
+  tinha acrescentado, ponto 2).
+- **Decisão (do coordenador):** `EditarEnquete` ganhou `editada_em_base: datetime | None`,
+  **obrigatório** no corpo (`null` = a enquete nunca foi editada). A tela manda o `editada_em` da
+  `Enquete` que carregou. Se não bate com o `editada_em` da linha travada, 409 `enquete_mudou`:
+  "Outra pessoa editou esta enquete agora há pouco. Abra de novo para ver a versão nova antes de
+  mudar." A tela mostra a frase e o botão "Abrir a versão nova", que carrega a enquete de novo e
+  recomeça o formulário com ela.
+- **Arquivo comum:** `api/app/esquemas/enquetes.py` e `web/src/enquetes/tipos.ts`, com o ok do
+  coordenador. Para a `NovaEnquete` não herdar a `editada_em_base`, as duas classes (e as duas
+  interfaces) foram escritas por inteiro; a `NovaEnquete` ficou com os mesmos campos de antes.
 
 ## 10. Término em dia e hora separados, hora padrão 20:00 · [Erick]
 - **Dúvida:** o protótipo usa um campo só (`datetime-local`).
@@ -96,11 +113,17 @@ do marco. **[Coordenador]** marca o que precisa de um arquivo comum.
   usar para "até quinta à noite"; o dia em branco obriga a pensar no prazo.
 - **Confirmar:** se 20:00 é um bom padrão.
 
-## 11. Editar dentro da última hora antes do término
-- **Dúvida:** o esquema comum pede o término a pelo menos 1 hora de agora. Quem abre "Editar" a
-  40 minutos do fim, sem mexer no término, recebe "Escolha um término daqui a pelo menos 1 hora."
-- **Decisão:** fica assim (é o esquema comum, e o caso é raro: editar uma enquete sem voto
-  nenhum a menos de 1 hora do fim).
+## 11. Editar perto do fim do prazo
+- **Dúvida:** o esquema pedia o término a pelo menos 1 hora de agora também na edição. Quem
+  abria "Editar" a 40 minutos do fim, sem mexer no término, recebia "Escolha um término daqui a
+  pelo menos 1 hora." e só conseguia corrigir a pergunta adiando o prazo (revisão independente,
+  ponto 4).
+- **Decisão (do coordenador):** na edição, "pelo menos 1 hora" só vale **se o término mudou**
+  (comparado como instante). Término igual passa, desde que a enquete ainda esteja aberta (o
+  serviço confere `encerra_em` pelo relógio do banco, e o banco confere de novo). Na criação,
+  continua valendo sempre. Na API: `EditarEnquete.encerra_em` só confere fuso, futuro e 1 ano; o
+  serviço confere a 1 hora quando mudou (422 no campo `encerra_em`). No front: `conferir` recebe
+  o dia e a hora gravados e não confere o término se forem os mesmos.
 
 ## 12. A pergunta é uma caixa de 2 linhas, sem Enter
 - **Dúvida:** o protótipo usa um campo de uma linha; com 200 letras, a pergunta some no celular.
@@ -120,3 +143,41 @@ do marco. **[Coordenador]** marca o que precisa de um arquivo comum.
   `avisos/avisos.css` para a prévia; `documentos/carregar.ts` (`useCarga`, `comoErroDaApi`);
   `servicos/email.FUSO_DE_RECIFE` na API. O aviso de "Sair sem publicar?" foi refeito no épico
   (`gestao/SairSemSalvar.tsx`), porque o do aviso fala em anexos.
+
+## 15. Unicode: NFC, texto sem letra, contagem por letra (revisão independente, pontos 6 a 8)
+- **Dúvida:** "Café" (é pronto) e "Café" (e + acento solto) apareciam iguais na tela e passavam
+  como opções diferentes; uma opção só de acentos soltos (ou só "?!") não aparece; o front
+  contava o emoji como 2 letras (UTF-16) e cortava o título do aviso no meio dele; o
+  `toLowerCase` do front não é o `casefold` da API ("Straße" × "STRASSE").
+- **Decisão:**
+  - API e front normalizam para **NFC** antes de comparar, contar e gravar (pergunta e opções).
+  - Pergunta ou opção **sem nenhuma letra ou número** é recusada: "Escreva a pergunta com letras
+    ou números." / "Cada opção precisa ter letras ou números." (categorias Unicode L e N; no
+    front, `/[\p{L}\p{N}]/u`).
+  - O front conta e corta **por code point** (`Array.from`), como o `len` do Python, no título
+    do aviso e nos limites de 200 (pergunta) e 100 (opção). Os campos perderam o `maxLength` do
+    HTML, que conta diferente (um emoji valeria 2); a conferência da tela avisa no lugar.
+  - A comparação do front é NFC + `toLocaleLowerCase('pt-BR')` + "ß" → "ss" + espaços juntados.
+    **Diferença que sobra:** o `casefold` também dobra letras raras (ligaduras como "ﬁ", o "ς"
+    final do grego e outras); nesses casos a tela deixa passar e a API recusa com "Duas opções
+    estão iguais.", que a tela mostra no campo. A API é a palavra final.
+
+## 16. Editar exige todos os campos; criar mantém os padrões (revisão independente, ponto 9)
+- **Dúvida:** com `multipla_escolha` e `mostrar_resultado` com padrão também na edição, um corpo
+  sem eles voltava a enquete para "escolha única" e "durante" em silêncio.
+- **Decisão:** em `EditarEnquete`, os dois são **obrigatórios**, sem padrão (422 se faltarem).
+  Em `NovaEnquete`, os padrões ficam (`false` e `durante`, como no contrato): na criação não há
+  valor anterior para apagar sem querer, e o formulário manda os dois de qualquer jeito.
+
+## 17. Testes comuns ajustados por causa da revisão · [Coordenador]
+- **Dúvida:** os pontos 2 e 9 deixam `editada_em_base`, `multipla_escolha` e `mostrar_resultado`
+  obrigatórios na edição, e dois testes comuns montavam o corpo de editar sem eles (um deles
+  quebrava o `tsc` e, com ele, o pre-commit).
+- **Decisão:** edição mínima, só acrescentando os campos novos ao corpo de editar:
+  `api/testes/test_m4_esquemas.py` (`test_editar_nao_tem_destino`) e `web/src/m4contrato.test.ts`
+  (`criar é POST e editar é PUT`). Nada mais nesses arquivos. O item 1 (o teste das rotas
+  vazias) continua como estava.
+- **Também comuns, com o ok do coordenador:** `_FIM_DE_FRASE` em `api/app/servicos/email.py` e o
+  espelho `FIM_DE_FRASE` em `web/src/avisos/formatos.ts` ganharam `”’»` (ponto 5: o link da
+  pergunta entre aspas curvas levava o `”` junto). Testes dos dois lados nos arquivos do épico
+  (`test_enquetes_gestao_revisao.py`, `gestao/links.test.ts`).

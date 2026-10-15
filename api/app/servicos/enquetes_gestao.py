@@ -16,7 +16,13 @@ from sqlalchemy.orm import Session
 
 from app.erros_api import ErroApi
 from app.esquemas.avisos import Categoria, CorrigirAviso, NovoAviso
-from app.esquemas.enquetes import EditarEnquete, MostrarResultado, NovaEnquete
+from app.esquemas.enquetes import (
+    MSG_TERMINO_MINIMO,
+    EditarEnquete,
+    MostrarResultado,
+    NovaEnquete,
+    termino_longe_o_bastante,
+)
 from app.modelos import Aviso, AvisoVersao, Bloco, Enquete, EnqueteBloco, EnqueteOpcao
 from app.modelos.avisos import LIMITE_TITULO as LIMITE_TITULO_AVISO
 from app.seguranca.dependencias import Logado
@@ -41,7 +47,7 @@ def titulo_do_aviso(pergunta: str) -> str:
     return completo[: LIMITE_TITULO_AVISO - 1].rstrip() + "…"
 
 
-def texto_do_aviso(dados: EditarEnquete) -> str:
+def texto_do_aviso(dados: EditarEnquete | NovaEnquete) -> str:
     """O mesmo texto no mural e no e-mail. O front repete esta frase na prévia
     (`web/src/enquetes/gestao/formatos.ts`); os testes dos dois lados conferem."""
     termino = dados.encerra_em.astimezone(FUSO_DE_RECIFE)
@@ -94,7 +100,7 @@ def _numeros_dos_blocos(db: Session, enquete_id: int) -> list[int]:
     )
 
 
-def _detalhes(dados: EditarEnquete, para_todos: bool, blocos: list[int]) -> dict:
+def _detalhes(dados: EditarEnquete | NovaEnquete, para_todos: bool, blocos: list[int]) -> dict:
     """O que o histórico guarda de `enquete_criada` e `enquete_editada` (contrato, 3.1)."""
     return {
         "pergunta": dados.pergunta,
@@ -198,6 +204,14 @@ def editar(db: Session, logado: Logado, enquete_id: int, dados: EditarEnquete) -
     agora = db.scalar(select(func.clock_timestamp()))
     if agora is not None and enquete.encerra_em <= agora:
         raise ErroApi(*enquetes_banco.RESTRICOES["enquete_encerrada"])
+    # Revisão do épico A, ponto 2: outra pessoa da gestão editou depois que esta tela abriu.
+    if dados.editada_em_base != enquete.editada_em:
+        raise ErroApi(
+            409,
+            "enquete_mudou",
+            "Outra pessoa editou esta enquete agora há pouco. Abra de novo para ver a versão nova"
+            " antes de mudar.",
+        )
     opcoes_atuais = list(
         db.scalars(
             select(EnqueteOpcao.texto)
@@ -205,15 +219,28 @@ def editar(db: Session, logado: Logado, enquete_id: int, dados: EditarEnquete) -
             .order_by(EnqueteOpcao.ordem)
         )
     )
-    mudou_opcoes = opcoes_atuais != dados.opcoes
+    mudou_termino = enquete.encerra_em != dados.encerra_em
     # O término comparado como instante: o mesmo horário em outro fuso não é mudança.
-    if not mudou_opcoes and (
-        enquete.pergunta,
-        enquete.multipla_escolha,
-        enquete.mostrar_resultado,
-        enquete.encerra_em,
-    ) == (dados.pergunta, dados.multipla_escolha, dados.mostrar_resultado.value, dados.encerra_em):
+    if (opcoes_atuais, enquete.pergunta, enquete.multipla_escolha, enquete.mostrar_resultado) == (
+        dados.opcoes,
+        dados.pergunta,
+        dados.multipla_escolha,
+        dados.mostrar_resultado.value,
+    ) and not mudou_termino:
         raise ErroApi(409, "sem_mudanca", "Nada mudou na enquete.")
+    # Revisão, ponto 4: "pelo menos 1 hora" só quando o término muda; perto do fim, dá para
+    # corrigir a pergunta sem adiar o prazo.
+    if mudou_termino and not termino_longe_o_bastante(dados.encerra_em):
+        raise ErroApi(
+            422,
+            "dados_invalidos",
+            MSG_TERMINO_MINIMO,
+            campos=[{"campo": "encerra_em", "mensagem": MSG_TERMINO_MINIMO}],
+        )
+    # Revisão, ponto 1: pergunta nova recria todas as opções (ids novos), mesmo com os mesmos
+    # textos: um voto mandado da tela antiga (com os ids velhos) é recusado pelo banco, em vez
+    # de cair numa pergunta que o morador nunca viu.
+    recriar_opcoes = opcoes_atuais != dados.opcoes or enquete.pergunta != dados.pergunta
     # Sempre um UPDATE, mesmo quando só as opções mudaram: o banco carimba `editada_em` e
     # confere de novo voto e prazo (trigger `enquete_regras`).
     aviso_id, para_todos = enquete.aviso_id, enquete.para_todos
@@ -229,7 +256,7 @@ def editar(db: Session, logado: Logado, enquete_id: int, dados: EditarEnquete) -
         .execution_options(synchronize_session=False)
     )
     _traduzindo(db, lambda: db.execute(alteracao))
-    if mudou_opcoes:
+    if recriar_opcoes:
         # Apagar antes de inserir: ordem e texto são únicos na enquete.
         apagar = delete(EnqueteOpcao).where(EnqueteOpcao.enquete_id == enquete_id)
         _traduzindo(db, lambda: db.execute(apagar))
