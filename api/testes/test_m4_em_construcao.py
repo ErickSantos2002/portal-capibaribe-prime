@@ -7,8 +7,7 @@ arquivo. O que vale antes e depois dos épicos (sessão, permissão, CSRF, valid
 
 import pytest
 
-from testes.conftest import ADMIN, COMISSAO, COMUM
-from testes.test_m4_rotas import EDITAR_ENQUETE, NOVA_ENQUETE
+from testes.conftest import COMISSAO, COMUM
 
 pytestmark = pytest.mark.usefixtures("predio")
 
@@ -21,19 +20,6 @@ EM_CONSTRUCAO = {
 def _501(resposta) -> None:
     assert resposta.status_code == 501, resposta.text
     assert resposta.json() == EM_CONSTRUCAO
-
-
-# --- épico A · criar e gerir -------------------------------------------------------------------
-
-
-def test_a_criar_enquete(logar):
-    comissao = logar(COMISSAO)
-    _501(comissao.post("/api/enquetes", json=NOVA_ENQUETE))
-    _501(comissao.post("/api/enquetes", json={**NOVA_ENQUETE, "para_todos": False, "blocos": [1]}))
-
-
-def test_a_editar_enquete(logar):
-    _501(logar(ADMIN).put("/api/enquetes/1", json=EDITAR_ENQUETE))
 
 
 # --- épico B · votar e resultado ---------------------------------------------------------------

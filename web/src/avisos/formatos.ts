@@ -41,8 +41,9 @@ export interface Parte {
 // Sem caractere de direção nem de largura zero (revisão de código, achado 6): eles faziam o
 // endereço parecer outro ("…/\u202egpj.exe" lido ao contrário).
 const ENDERECO = /https?:\/\/[^\s<>"\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]+/g
-// Pontuação colada no fim do endereço é da frase, não do link.
-const FIM_DE_FRASE = /[.,;:!?)\]}'"…]+$/
+// Pontuação colada no fim do endereço é da frase, não do link. Aspas curvas e o "»" também
+// fecham a frase (revisão do épico A do M4, ponto 5). Igual a `_FIM_DE_FRASE` da API.
+const FIM_DE_FRASE = /[.,;:!?)\]}'"…”’»]+$/
 
 /** Separa uma linha em texto e links. Nada aqui vira HTML: a tela monta elementos do React. */
 export function partesDaLinha(linha: string): Parte[] {

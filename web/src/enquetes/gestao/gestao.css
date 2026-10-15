@@ -1,0 +1,235 @@
+/* Épico A do M4 · formulário da enquete. Só os tokens de `estilo.css`.
+   A peça marcante é a "cédula": cada opção tem à esquerda a marca que o morador vai tocar na
+   hora de votar (bolinha na escolha única, quadradinho na múltipla), com o número da ordem.
+   O resto fica quieto, como os formulários do aviso e do documento. */
+
+.enq-form > :first-child {
+  margin-top: 0;
+}
+
+.enq-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.enq-form legend,
+.enq-rotulo {
+  margin: 18px 0 6px;
+  padding: 0;
+  font-weight: 700;
+}
+
+textarea.enq-pergunta {
+  min-height: 88px;
+  resize: none;
+}
+
+#enq-pergunta-ajuda {
+  margin-bottom: 4px;
+}
+
+.enq-erro-campo {
+  margin: 6px 0 0;
+  color: var(--erro);
+  font-weight: 700;
+}
+
+/* ---------- a cédula ---------- */
+
+.enq-cedula {
+  margin-top: 4px;
+}
+
+.enq-opcoes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 14px 6px;
+  border: 1px solid var(--linha);
+  border-left: 4px solid var(--ipe);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  list-style: none;
+  counter-reset: opcao;
+}
+
+.enq-opcoes li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  counter-increment: opcao;
+}
+
+/* A marca do voto, com o número da opção ao lado (a ordem é a que o morador vê). */
+.enq-marca {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tinta-suave);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.enq-marca::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ipe-forte);
+  border-radius: 50%;
+  transition: border-radius 0.15s;
+}
+
+.enq-marca.quadrada::before {
+  border-radius: 5px;
+}
+
+.enq-marca::after {
+  content: counter(opcao);
+  min-width: 1.2em;
+}
+
+.enq-tirar {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  color: var(--erro);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.enq-mais {
+  gap: 6px;
+}
+
+.enq-multipla {
+  margin-top: 14px;
+}
+
+/* ---------- término, resultado, destino ---------- */
+
+.enq-lado {
+  display: grid;
+  gap: 0 16px;
+}
+
+.enq-lado label {
+  margin-top: 0;
+}
+
+.enq-termino .enq-lado {
+  margin-top: 18px;
+}
+
+.enq-resultado-op span {
+  display: grid;
+  gap: 2px;
+}
+
+.enq-resultado-op .suave {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.enq-destino-fixo {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.enq-alcance {
+  margin-bottom: 0;
+}
+
+/* ---------- prévia do aviso ---------- */
+
+.enq-previa {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px dashed var(--borda);
+  border-radius: var(--r-medio);
+  background: var(--folha);
+}
+
+.enq-previa > p {
+  margin: 0 0 8px;
+}
+
+.enq-previa > p.ajuda {
+  margin: 12px 0 0;
+}
+
+.enq-previa-rotulo {
+  color: var(--tinta-suave);
+  font-size: 15px;
+}
+
+.enq-previa-categoria {
+  color: var(--cat-geral);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.enq-previa-titulo {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.enq-enviar {
+  margin-top: 20px;
+}
+
+/* ---------- sair sem salvar ---------- */
+
+.enq-sair-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(8 14 10 / 0.6);
+}
+
+.enq-sair {
+  width: min(100%, 440px);
+  padding: 20px;
+  border-radius: var(--r-medio);
+  background: var(--folha);
+  color: var(--tinta);
+}
+
+.enq-sair svg {
+  color: var(--ipe-forte);
+}
+
+.enq-sair h2 {
+  margin: 8px 0 4px;
+  font-size: 22px;
+}
+
+.enq-sair p {
+  margin: 0 0 16px;
+}
+
+@media (min-width: 600px) {
+  .enq-lado {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enq-marca::before {
+    transition: none;
+  }
+}
+
+.enq-reescreve {
+  margin-top: 18px;
+}

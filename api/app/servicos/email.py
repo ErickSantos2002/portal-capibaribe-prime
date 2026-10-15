@@ -53,7 +53,8 @@ _NEGRITO = re.compile(r"\*\*(\S(?:.*?\S)??)\*\*")
 _QUEBRA = re.compile(r"\r\n?|[  ]")
 # Iguais a `ENDERECO` e `FIM_DE_FRASE` de `web/src/avisos/formatos.ts`.
 _ENDERECO = re.compile(r"https?://[^\s<>\"​-‏‪-‮⁠-⁩﻿]+")
-_FIM_DE_FRASE = re.compile(r"[.,;:!?)\]}'\"…]+$")
+# Aspas curvas e o "»" também fecham a frase (revisão do épico A do M4, ponto 5).
+_FIM_DE_FRASE = re.compile(r"[.,;:!?)\]}'\"…”’»]+$")
 
 Bloco = dict[str, Any]
 Trecho = dict[str, Any]

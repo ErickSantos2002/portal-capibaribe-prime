@@ -87,6 +87,8 @@ def test_campo_desconhecido_recusado():
 
 def test_editar_nao_tem_destino():
     dados = {k: v for k, v in BASE.items() if k != "para_todos"}
+    # Revisão do épico A, ponto 9: na edição, tudo é obrigatório.
+    dados.update(multipla_escolha=False, mostrar_resultado="durante", editada_em_base=None)
     assert EditarEnquete(**dados).pergunta == BASE["pergunta"]
     with pytest.raises(ValidationError):
         EditarEnquete(**dados, para_todos=True)

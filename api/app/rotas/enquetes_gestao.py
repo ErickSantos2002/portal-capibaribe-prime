@@ -1,8 +1,8 @@
 """Épico A do M4 · Criar e gerir enquetes (H-20). Pertence ao épico A.
 
-Contrato: `docs/superpowers/specs/m4-contrato.md`, seção 3. Esquemas em
-`app/esquemas/enquetes.py`. Nesta onda, as duas respondem 501 `em_construcao`; sessão,
-permissão, CSRF e validação do corpo já são as de verdade.
+Contrato: `docs/superpowers/specs/m4-contrato.md`, seção 3; spec do épico:
+`docs/superpowers/specs/m4-gestao.md`. Esquemas em `app/esquemas/enquetes.py`; regras em
+`app/servicos/enquetes_gestao.py`.
 
 Rotas (mesmo prefixo do roteador do épico B, `enquetes.py`; os caminhos não se cruzam):
 - `POST /api/enquetes`                → 201 `EnqueteGravada` (`Gestao`)
@@ -16,10 +16,11 @@ banco (`enquete_com_voto`, `enquete_encerrada`) viram 409, nunca 500.
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 
-from app.erros_api import em_construcao
 from app.esquemas.comum import IdBanco
 from app.esquemas.enquetes import EditarEnquete, EnqueteGravada, NovaEnquete
 from app.seguranca.dependencias import Banco, Gestao, exige_cabecalho_portal
+from app.servicos import enquetes_gestao as servico
+from app.servicos import notificacoes
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(prefix="/api/enquetes", dependencies=[Depends(exige_cabecalho_portal)])
@@ -29,9 +30,14 @@ rotas = APIRouter(prefix="/api/enquetes", dependencies=[Depends(exige_cabecalho_
 def publicar(
     dados: NovaEnquete, logado: Gestao, db: Banco, tarefas: BackgroundTasks
 ) -> EnqueteGravada:
-    raise em_construcao()
+    enquete_id, aviso_id = servico.criar(db, logado, dados)
+    # H-13: o aviso automático notifica como qualquer aviso, depois do commit (M2).
+    notificacoes.agendar(tarefas, aviso_id)
+    return EnqueteGravada(id=enquete_id, aviso_id=aviso_id)
 
 
 @rotas.put("/{enquete_id}")
 def editar(enquete_id: IdBanco, dados: EditarEnquete, logado: Gestao, db: Banco) -> EnqueteGravada:
-    raise em_construcao()
+    # Correção do aviso automático sem notificar de novo (correção nunca notifica).
+    aviso_id = servico.editar(db, logado, enquete_id, dados)
+    return EnqueteGravada(id=enquete_id, aviso_id=aviso_id)

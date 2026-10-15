@@ -115,11 +115,14 @@ describe('enquetes/api', () => {
       blocos: [1, 2],
     }
     expect(await enquetes.criarEnquete(nova)).toEqual({ id: 7, aviso_id: 40 })
+    // Revisão do épico A (pontos 2 e 9): na edição, tudo é obrigatório, com a base.
     const edicao = {
       pergunta: nova.pergunta,
       opcoes: nova.opcoes,
+      multipla_escolha: false,
       encerra_em: nova.encerra_em,
-      mostrar_resultado: nova.mostrar_resultado,
+      mostrar_resultado: 'so_no_fim' as const,
+      editada_em_base: null,
     }
     await enquetes.editarEnquete(7, edicao)
     expect(chamada(fetch, 0)).toMatchObject({ caminho: '/api/enquetes', metodo: 'POST', corpo: nova })

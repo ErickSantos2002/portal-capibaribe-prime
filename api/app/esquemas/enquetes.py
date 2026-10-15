@@ -4,6 +4,7 @@ o resultado.
 Espelho TypeScript: `web/src/enquetes/tipos.ts` (conferido por `testes/test_contrato.py`).
 """
 
+import unicodedata
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated
@@ -29,11 +30,19 @@ class MostrarResultado(StrEnum):
     so_no_fim = "so_no_fim"
 
 
+def _tem_letra_ou_numero(texto: str) -> bool:
+    """Revisão do épico A, ponto 6: um texto só de acentos soltos ou pontuação não aparece."""
+    return any(unicodedata.category(c)[0] in "LN" for c in texto)
+
+
 def validar_pergunta(pergunta: str) -> str:
     sem_invisivel_nenhum(pergunta)
-    pergunta = pergunta.strip()
+    # NFC antes de contar e de gravar: "é" e "e + acento" são a mesma letra (revisão, ponto 6).
+    pergunta = unicodedata.normalize("NFC", pergunta).strip()
     if not pergunta:
         raise ValueError("Escreva a pergunta.")
+    if not _tem_letra_ou_numero(pergunta):
+        raise ValueError("Escreva a pergunta com letras ou números.")
     if len(pergunta) > LIMITE_PERGUNTA:
         raise ValueError(f"A pergunta pode ter até {LIMITE_PERGUNTA} letras.")
     return pergunta
@@ -50,9 +59,11 @@ def validar_opcoes(opcoes: list[str]) -> list[str]:
     limpas = []
     for opcao in opcoes:
         sem_invisivel_nenhum(opcao)
-        opcao = opcao.strip()
+        opcao = unicodedata.normalize("NFC", opcao).strip()
         if not opcao:
             continue
+        if not _tem_letra_ou_numero(opcao):
+            raise ValueError("Cada opção precisa ter letras ou números.")
         if len(opcao) > LIMITE_OPCAO:
             raise ValueError(f"Cada opção pode ter até {LIMITE_OPCAO} letras.")
         limpas.append(opcao)
@@ -65,7 +76,12 @@ def validar_opcoes(opcoes: list[str]) -> list[str]:
     return limpas
 
 
-def validar_encerramento(quando: datetime) -> datetime:
+MSG_TERMINO_MINIMO = "Escolha um término daqui a pelo menos 1 hora."
+
+
+def validar_encerramento_editado(quando: datetime) -> datetime:
+    """Com fuso, no futuro e em até 1 ano. O mínimo de 1 hora fica para quem chama: na edição,
+    só vale se o término mudou (revisão do épico A, ponto 4)."""
     if quando.tzinfo is None or quando.utcoffset() is None:
         raise ValueError("Informe a hora com o fuso (ex.: -03:00).")
     agora = datetime.now(UTC)
@@ -74,14 +90,30 @@ def validar_encerramento(quando: datetime) -> datetime:
         raise ValueError("A enquete pode durar até 1 ano.")
     if quando <= agora:
         raise ValueError("A data de término já passou. Escolha uma data no futuro.")
-    if quando < agora + DURACAO_MINIMA:
-        raise ValueError("Escolha um término daqui a pelo menos 1 hora.")
+    return quando
+
+
+def termino_longe_o_bastante(quando: datetime) -> bool:
+    return quando >= datetime.now(UTC) + DURACAO_MINIMA
+
+
+def validar_encerramento(quando: datetime) -> datetime:
+    validar_encerramento_editado(quando)
+    if not termino_longe_o_bastante(quando):
+        raise ValueError(MSG_TERMINO_MINIMO)
     return quando
 
 
 Pergunta = Annotated[str, AfterValidator(validar_pergunta)]
 Opcoes = Annotated[list[str], AfterValidator(validar_opcoes)]
 Encerramento = Annotated[datetime, AfterValidator(validar_encerramento)]
+EncerramentoEditado = Annotated[datetime, AfterValidator(validar_encerramento_editado)]
+
+
+def validar_base(quando: datetime | None) -> datetime | None:
+    if quando is not None and (quando.tzinfo is None or quando.utcoffset() is None):
+        raise ValueError("Informe a hora com o fuso (ex.: -03:00).")
+    return quando
 
 
 # --- requisições -------------------------------------------------------------------------------
@@ -89,18 +121,31 @@ Encerramento = Annotated[datetime, AfterValidator(validar_encerramento)]
 
 class EditarEnquete(Entrada):
     """`PUT /api/enquetes/{id}` (épico A): só enquanto ninguém votou e a enquete está aberta. O
-    formulário manda tudo; as opções substituem as anteriores, na ordem. Destino não muda."""
+    formulário manda tudo, sem padrão nenhum (revisão do épico A, ponto 9: campo esquecido não
+    volta ao padrão em silêncio); as opções substituem as anteriores, na ordem. Destino não muda.
+
+    `editada_em_base`: o `editada_em` da `Enquete` que a tela carregou (nulo se nunca foi
+    editada). Se outra pessoa editou depois, 409 `enquete_mudou` (revisão, ponto 2). O término só
+    pede "pelo menos 1 hora" se mudou (revisão, ponto 4; o serviço confere)."""
+
+    pergunta: Pergunta
+    opcoes: Opcoes
+    multipla_escolha: bool
+    encerra_em: EncerramentoEditado
+    mostrar_resultado: MostrarResultado
+    editada_em_base: Annotated[datetime | None, AfterValidator(validar_base)]
+
+
+class NovaEnquete(Entrada):
+    """`POST /api/enquetes` (H-20, épico A). `blocos` só vale quando `para_todos` é falso. Os
+    padrões de `multipla_escolha` e `mostrar_resultado` ficam: na criação não há valor anterior
+    para apagar sem querer."""
 
     pergunta: Pergunta
     opcoes: Opcoes
     multipla_escolha: bool = False
     encerra_em: Encerramento
     mostrar_resultado: MostrarResultado = MostrarResultado.durante
-
-
-class NovaEnquete(EditarEnquete):
-    """`POST /api/enquetes` (H-20, épico A). `blocos` só vale quando `para_todos` é falso."""
-
     para_todos: bool
     # `validate_default`: omitir `blocos` com `para_todos = false` também é recusado.
     blocos: list[NumeroDeBloco] = Field(default=[], validate_default=True)
