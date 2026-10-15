@@ -65,14 +65,20 @@ function Conteudo({ aviso, trocar }: { aviso: AvisoCompleto; trocar: (a: AvisoCo
         aviso={aviso}
         evento={aviso.evento}
         texto={aviso.texto}
-        avisos={<Situacao aviso={aviso} />}
+        avisos={
+          <>
+            {/* M4, épico B: a enquete que gerou este aviso (H-13). Logo depois do título, antes
+                do texto (ajustes do M4, ponto 10): no celular, o botão não fica abaixo da dobra.
+                Antes do "Corrigido em…", que termina em "Como está agora:" (o texto). */}
+            <EnqueteDoAviso enquete={aviso.enquete} />
+            <Situacao aviso={aviso} />
+          </>
+        }
       />
       {/* M3, épico B: fotos e PDFs da versão em vigor. */}
       <AnexosDoAviso avisoId={aviso.id} anexos={aviso.anexos.map((arquivo) => ({ arquivo }))} />
       {/* M3, épico A: o documento que gerou este aviso (RF-33). */}
       <DocumentoDoAviso documento={aviso.documento} />
-      {/* M4, épico B: a enquete que gerou este aviso (H-13). */}
-      <EnqueteDoAviso enquete={aviso.enquete} />
       {eu?.gestao && <ParaAGestao aviso={aviso} trocar={trocar} />}
     </article>
   )

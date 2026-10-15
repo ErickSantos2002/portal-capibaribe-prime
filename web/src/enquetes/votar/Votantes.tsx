@@ -4,7 +4,6 @@ import { Link } from 'react-router'
 import type { UnidadeRef } from '../../api/tipos'
 import { useCarga } from '../../avisos/carregar'
 import { Carregando, FalhaAoCarregar } from '../../avisos/componentes'
-import { ordemDaGrade } from '../../avisos/formatos'
 import { useRecado } from '../../casca/contextoRecado'
 import { useSessao } from '../../casca/contextoSessao'
 import { Icone } from '../../casca/Icone'
@@ -14,7 +13,7 @@ import { caminhoEnquete } from '../caminhos'
 import type { Enquete, Votantes } from '../tipos'
 import { EnqueteNaoEncontrada } from './EnqueteAberta'
 import { useIdDaEnquete } from './useIdDaEnquete'
-import { faltamParaCopiar, participacaoEmTexto } from './formatos'
+import { andar, faltamParaCopiar, ordemCrescente, participacaoEmTexto } from './formatos'
 import './enquetes.css'
 
 export function PaginaVotantes() {
@@ -27,9 +26,10 @@ function QuaisVotaram({ id }: { id: number }) {
     () => Promise.all([abrirEnquete(id), buscarVotantes(id)]),
     [id],
   )
-  if (carga.situacao === 'erro' && [404, 422].includes(carga.erro.status)) {
+  if (carga.situacao === 'erro' && carga.erro.status === 404) {
     return <EnqueteNaoEncontrada mensagem={carga.erro.mensagem} />
   }
+  if (carga.situacao === 'erro' && carga.erro.status === 422) return <EnqueteNaoEncontrada />
   return (
     <Tela titulo="Quais apartamentos votaram" voltar={caminhoEnquete(id)}>
       {carga.situacao === 'erro' && carga.erro.codigo === 'votantes_so_no_fim' ? (
@@ -80,8 +80,9 @@ function Conteudo({ enquete, lista }: { enquete: Enquete; lista: Votantes }) {
         <b>{participacaoEmTexto(enquete.participacao)}</b>
       </p>
       <p className="ajuda">
-        Mostra só quem votou, nunca em quê. Contam todos os apartamentos do destino, inclusive os
-        que ainda não entraram no Portal.
+        Mostra quem votou, não em quê. Mas, quando todos escolhem a mesma opção, dá para saber o
+        voto de cada um. Contam todos os apartamentos do destino, inclusive os que ainda não
+        entraram no Portal.
       </p>
       {faltam > 0 && (
         <button type="button" className="botao leve enq-copiar" onClick={() => void copiar()}>
@@ -116,7 +117,7 @@ interface PropsGrupo {
 function Grupo({ id, titulo, ajuda, unidades, votou }: PropsGrupo) {
   const { eu } = useSessao()
   const blocos = new Map<number, UnidadeRef[]>()
-  for (const u of ordemDaGrade(unidades)) blocos.set(u.bloco, [...(blocos.get(u.bloco) ?? []), u])
+  for (const u of ordemCrescente(unidades)) blocos.set(u.bloco, [...(blocos.get(u.bloco) ?? []), u])
   return (
     <section aria-labelledby={id}>
       <h2 className="secao" id={id}>
@@ -131,10 +132,13 @@ function Grupo({ id, titulo, ajuda, unidades, votou }: PropsGrupo) {
             <div key={bloco}>
               <h3 className="enq-bloco">Bloco {bloco}</h3>
               <ul className={votou ? 'enq-grade votou' : 'enq-grade'}>
-                {doBloco.map((u) => {
+                {doBloco.map((u, i) => {
                   const nome = `Bloco ${u.bloco}, apartamento ${u.apartamento}`
+                  // No computador, cada andar começa uma linha (8 por linha): o andar não
+                  // quebra no meio.
+                  const andarNovo = i === 0 || andar(doBloco[i - 1]) !== andar(u)
                   return (
-                    <li key={u.login}>
+                    <li key={u.login} className={andarNovo ? 'enq-andar-novo' : undefined}>
                       {eu?.admin ? (
                         <Link to={`/unidades/${u.login}`} aria-label={nome}>
                           {u.apartamento}

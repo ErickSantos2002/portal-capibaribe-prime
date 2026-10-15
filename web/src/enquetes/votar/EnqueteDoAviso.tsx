@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import type { EnqueteDoAviso as Dados } from '../../avisos/tipos'
 import { Icone } from '../../casca/Icone'
 import { caminhoEnquete } from '../caminhos'
+import { quandoTermina } from './formatos'
 import './enquetes.css'
 
 export function EnqueteDoAviso({ enquete }: { enquete: Dados | null }) {
@@ -15,6 +16,12 @@ export function EnqueteDoAviso({ enquete }: { enquete: Dados | null }) {
       <span>
         <b>Ir para a enquete</b>
         <span className="enq-do-aviso-pergunta">{enquete.pergunta}</span>
+        {/* Ajustes do M4, ponto 11: o aviso fica no mural depois do fim; o cartão diz o estado. */}
+        <span className="enq-do-aviso-estado">
+          {enquete.encerrada
+            ? 'Terminou · ver o resultado'
+            : `Aberta · vai até ${quandoTermina(enquete.encerra_em)}`}
+        </span>
       </span>
       <Icone nome="seta" />
     </Link>

@@ -234,6 +234,8 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
     mensagem: string
     semEdicao: boolean
     mudou: boolean
+    /** Os campos que causaram o erro geral: quando todos forem corrigidos, ele some. */
+    campos: Campo[]
   } | null>(null)
   const [enviando, setEnviando] = useState(false)
   const focarNaUltima = useRef(false)
@@ -249,15 +251,19 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
     caixas?.[caixas.length - 1]?.focus()
   }, [opcoes.chaves])
 
+  /** Tira o erro do campo mexido. Ajustes do M4, ponto 9: o erro geral que ele (e os outros
+   *  campos marcados) causou some junto, quando não sobra nenhum; o erro da API que não é de
+   *  campo (ex.: "a enquete já tem voto") continua. */
+  function limparErro(campo: Campo) {
+    const resto = { ...erros }
+    delete resto[campo]
+    setErros(resto)
+    if (geral && geral.campos.length > 0 && geral.campos.every((c) => !resto[c])) setGeral(null)
+  }
+
   function mudar(mudanca: Partial<Rascunho>, campo?: Campo) {
     setRascunho((atual) => ({ ...atual, ...mudanca }))
-    if (campo) {
-      setErros((atuais) => {
-        const resto = { ...atuais }
-        delete resto[campo]
-        return resto
-      })
-    }
+    if (campo) limparErro(campo)
   }
 
   function mudarOpcao(indice: number, texto: string) {
@@ -292,6 +298,7 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
         mensagem: mensagens.length === 1 ? mensagens[0] : 'Confira os campos marcados.',
         semEdicao: false,
         mudou: false,
+        campos: Object.keys(encontrados) as Campo[],
       })
       return
     }
@@ -331,6 +338,7 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
         mensagem: erro.mensagem,
         semEdicao: SEM_EDICAO.has(erro.codigo),
         mudou: erro.codigo === MUDOU,
+        campos: Object.keys(campos) as Campo[],
       })
       setEnviando(false)
     }
@@ -495,7 +503,7 @@ export function FormularioEnquete({ modo, inicial }: { modo: Modo; inicial: Rasc
             blocos={blocos}
             setBlocos={(b) => {
               setBlocos(b)
-              setErros((atuais) => ({ ...atuais, blocos: undefined }))
+              limparErro('blocos')
             }}
             erro={erros.blocos}
           />

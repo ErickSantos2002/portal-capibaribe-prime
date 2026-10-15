@@ -44,10 +44,10 @@ describe('o aviso automático (a mesma frase da API)', () => {
   })
 
   it('texto com as opções, o prazo, a escolha, o resultado e a frase da consulta', () => {
-    expect(textoDoAviso(rascunho({ opcoes: ['Terça à noite', ' ', 'Quinta à noite'] }))).toBe(
+    expect(textoDoAviso(rascunho({ opcoes: ['Terça à noite', ' ', 'Quinta à noite'] }), AGORA)).toBe(
       'Uma enquete nova está aberta no Portal: “Qual o melhor dia para a reunião?”.\n\n' +
         'As opções são:\n\n- Terça à noite\n- Quinta à noite\n\n' +
-        'Dá para votar até 24/10/2026, às 20h00 (horário de Recife). Marque uma opção. Vale um' +
+        'Dá para votar até 24 de outubro, às 20h (horário de Recife). Marque uma opção. Vale um' +
         ' voto por apartamento, e dá para trocar o voto até o fim. O resultado aparece durante' +
         ' a votação.\n\n' +
         '> Enquete é consulta. Não tem valor legal de votação em assembleia.\n\n' +
@@ -56,7 +56,10 @@ describe('o aviso automático (a mesma frase da API)', () => {
   })
 
   it('múltipla escolha, só no fim e hora da manhã', () => {
-    const texto = textoDoAviso(rascunho({ multipla: true, mostrar: 'so_no_fim', hora: '08:05' }))
+    const texto = textoDoAviso(
+      rascunho({ multipla: true, mostrar: 'so_no_fim', hora: '08:05' }),
+      AGORA,
+    )
     expect(texto).toContain('às 8h05 (horário de Recife). Pode marcar mais de uma opção.')
     expect(texto).toContain('O resultado só aparece quando a enquete terminar.')
   })

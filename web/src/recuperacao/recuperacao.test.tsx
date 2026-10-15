@@ -2,7 +2,7 @@
 // do link do e-mail, com o Portal inteiro montado (mesmas rotas e guardas de produção).
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { abrir, apiFalsa, eu, json } from '../acesso/apoioDeTeste'
+import { abrir, apiFalsa, esperarRecado, eu, json } from '../acesso/apoioDeTeste'
 
 const MSG_PEDIDO =
   'Se houver e-mail cadastrado, enviamos um link. Se não chegou, fale com a administração.'
@@ -180,11 +180,9 @@ describe('criar senha nova pelo link do e-mail', () => {
       senha_nova: 'senha nova boa',
       senha_nova_repetida: 'senha nova boa',
     })
-    expect(
-      await screen.findByText(
-        'Senha nova criada. Os outros aparelhos foram desconectados. Avise a família da senha nova.',
-      ),
-    ).toBeTruthy()
+    await esperarRecado(
+      'Senha nova criada. Os outros aparelhos foram desconectados. Avise a família da senha nova.',
+    )
   })
 
   it.each([

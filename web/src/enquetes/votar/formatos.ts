@@ -1,5 +1,4 @@
 // Épico B do M4 · textos das enquetes na voz do morador. Pertence ao épico B.
-import { ordemDaGrade } from '../../avisos/formatos'
 import type { UnidadeRef } from '../../api/tipos'
 import type { Participacao, Votantes } from '../tipos'
 
@@ -54,6 +53,12 @@ export function porcentagem(parte: number, total: number): number {
   return total > 0 ? Math.round((parte * 100) / total) : 0
 }
 
+/** "46%"; entre 0 e 1%, "menos de 1%" (1 de 320 não é 0%). */
+export function porcentagemEmTexto(parte: number, total: number): string {
+  if (parte > 0 && total > 0 && (parte * 100) / total < 0.5) return 'menos de 1%'
+  return `${porcentagem(parte, total)}%`
+}
+
 export function votosEmTexto(votos: number): string {
   return `${votos} ${votos === 1 ? 'voto' : 'votos'}`
 }
@@ -62,7 +67,7 @@ export function votosEmTexto(votos: number): string {
 export function participacaoEmTexto({ votaram, total }: Participacao): string {
   if (votaram === 0) return 'Nenhum apartamento votou ainda.'
   const verbo = votaram === 1 ? 'votou' : 'votaram'
-  return `${votaram} de ${total} apartamentos ${verbo} (${porcentagem(votaram, total)}%).`
+  return `${votaram} de ${total} apartamentos ${verbo} (${porcentagemEmTexto(votaram, total)}).`
 }
 
 /** O bloco da unidade está no destino da enquete (o selo e o "vota nela" da lista). */
@@ -70,9 +75,22 @@ export function noDestino(enquete: { para_todos: boolean; blocos: number[] }, bl
   return enquete.para_todos || enquete.blocos.includes(bloco)
 }
 
+/** Ordem crescente, por bloco e apartamento (do térreo ao último andar), na tela e no texto
+ *  copiado: é a ordem em que a Comissão procura um apartamento. */
+export function ordemCrescente(unidades: UnidadeRef[]): UnidadeRef[] {
+  return [...unidades].sort(
+    (a, b) => a.bloco - b.bloco || Number(a.apartamento) - Number(b.apartamento),
+  )
+}
+
+/** O andar do apartamento ("701" → 7, "003" → 0). */
+export function andar(u: UnidadeRef): number {
+  return Math.floor(Number(u.apartamento) / 100)
+}
+
 function linhasPorBloco(unidades: UnidadeRef[]): string[] {
   const porBloco = new Map<number, string[]>()
-  for (const u of ordemDaGrade(unidades)) {
+  for (const u of ordemCrescente(unidades)) {
     porBloco.set(u.bloco, [...(porBloco.get(u.bloco) ?? []), u.apartamento])
   }
   return [...porBloco].map(([bloco, aptos]) => `Bloco ${bloco}: ${aptos.join(', ')}`)

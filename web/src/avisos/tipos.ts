@@ -99,6 +99,9 @@ export interface DocumentoDoAviso {
 export interface EnqueteDoAviso {
   id: number
   pergunta: string
+  /** Ajustes do M4, ponto 11: o cartão diz se ainda está aberta ou se terminou. */
+  encerra_em: DataHora
+  encerrada: boolean
 }
 
 export interface ListaAvisos {

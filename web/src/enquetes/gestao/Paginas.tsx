@@ -1,15 +1,16 @@
 // Épico A do M4 · as telas "Nova enquete" e "Editar enquete" (H-20). Pertence ao épico A.
 // Editar carrega a enquete pela rota do épico B (`abrirEnquete`): é a mesma `Enquete` que a
 // tela dela mostra, com `pode_editar` (gestão, aberta e sem voto).
-import { Link, useParams } from 'react-router'
+import { Link } from 'react-router'
 import { Carregando, FalhaAoCarregar } from '../../avisos/componentes'
-import { NaoEncontrado } from '../../casca/guardas'
 import { Icone } from '../../casca/Icone'
 import { Tela } from '../../casca/Tela'
 import { useCarga } from '../../documentos/carregar'
 import { abrirEnquete } from '../api'
 import { CAMINHO_ENQUETES, caminhoEnquete } from '../caminhos'
 import type { Enquete } from '../tipos'
+import { EnqueteNaoEncontrada } from '../votar/EnqueteAberta'
+import { useIdDaEnquete } from '../votar/useIdDaEnquete'
 import { FormularioEnquete } from './Formulario'
 import { deIso, RASCUNHO_VAZIO, type Rascunho } from './formatos'
 
@@ -31,20 +32,20 @@ function rascunhoDe(enquete: Enquete): Rascunho {
   }
 }
 
-/** O `:id` do endereço, ou nulo se não for um número (link quebrado). */
-function useIdDaEnquete(): number | null {
-  const { id } = useParams()
-  return id && /^\d{1,15}$/.test(id) ? Number(id) : null
-}
-
+// Ajustes do M4, ponto 5: a mesma regra de id e a mesma tela de "não encontrada" da enquete
+// (épico B): `/enquetes/0/editar` não chama a API, e 404 ou 422 dela também caem aqui.
 export function PaginaEditarEnquete() {
   const id = useIdDaEnquete()
-  return id === null ? <NaoEncontrado /> : <EditarEnquete key={id} id={id} />
+  return id === null ? <EnqueteNaoEncontrada /> : <EditarEnquete key={id} id={id} />
 }
 
 function EditarEnquete({ id }: { id: number }) {
   const [carga, recarregar] = useCarga(() => abrirEnquete(id), [id])
-  if (carga.situacao === 'erro' && carga.erro.status === 404) return <NaoEncontrado />
+  if (carga.situacao === 'erro' && carga.erro.status === 404) {
+    return <EnqueteNaoEncontrada mensagem={carga.erro.mensagem} />
+  }
+  // 422: id fora do que o banco guarda; para quem abriu o link, é a enquete que não existe.
+  if (carga.situacao === 'erro' && carga.erro.status === 422) return <EnqueteNaoEncontrada />
   const enquete = carga.situacao === 'pronta' ? carga.dados : null
   return (
     <Tela titulo="Editar enquete" voltar={caminhoEnquete(id)}>

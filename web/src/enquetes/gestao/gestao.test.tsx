@@ -103,7 +103,8 @@ describe('nova enquete', () => {
     expect(previa.textContent).toContain('Enquete nova: Qual o melhor dia para a reunião?')
     expect(previa.textContent).toContain('Terça à noite')
     expect(previa.textContent).toContain('Não tem valor legal de votação em assembleia.')
-    expect(previa.textContent).toContain('às 20h00 (horário de Recife)')
+    // Ajustes do M4, ponto 16: por extenso, como na tela da enquete.
+    expect(previa.textContent).toMatch(/Dá para votar até \d{1,2} de \p{L}+( de \d{4})?, às 20h \(horário de Recife\)/u)
   })
 
   it('diz o que falta e não envia nada', async () => {
@@ -300,7 +301,9 @@ describe('editar enquete', () => {
       }),
     })
     abrir('/enquetes/7/editar')
-    expect(await screen.findByText(/Não achamos esta página/)).toBeTruthy()
+    // Ajustes do M4, ponto 5: a mesma tela de "não encontrada" da enquete.
+    expect(await screen.findByRole('heading', { name: 'Enquete não encontrada' })).toBeTruthy()
+    expect(screen.getByText('Enquete não encontrada.')).toBeTruthy()
   })
 
   // --- revisão independente do épico A ----------------------------------------------------------

@@ -20,6 +20,9 @@
   --erro: #a3322a;
   --erro-suave: #f8e4e1;
   --sobre-mata: #ffffff;
+  /* Botão desligado (ajustes do M4, ponto 7): 6:1 de texto, bem longe do verde. */
+  --desligado-fundo: #e2e6e3;
+  --desligado-tinta: #4a5a50;
   --sombra: 0 1px 0 rgba(23, 35, 28, 0.06);
   /* Categorias do aviso (spec dos avisos com formatação, 3.4): a cor é do rótulo, da faixa e
      do bloco de data; `-suave` é o fundo do bloco. Rótulo ≥ 4,5:1 na folha e no -suave. */
@@ -57,6 +60,8 @@
   --erro: #f19a90;
   --erro-suave: #3a1d1a;
   --sobre-mata: #0d1a12;
+  --desligado-fundo: #2a332e;
+  --desligado-tinta: #b4c2b9;
   --sombra: none;
   --cat-geral: #a9b8ae;
   --cat-geral-suave: #26302a;
@@ -144,6 +149,7 @@ select {
   top: 0;
   z-index: 3;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   min-height: 64px;
@@ -605,9 +611,14 @@ select:focus-visible {
   background: var(--mata-forte);
 }
 
-.botao:disabled {
-  cursor: progress;
-  opacity: 0.7;
+/* Ajustes do M4, ponto 7: desligado tem cara de desligado nos dois temas (só a transparência
+   deixava o verde quase igual ao ligado no escuro). Fundo cinza e texto com contraste de leitura. */
+.botao:disabled,
+.botao:disabled:hover {
+  border-color: var(--desligado-fundo);
+  background: var(--desligado-fundo);
+  color: var(--desligado-tinta);
+  cursor: not-allowed;
 }
 
 .botao.leve {
@@ -942,34 +953,32 @@ input.apto {
 }
 
 .recado {
-  /* No celular, o recado aparece embaixo do topo: embaixo ele cobria o botão que a pessoa
-     acabou de tocar e o "Novo aviso" (revisão, U2). No computador volta para baixo, à direita. */
-  position: fixed;
-  left: 16px;
-  right: 16px;
-  top: 76px;
-  z-index: 5;
-  padding: 14px 16px;
+  /* Ajustes do M4, ponto 8: o recado fica numa linha própria dentro do topo (que fica preso no
+     alto), ocupando espaço: o topo cresce e a página desce. Antes ficava solto por cima e cobria
+     o título e o conteúdo, agora que ele só some quando a pessoa fecha (fechamento do M3). */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
   border-radius: var(--r-medio);
   background: var(--tinta);
   color: var(--papel);
   font-size: 16px;
-  opacity: 0;
-  transform: translateY(6px);
-  transition:
-    opacity 0.2s,
-    transform 0.2s;
-  pointer-events: none;
+  font-weight: 400;
 }
 
-.recado.on {
-  /* Fechamento do M3: o recado fica até a pessoa fechar, então o botão precisa receber o toque. */
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
+/* Linha inteira do topo, embaixo do título; vazia, não ocupa nada. */
+.recado-lugar {
+  flex-basis: 100%;
+}
+
+.recado-lugar:empty {
+  display: none;
+}
+
+/* Na entrada (sem topo), o recado vem antes do conteúdo, com a margem da página. */
+.recado-lugar.solto {
+  padding: 16px 16px 0;
 }
 
 .recado-texto {
@@ -1167,13 +1176,6 @@ details[open] > summary::after {
     bottom: 32px;
   }
 
-  .recado {
-    top: auto;
-    left: auto;
-    right: 40px;
-    bottom: 100px;
-    width: 400px;
-  }
 
   .lado {
     display: grid;

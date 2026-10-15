@@ -116,7 +116,9 @@ textarea.enq-pergunta {
 
 .enq-lado {
   display: grid;
-  gap: 0 16px;
+  /* Ajustes do M4, ponto 21: no celular, dia e hora ficam um embaixo do outro; o espaço entre
+     eles separa a caixa do dia do rótulo da hora. */
+  gap: 18px 16px;
 }
 
 .enq-lado label {
@@ -125,6 +127,11 @@ textarea.enq-pergunta {
 
 .enq-termino .enq-lado {
   margin-top: 18px;
+}
+
+/* Ajustes do M4, ponto 21: "Quando mostrar o resultado" não cola na ajuda do término. */
+.enq-form fieldset.enq-resultado {
+  margin-top: 24px;
 }
 
 .enq-resultado-op span {

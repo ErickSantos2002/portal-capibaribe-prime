@@ -90,7 +90,7 @@ function ItemEnquete({ enquete, eu }: { enquete: EnqueteResumo; eu: Eu }) {
         <Icone nome="seta" />
       </span>
       <span className="linha-meta">
-        {falta && <span className="selo novo">Seu apartamento ainda não votou</span>}
+        {falta && <span className="selo enq-falta">Seu apartamento ainda não votou</span>}
         {!enquete.encerrada && vota && enquete.ja_votou && (
           <span className="com-icone enq-votou">
             <Icone nome="certo" tamanho={18} /> Seu apartamento já votou

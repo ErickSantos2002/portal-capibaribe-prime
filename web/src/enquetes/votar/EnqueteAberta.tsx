@@ -12,7 +12,13 @@ import { Tela } from '../../casca/Tela'
 import { abrirEnquete, votar } from '../api'
 import { CAMINHO_ENQUETES, caminhoEditarEnquete, caminhoVotantes } from '../caminhos'
 import type { Enquete } from '../tipos'
-import { participacaoEmTexto, porcentagem, quandoTermina, votosEmTexto } from './formatos'
+import {
+  participacaoEmTexto,
+  porcentagem,
+  porcentagemEmTexto,
+  quandoTermina,
+  votosEmTexto,
+} from './formatos'
 import { useIdDaEnquete } from './useIdDaEnquete'
 import './enquetes.css'
 
@@ -54,9 +60,11 @@ function EnqueteAberta({ id }: { id: number }) {
   }, [recarregar])
 
   // 422 é id fora do que o banco guarda: para quem abriu o link, é a mesma enquete que não existe.
-  if (carga.situacao === 'erro' && [404, 422].includes(carga.erro.status)) {
+  if (carga.situacao === 'erro' && carga.erro.status === 404) {
     return <EnqueteNaoEncontrada mensagem={carga.erro.mensagem} />
   }
+  // A frase do 422 ("Confira os dados enviados.") não diz nada a quem abriu um link.
+  if (carga.situacao === 'erro' && carga.erro.status === 422) return <EnqueteNaoEncontrada />
   // Enquanto recarrega (depois de "a enquete mudou"), a tela de antes continua, com o erro.
   const enquete = carga.dados
   return (
@@ -113,12 +121,17 @@ function Conteudo({ enquete, eu, trocar, recarregar }: PropsConteudo) {
           <FormularioDoVoto enquete={enquete} trocar={trocar} recarregar={recarregar} />
         </>
       ) : (
-        <div className="aviso-caixa info">
-          <Icone nome="info" />
-          <p>
-            Esta enquete é para o {blocosEmTexto(enquete.blocos)}. Seu apartamento não vota nela.
-          </p>
-        </div>
+        <>
+          {/* Ajustes do M4, ponto 20: quem não vota (a gestão de outro bloco) também vê o prazo. */}
+          <p className="suave">Vai até {final}.</p>
+          <div className="aviso-caixa info">
+            <Icone nome="info" />
+            <p>
+              Esta enquete é para o {blocosEmTexto(enquete.blocos)}. Seu apartamento não vota
+              nela.
+            </p>
+          </div>
+        </>
       )}
       <Resultado enquete={enquete} />
       <p className="ajuda enq-consulta">
@@ -156,6 +169,19 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
     setMudouEmOutroAparelho(true)
   }
 
+  // Ajustes do M4, ponto 2: a enquete recarregada (editada pela gestão, com opções novas) não
+  // pode ficar com a escolha de antes marcada por baixo. Fica só o que ainda existe; se não
+  // sobrar nada, volta ao voto gravado (ou fica vazia, e o botão diz o que falta).
+  const opcoesAtuais = enquete.opcoes.map((o) => o.id)
+  const chaveDasOpcoes = `${opcoesAtuais.join(',')}|${enquete.multipla_escolha}`
+  const [opcoesVistas, setOpcoesVistas] = useState(chaveDasOpcoes)
+  if (chaveDasOpcoes !== opcoesVistas) {
+    setOpcoesVistas(chaveDasOpcoes)
+    const sobrou = escolha.filter((o) => opcoesAtuais.includes(o))
+    const valida = sobrou.length > 0 && (enquete.multipla_escolha || sobrou.length === 1)
+    setEscolha(valida ? sobrou : enquete.meu_voto)
+  }
+
   useEffect(() => {
     if (foco?.alvo === 'confirmacao') confirmacao.current?.focus()
     if (foco?.alvo === 'erro') alerta.current?.focus()
@@ -188,8 +214,12 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
       const falha = comoErroDaApi(e)
       setErro(falha.mensagem)
       setFoco((f) => ({ alvo: 'erro', vez: (f?.vez ?? 0) + 1 }))
-      // A enquete mudou (ou terminou) desde que a tela abriu: mostra a de agora.
-      if (['enquete_mudou', 'enquete_encerrada', 'voto_mudou_agora'].includes(falha.codigo)) {
+      // A enquete mudou (ou terminou) desde que a tela abriu: mostra a de agora. Um 422 também
+      // (ajustes do M4, ponto 1): a tela pode estar com o tipo de escolha de antes.
+      if (
+        ['enquete_mudou', 'enquete_encerrada', 'voto_mudou_agora'].includes(falha.codigo) ||
+        falha.status === 422
+      ) {
         if (falha.codigo === 'enquete_mudou') setEscolha([])
         recarregar()
       }
@@ -223,7 +253,14 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
       <form className="enq-voto" onSubmit={(e) => void enviar(e)}>
         <fieldset>
           <legend className="enq-legenda">
-            {enquete.multipla_escolha ? 'Pode marcar mais de uma.' : 'Escolha uma opção.'}
+            {/* Ajustes do M4, ponto 15: depois do voto, a legenda não soa como pendência. */}
+            {jaVotou
+              ? enquete.multipla_escolha
+                ? 'Quer trocar? Marque ou desmarque e toque em Trocar voto.'
+                : 'Quer trocar? Escolha outra opção.'
+              : enquete.multipla_escolha
+                ? 'Pode marcar mais de uma.'
+                : 'Escolha uma opção.'}
           </legend>
           {enquete.opcoes.map((o) => (
             <label key={o.id} className="enq-opcao">
@@ -244,6 +281,14 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
             <p>{erro}</p>
           </div>
         )}
+        {/* Ajustes do M4, ponto 6: tocar outra opção não grava; a tela diz que falta o botão. */}
+        <p className="enq-pendente" aria-live="polite">
+          {jaVotou && !mesma && escolha.length > 0 && !enviando && (
+            <>
+              Você ainda não trocou o voto. Toque em <b>Trocar voto</b> para valer.
+            </>
+          )}
+        </p>
         <button
           className="botao enq-votar"
           type="submit"
@@ -255,7 +300,9 @@ function FormularioDoVoto({ enquete, trocar, recarregar }: Omit<PropsConteudo, '
         {!enviando && (escolha.length === 0 || mesma) && (
           <p className="ajuda enq-dica">
             {jaVotou && escolha.length > 0
-              ? 'Para trocar o voto, escolha outra opção.'
+              ? enquete.multipla_escolha
+                ? 'Para trocar o voto, marque ou desmarque uma opção.'
+                : 'Para trocar o voto, escolha outra opção.'
               : enquete.multipla_escolha
                 ? 'Marque pelo menos uma opção para votar.'
                 : 'Escolha uma opção para votar.'}
@@ -282,6 +329,7 @@ function Resultado({ enquete }: { enquete: Enquete }) {
             const votos = o.votos ?? 0
             // Porcentagem dos apartamentos que votaram (na múltipla escolha, a soma passa de 100).
             const pct = porcentagem(votos, votaram)
+            const pctTexto = porcentagemEmTexto(votos, votaram)
             const destaque = enquete.encerrada && votos > 0 && votos === maior
             return (
               <li key={o.id} className={destaque ? 'enq-barra mais-votada' : 'enq-barra'}>
@@ -289,9 +337,11 @@ function Resultado({ enquete }: { enquete: Enquete }) {
                   <span>
                     {o.texto}
                     {enquete.meu_voto.includes(o.id) && <span className="enq-seu"> seu voto</span>}
+                    {/* Ajustes do M4, ponto 17: o ganhador também em texto, não só na cor. */}
+                    {destaque && <span className="enq-mais-votada">Mais votada</span>}
                   </span>
                   <b>
-                    {votosEmTexto(votos)}, {pct}%
+                    {votosEmTexto(votos)}, {pctTexto}
                   </b>
                 </div>
                 <div
@@ -301,9 +351,9 @@ function Resultado({ enquete }: { enquete: Enquete }) {
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={pct}
-                  aria-valuetext={`${pct}%`}
+                  aria-valuetext={pctTexto}
                 >
-                  <span style={{ width: `${pct}%` }} />
+                  <span style={{ width: `${(votos * 100) / Math.max(votaram, 1)}%` }} />
                 </div>
               </li>
             )
@@ -313,6 +363,13 @@ function Resultado({ enquete }: { enquete: Enquete }) {
         <p>
           O resultado aparece quando a enquete terminar, em {quandoTermina(enquete.encerra_em)}.
           Até lá, ninguém vê os votos, nem a Comissão.
+        </p>
+      )}
+      {enquete.resultado_visivel && enquete.multipla_escolha && (
+        // Ajustes do M4, ponto 13: a porcentagem é sobre quem votou (dúvidas do B, item 2).
+        <p className="ajuda enq-soma">
+          Cada apartamento pode marcar mais de uma opção, então a soma das porcentagens pode
+          passar de 100%.
         </p>
       )}
       <p className="ajuda">{participacaoEmTexto(enquete.participacao)}</p>
@@ -342,7 +399,10 @@ function ParaAGestao({ enquete }: { enquete: Enquete }) {
           <Icone nome="enquetes" tamanho={28} />
           <span>
             <b>Quais apartamentos votaram</b>
-            <span className="ajuda">Sem mostrar o voto de ninguém</span>
+            {/* Ajustes do M4, ponto 12: promessa honesta (dúvidas do B, item 24). */}
+            <span className="ajuda">
+              Mostra quem votou, não em quê. Quando todos escolhem a mesma opção, dá para saber.
+            </span>
           </span>
           <Icone nome="seta" />
         </Link>

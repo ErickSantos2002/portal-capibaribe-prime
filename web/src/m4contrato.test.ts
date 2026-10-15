@@ -161,15 +161,22 @@ describe('encaixes do M4 ligados', () => {
     expect(itensDoMenu(eu()).map((i) => i.texto)).toEqual(['Avisos', 'Enquetes', 'Documentos', 'Minha unidade'])
   })
 
-  it('o aviso aberto passa a enquete que o gerou, depois do texto', async () => {
+  // Ajustes do M4, ponto 10: o cartão da enquete vem logo depois do título, antes do texto
+  // (no celular, ele ficava abaixo da dobra).
+  it('o aviso aberto passa a enquete que o gerou, antes do texto', async () => {
     apiFalsa({
       'GET /api/acesso/eu': json(200, eu()),
-      'GET /api/avisos/7': json(200, avisoCompleto({ id: 3, pergunta: 'Qual o melhor dia?' })),
+      'GET /api/avisos/7': json(200, avisoCompleto({
+        id: 3,
+        pergunta: 'Qual o melhor dia?',
+        encerra_em: '2099-11-10T23:00:00Z',
+        encerrada: false,
+      })),
     })
     abrir('/avisos/7')
     const encaixe = await screen.findByText('encaixe: enquete 3 Qual o melhor dia?')
     const texto = screen.getByText('Texto do aviso')
-    expect(texto.compareDocumentPosition(encaixe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(encaixe.compareDocumentPosition(texto) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
 

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { esperarRecado } from '../acesso/apoioDeTeste'
 import type { Eu, Papel, UnidadeRef } from '../api/tipos'
 import { rotas } from '../rotas'
 import { oQueFez, quemFez } from './frases'
@@ -236,7 +237,7 @@ describe('ficha da unidade e reset (H-08)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Sim, voltar para a senha inicial' }))
     expect(await screen.findByText('Ainda não entrou')).toBeTruthy()
-    expect(screen.getByText('Bloco 1, 203 voltou para a senha inicial.')).toBeTruthy()
+    await esperarRecado('Bloco 1, 203 voltou para a senha inicial.')
     const reset = chamadas.find((c) => c.metodo === 'POST')
     expect(reset?.corpo).toEqual({ confirmo: true })
   })
@@ -359,7 +360,7 @@ describe('papéis (H-09)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Dar papel de Comissão' }))
     fireEvent.click(screen.getByRole('button', { name: 'Sim, dar o papel' }))
-    expect(await screen.findByText('Agora o Bloco 2, 304 é da Comissão.')).toBeTruthy()
+    await esperarRecado('Agora o Bloco 2, 304 é da Comissão.')
     expect(screen.getByRole('img', { name: 'Bloco 2, apartamento 304' }).className).toContain(
       'gestao',
     )
@@ -373,9 +374,7 @@ describe('papéis (H-09)', () => {
     ).toBeTruthy()
     expect(chamadas.some((c) => c.metodo === 'DELETE')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Sim, tirar o papel' }))
-    expect(
-      await screen.findByText('Papel de Comissão retirado. As opções somem na hora.'),
-    ).toBeTruthy()
+    await esperarRecado('Papel de Comissão retirado. As opções somem na hora.')
     expect(screen.getByText('Apartamento comum')).toBeTruthy()
   })
 

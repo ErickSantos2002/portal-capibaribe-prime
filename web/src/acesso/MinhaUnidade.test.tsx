@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MinhaUnidade } from './tipos'
-import { abrir, apiFalsa, eu, json } from './apoioDeTeste'
+import { abrir, apiFalsa, esperarRecado, eu, json } from './apoioDeTeste'
 
 function dados(mudar: Partial<MinhaUnidade> = {}): MinhaUnidade {
   return {
@@ -153,7 +153,7 @@ describe('minha unidade · avisos por e-mail (ajustes do M2)', () => {
     fireEvent.click(caixa)
     expect(chamadas.filter((c) => c.metodo === 'PUT')).toHaveLength(1)
     responder(json(200, dados({ ...COM_EMAIL, receber_avisos_email: false })))
-    expect(await screen.findByText('Pronto: os avisos não chegam mais por e-mail.')).toBeTruthy()
+    await esperarRecado('Pronto: os avisos não chegam mais por e-mail.')
     const depois = screen.getByRole('checkbox', { name: ROTULO })
     expect(document.activeElement).toBe(depois)
     expect(depois.getAttribute('aria-disabled')).toBeNull()
@@ -176,7 +176,7 @@ describe('minha unidade · avisos por e-mail (ajustes do M2)', () => {
         corpo: { receber: false },
       }),
     )
-    expect(await screen.findByText('Pronto: os avisos não chegam mais por e-mail.')).toBeTruthy()
+    await esperarRecado('Pronto: os avisos não chegam mais por e-mail.')
     const caixa = screen.getByRole('checkbox', { name: ROTULO })
     expect((caixa as HTMLInputElement).checked).toBe(false)
   })
@@ -189,7 +189,7 @@ describe('minha unidade · avisos por e-mail (ajustes do M2)', () => {
     const caixa = screen.getByRole('checkbox', { name: ROTULO })
     expect((caixa as HTMLInputElement).checked).toBe(false)
     fireEvent.click(caixa)
-    expect(await screen.findByText('Pronto: os avisos voltam a chegar por e-mail.')).toBeTruthy()
+    await esperarRecado('Pronto: os avisos voltam a chegar por e-mail.')
     expect(chamadas.find((c) => c.metodo === 'PUT')?.corpo).toEqual({ receber: true })
   })
 

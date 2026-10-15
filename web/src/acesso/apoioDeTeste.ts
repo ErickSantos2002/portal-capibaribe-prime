@@ -1,10 +1,10 @@
 // Apoio dos testes de tela do épico A: uma API de mentira por rota e o Portal inteiro montado
 // num roteador de memória (as mesmas rotas e guardas de produção).
-import { render } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
-import { vi } from 'vitest'
+import { expect, vi } from 'vitest'
 import type { Eu, Papel } from '../api/tipos'
 import { rotas } from '../rotas'
 
@@ -63,4 +63,10 @@ export function abrir(caminho: string) {
   const roteador = createMemoryRouter(rotas, { initialEntries: [caminho] })
   render(createElement(RouterProvider, { router: roteador }))
   return roteador
+}
+
+/** O recado da casca (região de status) com esta frase. A frase também aparece na caixa visível
+ *  (fora da árvore de acessibilidade), então `findByText` acharia duas (ajustes do M4, ponto 8). */
+export async function esperarRecado(frase: string) {
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe(frase))
 }

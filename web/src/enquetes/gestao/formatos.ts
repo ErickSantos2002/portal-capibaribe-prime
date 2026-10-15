@@ -2,6 +2,7 @@
 // épico A. As frases repetem as da API (`app/esquemas/enquetes.py` e
 // `app/servicos/enquetes_gestao.py`): a tela avisa antes, a API confere de novo.
 import type { MostrarResultado } from '../tipos'
+import { quandoTermina } from '../votar/formatos'
 
 export const LIMITE_PERGUNTA = 200
 export const LIMITE_OPCAO = 100
@@ -147,15 +148,10 @@ export function tituloDoAviso(pergunta: string): string {
   return completo.slice(0, LIMITE_TITULO_AVISO - 1).join('').trimEnd() + '…'
 }
 
-/** "24/10/2026, às 8h05". */
-function termino(dia: string, hora: string): string {
-  const [ano, mes, d] = dia.split('-')
-  const [h, m] = hora.split(':')
-  return `${d}/${mes}/${ano}, às ${Number(h)}h${m}`
-}
-
-/** O texto que a API vai publicar no mural (a mesma frase, para a prévia). */
-export function textoDoAviso(r: Rascunho): string {
+/** O texto que a API vai publicar no mural (a mesma frase, para a prévia). A data por extenso,
+ *  como na tela da enquete ("16 de outubro, às 20h"; em outro ano, com o ano): ajustes do M4,
+ *  ponto 16; a API usa `quando_em_texto`, com a mesma regra. */
+export function textoDoAviso(r: Rascunho, agora: Date = new Date()): string {
   const lista = opcoesLimpas(r.opcoes)
     .map((o) => `- ${o}`)
     .join('\n')
@@ -167,7 +163,7 @@ export function textoDoAviso(r: Rascunho): string {
   return (
     `Uma enquete nova está aberta no Portal: “${limpo(r.pergunta)}”.\n\n` +
     `As opções são:\n\n${lista}\n\n` +
-    `Dá para votar até ${termino(r.dia, r.hora)} (horário de Recife). ${escolha} Vale um voto` +
+    `Dá para votar até ${quandoTermina(paraIso(r.dia, r.hora), agora)} (horário de Recife). ${escolha} Vale um voto` +
     ` por apartamento, e dá para trocar o voto até o fim. ${resultado}\n\n` +
     '> Enquete é consulta. Não tem valor legal de votação em assembleia.\n\n' +
     'O botão “Ir para a enquete”, neste aviso, leva direto a ela.'

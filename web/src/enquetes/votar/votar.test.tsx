@@ -81,7 +81,9 @@ describe('encaixes', () => {
       createElement(
         MemoryRouter,
         null,
-        createElement(EnqueteDoAviso, { enquete: { id: 3, pergunta: 'Qual o melhor dia?' } }),
+        createElement(EnqueteDoAviso, {
+          enquete: { id: 3, pergunta: 'Qual o melhor dia?', encerra_em: FIM, encerrada: false },
+        }),
       ),
     )
     const link = screen.getByRole('link', { name: /Ir para a enquete/ })

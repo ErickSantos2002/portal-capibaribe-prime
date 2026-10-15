@@ -1,8 +1,9 @@
 // A moldura de toda tela: topo (título, placa ou seta de voltar, botão de tema), conteúdo e
 // navegação. Celular e computador pelo mesmo HTML; o CSS (≥ 900 px) troca o layout.
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { BotaoTema } from './BotaoTema'
+import { ContextoLugarDoRecado } from './contextoRecado'
 import { useSessao } from './contextoSessao'
 import { Icone } from './Icone'
 import { Navegacao } from './Navegacao'
@@ -31,6 +32,9 @@ export function Tela({ titulo, voltar, entrada, extra, children }: Props) {
   const { eu } = useSessao()
   const navegar = useNavigate()
   const titulo1 = useRef<HTMLHeadingElement>(null)
+  // O lugar do recado: dentro do topo (que fica preso no alto), numa linha só dele. O recado
+  // ocupa espaço ali e nunca cobre o conteúdo (ajustes do M4, ponto 8).
+  const registrarLugarDoRecado = useContext(ContextoLugarDoRecado)
   const comNav = !!eu && !eu.precisa_trocar_senha && !entrada
 
   useEffect(() => {
@@ -56,7 +60,10 @@ export function Tela({ titulo, voltar, entrada, extra, children }: Props) {
         Pular para o conteúdo
       </a>
       {entrada ? (
-        <BotaoTema solto />
+        <>
+          <BotaoTema solto />
+          <div className="recado-lugar solto" ref={registrarLugarDoRecado} />
+        </>
       ) : (
         <header className="topo">
           {voltar && (
@@ -69,6 +76,7 @@ export function Tela({ titulo, voltar, entrada, extra, children }: Props) {
           </h1>
           {!voltar && eu && <Placa unidade={eu.unidade} gestao={eu.gestao} />}
           <BotaoTema />
+          <div className="recado-lugar" ref={registrarLugarDoRecado} />
         </header>
       )}
       <main className="conteudo" id="conteudo" tabIndex={-1}>
