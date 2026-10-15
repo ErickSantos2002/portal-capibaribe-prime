@@ -38,3 +38,13 @@ merge, Vercel, Neon ou R2; `web/package.json` e `novidades.ts` intactos.
 ### Tarefa 4 · Fechamento
 - [x] `duvidas-m4-gestao.md`; suíte inteira (pytest, vitest, eslint, tsc, pre-commit); commit;
   derrubar o container.
+
+---
+
+## Estado (14/10/2026, épico concluído)
+
+Tarefas 1 a 4 feitas na branch `m4/gestao` (sem push, sem merge). API: 1713 testes verdes.
+Front: 573 testes; falha só `m4contrato.test.ts` → "rotas vazias e sem item no menu", que confere
+que as rotas do épico A não existem (arquivo comum; conserto de uma linha no fechamento,
+`duvidas-m4-gestao.md`, item 1). Prints da conferência visual (celular, computador, escuro)
+ficaram fora do repositório.

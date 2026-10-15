@@ -1,0 +1,97 @@
+// Épico A do M4 · as contas do formulário de enquete, sem tela.
+import { describe, expect, it } from 'vitest'
+import {
+  conferir,
+  deIso,
+  opcoesLimpas,
+  paraIso,
+  RASCUNHO_VAZIO,
+  textoDoAviso,
+  tituloDoAviso,
+  type Rascunho,
+} from './formatos'
+
+const AGORA = new Date('2026-10-14T12:00:00-03:00')
+
+function rascunho(troca: Partial<Rascunho> = {}): Rascunho {
+  return {
+    ...RASCUNHO_VAZIO,
+    pergunta: 'Qual o melhor dia para a reunião?',
+    opcoes: ['Terça à noite', 'Quinta à noite'],
+    dia: '2026-10-24',
+    hora: '20:00',
+    ...troca,
+  }
+}
+
+describe('término no horário de Recife', () => {
+  it('dia e hora viram data com o fuso de Recife', () => {
+    expect(paraIso('2026-10-24', '20:00')).toBe('2026-10-24T20:00:00-03:00')
+  })
+
+  it('e voltam, de qualquer fuso', () => {
+    expect(deIso('2026-10-24T23:05:00Z')).toEqual({ dia: '2026-10-24', hora: '20:05' })
+    expect(deIso('2026-10-25T01:30:00Z')).toEqual({ dia: '2026-10-24', hora: '22:30' })
+  })
+})
+
+describe('o aviso automático (a mesma frase da API)', () => {
+  it('título com o começo de sempre, cortado em 120 letras', () => {
+    expect(tituloDoAviso('Qual dia?')).toBe('Enquete nova: Qual dia?')
+    const longo = tituloDoAviso('Vocês ' + 'x'.repeat(190) + '?')
+    expect(longo).toHaveLength(120)
+    expect(longo.endsWith('…')).toBe(true)
+  })
+
+  it('texto com as opções, o prazo, a escolha, o resultado e a frase da consulta', () => {
+    expect(textoDoAviso(rascunho({ opcoes: ['Terça à noite', ' ', 'Quinta à noite'] }))).toBe(
+      'Uma enquete nova está aberta no Portal: “Qual o melhor dia para a reunião?”.\n\n' +
+        'As opções são:\n\n- Terça à noite\n- Quinta à noite\n\n' +
+        'Dá para votar até 24/10/2026, às 20h00 (horário de Recife). Marque uma opção. Vale um' +
+        ' voto por apartamento, e dá para trocar o voto até o fim. O resultado aparece durante' +
+        ' a votação.\n\n' +
+        '> Enquete é consulta. Não tem valor legal de votação em assembleia.\n\n' +
+        'O botão “Ir para a enquete”, neste aviso, leva direto a ela.',
+    )
+  })
+
+  it('múltipla escolha, só no fim e hora da manhã', () => {
+    const texto = textoDoAviso(rascunho({ multipla: true, mostrar: 'so_no_fim', hora: '08:05' }))
+    expect(texto).toContain('às 8h05 (horário de Recife). Pode marcar mais de uma opção.')
+    expect(texto).toContain('O resultado só aparece quando a enquete terminar.')
+  })
+})
+
+describe('conferir antes de enviar (as frases da API)', () => {
+  it('tudo certo', () => {
+    expect(conferir(rascunho(), AGORA)).toEqual({})
+  })
+
+  it('opções em branco não contam', () => {
+    expect(opcoesLimpas([' Sim ', '', 'Não', '  '])).toEqual(['Sim', 'Não'])
+  })
+
+  const casos: [Partial<Rascunho>, string, string][] = [
+    [{ pergunta: '   ' }, 'pergunta', 'Escreva a pergunta.'],
+    [{ opcoes: ['Sim', ' '] }, 'opcoes', 'Escreva pelo menos 2 opções de resposta.'],
+    [{ opcoes: ['Sábado de manhã', 'sábado  de MANHÃ'] }, 'opcoes', 'Duas opções estão iguais.'],
+    [{ dia: '' }, 'termino', 'Escolha o dia do término.'],
+    [{ hora: '' }, 'termino', 'Escolha a hora do término.'],
+    [
+      { dia: '2026-10-14', hora: '11:00' },
+      'termino',
+      'A data de término já passou. Escolha uma data no futuro.',
+    ],
+    [{ dia: '2026-10-14', hora: '12:30' }, 'termino', 'Escolha um término daqui a pelo menos 1 hora.'],
+    [{ dia: '2027-10-15' }, 'termino', 'A enquete pode durar até 1 ano.'],
+  ]
+  it.each(casos)('%o → %s', (troca, campo, mensagem) => {
+    expect(conferir(rascunho(troca), AGORA)).toEqual({ [campo]: mensagem })
+  })
+
+  it('opção comprida demais', () => {
+    expect(conferir(rascunho({ opcoes: ['Sim', 'x'.repeat(101)] }), AGORA)).toEqual({
+      opcoes: 'Cada opção pode ter até 100 letras.',
+    })
+  })
+})
