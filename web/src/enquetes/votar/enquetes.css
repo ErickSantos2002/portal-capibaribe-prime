@@ -1,0 +1,259 @@
+/* Épico B do M4 · telas de votar e do resultado. Pertence ao épico B. Só tokens do estilo.css
+   (mata, ipê, folha, linha, borda); o tema escuro vem de graça pelos tokens. */
+
+.enq-grupo:first-child .secao {
+  margin-top: 0;
+}
+
+.enq-votou {
+  color: var(--mata);
+  font-weight: 700;
+}
+
+/* ---------- enquete aberta ---------- */
+.enq-pergunta {
+  margin: 0 0 10px;
+  font-size: 24px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.enq-confirmacao {
+  margin-top: 16px;
+}
+
+.enq-confirmacao:focus {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
+.enq-voto fieldset {
+  min-width: 0;
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.enq-legenda {
+  margin-bottom: 10px;
+  padding: 0;
+  font-weight: 700;
+}
+
+/* A opção inteira é o alvo do toque (60 px de altura), não só a bolinha. */
+.enq-opcao {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  margin: 0 0 10px;
+  padding: 12px 16px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-pequeno);
+  background: var(--folha);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.enq-opcao input {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  accent-color: var(--mata);
+}
+
+.enq-opcao span {
+  overflow-wrap: anywhere;
+}
+
+.enq-opcao:hover {
+  border-color: var(--mata);
+}
+
+.enq-opcao:has(input:checked) {
+  border-color: var(--mata);
+  background: var(--mata-suave);
+  box-shadow: inset 4px 0 0 var(--mata);
+  font-weight: 700;
+}
+
+.enq-opcao:has(input:focus-visible) {
+  outline: 3px solid var(--ipe-forte);
+  outline-offset: 2px;
+}
+
+.enq-voto .aviso-caixa {
+  margin: 4px 0 12px;
+}
+
+.enq-votar {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.enq-dica {
+  text-align: center;
+}
+
+/* ---------- resultado ---------- */
+.enq-barras {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.enq-barra {
+  margin-bottom: 16px;
+}
+
+.enq-barra-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.enq-barra-topo > span {
+  overflow-wrap: anywhere;
+}
+
+.enq-barra-topo b {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.enq-seu {
+  display: inline-block;
+  margin-left: 6px;
+  white-space: nowrap;
+  color: var(--mata);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.enq-trilho {
+  height: 14px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: var(--mata-suave);
+}
+
+.enq-trilho span {
+  display: block;
+  height: 100%;
+  border-radius: 7px;
+  background: var(--mata);
+}
+
+/* Terminada: a mais votada ganha o ipê, a cor de destaque do Portal. */
+.mais-votada .enq-trilho span {
+  background: var(--ipe);
+}
+
+.mais-votada .enq-barra-topo > span {
+  font-weight: 700;
+}
+
+.enq-consulta {
+  margin-top: 24px;
+}
+
+/* ---------- cartões (aviso automático, gestão) ---------- */
+.enq-do-aviso,
+.enq-cartao {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border-radius: var(--r-medio);
+  background: var(--folha);
+  color: inherit;
+  text-decoration: none;
+}
+
+.enq-do-aviso {
+  margin: 20px 0;
+  border: 2px solid var(--mata);
+}
+
+.enq-cartao {
+  margin-top: 12px;
+  border: 1px solid var(--linha);
+}
+
+.enq-do-aviso:hover,
+.enq-cartao:hover {
+  background: var(--mata-suave);
+}
+
+.enq-do-aviso svg,
+.enq-cartao svg {
+  flex: none;
+  color: var(--mata);
+}
+
+.enq-do-aviso > span,
+.enq-cartao > span {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+
+.enq-do-aviso b {
+  color: var(--mata);
+}
+
+.enq-do-aviso-pergunta {
+  overflow-wrap: anywhere;
+}
+
+.enq-cartao .ajuda {
+  margin: 0;
+}
+
+/* ---------- quais apartamentos votaram ---------- */
+.enq-contagem {
+  margin: 4px 0 6px;
+  font-size: 19px;
+}
+
+.enq-copiar {
+  margin-top: 14px;
+}
+
+.enq-bloco {
+  margin: 14px 0 6px;
+  color: var(--tinta-suave);
+  font-size: 16px;
+}
+
+.enq-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.enq-grade :is(a, span) {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border: 1px solid var(--borda);
+  border-radius: 5px;
+  background: var(--folha);
+  color: var(--tinta-suave);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+.enq-grade.votou :is(a, span) {
+  border-color: var(--mata);
+  background: var(--mata);
+  color: var(--sobre-mata);
+}

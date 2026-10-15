@@ -173,26 +173,38 @@ describe('encaixes do M4 ligados', () => {
   })
 })
 
-describe('encaixes do M4 ainda não mostram nada', () => {
-  afterEach(cleanup)
-
-  it('rotas vazias e sem item no menu', async () => {
-    const { rotasVotar } = await vi.importActual<typeof import('./enquetes/votar/rotas')>('./enquetes/votar/rotas')
+describe('encaixes do épico A mostram o que devem', () => {
+  it('rotas de criar e editar enquete', async () => {
     const { rotasGestaoEnquetes } =
       await vi.importActual<typeof import('./enquetes/gestao/rotas')>('./enquetes/gestao/rotas')
+    const caminhos: string[] = []
+    const juntar = (rotas: typeof rotasGestaoEnquetes) =>
+      rotas.forEach((r) => {
+        if (r.path) caminhos.push(r.path)
+        if (r.children) juntar(r.children)
+      })
+    juntar(rotasGestaoEnquetes)
+    expect(caminhos).toEqual(['enquetes/nova', 'enquetes/:id/editar'])
+  })
+})
+
+// Épicos A e B: a parte "ainda não mostram nada" virou estes blocos no merge do M4.
+// O que cada encaixe mostra está em `enquetes/votar/votar.test.tsx`.
+describe('encaixes do épico B mostram o que devem', () => {
+  afterEach(cleanup)
+
+  it('rotas de votar e item no menu para toda unidade', async () => {
+    const { rotasVotar } = await vi.importActual<typeof import('./enquetes/votar/rotas')>('./enquetes/votar/rotas')
     const { itemEnquetes } = await vi.importActual<typeof import('./enquetes/votar/menu')>('./enquetes/votar/menu')
-    expect(rotasVotar).toEqual([])
-    expect(rotasGestaoEnquetes).toEqual([])
-    expect(itemEnquetes(eu())).toBeNull()
-    expect(itemEnquetes(eu(['comissao']))).toBeNull()
+    expect(rotasVotar).not.toEqual([])
+    expect(itemEnquetes(eu())?.para).toBe('/enquetes')
+    expect(itemEnquetes(eu(['comissao']))?.para).toBe('/enquetes')
   })
 
-  it('o aviso automático ainda não mostra o botão da enquete', async () => {
+  it('aviso sem enquete continua sem botão', async () => {
     const { EnqueteDoAviso } = await vi.importActual<typeof import('./enquetes/votar/EnqueteDoAviso')>(
       './enquetes/votar/EnqueteDoAviso',
     )
-    const enquete = { id: 3, pergunta: 'Qual o melhor dia?' }
-    expect(render(createElement(EnqueteDoAviso, { enquete })).container.innerHTML).toBe('')
     expect(render(createElement(EnqueteDoAviso, { enquete: null })).container.innerHTML).toBe('')
   })
 })

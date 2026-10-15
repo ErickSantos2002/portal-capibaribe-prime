@@ -1,8 +1,8 @@
 """Contrato das rotas do M4 (spec do M4, seção 3): o que vale antes **e depois** dos épicos.
 
 Sessão, permissão, CSRF, validação dos corpos, o `enquete` do aviso aberto e o
-`gravar_correcao` ficam aqui. Os 501 `em_construcao` estão em `test_m4_em_construcao.py` (cada
-épico apaga a própria seção de lá).
+`gravar_correcao` ficam aqui. Os 501 `em_construcao` da onda do contrato sumiram com os épicos (o
+arquivo deles foi apagado no merge).
 """
 
 from datetime import UTC, datetime, timedelta

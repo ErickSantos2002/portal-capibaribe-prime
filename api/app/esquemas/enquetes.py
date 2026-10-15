@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import AfterValidator, Field, ValidationInfo, field_validator
+from pydantic import AfterValidator, Field, Strict, ValidationInfo, field_validator
 
 from app.esquemas.avisos import NumeroDeBloco
 from app.esquemas.comum import Entrada, IdBanco, Saida, UnidadeRef, sem_invisivel_nenhum
@@ -164,7 +164,8 @@ class Votar(Entrada):
     """`PUT /api/enquetes/{id}/voto` (H-21, épico B): votar e trocar o voto são a mesma coisa.
     Mais de uma opção numa enquete de escolha única: a API recusa com 422 (e o banco também)."""
 
-    opcoes: list[IdBanco]
+    # Inteiro estrito (revisão do épico B, ponto 7): `true`, `"1"` e `1.0` não viram a opção 1.
+    opcoes: list[Annotated[IdBanco, Strict()]]
 
     @field_validator("opcoes")
     @classmethod
