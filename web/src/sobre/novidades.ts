@@ -17,6 +17,19 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.5.0',
+    data: '2026-10-14',
+    nome: 'Enquetes',
+    itens: [
+      'Enquetes no Portal: em Enquetes, no menu, você vê as abertas e as que já terminaram. Cada apartamento tem um voto, e dá para trocar enquanto a enquete estiver aberta.',
+      'Quando sai uma enquete nova, chega um aviso no mural com o botão "Ir para a enquete".',
+      'Na lista aparece "Seu apartamento ainda não votou" nas enquetes que esperam o seu voto.',
+      'Algumas enquetes mostram o resultado durante a votação; outras, só quando terminam. A tela sempre diz qual é o caso.',
+      'Quem cria as enquetes é a Comissão e a administração do Portal. Enquete é consulta: não tem valor legal de votação em assembleia.',
+      'A mensagem de confirmação (como "Aviso publicado.") agora aparece no alto da tela sem cobrir o que está embaixo.',
+    ],
+  },
+  {
     versao: '1.4.0',
     data: '2026-10-13',
     nome: 'Documentos e anexos',
