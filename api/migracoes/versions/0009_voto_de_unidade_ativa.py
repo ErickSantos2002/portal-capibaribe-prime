@@ -6,9 +6,10 @@ Criada em: 2026-10-14
 
 Até aqui, só a sessão impedia o voto de uma unidade desativada (unidade desativada não tem
 sessão); o banco, como `app`, aceitava. Agora a trigger `voto_conferir` também recusa votar ou
-trocar o voto de unidade com `ativa = false`, com a mesma regra do destino
-(`voto_fora_do_destino`: unidade desativada não está no destino de nenhuma enquete), que a API
-já traduz para 403. Só a função muda: nada de tabela, coluna ou permissão.
+trocar o voto de unidade com `ativa = false`, com uma regra própria (`voto_de_unidade_inativa`),
+que `enquetes_banco.traduzir` dá como 403 `unidade_inativa` (ajustes do M4, ponto 4: a primeira
+versão reaproveitava `voto_fora_do_destino`, e a frase falava do bloco errado). Só a função muda:
+nada de tabela, coluna ou permissão.
 
 Escrita à mão, no mesmo padrão da 0002 a 0008. O downgrade devolve a função da 0008.
 """
@@ -75,7 +76,7 @@ _ANTES_DA_DATA = "    new.votado_em := clock_timestamp();\n"
 _UNIDADE_ATIVA = """    if exists (select 1 from public.unidade u
                 where u.id = new.unidade_id and not u.ativa) then
         raise exception 'Unidade desativada não vota.'
-            using errcode = 'check_violation', constraint = 'voto_fora_do_destino';
+            using errcode = 'check_violation', constraint = 'voto_de_unidade_inativa';
     end if;
 """
 

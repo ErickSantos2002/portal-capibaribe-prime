@@ -14,12 +14,20 @@ from testes.apoio_m4 import votar
 
 pytestmark = pytest.mark.usefixtures("banco_limpo")
 
-MIGRACAO = Path(__file__).resolve().parents[1] / "migracoes" / "versions" / "0008_enquetes.py"
+# As migrações das enquetes: a 0008 e as que mexem nas regras dela (a 0009, voto de unidade
+# ativa; ajustes do M4, ponto 4).
+VERSOES = Path(__file__).resolve().parents[1] / "migracoes" / "versions"
+MIGRACOES = (VERSOES / "0008_enquetes.py", VERSOES / "0009_voto_de_unidade_ativa.py")
 TABELAS = ("enquete", "enquete_opcao", "enquete_bloco", "voto", "voto_opcao")
 
 
 def test_toda_regra_das_triggers_tem_traducao():
-    nomes = set(re.findall(r"constraint = '(\w+)'", MIGRACAO.read_text(encoding="utf-8")))
+    nomes = {
+        nome
+        for migracao in MIGRACOES
+        for nome in re.findall(r"constraint = '(\w+)'", migracao.read_text(encoding="utf-8"))
+    }
+    assert "voto_de_unidade_inativa" in nomes
     assert nomes, "a leitura da migração não achou nada"
     assert nomes <= set(RESTRICOES), nomes - set(RESTRICOES)
 

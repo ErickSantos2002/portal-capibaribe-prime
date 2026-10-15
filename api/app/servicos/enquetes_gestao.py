@@ -9,6 +9,7 @@ banco recusa, `enquetes_banco.traduzir` dá a resposta (4xx, nunca 500).
 """
 
 from collections.abc import Callable, Sequence
+from datetime import datetime
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import DBAPIError
@@ -31,6 +32,20 @@ from app.servicos.email import FUSO_DE_RECIFE
 from app.servicos.historico import Acao, registrar
 
 PREFIXO_DO_AVISO = "Enquete nova: "
+MESES = (
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
+)
 
 
 def nao_encontrada() -> ErroApi:
@@ -47,10 +62,20 @@ def titulo_do_aviso(pergunta: str) -> str:
     return completo[: LIMITE_TITULO_AVISO - 1].rstrip() + "…"
 
 
+def quando_em_texto(quando: datetime, agora: datetime | None = None) -> str:
+    """No horário de Recife, como a tela da enquete fala ("16 de outubro, às 20h", "às 19h30");
+    em outro ano que o de `agora`, com o ano ("5 de janeiro de 2027, às 12h"). Espelho de
+    `quandoTermina` (`web/src/enquetes/votar/formatos.ts`); ajustes do M4, ponto 16."""
+    local = quando.astimezone(FUSO_DE_RECIFE)
+    ano_de_agora = (agora or datetime.now(FUSO_DE_RECIFE)).astimezone(FUSO_DE_RECIFE).year
+    ano = f" de {local.year}" if local.year != ano_de_agora else ""
+    minuto = f"{local.minute:02d}" if local.minute else ""
+    return f"{local.day} de {MESES[local.month - 1]}{ano}, às {local.hour}h{minuto}"
+
+
 def texto_do_aviso(dados: EditarEnquete | NovaEnquete) -> str:
     """O mesmo texto no mural e no e-mail. O front repete esta frase na prévia
     (`web/src/enquetes/gestao/formatos.ts`); os testes dos dois lados conferem."""
-    termino = dados.encerra_em.astimezone(FUSO_DE_RECIFE)
     escolha = "Pode marcar mais de uma opção." if dados.multipla_escolha else "Marque uma opção."
     resultado = (
         "O resultado só aparece quando a enquete terminar."
@@ -61,7 +86,7 @@ def texto_do_aviso(dados: EditarEnquete | NovaEnquete) -> str:
     return (
         f"Uma enquete nova está aberta no Portal: “{dados.pergunta}”.\n\n"
         f"As opções são:\n\n{lista}\n\n"
-        f"Dá para votar até {termino:%d/%m/%Y}, às {termino.hour}h{termino:%M} (horário de"
+        f"Dá para votar até {quando_em_texto(dados.encerra_em)} (horário de"
         f" Recife). {escolha} Vale um voto por apartamento, e dá para trocar o voto até o fim."
         f" {resultado}\n\n"
         "> Enquete é consulta. Não tem valor legal de votação em assembleia.\n\n"
@@ -240,7 +265,14 @@ def editar(db: Session, logado: Logado, enquete_id: int, dados: EditarEnquete) -
     # Revisão, ponto 1: pergunta nova recria todas as opções (ids novos), mesmo com os mesmos
     # textos: um voto mandado da tela antiga (com os ids velhos) é recusado pelo banco, em vez
     # de cair numa pergunta que o morador nunca viu.
-    recriar_opcoes = opcoes_atuais != dados.opcoes or enquete.pergunta != dados.pergunta
+    # Ajustes do M4, ponto 1: trocar o tipo de escolha também recria. Senão, a tela aberta da
+    # múltipla manda duas opções para uma enquete de escolha única e recebe um 422 que não diz
+    # que a enquete mudou; com ids novos, o voto velho é 409 `enquete_mudou` e a tela recarrega.
+    recriar_opcoes = (
+        opcoes_atuais != dados.opcoes
+        or enquete.pergunta != dados.pergunta
+        or enquete.multipla_escolha != dados.multipla_escolha
+    )
     # Sempre um UPDATE, mesmo quando só as opções mudaram: o banco carimba `editada_em` e
     # confere de novo voto e prazo (trigger `enquete_regras`).
     aviso_id, para_todos = enquete.aviso_id, enquete.para_todos

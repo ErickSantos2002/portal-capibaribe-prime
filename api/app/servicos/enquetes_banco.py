@@ -34,7 +34,9 @@ _DESTINO = (
 _VOTO_MUDOU = (
     409,
     "voto_mudou_agora",
-    "O voto do seu apartamento mudou agora há pouco em outro aparelho. Abra de novo e confira.",
+    # Serve à corrida entre dois celulares da mesma casa e à edição da enquete no meio do voto
+    # (ajustes do M4, ponto 3): não culpa "outro aparelho".
+    "A enquete ou o voto do seu apartamento mudou agora há pouco. Confira e vote de novo.",
 )
 _ENQUETE_MUDOU = (
     409,
@@ -65,6 +67,12 @@ RESTRICOES: dict[str, tuple[int, str, str]] = {
     "enquete_destino_fechado": _DESTINO,
     "enquete_destino_do_aviso": _DESTINO,
     "voto_fora_do_destino": (403, "fora_do_destino", "Esta enquete não é para o seu bloco."),
+    # Trigger da 0009 (ajustes do M4, ponto 4): regra própria, não a do destino.
+    "voto_de_unidade_inativa": (
+        403,
+        "unidade_inativa",
+        "Este apartamento foi desativado no Portal e não vota mais. Fale com a administração.",
+    ),
     "voto_completo": _VOTO_MUDOU,
     # CHECK e UNIQUE (a API valida antes; chegar aqui é um caso que escapou).
     "enquete_pergunta_tamanho": _CAMPOS,

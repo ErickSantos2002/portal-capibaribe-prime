@@ -13,6 +13,7 @@ import unicodedata
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import psycopg
 from sqlalchemy import ColumnElement, exists, func, select, true
@@ -405,7 +406,9 @@ def _enquete_do_aviso(db: Session, logado: Logado, aviso_id: int) -> EnqueteDoAv
     """A enquete que gerou este aviso (H-13; spec do M4, seção 3.3), com a pergunta atual, se a
     unidade pode vê-la. O banco garante que o aviso e a enquete têm o mesmo destino (0008); a
     conferência aqui é a segunda trava: a pergunta nunca aparece fora do destino da enquete."""
-    consulta = select(Enquete.id, Enquete.pergunta).where(Enquete.aviso_id == aviso_id)
+    consulta = select(Enquete.id, Enquete.pergunta, Enquete.encerra_em).where(
+        Enquete.aviso_id == aviso_id
+    )
     if not logado.gestao:
         do_bloco = exists(
             select(EnqueteBloco.enquete_id)
@@ -414,7 +417,14 @@ def _enquete_do_aviso(db: Session, logado: Logado, aviso_id: int) -> EnqueteDoAv
         )
         consulta = consulta.where(Enquete.para_todos | do_bloco)
     linha = db.execute(consulta).one_or_none()
-    return None if linha is None else EnqueteDoAviso(id=linha.id, pergunta=linha.pergunta)
+    if linha is None:
+        return None
+    return EnqueteDoAviso(
+        id=linha.id,
+        pergunta=linha.pergunta,
+        encerra_em=linha.encerra_em,
+        encerrada=linha.encerra_em <= datetime.now(UTC),
+    )
 
 
 def _gravar_leitura(db: Session, aviso_id: int, unidade_id: int) -> None:

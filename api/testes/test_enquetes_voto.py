@@ -278,7 +278,7 @@ def test_banco_recusa_voto_de_unidade_desativada(engine_app, engine_dono, predio
     _desativar(engine_dono, COMUM)
     with pytest.raises(DBAPIError) as erro:
         votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[0])
-    assert restricao(erro.value) == "voto_fora_do_destino"
+    assert restricao(erro.value) == "voto_de_unidade_inativa"
     assert votos_da_enquete(engine_app, criada.id) == []
 
 
@@ -288,7 +288,7 @@ def test_banco_recusa_troca_de_unidade_desativada(engine_app, engine_dono, predi
     _desativar(engine_dono, COMUM)
     with pytest.raises(DBAPIError) as erro:
         votar_no_banco(engine_app, criada.id, predio[COMUM], criada.opcoes[1])
-    assert restricao(erro.value) == "voto_fora_do_destino"
+    assert restricao(erro.value) == "voto_de_unidade_inativa"
     assert votos_da_enquete(engine_app, criada.id) == [(predio[COMUM], [criada.opcoes[0]])]
 
 
@@ -302,7 +302,7 @@ def test_desativada_no_meio_do_voto_e_4xx(logar, engine_dono, engine_app, predio
         return original(db, *args)
 
     monkeypatch.setattr(servico, "_gravar_voto", desativa_antes)
-    assert _erro(_votar(logar(COMUM), criada.id, criada.opcoes[0])) == (403, "fora_do_destino")
+    assert _erro(_votar(logar(COMUM), criada.id, criada.opcoes[0])) == (403, "unidade_inativa")
 
 
 def test_migracao_0009_volta_e_vai():

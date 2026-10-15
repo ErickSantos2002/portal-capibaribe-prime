@@ -227,6 +227,10 @@ class EnqueteDoAviso(Saida):
 
     id: int
     pergunta: str
+    # Ajustes do M4, ponto 11: o cartão diz se ainda está aberta ou se terminou (relógio da API,
+    # como o `encerrada` da `EnqueteResumo`).
+    encerra_em: datetime
+    encerrada: bool
 
 
 class AvisoCompleto(AvisoResumo):

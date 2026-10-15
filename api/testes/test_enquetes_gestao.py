@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from sqlalchemy import Engine, text
 
+from app.servicos.enquetes_gestao import quando_em_texto
 from testes.apoio_m4 import votar
 from testes.conftest import ADMIN, COMISSAO, COMUM
 from testes.test_avisos_apoio import historico
@@ -97,7 +98,7 @@ def _texto_esperado(
     return (
         f"Uma enquete nova está aberta no Portal: “{pergunta}”.\n\n"
         f"As opções são:\n\n{lista}\n\n"
-        f"Dá para votar até {termino:%d/%m/%Y}, às {termino.hour}h{termino:%M} (horário de"
+        f"Dá para votar até {quando_em_texto(termino)} (horário de"
         f" Recife). {escolha} Vale um voto por apartamento, e dá para trocar o voto até o fim."
         f" {resultado}\n\n"
         "> Enquete é consulta. Não tem valor legal de votação em assembleia.\n\n"
@@ -141,7 +142,13 @@ def test_o_aviso_automatico_sai_no_mural_com_a_enquete(logar, agendados, engine_
     assert aviso["categoria"] == "geral"
     assert aviso["para_todos"] is True
     assert aviso["fixado"] is False
-    assert aviso["enquete"] == {"id": gravada["id"], "pergunta": PERGUNTA}
+    enquete = aviso["enquete"]
+    assert {k: enquete[k] for k in ("id", "pergunta", "encerrada")} == {
+        "id": gravada["id"],
+        "pergunta": PERGUNTA,
+        "encerrada": False,
+    }
+    assert datetime.fromisoformat(enquete["encerra_em"]) == TERMINO
     # H-13: notifica como qualquer aviso, depois do commit (M2).
     assert agendados == [gravada["aviso_id"]]
     assert _contar(engine_app, "notificacao_envio") > 0
