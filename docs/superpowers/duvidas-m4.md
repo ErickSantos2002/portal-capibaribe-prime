@@ -164,3 +164,21 @@ Os agentes dos épicos registram as próprias dúvidas em `duvidas-m4-gestao.md`
 - **0009** ganhou regra própria (`voto_de_unidade_inativa` → 403 `unidade_inativa`); a 0009
   ainda não foi aplicada em produção, então foi editada no lugar (sem migração nova).
 - **`EnqueteDoAviso`** ganhou `encerra_em` e `encerrada` (esquema e tipo comuns).
+
+## Respostas do Erick (15/10/2026)
+Todas as dúvidas [Erick] do M4 (este arquivo, `duvidas-m4-gestao.md` e `duvidas-m4-votar.md`):
+- **Contrato 3** (nada muda depois do 1º voto, nem o prazo): mantido. Prorrogar só se o grupo
+  pedir, e aí "só prorrogar, nunca encurtar, e avisar todo mundo".
+- **Contrato 4** ("só no fim" vale para a gestão): mantido, ninguém vê antes.
+- **Contrato 7** (voto só se troca, não se retira): mantido.
+- **Contrato 9** (cancelar, texto explicativo, aviso de "terminou"): nenhuma agora, ficam no backlog.
+- **Contrato 11** (limites 200/100/1 ano): mantidos.
+- **Contrato 12** (aviso automático sempre): mantido.
+- **Gestão 3** (texto completo do aviso automático, com as opções): mantido.
+- **Gestão 10** (hora padrão 20:00): mantida.
+- **Gestão 18 / Votar 16** (no "durante", lista de quem votou só no fim): mantido.
+- **Votar 2** (porcentagem sobre quem votou; na múltipla passa de 100%): mantido.
+- **Votar 3** (no "durante", quem não votou já vê o parcial): mantido.
+- **Votar 12**: **mudou** — a seção da enquete passa a se chamar "Para a gestão", como no aviso e
+  no documento (versão 1.5.1).
+- **Votar 24** (unanimidade: só a frase honesta, sem mínimo de votos): mantido.

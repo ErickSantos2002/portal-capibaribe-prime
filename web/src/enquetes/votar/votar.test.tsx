@@ -384,7 +384,7 @@ describe('resultado (H-22)', () => {
 
 // --- gestão --------------------------------------------------------------------------------------
 
-describe('para a Comissão', () => {
+describe('para a gestão', () => {
   it('"Quais apartamentos votaram" e "Editar" enquanto ninguém votou', async () => {
     apiFalsa({
       'GET /api/acesso/eu': json(200, COMISSAO),
@@ -396,6 +396,16 @@ describe('para a Comissão', () => {
     expect(screen.getByRole('link', { name: /Editar a enquete/ }).getAttribute('href')).toBe(
       '/enquetes/7/editar',
     )
+  })
+
+  it('a seção se chama "Para a gestão", como no aviso (decisão do Erick, 15/10)', async () => {
+    apiFalsa({
+      'GET /api/acesso/eu': json(200, COMISSAO),
+      'GET /api/enquetes/7': json(200, soNoFim({ pode_editar: true })),
+    })
+    abrir('/enquetes/7')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Para a gestão' })).toBeTruthy()
+    expect(screen.queryByText('Para a Comissão')).toBeNull()
   })
 
   it('sem "Editar" depois do primeiro voto; o morador não vê nada disso', async () => {

@@ -381,7 +381,7 @@ function ParaAGestao({ enquete }: { enquete: Enquete }) {
   return (
     <section className="enq-gestao" aria-labelledby="enq-gestao">
       <h2 className="secao" id="enq-gestao">
-        Para a Comissão
+        Para a gestão
       </h2>
       {/* Revisão, ponto 1: no "durante" aberto, a lista de quem votou, cruzada com a contagem
           ao vivo, diria em quê cada apartamento votou. A API também recusa. */}

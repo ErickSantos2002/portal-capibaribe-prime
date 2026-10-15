@@ -17,6 +17,13 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.5.1',
+    data: '2026-10-15',
+    itens: [
+      'Na enquete, a parte que só quem organiza vê agora se chama "Para a gestão", como nos avisos e documentos.',
+    ],
+  },
+  {
     versao: '1.5.0',
     data: '2026-10-14',
     nome: 'Enquetes',
