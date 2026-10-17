@@ -12,14 +12,14 @@
 
 /* ---------- enquete aberta ---------- */
 .enq-pergunta {
-  margin: 0 0 10px;
-  font-size: 24px;
+  margin: 0 0 0.625rem;
+  font-size: 1.5rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
 .enq-confirmacao {
-  margin-top: 16px;
+  margin-top: 1rem;
 }
 
 .enq-confirmacao:focus {
@@ -29,13 +29,13 @@
 
 .enq-voto fieldset {
   min-width: 0;
-  margin: 16px 0 0;
+  margin: 1rem 0 0;
   padding: 0;
   border: 0;
 }
 
 .enq-legenda {
-  margin-bottom: 10px;
+  margin-bottom: 0.625rem;
   padding: 0;
   font-weight: 700;
 }
@@ -44,10 +44,10 @@
 .enq-opcao {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 60px;
-  margin: 0 0 10px;
-  padding: 12px 16px;
+  gap: 0.875rem;
+  min-height: 3.75rem;
+  margin: 0 0 0.625rem;
+  padding: 0.75rem 1rem;
   border: 2px solid var(--borda);
   border-radius: var(--r-pequeno);
   background: var(--folha);
@@ -57,8 +57,8 @@
 
 .enq-opcao input {
   flex: none;
-  width: 26px;
-  height: 26px;
+  width: 1.625rem;
+  height: 1.625rem;
   margin: 0;
   accent-color: var(--mata);
 }
@@ -84,12 +84,12 @@
 }
 
 .enq-voto .aviso-caixa {
-  margin: 4px 0 12px;
+  margin: 0.25rem 0 0.75rem;
 }
 
 .enq-votar {
   width: 100%;
-  margin-top: 6px;
+  margin-top: 0.375rem;
 }
 
 .enq-dica {
@@ -104,17 +104,23 @@
 }
 
 .enq-barra {
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .enq-barra-topo {
   display: flex;
+  /* M5: com letra grande, a contagem desce para baixo do texto da opção em vez de espremê-lo
+     (a 200 %, "Sábado" virava "Sáb/ado"). */
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: 12px;
+  gap: 0 0.75rem;
 }
 
 .enq-barra-topo > span {
+  /* 8rem: com a letra de fábrica, texto e contagem continuam na mesma linha, como antes. */
+  flex: 1 1 8rem;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
@@ -125,16 +131,16 @@
 
 .enq-seu {
   display: inline-block;
-  margin-left: 6px;
+  margin-left: 0.375rem;
   white-space: nowrap;
   color: var(--mata);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
 }
 
 .enq-trilho {
-  height: 14px;
-  margin-top: 6px;
+  height: 0.875rem;
+  margin-top: 0.375rem;
   overflow: hidden;
   border-radius: 7px;
   background: var(--mata-suave);
@@ -157,7 +163,7 @@
 }
 
 .enq-consulta {
-  margin-top: 24px;
+  margin-top: 1.5rem;
 }
 
 /* ---------- cartões (aviso automático, gestão) ---------- */
@@ -165,9 +171,9 @@
 .enq-cartao {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 72px;
-  padding: 14px 16px;
+  gap: 0.875rem;
+  min-height: 4.5rem;
+  padding: 0.875rem 1rem;
   border-radius: var(--r-medio);
   background: var(--folha);
   color: inherit;
@@ -175,12 +181,12 @@
 }
 
 .enq-do-aviso {
-  margin: 20px 0;
+  margin: 1.25rem 0;
   border: 2px solid var(--mata);
 }
 
 .enq-cartao {
-  margin-top: 12px;
+  margin-top: 0.75rem;
   border: 1px solid var(--linha);
 }
 
@@ -199,7 +205,7 @@
 .enq-cartao > span {
   display: grid;
   flex: 1;
-  gap: 2px;
+  gap: 0.125rem;
 }
 
 .enq-do-aviso b {
@@ -216,24 +222,24 @@
 
 /* ---------- quais apartamentos votaram ---------- */
 .enq-contagem {
-  margin: 4px 0 6px;
-  font-size: 19px;
+  margin: 0.25rem 0 0.375rem;
+  font-size: 1.1875rem;
 }
 
 .enq-copiar {
-  margin-top: 14px;
+  margin-top: 0.875rem;
 }
 
 .enq-bloco {
-  margin: 14px 0 6px;
+  margin: 0.875rem 0 0.375rem;
   color: var(--tinta-suave);
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .enq-grade {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(auto-fill, minmax(3.25rem, 1fr));
+  gap: 0.25rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -242,12 +248,12 @@
 .enq-grade :is(a, span) {
   display: grid;
   place-items: center;
-  min-height: 44px;
+  min-height: 2.75rem;
   border: 1px solid var(--borda);
   border-radius: 5px;
   background: var(--folha);
   color: var(--tinta-suave);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
   text-decoration: none;
 }
@@ -264,17 +270,22 @@
    "tudo certo". Selo com fundo ipê-suave e texto na tinta, para o contraste valer nos dois
    temas (o ipê puro como texto não chega a 4,5:1 no claro). */
 .selo.enq-falta {
-  padding: 2px 10px;
+  padding: 0.125rem 0.625rem;
   border: 1px solid var(--ipe);
-  border-radius: 999px;
+  /* 1em, não 999px: numa linha só dá a mesma pílula (o canto é limitado à meia altura); com a
+     letra grande, quando o selo quebra em várias linhas, vira retângulo arredondado, não um ovo
+     (M5). */
+  border-radius: 1em;
   background: var(--ipe-suave);
   color: var(--tinta);
 }
 
 .selo.enq-falta::before {
+  /* O pontinho não encolhe quando o texto do selo quebra (M5). */
+  flex: none;
   content: '';
-  width: 9px;
-  height: 9px;
+  width: 0.5625rem;
+  height: 0.5625rem;
   border-radius: 50%;
   background: var(--ipe-forte);
 }
@@ -282,13 +293,13 @@
 /* Terminada: o selo de texto da mais votada (a cor sozinha não diz quem ganhou). */
 .enq-mais-votada {
   display: inline-block;
-  margin-left: 8px;
-  padding: 0 8px;
+  margin-left: 0.5rem;
+  padding: 0 0.5rem;
   border: 1px solid var(--ipe);
   border-radius: 999px;
   background: var(--ipe-suave);
   color: var(--tinta);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -299,7 +310,7 @@
 
 /* "Você ainda não trocou o voto": logo acima do botão; vazio não ocupa espaço. */
 .enq-pendente {
-  margin: 4px 0 8px;
+  margin: 0.25rem 0 0.5rem;
   color: var(--tinta);
   text-align: center;
 }
@@ -311,14 +322,14 @@
 
 .enq-do-aviso-estado {
   color: var(--tinta-suave);
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 /* No computador, a grade de apartamentos tem 8 por linha (um andar) e cada andar começa a
    linha: o andar não quebra no meio. */
-@media (min-width: 900px) {
+@media (min-width: 56.25em) {
   .enq-grade {
-    grid-template-columns: repeat(8, minmax(52px, 72px));
+    grid-template-columns: repeat(8, minmax(3.25rem, 4.5rem));
   }
 
   .enq-andar-novo {
