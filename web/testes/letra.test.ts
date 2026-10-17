@@ -13,8 +13,6 @@ const SRC = new URL('../src/', import.meta.url).pathname
 /** Ainda em px: cada grupo apaga as suas linhas ao converter (e o teste passa a cobri-las). */
 const PENDENTES = new Set([
   // G1
-  'avisos/avisos.css',
-  'avisos/anexos.css',
   // G2
   'documentos/documentos.css',
   'sobre/sobre.css',

@@ -82,6 +82,89 @@ G1, G2 e G3 acrescentam as suas no fim, cada um na sua seção.
 
 ## G1 · avisos
 
+Branch `m5/letra-g1`. Arquivos: `avisos/avisos.css`, `avisos/anexos.css`, `avisos/IconesAnexo.tsx`
+(e o teste novo `avisos/icones-anexo.test.tsx`).
+
+### G1.1 Um limite só para "letra grande" nos avisos: `@container conteudo (max-width: 17.5rem)`
+- **Dúvida:** com a letra a 150 % e 200 % num celular de 360 px, peças lado a lado ficavam
+  estreitas demais. A conferência não acusava (não é rolagem nem corte), mas o print mostrava:
+  no **mural**, a data, o corpo e a seta do cartão deixavam o título com três letras por linha; no
+  **aviso aberto**, o quadro "Quando / Onde" em três colunas punha o valor com uma letra por linha;
+  no **novo aviso**, "Dia" e "Hora" lado a lado cortavam o "dd/mm/aaaa"; e os botões "Enviar de
+  novo" e "Tirar" do anexo passavam da borda.
+- **Decisão:** quando o `.conteudo` fica com menos de 17.5rem, o cartão do mural põe a data e a
+  seta numa linha e o corpo embaixo, com a largura toda; o quadro do evento põe o rótulo na linha
+  do ícone e o valor embaixo; o cabeçalho do aviso e a caixa de destaque empilham (data e ícone em
+  cima); Dia e Hora ficam um embaixo do outro; os botões do anexo ganham a linha inteira do cartão.
+- **Por quê 17.5rem (280 px com a letra de fábrica):** nada muda com a letra de fábrica, nem num
+  celular de 320 px (288 px de conteúdo); num de 360 px, muda a partir de uns 19 px de letra
+  (~120 %). A grade de "Quem leu" fica no 19.75rem do comum (é a conta das 8 casas).
+- **Recomendação:** conferir no aparelho com a letra um pouco maior que a de fábrica (110 a 125 %),
+  que é o caso de transição: se o cartão lado a lado ainda estiver apertado, baixar o limite não
+  resolve; subir para 19.75rem (o da grade) resolve, mas muda o cartão no celular de 320 px.
+
+### G1.2 Palavra mais larga que a tela quebra no meio
+- **O que fica:** a 200 % e 360 px, palavras como "empreendimento" (no "Onde") e
+  "extraordinária" (no título da prévia, que usa o `h2` do comum) não cabem na linha e quebram no
+  meio ("empreendiment/o"). Não há rolagem nem corte; é o `overflow-wrap` da spec 3.5.
+- **Decisão:** não pôr teto (`min(rem, vw)`), porque é texto corrido, não letra de vitrine (spec
+  3.5). Com 150 % isso já não acontece nas telas conferidas.
+
+### G1.3 Ícones que encolhiam: o comum devia ter `flex: none` · [coordenador]
+- **Achado:** o `Icone` cresce, mas dentro de um flex sem `flex: none` ele **encolhe** quando o
+  texto ao lado quebra linha: o alfinete do fixado ficava com 18 de 40 px a 200 %; a lupa do
+  "Procurar nos avisos", a caixa do "Ver os avisos arquivados" e o clipe do "Anexar foto ou PDF"
+  também. As peças são do comum: `.fixado .rotulo`, `.com-icone`, `.texto-link`, `.botao`.
+- **Decisão:** contornado nos avisos com seletor próprio (`.fixado .rotulo svg`,
+  `.avisos-busca label svg`, `.avisos-arquivados .texto-link svg`, `.anexos-escolher label svg`
+  com `flex: none`), sem tocar o `estilo.css`.
+- **Recomendação:** no fechamento, pôr no comum `:is(.botao, .texto-link, .com-icone, .rotulo) >
+  svg { flex: none; }` (ou no próprio `Icone`) e apagar os quatro seletores dos avisos. Os outros
+  épicos provavelmente têm o mesmo caso; a varredura que achou estes (SVG com largura real menor
+  que a pedida) está descrita na G1.6.
+
+### G1.4 Campos escondidos com o recorte do `.oculto`
+- **Decisão:** os rádios das categorias e o campo de arquivo continuam escondidos no CSS dos
+  avisos (sem mexer nos `.tsx`), agora como o `.oculto` do comum: 1 px com `/* px: escondido */`,
+  `overflow: hidden` e `clip-path: inset(50%)`. Sem o recorte, o botão interno do campo de arquivo
+  (que cresce com a letra) e o rádio passavam da borda: eram eles que faziam a página rolar para o
+  lado no novo aviso a 24 e 32 px. Foco pelo teclado continua (o anel vai no rótulo vizinho).
+
+### G1.5 O que ficou em px (spec 3.3)
+- **Miniatura do anexo** (56 × 56 px, e a coluna dela no cartão): imagem. **Largura máxima da
+  foto única** no computador (520 px): imagem. **Campos escondidos** (1 px). O resto é rem; as
+  media queries (720 e 600 px) viraram 45em e 37.5em.
+
+### G1.6 Rodada antes/depois
+`conferir-letra.mjs --grupo G1` (mural, aviso, aviso-fixado, novo-aviso, quem-leu):
+
+| fonte | largura | antes: rolagem / fora / cortado / alvo < 44 | depois |
+|---|---|---|---|
+| 16 | 360 | 0 / 0 / 0 / 1 tela (quem-leu) | 0 / 0 / 0 / 1 tela (quem-leu) |
+| 16 | 1280 | 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 |
+| 24 | 360 | **1 (novo aviso)** / 0 / 0 / 1 (quem-leu) | 0 / 0 / 0 / 0 |
+| 24 | 1280 | 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 |
+| 32 | 360 | **1 (novo aviso)** / 0 / 0 / 1 (quem-leu) | 0 / 0 / 0 / 0 |
+| 32 | 1280 | 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 |
+
+- **Letra mediana por tela** (16 → 24 → 32 px de fonte, a 360): antes, mural 15 → 19.8 → 22 e
+  "Quem leu" 15 → 15 → 15; depois, mural 15 → 22.5 → 30, "Quem leu" 15 → 22.5 → 30, novo aviso
+  e aviso fixado 18 → 27 → 36, aviso 16 → 24 → 32 (tudo cresce na proporção).
+- **16 px: os 10 prints iguais aos de antes, pixel a pixel** (`comparar-prints.mjs`: 10 iguais).
+- **Alvos < 44 que já existiam** (dúvida 4 da base): as casas da grade de "Quem leu" a 360 px com a
+  letra de fábrica (38 × 44, 318 casas). Com letra grande, a grade passa a 4 por linha e as casas
+  ficam largas; antes, a 24 e 32 px, continuavam em 8 por linha (o `repeat(8, …)` dos avisos
+  vencia a *container query* do comum, e a letra não crescia). Nenhum alvo novo.
+- **Telas a mais, fora do script** (cópia local do `conferir-letra.mjs`, não versionada): o novo
+  aviso com título, texto formatado, "É um evento?" marcado e dois anexos; e a prévia aberta, com
+  evento. Antes: rolagem a 24 e 32 px nas duas. Depois: zero rolagem, fora e cortado nas 12
+  medidas, e os 4 prints a 16 px iguais aos de antes. A mesma cópia mediu os SVG encolhidos (G1.3):
+  zero depois.
+- **Não conferido aqui:** o aviso aberto **com fotos e PDF** e a foto grande (visualizador): o
+  envio de arquivo não está ligado no ambiente local (sem R2), então nenhum anexo chega a existir.
+  A conversão ali é a mecânica (rem), e o `IconeAnexo` está em rem; fica para a rodada do
+  coordenador num ambiente com R2, ou para o aparelho.
+
 ## G2 · documentos, sobre, notificações
 
 ## G3 · enquetes, acesso, recuperação, administração
