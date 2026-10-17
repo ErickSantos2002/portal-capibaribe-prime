@@ -126,7 +126,7 @@
   margin: 0 0 1.25rem;
   padding: 0.875rem 1rem 1rem;
   border: 1px solid var(--ipe);
-  border-left-width: 6px;
+  border-left-width: 0.375rem;
   border-radius: var(--r-medio);
   background: var(--ipe-suave);
 }
@@ -187,4 +187,32 @@
 .notif-cartao .aviso-caixa > p {
   flex: 1 1 10rem;
   min-width: 0;
+}
+
+/* ---------- revisões do M5 ---------- */
+
+/* "Falta um passo" com letra grande: mais compacta (a 200 %, a faixa sozinha passava da altura
+   da tela, empurrando os avisos para baixo). O sino sai (a frase já diz do que se trata), o
+   respiro diminui e os botões ficam com a altura mínima de alvo (2.75rem), não a de 3.5rem. */
+@container conteudo (max-width: 17.5rem) {
+  .notif-faixa {
+    padding: 0.5rem 0.625rem 0.625rem;
+  }
+
+  .notif-faixa-texto {
+    margin-bottom: 0.5rem;
+  }
+
+  .notif-faixa-texto > svg {
+    display: none;
+  }
+
+  .notif-faixa-acoes {
+    gap: 0.375rem;
+  }
+
+  .notif-faixa-acoes .botao {
+    min-height: 2.75rem;
+    padding-block: 0.375rem;
+  }
 }

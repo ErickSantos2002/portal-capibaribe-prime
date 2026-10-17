@@ -10,14 +10,17 @@ describe('ícone dos anexos', () => {
   it('mede em rem: 24 vira 1.5rem', () => {
     const { container } = render(<IconeAnexo nome="clipe" />)
     const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('1.5rem')
-    expect(svg.getAttribute('height')).toBe('1.5rem')
+    // Revisões do M5 (R3): atributo em número, rem pelo CSS (`.icone` e `--icone`).
+    expect(svg.getAttribute('width')).toBe('24')
+    expect(svg.getAttribute('height')).toBe('24')
+    expect(svg.classList.contains('icone')).toBe(true)
+    expect(svg.style.getPropertyValue('--icone')).toBe('1.5rem')
   })
 
   it('o tamanho pedido também: 28 vira 1.75rem', () => {
     const { container } = render(<IconeAnexo nome="foto" tamanho={28} />)
     const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('1.75rem')
-    expect(svg.getAttribute('height')).toBe('1.75rem')
+    expect(svg.getAttribute('width')).toBe('28')
+    expect(svg.style.getPropertyValue('--icone')).toBe('1.75rem')
   })
 })

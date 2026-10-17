@@ -18,7 +18,7 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 45em) {
+@container raiz (min-width: 45rem) {
   .anexos-fotos {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -73,7 +73,7 @@
   color: var(--tinta);
   font-size: 0.9375rem;
   font-weight: 700;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  box-shadow: 0 0.0625rem 0.1875rem rgb(0 0 0 / 0.25);
 }
 
 .anexo-foto.falhou {
@@ -377,7 +377,7 @@ div.anexo-pdf .anexo-nome {
   }
 }
 
-@media (min-width: 37.5em) {
+@container raiz (min-width: 37.5rem) {
   .anexo-item {
     grid-template-columns: 56px minmax(0, 1fr) auto; /* px: imagem (a miniatura) */
   }

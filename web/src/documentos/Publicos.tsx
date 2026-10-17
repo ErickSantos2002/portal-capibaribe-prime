@@ -100,7 +100,7 @@ export function DocumentoPublicoAberto({ id }: { id: number }) {
   const documento = carga.dados.itens.find((d) => d.id === id)
   if (!documento) return <Navigate to="/entrar" replace state={{ de: local.pathname }} />
   return (
-    <Tela titulo={documento.titulo} voltar="/documentos/publicos">
+    <Tela titulo="Documento" tituloDaAba={documento.titulo} voltar="/documentos/publicos">
       <article className="doc-aberto">
         <FolhaDoDocumento documento={documento} />
         <div className="doc-rodape">

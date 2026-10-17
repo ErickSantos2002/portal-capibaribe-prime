@@ -1,7 +1,7 @@
 // Épico A do M3 · peças comuns às telas de documentos. Pertence ao épico A.
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { emRem } from '../casca/emRem'
+import { tamanhoDoIcone } from '../casca/emRem'
 import { Icone } from '../casca/Icone'
 import { enderecoParaAbrir } from './api'
 import {
@@ -27,8 +27,7 @@ const DESENHOS = {
 export function IconeDoc({ nome, tamanho = 24 }: { nome: keyof typeof DESENHOS; tamanho?: number }) {
   return (
     <svg
-      width={emRem(tamanho)}
-      height={emRem(tamanho)}
+      {...tamanhoDoIcone(tamanho)}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -116,7 +115,7 @@ export function ItemDocumento({
   )
 }
 
-/** A "folha" do documento aberto: assunto, título inteiro (o do topo pode ser cortado, U17),
+/** A "folha" do documento aberto: assunto, título inteiro (o topo diz só "Documento", U17),
  *  data, arquivo, versão e os botões. Também a do documento público aberto sem entrar (U2). */
 export function FolhaDoDocumento({ documento }: { documento: DocumentoResumo }) {
   return (
@@ -125,7 +124,7 @@ export function FolhaDoDocumento({ documento }: { documento: DocumentoResumo }) 
         <Icone nome="documentos" tamanho={20} />
         {assuntoDe(documento.categoria).nome}
       </p>
-      <p className="doc-titulo">{documento.titulo}</p>
+      <h2 className="doc-titulo">{documento.titulo}</h2>
       <p className="doc-data">Documento de {dataDoDocumento(documento.data_documento)}</p>
       <p className="doc-arquivo">
         {tipoEmTexto(documento.arquivo.tipo)}, {tamanhoEmTexto(documento.arquivo.tamanho_bytes)}

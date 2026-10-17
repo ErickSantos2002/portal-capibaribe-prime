@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useParams } from 'react-router'
 import { ErroDaApi } from '../api/cliente'
+import { Celular, Email } from '../casca/Contato'
 import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { Placa } from '../casca/Placa'
@@ -17,7 +18,6 @@ import { Tela } from '../casca/Tela'
 import { useRecado } from '../casca/contextoRecado'
 import { useSessao } from '../casca/contextoSessao'
 import {
-  formatarCelular,
   formatarDataEHora,
   nomeDaUnidade,
   nomeDoPapel,
@@ -173,12 +173,16 @@ function Ficha({ unidade: u, aoMudar }: PropsFicha) {
             <div>
               <dt>Celular</dt>
               <dd>
-                {u.celular && <a href={`tel:+55${u.celular}`}>{formatarCelular(u.celular)}</a>}
+                {u.celular && (
+                  <a href={`tel:+55${u.celular}`}>
+                    <Celular digitos={u.celular} />
+                  </a>
+                )}
               </dd>
             </div>
             <div>
               <dt>E-mail</dt>
-              <dd>{u.email ?? 'não informado'}</dd>
+              <dd>{u.email ? <Email endereco={u.email} /> : 'não informado'}</dd>
             </div>
           </>
         )}

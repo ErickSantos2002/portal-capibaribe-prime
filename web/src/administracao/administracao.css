@@ -8,7 +8,7 @@
 }
 
 .legenda i.ge {
-  box-shadow: inset 0 -4px 0 var(--ipe-forte);
+  box-shadow: inset 0 -0.25rem 0 var(--ipe-forte);
 }
 
 /* Grade ou lista, e o filtro da lista: chips em cima da lista. */
@@ -92,4 +92,19 @@
   padding-block: 0.75rem;
   color: var(--mata);
   text-underline-offset: 3px;
+}
+
+/* ---------- revisões do M5 ---------- */
+
+/* Confirmação da ficha com letra grande (U7): a borda, o padding de 1rem e o recuo da lista de
+   1.375rem deixavam pouca linha, e o ponto de "desconectados." caía sozinho na linha de baixo.
+   Com a coluna estreita para a letra, menos recuo. */
+@container conteudo (max-width: 17.5rem) {
+  .confirmacao {
+    padding: 0.625rem 0.5rem;
+  }
+
+  .confirmacao ul {
+    padding-left: 1rem;
+  }
 }

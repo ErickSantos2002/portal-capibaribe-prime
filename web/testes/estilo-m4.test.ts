@@ -74,8 +74,9 @@ describe('telas de enquete', () => {
   })
 
   test('18: no computador, 8 por linha e o andar novo começa a linha', () => {
-    // 900 px = 56.25em desde o M5 (media query em em, que acompanha a letra).
-    assert.match(enquetes, /@media \(min-width: 56\.25em\)\s*\{[^@]*\.enq-grade\s*\{[^}]*repeat\(8,/)
+    // 900 px = 56.25rem desde as revisões do M5 (container query em rem sobre a página, que
+    // acompanha a letra também no iPhone).
+    assert.match(enquetes, /@container raiz \(min-width: 56\.25rem\)\s*\{[^@]*\.enq-grade\s*\{[^}]*repeat\(8,/)
     assert.match(regra(enquetes, '.enq-andar-novo'), /grid-column-start:\s*1/)
   })
 

@@ -6,6 +6,7 @@ import { BotaoTema } from './BotaoTema'
 import { ContextoLugarDoRecado } from './contextoRecado'
 import { useSessao } from './contextoSessao'
 import { Icone } from './Icone'
+import { useLetraGrande } from './letra'
 import { Navegacao } from './Navegacao'
 import { Placa } from './Placa'
 
@@ -18,6 +19,9 @@ let jaAbriuUmaTela = false
 interface Props {
   /** Título do topo e da aba do navegador. */
   titulo: string
+  /** Na aba do navegador, quando o título do topo é o nome da tela e o do item é outro (o
+   *  documento aberto: "Documento" no topo, o título dele na aba e na folha). */
+  tituloDaAba?: string
   /** Tela de detalhe: seta de voltar para este caminho (se não houver histórico) e, no
    *  celular, sem as abas de baixo. */
   voltar?: string
@@ -28,7 +32,7 @@ interface Props {
   children: ReactNode
 }
 
-export function Tela({ titulo, voltar, entrada, extra, children }: Props) {
+export function Tela({ titulo, tituloDaAba, voltar, entrada, extra, children }: Props) {
   const { eu } = useSessao()
   const navegar = useNavigate()
   const titulo1 = useRef<HTMLHeadingElement>(null)
@@ -36,10 +40,15 @@ export function Tela({ titulo, voltar, entrada, extra, children }: Props) {
   // ocupa espaço ali e nunca cobre o conteúdo (ajustes do M4, ponto 8).
   const registrarLugarDoRecado = useContext(ContextoLugarDoRecado)
   const comNav = !!eu && !eu.precisa_trocar_senha && !entrada
+  // Letra grande (M5, revisões, A): o topo fixo vira uma faixa fina, só com voltar (ou a placa)
+  // e o tema numa linha, e o título desce para o começo do conteúdo, rolando com a página. A
+  // 200 % num celular, o topo com o título chegava a ocupar mais da metade da tela, e o recado de
+  // confirmação, que mora no topo, precisa continuar à vista. Com a letra de fábrica, o de sempre.
+  const faixa = useLetraGrande()
 
   useEffect(() => {
-    document.title = entrada ? NOME_DO_PORTAL : `${titulo} · ${NOME_DO_PORTAL}`
-  }, [titulo, entrada])
+    document.title = entrada ? NOME_DO_PORTAL : `${tituloDaAba ?? titulo} · ${NOME_DO_PORTAL}`
+  }, [titulo, tituloDaAba, entrada])
 
   useEffect(() => {
     if (jaAbriuUmaTela) titulo1.current?.focus({ preventScroll: true })
@@ -53,6 +62,11 @@ export function Tela({ titulo, voltar, entrada, extra, children }: Props) {
     else navegar(voltar ?? '/avisos')
   }
 
+  const h1 = (
+    <h1 ref={titulo1} tabIndex={-1} className={faixa ? 'titulo-tela' : undefined}>
+      {titulo}
+    </h1>
+  )
   const classes = ['app', voltar && 'detalhe', !comNav && 'sem-nav'].filter(Boolean).join(' ')
   return (
     <div className={classes}>
@@ -65,21 +79,20 @@ export function Tela({ titulo, voltar, entrada, extra, children }: Props) {
           <div className="recado-lugar solto" ref={registrarLugarDoRecado} />
         </>
       ) : (
-        <header className="topo">
+        <header className={faixa ? 'topo faixa' : 'topo'}>
           {voltar && (
             <button type="button" className="voltar" onClick={aoVoltar}>
               <Icone nome="voltar" tamanho={28} rotulo="Voltar" />
             </button>
           )}
-          <h1 ref={titulo1} tabIndex={-1}>
-            {titulo}
-          </h1>
+          {!faixa && h1}
           {!voltar && eu && <Placa unidade={eu.unidade} gestao={eu.gestao} />}
           <BotaoTema />
           <div className="recado-lugar" ref={registrarLugarDoRecado} />
         </header>
       )}
       <main className="conteudo" id="conteudo" tabIndex={-1}>
+        {faixa && !entrada && h1}
         {children}
       </main>
       {extra}

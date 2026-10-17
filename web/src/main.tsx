@@ -6,10 +6,14 @@ import { RouterProvider } from 'react-router/dom'
 import '@fontsource/atkinson-hyperlegible/400.css'
 import '@fontsource/atkinson-hyperlegible/700.css'
 import './estilo.css'
+import { vigiarLetra } from './casca/letra'
 import { registrarServiceWorker } from './notificacoes/ganchos'
 import { rotas } from './rotas'
 
 const roteador = createBrowserRouter(rotas)
+
+// Marca o html com a letra grande e a tela baixa antes do primeiro desenho (M5, revisões, R1).
+vigiarLetra()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

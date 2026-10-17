@@ -1,7 +1,7 @@
 // M3 · Épico B: ícones dos anexos que o `Icone` da casca não tem (dúvida 2 do épico B). Mesmo
 // traço (2 px, 24×24), sempre ao lado de texto, por isso decorativos (aria-hidden).
 // M5: o `tamanho` é px de desenho (24 = com a letra de fábrica) e vira rem: cresce com a letra.
-import { emRem } from '../casca/emRem'
+import { tamanhoDoIcone } from '../casca/emRem'
 
 export type NomeDoIconeAnexo = 'clipe' | 'foto' | 'fechar'
 
@@ -27,8 +27,7 @@ function Desenho({ nome }: { nome: NomeDoIconeAnexo }) {
 export function IconeAnexo({ nome, tamanho = 24 }: { nome: NomeDoIconeAnexo; tamanho?: number }) {
   return (
     <svg
-      width={emRem(tamanho)}
-      height={emRem(tamanho)}
+      {...tamanhoDoIcone(tamanho)}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

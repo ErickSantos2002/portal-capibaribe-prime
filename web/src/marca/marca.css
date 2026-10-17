@@ -30,7 +30,7 @@
   width: 148px; /* px: imagem */
 }
 
-@media (min-width: 56.25em) {
+@container raiz (min-width: 56.25rem) {
   .logo:not(.pequeno) img {
     width: 260px; /* px: imagem */
   }

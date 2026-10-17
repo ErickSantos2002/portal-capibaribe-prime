@@ -64,7 +64,13 @@ function DocumentoAberto({ id }: { id: number }) {
     return <DocumentoNaoEncontrado mensagem={carga.erro.mensagem} />
   }
   return (
-    <Tela titulo={carga.situacao === 'pronta' ? carga.dados.titulo : 'Documento'} voltar="/documentos">
+    // U17 (revisões do M5): o topo diz "Documento" e o título inteiro vai na folha (e na aba do
+    // navegador). No topo, o título comprido era cortado em duas linhas.
+    <Tela
+      titulo="Documento"
+      tituloDaAba={carga.situacao === 'pronta' ? carga.dados.titulo : undefined}
+      voltar="/documentos"
+    >
       {carga.situacao === 'erro' ? (
         <FalhaAoCarregar mensagem={carga.erro.mensagem} tentar={recarregar} />
       ) : carga.situacao === 'carregando' ? (

@@ -9,6 +9,12 @@ import { rotas } from '../rotas'
 import { oQueFez, quemFez } from './frases'
 import type { ItemHistorico, PainelAtivacao, UnidadeAdmin, UnidadePainel } from './tipos'
 
+/** O celular vem em dois pedaços (revisões do M5, U6: o número preso numa linha): casa o texto
+ *  inteiro do elemento de fora. */
+const textoInteiro = (texto: string) => (_: string, el: Element | null) =>
+  el?.textContent === texto && el.parentElement?.textContent !== texto
+
+
 const ref = (login: string): UnidadeRef => ({
   login,
   bloco: Number(login[0]),
@@ -164,7 +170,7 @@ describe('painel de ativação (H-07)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Lista com contatos' }))
 
     expect(await screen.findByText('Maria (fictícia)')).toBeTruthy()
-    expect(screen.getByText('(81) 9 0000-0002')).toBeTruthy()
+    expect(screen.getByText(textoInteiro('(81) 9 0000-0002'))).toBeTruthy()
     // axe (heading-order): o bloco é h2, o responsável de cada linha é h3.
     expect(
       screen.getByRole('heading', { level: 2, name: 'Bloco 1: 2 de 3 (67%)' }),
@@ -187,7 +193,7 @@ describe('painel de ativação (H-07)', () => {
     api({ 'GET /api/admin/unidades': () => json(200, PAINEL) }, COMISSAO)
     abrir('/unidades')
     fireEvent.click(await screen.findByRole('button', { name: 'Lista com contatos' }))
-    expect(await screen.findByText('(81) 9 0000-0002')).toBeTruthy()
+    expect(await screen.findByText(textoInteiro('(81) 9 0000-0002'))).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Histórico de ações' })).toBeNull()
   })
 

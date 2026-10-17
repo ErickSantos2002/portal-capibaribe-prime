@@ -13,6 +13,7 @@ import { Link, useNavigate } from 'react-router'
 import { ErroDaApi } from '../api/cliente'
 import { useRecado } from '../casca/contextoRecado'
 import { useSessao } from '../casca/contextoSessao'
+import { Celular, Email } from '../casca/Contato'
 import { formatarCelular, formatarDataEHora, nomeDaUnidade, nomeDoPapel } from '../casca/formatar'
 import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
@@ -188,11 +189,11 @@ export function MinhaUnidade() {
             </div>
             <div>
               <dt>Celular</dt>
-              <dd>{formatarCelular(dados.celular)}</dd>
+              <dd>{dados.celular && <Celular digitos={dados.celular} />}</dd>
             </div>
             <div>
               <dt>E-mail</dt>
-              <dd>{dados.email ?? 'não informado'}</dd>
+              <dd>{dados.email ? <Email endereco={dados.email} /> : 'não informado'}</dd>
             </div>
             {dados.papeis.length > 0 && (
               <div>

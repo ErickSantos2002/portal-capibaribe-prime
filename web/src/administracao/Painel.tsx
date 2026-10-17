@@ -1,14 +1,15 @@
 // H-07 · Painel de ativação (como `telaAdmin` do protótipo). Pertence ao épico B.
 // Grade: os 64 apartamentos de cada bloco, do 7º andar ao térreo (já entrou = verde, papel de
 // gestão = faixa amarela). Lista: responsável, celular e data do primeiro acesso, com filtro.
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { ErroDaApi } from '../api/cliente'
+import { Celular } from '../casca/Contato'
 import { Icone } from '../casca/Icone'
 import { Placa } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
 import { useSessao } from '../casca/contextoSessao'
-import { formatarCelular, formatarData, nomeDoPapel } from '../casca/formatar'
+import { formatarData, nomeDoPapel } from '../casca/formatar'
 import './administracao.css'
 import { buscarPainel } from './api'
 import type { PainelAtivacao, ResumoBloco, Situacao, UnidadePainel } from './tipos'
@@ -199,20 +200,29 @@ function Grade({ painel }: { painel: PainelAtivacao }) {
           <section key={bloco.numero} aria-label={bloco.nome}>
             <h2 className="secao">{tituloDoBloco(bloco)}</h2>
             <div className="grade">
-              {unidades.map((u) => {
+              {unidades.map((u, i) => {
                 const classes = [u.ativada && 'at', u.papeis.length > 0 && 'ge']
                   .filter(Boolean)
                   .join(' ')
                 const papel = u.papeis.length ? `, ${u.papeis.map(nomeDoPapel).join(' e ')}` : ''
+                // Revisões do M5 (U8): o rótulo do andar só aparece quando a grade fica com 4
+                // colunas (letra grande); com 8, a linha já é o andar (estilo.css, .grade-andar).
+                const andarNovo = i === 0 || unidades[i - 1].andar !== u.andar
                 return (
-                  <Link
-                    key={u.unidade.login}
+                  <Fragment key={u.unidade.login}>
+                    {andarNovo && (
+                      <span className="grade-andar" aria-hidden="true">
+                        {u.andar === 0 ? 'Térreo' : `${u.andar}º andar`}
+                      </span>
+                    )}
+                    <Link
                     to={`/unidades/${u.unidade.login}`}
                     className={classes || undefined}
                     aria-label={`Apartamento ${u.unidade.apartamento}, ${u.ativada ? 'já entrou' : 'ainda não entrou'}${papel}`}
                   >
                     {u.unidade.apartamento}
-                  </Link>
+                    </Link>
+                  </Fragment>
                 )
               })}
             </div>
@@ -258,7 +268,11 @@ function LinhaUnidade({ unidade: u }: { unidade: UnidadePainel }) {
       <Placa unidade={u.unidade} gestao={u.papeis.length > 0} />
       <h3>{u.ativada ? (u.responsavel_nome ?? 'Responsável não informado') : 'Ainda não entrou'}</h3>
       <span className="linha-meta">
-        {u.celular && <span>{formatarCelular(u.celular)}</span>}
+        {u.celular && (
+          <span>
+            <Celular digitos={u.celular} />
+          </span>
+        )}
         {u.ativada_em && <span>entrou em {formatarData(u.ativada_em)}</span>}
         {u.papeis.map((p) => (
           <span key={p} className="selo">

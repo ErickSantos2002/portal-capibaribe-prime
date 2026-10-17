@@ -10,12 +10,17 @@ describe('ícone dos documentos', () => {
   it('mede em rem: 24 vira 1.5rem', () => {
     const { container } = render(<IconeDoc nome="baixar" />)
     const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('1.5rem')
-    expect(svg.getAttribute('height')).toBe('1.5rem')
+    // Revisões do M5 (R3): atributo em número, rem pelo CSS (`.icone` e `--icone`).
+    expect(svg.getAttribute('width')).toBe('24')
+    expect(svg.getAttribute('height')).toBe('24')
+    expect(svg.classList.contains('icone')).toBe(true)
+    expect(svg.style.getPropertyValue('--icone')).toBe('1.5rem')
   })
 
   it('o tamanho pedido também: 20 vira 1.25rem', () => {
     const { container } = render(<IconeDoc nome="fora" tamanho={20} />)
-    expect(container.querySelector('svg')!.getAttribute('height')).toBe('1.25rem')
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('height')).toBe('20')
+    expect(svg.style.getPropertyValue('--icone')).toBe('1.25rem')
   })
 })

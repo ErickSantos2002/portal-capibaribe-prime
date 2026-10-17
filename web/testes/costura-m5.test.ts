@@ -74,26 +74,24 @@ describe('2 e 5: com letra grande, o que não é texto encolhe (.opcao, .item, .
   })
 })
 
-describe('3: tela baixa para a letra, o topo rola com a página', () => {
-  const baixa = bloco(estilo, '@media (max-height: 35em)')
-
-  test('o topo deixa de ser fixo e a folga de cima das âncoras desce', () => {
-    assert.match(baixa, /\.topo\s*\{[^}]*position:\s*static/)
-    assert.match(baixa, /html\s*\{[^}]*scroll-padding-top:\s*0\.75rem/)
+describe('3 (revisões do M5, A): o topo continua fixo; com letra grande vira faixa fina', () => {
+  test('sem o @media (max-height) que soltava o topo (o recado e o voltar sumiam ao rolar)', () => {
+    assert.doesNotMatch(estilo, /@media \(max-height/)
   })
 
-  test('fora disso o topo continua fixo (letra de fábrica)', () => {
+  test('o topo é sempre fixo, também como faixa (o recado mora nela)', () => {
     assert.match(regra(estilo, '.topo'), /position:\s*sticky/)
+    assert.doesNotMatch(regra(estilo, '.topo.faixa'), /position:/)
   })
 })
 
 describe('4: abas de baixo nunca encostam', () => {
   test('com a tela estreita para a letra, a aba tem pelo menos a largura da palavra', () => {
-    assert.match(bloco(estilo, '@media (max-width: 22em)'), /\.nav a\s*\{[^}]*min-width:\s*min-content/)
+    assert.match(bloco(estilo, '@container raiz (max-width: 22rem)'), /\.nav a\s*\{[^}]*min-width:\s*min-content/)
   })
 
   test('com cinco abas, sempre (com a letra de fábrica "Documentos" já não cabia)', () => {
-    const cinco = bloco(estilo, '@media not all and (min-width: 56.25em)')
+    const cinco = bloco(estilo, '@container raiz not (min-width: 56.25rem)')
     assert.match(cinco, /\.nav:has\(> a:nth-of-type\(5\)\) a\s*\{[^}]*min-width:\s*min-content/)
   })
 
@@ -101,8 +99,13 @@ describe('4: abas de baixo nunca encostam', () => {
     assert.match(regra(estilo, '.nav a'), /font-size:\s*min\(0\.9375rem, 5\.5vw\)/)
   })
 
-  test('o número de não lidos não passa da borda da aba', () => {
-    assert.match(regra(estilo, '.nav .conta'), /left:\s*min\(calc\(50% \+ 0\.375rem\), calc\(100% - 1\.25rem\)\)/)
+  test('o número de não lidos não passa da borda da aba (R4: preso no canto, letra com teto)', () => {
+    assert.match(regra(estilo, '.nav .conta'), /font-size:\s*min\(0\.8125rem, 4\.75vw\)/)
+    assert.match(regra(estilo, '.nav .conta'), /min-width:\s*1\.385em/)
+    const estreita = estilo.slice(estilo.lastIndexOf('@container raiz (max-width: 22rem)'))
+    assert.match(bloco(estreita, '@container raiz (max-width: 22rem)'), /\.nav \.conta\s*\{[^}]*right:\s*0\.125rem/)
+    // Depois da regra de base (mesmo peso: a última vence).
+    assert.ok(estilo.lastIndexOf('@container raiz (max-width: 22rem)') > estilo.indexOf('\n.nav .conta {'))
   })
 })
 

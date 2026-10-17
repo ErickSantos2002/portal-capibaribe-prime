@@ -194,7 +194,7 @@ describe('documento aberto', () => {
       'GET /api/documentos/1': json(200, comVersoes),
     })
     abrir('/documentos/1')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Cronograma da obra' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 2, name: 'Cronograma da obra' })).toBeTruthy()
     expect(screen.getByText(/PDF, 2,4 MB/)).toBeTruthy()
     expect(screen.getByText(/Versão 2/)).toBeTruthy()
     const abrirLink = screen.getByRole('link', { name: /Abrir o documento \(abre em outra aba\)/ })
@@ -207,14 +207,16 @@ describe('documento aberto', () => {
     expect(screen.queryByRole('link', { name: /Enviar nova versão/ })).toBeNull()
   })
 
-  it('U17: o título inteiro também no corpo (o do topo pode ser cortado)', async () => {
+  it('U17 (revisões do M5): o topo diz "Documento"; o título inteiro fica na folha e na aba', async () => {
     apiFalsa({
       'GET /api/acesso/eu': json(200, eu()),
       'GET /api/documentos/1': json(200, comVersoes),
     })
     abrir('/documentos/1')
-    await screen.findByRole('heading', { level: 1, name: 'Cronograma da obra' })
-    expect(screen.getAllByText('Cronograma da obra')).toHaveLength(2)
+    await screen.findByRole('heading', { level: 2, name: 'Cronograma da obra' })
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Documento')
+    expect(screen.getAllByText('Cronograma da obra')).toHaveLength(1)
+    expect(document.title).toBe('Cronograma da obra · Portal Capibaribe Prime')
   })
 
   it('U12: o morador não vê "Quem vê"', async () => {
@@ -299,7 +301,8 @@ describe('link de documento público sem entrar', () => {
   it('mostra o documento, com abrir, baixar e entrar', async () => {
     apiFalsa({ 'GET /api/documentos/publicos': json(200, { itens: [publico] }) })
     const roteador = abrir('/documentos/1')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Como acessar o Portal' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 2, name: 'Como acessar o Portal' })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Documento')
     expect(roteador.state.location.pathname).toBe('/documentos/1')
     expect(
       screen.getByRole('link', { name: /Abrir o documento/ }).getAttribute('href'),
