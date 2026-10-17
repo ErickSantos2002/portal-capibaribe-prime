@@ -17,6 +17,17 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.6.0',
+    data: '2026-10-17',
+    nome: 'Letra que cresce',
+    itens: [
+      'O Portal agora segue o tamanho de letra que você escolhe no celular (em Configurações, Tela ou Acessibilidade) ou no navegador do computador. Quem aumenta a letra vê o Portal inteiro maior, sem nada cortado.',
+      'Com a letra grande, o alto da tela fica só com a seta de voltar e o botão do tema, e o título desce junto com o texto. Sobra mais espaço para ler.',
+      'Nos formulários, cada campo ficou um pouco mais separado do outro, para ficar claro qual título é de qual campo.',
+      'No documento aberto, o alto da tela diz "Documento" e o título inteiro aparece logo abaixo, sem cortar.',
+    ],
+  },
+  {
     versao: '1.5.1',
     data: '2026-10-15',
     itens: [

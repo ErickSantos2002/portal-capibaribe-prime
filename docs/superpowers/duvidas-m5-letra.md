@@ -734,3 +734,9 @@ dava zero nas medidas automáticas: os achados das revisões eram de desenho, vi
   Dona Socorro estranhar o hífen, é tirar uma regra.
 - **[Erick] Espaço entre os grupos (U11) e o topo do documento ("Documento")**: as duas mudanças
   visíveis com a letra de fábrica.
+
+## Respostas do Erick (17/10/2026)
+
+- Hifenização com letra grande: **mantida** (com hífen, como no jornal).
+- Abas de baixo do celular: **pendente**, ajustar na próxima sessão. Até lá vale o teto atual.
+- Demais [Erick]: mantido o que está, teste em iPhone/Android reais pendente (tarefa 6 do plano).
