@@ -85,15 +85,30 @@ body {
   margin: 0;
 }
 
-/* O foco e as âncoras nunca param embaixo do topo fixo nem das abas de baixo (revisão, U2). */
+/* O foco e as âncoras nunca param embaixo do topo fixo nem das abas de baixo (revisão, U2).
+   Em rem: o topo e as abas crescem com a letra, e a folga cresce junto (spec m5-letra, 3). */
 html {
-  scroll-padding-top: 80px;
-  scroll-padding-bottom: 88px;
+  scroll-padding-top: 5rem;
+  scroll-padding-bottom: 5.5rem;
+}
+
+/* ---------- letra que cresce (M5, spec docs/superpowers/specs/m5-letra.md) ----------
+   Nenhum tamanho de letra é fixo: tudo em rem, sobre o tamanho que o navegador dá ao html (16 px
+   de fábrica, ou o que a pessoa escolheu). O html nunca recebe font-size próprio, senão a escolha
+   dela se perde. No Android (Chrome 146+), a meta text-scale do index.html faz esse tamanho seguir
+   o "Tamanho da fonte" do celular. No iPhone e no iPad, o Safari só repassa o tamanho de texto do
+   aparelho (Dynamic Type) pela fonte do sistema: o html usa -apple-system-body só para pegar o
+   TAMANHO (17 px no padrão), e o body devolve a Atkinson Hyperlegible da casa. A condição do
+   -webkit-touch-callout deixa de fora o Safari do Mac, onde essa fonte tem tamanho fixo. */
+@supports (font: -apple-system-body) and (-webkit-touch-callout: default) {
+  html {
+    font: -apple-system-body;
+  }
 }
 
 /* Com o botão flutuante ("Novo aviso"), o fim da tela rola até ficar acima dele (U2). */
 .app:has(> .flutuante) .conteudo {
-  padding-bottom: 104px;
+  padding-bottom: 6.5rem;
 }
 
 body {
@@ -101,8 +116,12 @@ body {
   background: var(--papel);
   color: var(--tinta);
   font-family: var(--fonte);
-  font-size: 18px;
+  font-size: 1.125rem;
   line-height: 1.5;
+  /* Teto da letra grande (spec 3.5): palavra que não cabe na linha (e-mail, link, ou só uma
+     palavra comprida com letra de 200 %) quebra em vez de empurrar a tela para o lado. `anywhere`
+     (e não `break-word`) porque também vale dentro de flex e grid, que medem a palavra inteira. */
+  overflow-wrap: anywhere;
 }
 
 button,
@@ -129,10 +148,10 @@ select {
 
 .pular {
   position: absolute;
-  left: 8px;
-  top: -60px;
+  left: 0.5rem;
+  top: -3.75rem;
   z-index: 10;
-  padding: 10px 16px;
+  padding: 0.625rem 1rem;
   border-radius: var(--r-pequeno);
   background: var(--folha);
   color: var(--mata);
@@ -140,7 +159,7 @@ select {
 }
 
 .pular:focus {
-  top: 8px;
+  top: 0.5rem;
 }
 
 /* ---------- topo ---------- */
@@ -151,9 +170,9 @@ select {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  min-height: 64px;
-  padding: 12px 16px;
+  gap: 0.5rem;
+  min-height: 4rem;
+  padding: 0.75rem 16px; /* px: margem lateral da página no celular */
   background: var(--mata);
   color: var(--sobre-mata);
 }
@@ -164,7 +183,7 @@ select {
   min-width: 0;
   overflow-wrap: anywhere;
   margin: 0;
-  font-size: 21px;
+  font-size: 1.3125rem;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -180,8 +199,8 @@ select {
   display: grid;
   place-items: center;
   flex: none;
-  width: 44px;
-  height: 44px;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 0;
   border-radius: var(--r-pequeno);
   background: none;
@@ -190,18 +209,18 @@ select {
 }
 
 .voltar {
-  margin-left: -10px;
+  margin-left: -0.625rem;
 }
 
 .tema-btn {
-  margin-right: -8px;
+  margin-right: -0.5rem;
 }
 
 /* Na entrada (sem topo), o botão de tema fica solto no canto. */
 .tema-btn.solto {
   position: absolute;
-  top: 10px;
-  right: 18px;
+  top: 0.625rem;
+  right: 1.125rem;
   z-index: 2;
   color: var(--tinta-suave);
 }
@@ -212,8 +231,8 @@ select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 64px;
-  padding: 2px 10px 3px;
+  min-width: 4rem;
+  padding: 0.125rem 0.625rem 0.1875rem;
   border: 2px solid currentColor;
   border-radius: 6px;
   font-variant-numeric: tabular-nums;
@@ -221,31 +240,31 @@ select {
 }
 
 .placa small {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   opacity: 0.9;
 }
 
 .placa strong {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
 
 .placa.grande {
-  padding: 8px 22px 10px;
+  padding: 0.5rem 1.375rem 0.625rem;
   border-width: 3px;
   border-radius: 10px;
   color: var(--mata-forte);
 }
 
 .placa.grande small {
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .placa.grande strong {
-  font-size: 52px;
+  font-size: 3.25rem;
 }
 
 .placa.gestao {
@@ -256,7 +275,9 @@ select {
 .conteudo {
   flex: 1;
   width: 100%;
-  padding: 20px 16px 28px;
+  padding: 1.25rem 16px 1.75rem; /* px: margem lateral da página no celular (spec 3.3) */
+  /* A grade de apartamentos pergunta a largura daqui (container query, abaixo). */
+  container: conteudo / inline-size;
 }
 
 .conteudo:focus {
@@ -268,30 +289,30 @@ select {
 }
 
 h2 {
-  margin: 0 0 8px;
-  font-size: 26px;
+  margin: 0 0 0.5rem;
+  font-size: 1.625rem;
   line-height: 1.2;
 }
 
 h3 {
   margin: 0;
-  font-size: 19px;
+  font-size: 1.1875rem;
   line-height: 1.3;
 }
 
 p {
-  margin: 0 0 14px;
+  margin: 0 0 0.875rem;
 }
 
 .suave {
   color: var(--tinta-suave);
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .secao {
-  margin: 28px 0 10px;
+  margin: 1.75rem 0 0.625rem;
   color: var(--tinta);
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 700;
 }
 
@@ -315,16 +336,25 @@ p {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 3px;
+  gap: 0.1875rem;
   min-width: 0;
-  min-height: 64px;
-  padding: 10px 2px 8px;
+  min-height: 4rem;
+  padding: 0.625rem 0.125rem 0.5rem;
   color: var(--tinta-suave);
-  /* 15 px no mínimo (revisão, U10): a persona mais velha lê as abas sem óculos. */
-  font-size: 15px;
+  /* 15 px no mínimo (revisão, U10): a persona mais velha lê as abas sem óculos. Teto (M5, spec
+     3.5): quatro abas dividem a largura do celular, e "Documentos" não cabe numa aba de 90 px com
+     letra maior que uns 20 px; o 5.5vw segura a letra das abas no que cabe (no celular de 360 px,
+     até 20 px; no de 412 px, até 23 px). O resto da tela não tem teto. */
+  font-size: min(0.9375rem, 5.5vw);
   line-height: 1.15;
   text-align: center;
   text-decoration: none;
+}
+
+/* Cinco abas (gestão, com "Unidades"): cada uma tem 72 px no celular de 360 px, e o teto desce
+   para 4.3vw (15,5 px ali): "Documentos" é a palavra que precisa caber. */
+.nav:has(> a:nth-of-type(5)) a {
+  font-size: min(0.9375rem, 4.3vw);
 }
 
 .nav a[aria-current='page'] {
@@ -338,24 +368,24 @@ p {
   top: 0;
   left: 24%;
   right: 24%;
-  height: 3px;
+  height: 3px; /* px: marcador fino, como uma borda */
   border-radius: 0 0 3px 3px;
   background: var(--mata);
 }
 
 .nav .conta {
   position: absolute;
-  top: 7px;
-  left: calc(50% + 6px);
+  top: 0.4375rem;
+  left: calc(50% + 0.375rem);
   display: grid;
   place-items: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.3125rem;
   border-radius: 9px;
   background: var(--ipe);
   color: #17231c;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 
@@ -379,11 +409,12 @@ p {
 
 .item {
   display: grid;
-  grid-template-columns: 1fr auto;
+  /* minmax(0, …): palavra comprida no título quebra em vez de empurrar a seta para fora (M5). */
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px 12px;
-  min-height: 72px;
-  padding: 16px;
+  gap: 0.25rem 0.75rem;
+  min-height: 4.5rem;
+  padding: 1rem;
   border-top: 1px solid var(--linha);
   color: inherit;
   text-decoration: none;
@@ -399,7 +430,7 @@ a.item:hover {
 
 .item :is(h2, h3) {
   margin: 0;
-  font-size: 19px;
+  font-size: 1.1875rem;
   font-weight: 400;
   line-height: 1.3;
 }
@@ -413,9 +444,9 @@ a.item:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 12px;
+  gap: 0.25rem 0.75rem;
   color: var(--tinta-suave);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .item .seta {
@@ -427,8 +458,8 @@ a.item:hover {
 .selo {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 15px;
+  gap: 0.25rem;
+  font-size: 0.9375rem;
   font-weight: 700;
 }
 
@@ -438,8 +469,8 @@ a.item:hover {
 
 .selo.novo::before {
   content: '';
-  width: 9px;
-  height: 9px;
+  width: 0.5625rem;
+  height: 0.5625rem;
   border-radius: 50%;
   background: var(--mata);
 }
@@ -447,14 +478,14 @@ a.item:hover {
 .com-icone {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 /* aviso fixado: o único bloco que ganha cor de fundo no mural */
 .fixado {
   display: block;
-  margin-bottom: 20px;
-  padding: 16px;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
   border: 1px solid var(--ipe);
   border-radius: var(--r-medio);
   background: var(--ipe-suave);
@@ -465,15 +496,15 @@ a.item:hover {
 .fixado .rotulo {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-  font-size: 15px;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.9375rem;
   font-weight: 700;
 }
 
 .fixado h2 {
   margin: 0;
-  font-size: 19px;
+  font-size: 1.1875rem;
   line-height: 1.3;
 }
 
@@ -481,21 +512,21 @@ a.item:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 12px;
-  margin-top: 8px;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.5rem;
   color: var(--tinta-suave);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .fixado p {
-  margin: 6px 0 0;
+  margin: 0.375rem 0 0;
   color: var(--tinta-suave);
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .previa {
-  margin: 18px 0 0;
-  padding: 12px;
+  margin: 1.125rem 0 0;
+  padding: 0.75rem;
   border: 2px dashed var(--borda);
   border-radius: var(--r-medio);
 }
@@ -503,14 +534,14 @@ a.item:hover {
 /* ---------- formulário ---------- */
 label {
   display: block;
-  margin: 18px 0 6px;
+  margin: 1.125rem 0 0.375rem;
   font-weight: 700;
 }
 
 .ajuda {
-  margin: 6px 0 0;
+  margin: 0.375rem 0 0;
   color: var(--tinta-suave);
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 input[type='text'],
@@ -524,12 +555,12 @@ input[type='time'],
 textarea,
 select {
   width: 100%;
-  min-height: 54px;
-  padding: 12px 14px;
+  min-height: 3.375rem;
+  padding: 0.75rem 0.875rem;
   border: 2px solid var(--borda);
   border-radius: var(--r-pequeno);
   background: var(--folha);
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* Campo de uma linha com a mesma altura dos botões (56px). */
@@ -544,7 +575,7 @@ select {
     input[type='time'],
     select
   ) {
-  height: 56px;
+  height: 3.5rem;
   padding-block: 0;
 }
 
@@ -555,7 +586,7 @@ select:hover {
 }
 
 textarea {
-  min-height: 140px;
+  min-height: 8.75rem;
   resize: vertical;
 }
 
@@ -589,15 +620,15 @@ select:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0.5rem;
   width: 100%;
-  min-height: 56px;
-  padding: 12px 18px;
+  min-height: 3.5rem;
+  padding: 0.75rem 1.125rem;
   border: 2px solid var(--mata);
   border-radius: var(--r-pequeno);
   background: var(--mata);
   color: var(--sobre-mata);
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
@@ -637,14 +668,14 @@ select:focus-visible {
 }
 
 .botao + .botao {
-  margin-top: 12px;
+  margin-top: 0.75rem;
 }
 
 .texto-link {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 8px 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0;
   border: 0;
   background: none;
   color: var(--mata);
@@ -656,16 +687,16 @@ select:focus-visible {
 
 .aviso-caixa {
   display: flex;
-  gap: 10px;
-  margin: 16px 0;
-  padding: 14px;
+  gap: 0.625rem;
+  margin: 1rem 0;
+  padding: 0.875rem;
   border-radius: var(--r-medio);
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .aviso-caixa svg {
   flex: none;
-  margin-top: 2px;
+  margin-top: 0.125rem;
 }
 
 .aviso-caixa.atencao {
@@ -690,10 +721,10 @@ select:focus-visible {
 .opcao {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 60px;
-  margin: 0 0 10px;
-  padding: 12px 16px;
+  gap: 0.875rem;
+  min-height: 3.75rem;
+  margin: 0 0 0.625rem;
+  padding: 0.75rem 1rem;
   border: 2px solid var(--borda);
   border-radius: var(--r-pequeno);
   background: var(--folha);
@@ -703,8 +734,8 @@ select:focus-visible {
 
 .opcao input {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 1.5rem;
+  height: 1.5rem;
   margin: 0;
   accent-color: var(--mata);
 }
@@ -718,12 +749,12 @@ select:focus-visible {
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .chip {
-  min-height: 44px;
-  padding: 8px 16px;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
   border: 2px solid var(--borda);
   border-radius: 22px;
   background: var(--folha);
@@ -745,7 +776,7 @@ select:focus-visible {
 }
 
 .blocos legend {
-  margin: 18px 0 6px;
+  margin: 1.125rem 0 0.375rem;
   padding: 0;
   font-weight: 700;
 }
@@ -753,7 +784,7 @@ select:focus-visible {
 .blocos-op {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .blocos-op label {
@@ -762,19 +793,19 @@ select:focus-visible {
 
 .blocos-op input {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: 1px; /* px: escondido (só o leitor de tela) */
+  height: 1px; /* px: escondido */
   opacity: 0;
 }
 
 .blocos-op span {
   display: grid;
   place-items: center;
-  min-height: 56px;
+  min-height: 3.5rem;
   border: 2px solid var(--borda);
   border-radius: var(--r-pequeno);
   background: var(--folha);
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
@@ -793,7 +824,7 @@ select:focus-visible {
 }
 
 input.apto {
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
@@ -802,41 +833,50 @@ input.apto {
 /* ---------- painel de ativação ---------- */
 .resumo {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  /* Três lado a lado enquanto cabem; com letra grande, um embaixo do outro (M5). */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 6rem), 1fr));
+  gap: 0.625rem;
 }
 
 .resumo div {
-  padding: 12px 8px;
+  padding: 0.75rem 0.5rem;
   border: 1px solid var(--linha);
   border-radius: var(--r-medio);
   background: var(--folha);
-  font-size: 15px;
+  font-size: 0.9375rem;
   text-align: center;
 }
 
 .resumo b {
   display: block;
   color: var(--mata);
-  font-size: 28px;
+  font-size: 1.75rem;
   font-variant-numeric: tabular-nums;
 }
 
 .grade {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
+  gap: 0.25rem;
+}
+
+/* Letra grande (M5, spec 3.5): quando 8 casas de 2,25rem não cabem, cada andar vira 2 linhas
+   de 4 (o andar continua começando na linha dele). Com a letra de fábrica, nada muda. */
+@container conteudo (max-width: 19.75rem) {
+  .grade {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .grade a {
   display: grid;
   place-items: center;
-  min-height: 44px;
+  min-height: 2.75rem;
   border: 1px solid var(--borda);
   border-radius: 5px;
   background: var(--folha);
   color: var(--tinta-suave);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   text-decoration: none;
 }
@@ -858,30 +898,30 @@ input.apto {
 .legenda {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 16px;
-  margin: 12px 0 0;
+  gap: 0.375rem 1rem;
+  margin: 0.75rem 0 0;
   color: var(--tinta-suave);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .legenda span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .legenda i {
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
   border: 1px solid var(--linha);
   border-radius: 4px;
   background: var(--folha);
 }
 
 .ficha {
-  margin: 0 0 16px;
-  padding: 4px 16px;
+  margin: 0 0 1rem;
+  padding: 0.25rem 1rem;
   border: 1px solid var(--linha);
   border-radius: var(--r-medio);
   background: var(--folha);
@@ -889,11 +929,13 @@ input.apto {
 
 .ficha div {
   display: flex;
+  /* Com letra grande, o valor desce para baixo do rótulo em vez de vazar (M5). */
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 0;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
   border-top: 1px solid var(--linha);
-  font-size: 17px;
+  font-size: 1.0625rem;
 }
 
 .ficha div:first-child {
@@ -901,13 +943,18 @@ input.apto {
 }
 
 .ficha dt {
-  /* O rótulo não encolhe: quem quebra é o valor (U4). */
+  /* O rótulo não encolhe: quem quebra é o valor (U4). Com letra grande, nem o rótulo cabe: ele
+     quebra dentro da largura da ficha (M5). */
   flex: none;
+  max-width: 100%;
   color: var(--tinta-suave);
 }
 
 .ficha dd {
-  /* min-width: 0 + anywhere: e-mail longo quebra em vez de empurrar a tela (revisão, U4). */
+  /* min-width: 0 + anywhere: e-mail longo quebra em vez de empurrar a tela (revisão, U4).
+     flex 1 1 10rem: com a letra de fábrica, fica ao lado do rótulo como antes; quando rótulo e
+     10rem não cabem juntos (letra grande), desce para a linha de baixo (M5). */
+  flex: 1 1 10rem;
   min-width: 0;
   margin: 0;
   font-weight: 700;
@@ -917,14 +964,14 @@ input.apto {
 
 /* ---------- entrada ---------- */
 .entrada {
-  padding-top: 12px;
+  padding-top: 0.75rem;
   text-align: center;
 }
 
 .entrada h1.titulo {
-  margin: 14px 0 4px;
+  margin: 0.875rem 0 0.25rem;
   color: var(--mata-forte);
-  font-size: 30px;
+  font-size: 1.875rem;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -936,14 +983,14 @@ input.apto {
 /* ---------- botão flutuante e recado ---------- */
 .flutuante {
   position: fixed;
-  right: 16px;
-  bottom: 82px;
+  right: 1rem;
+  bottom: 5.125rem;
   z-index: 4;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 0 20px;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+  padding: 0 1.25rem;
   border-radius: 28px;
   background: var(--mata);
   color: var(--sobre-mata);
@@ -958,12 +1005,12 @@ input.apto {
      o título e o conteúdo, agora que ele só some quando a pessoa fecha (fechamento do M3). */
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
   border-radius: var(--r-medio);
   background: var(--tinta);
   color: var(--papel);
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 400;
 }
 
@@ -978,7 +1025,7 @@ input.apto {
 
 /* Na entrada (sem topo), o recado vem antes do conteúdo, com a margem da página. */
 .recado-lugar.solto {
-  padding: 16px 16px 0;
+  padding: 1rem 1rem 0;
 }
 
 .recado-texto {
@@ -988,9 +1035,9 @@ input.apto {
 
 .recado-fechar {
   flex: none;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 14px;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
   border: 1px solid var(--papel);
   border-radius: var(--r-medio);
   background: transparent;
@@ -1002,7 +1049,7 @@ input.apto {
 
 .vazio {
   margin: 0;
-  padding: 32px 8px;
+  padding: 2rem 0.5rem;
   color: var(--tinta-suave);
   text-align: center;
 }
@@ -1014,7 +1061,7 @@ input.apto {
 details summary {
   display: flex;
   align-items: center;
-  min-height: 44px;
+  min-height: 2.75rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -1022,22 +1069,22 @@ details summary {
 details summary::after {
   content: '';
   flex: none;
-  width: 10px;
-  height: 10px;
+  width: 0.625rem;
+  height: 0.625rem;
   margin-left: auto;
   border: solid currentColor;
   border-width: 0 2.5px 2.5px 0;
-  transform: rotate(45deg) translate(-3px, -3px);
+  transform: rotate(45deg) translate(-0.1875rem, -0.1875rem);
 }
 
 details[open] > summary::after {
-  transform: rotate(-135deg) translate(-3px, -3px);
+  transform: rotate(-135deg) translate(-0.1875rem, -0.1875rem);
 }
 
 .oculto {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: 1px; /* px: escondido (só o leitor de tela) */
+  height: 1px; /* px: escondido */
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
@@ -1050,10 +1097,10 @@ details[open] > summary::after {
 /* ============================================================
    Computador (≥ 900 px): menu lateral verde e coluna de leitura de até 720 px
    ============================================================ */
-@media (min-width: 900px) {
+@media (min-width: 56.25em) {
   .app {
     display: grid;
-    grid-template-columns: 264px 1fr;
+    grid-template-columns: 16.5rem 1fr;
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas:
       'nav topo'
@@ -1069,7 +1116,7 @@ details[open] > summary::after {
 
   .topo {
     grid-area: topo;
-    padding: 14px 40px;
+    padding: 0.875rem 2.5rem;
     border-bottom: 1px solid var(--linha);
     background: var(--folha);
     color: var(--tinta);
@@ -1081,7 +1128,7 @@ details[open] > summary::after {
 
   .conteudo {
     grid-area: main;
-    padding: 32px max(40px, calc((100% - 720px) / 2)) 48px;
+    padding: 2rem max(2.5rem, calc((100% - 45rem) / 2)) 3rem;
   }
 
   .nav,
@@ -1091,9 +1138,9 @@ details[open] > summary::after {
     top: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
     height: 100dvh;
-    padding: 20px 14px;
+    padding: 1.25rem 0.875rem;
     border-top: 0;
     background: var(--mata);
   }
@@ -1104,17 +1151,19 @@ details[open] > summary::after {
     background: var(--folha);
   }
 
-  .nav a {
+  /* No menu lateral não há teto: o seletor de cinco abas entra aqui só para perder para este. */
+  .nav a,
+  .nav:has(> a:nth-of-type(5)) a {
     flex: 0;
     flex-direction: row;
     justify-content: flex-start;
     align-items: center;
-    gap: 12px;
-    min-height: 52px;
-    padding: 0 14px;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    padding: 0 0.875rem;
     border-radius: var(--r-pequeno);
     color: var(--sobre-mata);
-    font-size: 17px;
+    font-size: 1.0625rem;
     text-align: left;
     opacity: 0.88;
   }
@@ -1141,11 +1190,11 @@ details[open] > summary::after {
   }
 
   .nav a[aria-current='page']::before {
-    top: 12px;
-    bottom: 12px;
+    top: 0.75rem;
+    bottom: 0.75rem;
     left: 0;
     right: auto;
-    width: 4px;
+    width: 0.25rem;
     height: auto;
     border-radius: 0 3px 3px 0;
     background: var(--ipe);
@@ -1158,29 +1207,29 @@ details[open] > summary::after {
 
   .nav-marca {
     display: block;
-    padding: 0 4px 22px;
+    padding: 0 0.25rem 1.375rem;
   }
 
   .nav-placa {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0.75rem;
     margin-top: auto;
-    padding: 16px 14px 4px;
+    padding: 1rem 0.875rem 0.25rem;
     color: var(--sobre-mata);
-    font-size: 15px;
+    font-size: 0.9375rem;
   }
 
   .flutuante {
-    right: 40px;
-    bottom: 32px;
+    right: 2.5rem;
+    bottom: 2rem;
   }
 
 
   .lado {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 24px;
+    gap: 0 1.5rem;
   }
 
   .so-pc {

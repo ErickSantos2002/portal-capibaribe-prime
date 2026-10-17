@@ -1,5 +1,7 @@
 // Ícones do protótipo: SVG de traço único (2 px), um estilo só, sempre ao lado de texto.
 // O desenho de cada um é constante do código (nunca dado de fora), por isso o innerHTML é seguro.
+// O tamanho é em px de desenho e o SVG mede em rem: cresce com a letra (M5, spec m5-letra, 3.4).
+import { emRem } from './emRem'
 
 const DESENHOS = {
   avisos:
@@ -59,8 +61,8 @@ interface Props {
 export function Icone({ nome, tamanho = 24, rotulo }: Props) {
   return (
     <svg
-      width={tamanho}
-      height={tamanho}
+      width={emRem(tamanho)}
+      height={emRem(tamanho)}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

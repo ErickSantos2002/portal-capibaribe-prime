@@ -7,7 +7,7 @@
 
 :root[data-tema='escuro'] {
   --logo-fundo: #ffffff;
-  --logo-respiro: 14px 18px;
+  --logo-respiro: 0.875rem 1.125rem;
 }
 
 .logo {
@@ -21,18 +21,18 @@
 
 .logo img {
   display: block;
-  width: 220px;
+  width: 220px; /* px: imagem (o logo não cresce com a letra; spec 3.3) */
   max-width: 100%;
   height: auto;
 }
 
 .logo.pequeno img {
-  width: 148px;
+  width: 148px; /* px: imagem */
 }
 
-@media (min-width: 900px) {
+@media (min-width: 56.25em) {
   .logo:not(.pequeno) img {
-    width: 260px;
+    width: 260px; /* px: imagem */
   }
 }
 
@@ -40,12 +40,12 @@
    ali ele vai sempre num cartão claro, nos dois temas. */
 .logo.cartao {
   display: block;
-  padding: 12px 14px;
+  padding: 0.75rem 0.875rem;
   background: #ffffff;
 }
 
 .logo.cartao img {
   width: 100%;
-  max-width: 190px;
+  max-width: 190px; /* px: imagem */
   margin: 0 auto;
 }
