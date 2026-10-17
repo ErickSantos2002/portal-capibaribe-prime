@@ -41,7 +41,10 @@ confirma; está no plano (tarefa 6) e nas dúvidas.
   zoom da página inteira que o Windows fazia e o aumento automático de texto no celular.
   [Chrome 146 release notes](https://developer.chrome.com/release-notes/146)
 - **FATO.** Media query em `em`/`rem` é medida pelo tamanho **inicial** da fonte (não pelo do
-  `html` do autor), então ela também acompanha a escala quando a meta está lá.
+  `html` do autor), então ela também acompanha a escala quando a meta está lá. **No iPhone, não**
+  (revisões do M5, R1): lá a letra chega pelo `font: -apple-system-body` do `html`, que é do
+  autor, e o tamanho inicial continua o de fábrica. Por isso o Portal não usa media query de
+  tamanho (seção 3.7).
   [Media Queries 4, §1.3 "Units"](https://www.w3.org/TR/mediaqueries-4/#units) ·
   [Josh Tumath, "Let's fix the web's text size" (jul/2026)](https://www.joshtumath.uk/posts/2026-07-02-lets-fix-the-webs-text-size/)
 - **FATO (contexto).** O Firefox do Android já segue o tamanho do sistema fazendo **zoom da
@@ -113,14 +116,21 @@ corta ou encavala:
 
 | Propriedade | Por quê |
 |---|---|
-| `border`, `border-*-width` | espessura de linha não precisa crescer |
+| `border`, `border-*-width` (até 4 px) | espessura de linha não precisa crescer |
 | `border-radius` e os tokens `--r-pequeno`, `--r-medio` | canto |
-| `outline`, `outline-offset` (foco) | o anel de foco já é bem visível em 3 px |
-| `box-shadow`, `text-shadow`, token `--sombra` | sombra |
-| `text-underline-offset`, `text-decoration-thickness` | sublinhado |
+| `outline`, `outline-offset` (foco, até 4 px) | o anel de foco já é bem visível em 3 px |
+| token `--sombra` | sombra fina do cartão |
+| `text-underline-offset`, `text-decoration-thickness` (até 4 px) | sublinhado |
 
-**Com o comentário `/* px: motivo */`** na mesma declaração (antes ou logo depois do `;`, na mesma
-linha). Motivos aceitos:
+Desde as revisões (R6): a guarda pega também `pt`, `pc`, `cm`, `mm`, `in` e `q`, em maiúscula ou
+minúscula; espessura acima de 4 px é bloco, não linha, e vai em rem (a faixa colorida de 5 e 6 px
+dos avisos e da faixa de notificações); sombra fora do token vai em rem (`inset 0 -0.25rem 0`, a
+barrinha da placa e da grade); `vw`/`vh` na letra só como o teto `min(<rem>, <vw>)`; `var()` na
+letra com token em unidade absoluta não passa; e ela lê também o `<style>` do `index.html` e os
+`style={{…}}` dos `.tsx` (número puro em medida é px no React).
+
+**Com o comentário `/* px: motivo */`** na MESMA linha do px (antes da declaração ou logo depois
+do `;`); numa declaração em várias linhas, cada linha com px precisa do seu. Motivos aceitos:
 - **margem lateral da página no celular** (`.conteudo` e `.topo`, 16 px): com a letra a 200 %,
   `2rem` de cada lado comeriam 64 px da largura de leitura de um celular de 360 px;
 - **imagem** (logo, miniatura de foto): imagem não é texto, e crescer só empurraria o conteúdo;
@@ -131,9 +141,12 @@ linha). Motivos aceitos:
 
 ### 3.4 Ícones e estilos nos `.tsx`
 - Ícones SVG (`Icone`, e os ícones próprios de `avisos/IconesAnexo.tsx` e dos documentos):
-  **crescem com a letra**. O `tamanho` continua em px de desenho (24 = com a letra de fábrica) e
-  o SVG recebe `width`/`height` em rem pelo `emRem` de `web/src/casca/emRem.ts` (24 → `1.5rem`).
-  Com a letra de fábrica, o tamanho é o mesmo de antes.
+  **crescem com a letra**. O `tamanho` continua em px de desenho (24 = com a letra de fábrica).
+  Desde as revisões (R3), os atributos `width`/`height` ficam em **número** (o WebKit antigo não
+  lê rem num atributo de SVG) e a medida em rem vai pelo CSS: `tamanhoDoIcone` de
+  `web/src/casca/emRem.ts` põe a classe `icone` e a variável `--icone: 1.5rem`, e o `estilo.css`
+  tem `.icone { width: var(--icone); height: var(--icone) }`. Com a letra de fábrica, o mesmo
+  tamanho de antes.
 - Estilo inline com tamanho em px: o único `style={{…}}` do `web/src` é a largura em `%` da barra
   de resultado da enquete (`EnqueteAberta.tsx`), que não muda. Os `width`/`height` do `<img>` do
   logo (`Logo.tsx`) só reservam a proporção (o CSS manda no tamanho) e ficam.
@@ -171,12 +184,21 @@ linha). Motivos aceitos:
   Hyperlegible), `font-size: 1.125rem` e `line-height: 1.5`, então a família e o ritmo da casa
   voltam no body e o resto da página herda deles.
 
-### 3.7 Layout de 2 colunas
-`@media (min-width: 900px)` vira **`@media (min-width: 56.25em)`** (media query sempre em `em`, a
-unidade que todo navegador mede pelo tamanho inicial). Com letra de fábrica, nada muda; com letra
-a 150 % (24 px), o menu lateral só aparece a partir de 1350 px de janela, e a 200 %, de 1800 px:
-num notebook de 1280 px, letra grande dá o layout de celular, com uma coluna só, que é o desejado
-(a letra grande cabe, e as abas de baixo ficam). O mesmo vale para qualquer outra media query.
+### 3.7 Layout de 2 colunas (e qualquer outra largura que dependa da letra)
+`@media (min-width: 900px)` vira **`@container raiz (min-width: 56.25rem)`**: container query em
+`rem` sobre a página (`#root { container: raiz / inline-size }`). Era `@media (min-width:
+56.25em)` até as revisões (R1): a media query em `em` é medida pelo tamanho **inicial** da fonte
+(Media Queries 4, §1.3), que acompanha a meta `text-scale` do Android e a "Tamanho da fonte" do
+navegador, mas **não** o Dynamic Type do iPhone, que chega pela declaração `font:
+-apple-system-body` do `html` (3.6). O `rem` de uma container query é o do `html`, e acompanha
+nos três. Com letra de fábrica, nada muda; com letra a 150 % (24 px), o menu lateral só aparece a
+partir de 1350 px de janela, e a 200 %, de 1800 px: num notebook de 1280 px, letra grande dá o
+layout de celular, com uma coluna só, que é o desejado (a letra grande cabe, e as abas de baixo
+ficam); a coluna de leitura continua com 45rem, centralizada (U5). O mesmo vale para as outras
+larguras (`22rem` das abas, `37.5rem`, `45rem`). O que não é largura (a altura da tela, o topo)
+usa as marcas que `web/src/casca/letra.ts` põe no `html`: `data-letra="grande"` (a raiz com 20 px
+ou mais) e `data-altura="baixa"` (menos de 35 letras de altura). A guarda recusa media query de
+tamanho em qualquer unidade.
 
 ## 4. Tabela de conversão (1rem = 16 px)
 

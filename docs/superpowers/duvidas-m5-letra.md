@@ -480,3 +480,225 @@ Telas com o problema (e quantos achados, quando difere):
 - **Não conferido:** tema escuro, e aparelho real (tarefa 6 do plano, do coordenador).
 - **De passagem:** com `PENDENTES` vazio depois do merge dos três grupos, o `tsc -b` acusava
   `never` no `letra.test.ts`; o `Set` ganhou o tipo (`new Set<string>`). Nada muda no teste.
+
+## Revisões
+
+Duas revisões independentes (R = código, U = uso) depois da costura. Tudo em `m5/integrado`; a
+direção do topo (A) foi decidida pelo coordenador. Testes novos: `web/src/casca/letra.test.tsx`
+(detector), `casca/topo-letra.test.tsx` (topo e recado), `casca/rolar.test.ts`,
+`casca/contato.test.tsx`, `web/testes/revisoes-m5.test.ts` (14 regras de CSS: as 14 falham com os
+CSS de `ee10594` e passam agora) e o `letra.test.ts` reescrito (R6).
+
+### A. Topo com letra grande: faixa fixa fina e título no conteúdo (R1, R2, U1, U2, C5)
+- **O que mudou:** com `data-letra="grande"` no `html`, a `Tela` desenha o topo como faixa
+  (`header.topo.faixa`): voltar **ou** a placa à esquerda, tema à direita, numa linha, e o
+  recado (`.recado-lugar`) dentro dela. O `h1` vai para o começo do `main` (`.titulo-tela`),
+  rolando com a página; continua o título da página (recebe o foco a cada tela, `tabindex -1`) e
+  o "Pular para o conteúdo" cai nele. Com a letra de fábrica, o DOM e o desenho do topo são os de
+  antes (prints iguais a 16 px, fora o documento aberto, abaixo).
+- **A placa fica na faixa:** "só voltar e tema" vale para as telas de detalhe; nas de cima (sem
+  voltar), a placa ocupa o lugar do voltar. Ela é mais baixa que o botão de tema (2.75rem), então
+  a faixa não cresce, e é o elemento-assinatura do Portal.
+- **Também no layout de computador com letra grande** (1366 × 768 a 150 %, monitor de 1920 a
+  150 %): a mesma faixa (sem a placa, que o computador já escondia do topo) e o título no
+  conteúdo. Separar os dois casos exigiria o React saber o layout; o desenho funciona nos dois.
+- **Removido** o `@media (max-height: 35em)` que soltava o topo: com ele, o recado e o voltar
+  sumiam ao rolar. O topo é sempre fixo; com o celular deitado e a letra de fábrica, volta a ser
+  o topo fixo de antes (64 px).
+- **Conferido no navegador:** a 360 px e 200 %, rolando "Quem leu" até o fim e tocando em
+  "Copiar a lista", o recado aparece na faixa, no alto da tela (112 a 416 px).
+- **Documento aberto (U17), mudança visível a 16 px, de propósito:** o topo diz só
+  **"Documento"**, nas duas letras; o título inteiro está na folha, logo abaixo, agora como `h2`
+  (era `p`, mesmo desenho), e na aba do navegador (`tituloDaAba` da `Tela`). O `line-clamp` do
+  topo saiu. A 16 px: uma linha no topo em vez de duas cortadas ("Relatório mensal de…") e a
+  página sobe ~6 px (morador, gestão; o documento público aberto sem entrar também).
+- **Primeira tela:** a 150 % num iPhone (390 × 844), o "Abrir o documento" termina em 827 px (era
+  892, fora da tela): com letra grande a folha tem menos respiro (0.875rem/0.75rem) e o título
+  da tela fica mais junto da faixa.
+
+### R1. "Letra grande" que vale também no iPhone
+- **Por quê:** no iPhone o Dynamic Type chega pela declaração `font: -apple-system-body` do
+  `html`; media query em `em` é medida pelo tamanho **inicial** (Media Queries 4, §1.3) e lá não
+  acompanha. A spec 3.7 dizia o contrário ("a unidade que todo navegador mede pelo tamanho
+  inicial" como vantagem): corrigida, com o porquê (spec 2.1 e 3.7).
+- **Larguras:** `#root { container: raiz / inline-size }`, e todas as media queries de largura
+  viraram `@container raiz (…rem)`: `56.25em` (estilo, marca, sobre, enquetes), `22em` (abas),
+  `45em` (anexos), `37.5em` (anexos, gestão, documentos). O `rem` da container query é o do
+  `html`. A largura do `#root` não conta a barra de rolagem (a media query contava): num
+  navegador de computador com barra clássica, o layout de 2 colunas passa a valer ~15 px de
+  janela depois. Nos prints (Chrome sem barra), igual.
+- **Altura e topo:** `web/src/casca/letra.ts` marca o `html` com `data-letra="grande"` (raiz ≥
+  20 px) e `data-altura="baixa"` (janela < 35 letras de altura), lendo o `font-size` calculado do
+  `html`; uma régua invisível de 1rem (`ResizeObserver`) e o `resize` da janela remarcam quando a
+  letra ou a tela mudam com o Portal aberto; `useLetraGrande()` (`useSyncExternalStore`) é o que
+  a `Tela` lê. Roda no `main.tsx`, antes do primeiro desenho. "O que mudou" numa tela baixa
+  (G2-3) usa `data-altura`.
+- **Por que 20 px (125 %):** ficam no desenho de fábrica o "Grande" do iPhone (17 px, o padrão),
+  o passo seguinte (19 px) e o 115 % do Android (18,4); passam para letra grande o 130 % do
+  Android (20,8), o "Grande" do Chrome de computador (20) e o "Extra Grande" do iPhone (21) em
+  diante.
+- **Conferido:** o botão flutuante (`position: fixed`) continua preso à janela com o `#root`
+  contêiner (no Chrome, `container-type` não faz o contêiner virar bloco de contenção de `fixed`).
+- **A TESTAR no aparelho:** Safari < 16 não tem container query (o layout fica o de celular, sem
+  os lado a lado de 37.5/45rem: degrada para uma coluna), e o Safari 16 tinha contenção de layout
+  no `container-type` (o flutuante ficaria preso ao fim da página; conferir num iPhone com iOS
+  16, se houver); e o detector com o Dynamic Type trocado com o Portal aberto.
+- **Guarda:** o `letra.test.ts` recusa media query de tamanho em qualquer unidade e container
+  query em `em`.
+
+### R2. O recado na faixa fixa
+- `topo-letra.test.tsx`: com letra grande o recado está dentro do `header.topo.faixa`, não no
+  conteúdo; `costura-m5` e `revisoes-m5`: o `.topo` é `sticky`, a faixa não muda o `position` e
+  não há mais `@media (max-height` no comum.
+
+### R3. Ícones com atributo em número
+- `width`/`height` em número (24) e a medida em rem pelo CSS (`.icone { width: var(--icone) }`,
+  `--icone: 1.5rem` no `style`), no `Icone`, no `IconeAnexo` e no `IconeDoc`, pelo
+  `tamanhoDoIcone` de `casca/emRem.ts`. Variável, não `style={{ width }}`: o inline venceria as
+  regras mais específicas que mudam um ícone (a seta menor das listas com letra grande, C4). O
+  React aplica o `style` pelo CSSOM, que a CSP (`default-src 'self'`) não bloqueia (como a barra
+  da enquete). Testes dos três ícones ajustados.
+
+### R4 + U10. Número de não lidos na aba
+- A letra do número tem o teto da letra das abas (`min(0.8125rem, 4.75vw)`, a proporção 13/15 do
+  5.5vw da dúvida 1), a plaquinha é medida em `em` sobre ela (`width: max-content`, senão o "120"
+  vazava), e na aba estreita (`@container raiz (max-width: 22rem)`) ela fica presa no canto de
+  cima, à direita, sobre a ponta do ícone. **Medido** a 360 px (aba de 76 a 90 px), com 1, 12 e
+  120 não lidos, a 16, 24 e 32: dentro da aba nos 9 casos, e sobre o ícone só 8 px de altura (o
+  canto). A 16 px, posição e tamanho de antes. O Portal não tem "99+": mostra o número da API.
+
+### R5. Painel a 320 px e 200 %
+- As cinco abas com `min-content` somavam 329 px (o respiro de 0.125rem de cada lado). Com cinco
+  abas na tela estreita, o respiro cai para 0.0625rem: 320 px sem rolagem a 24 e 32, com 3 a
+  4 px entre "Enquetes" e "Documentos" (medido; 320 não está na rodada). Com quatro abas, o de
+  antes (C6: 6 a 8 px). Zerar o respiro de todas, a primeira tentativa, deixava "Enquetes" e
+  "Documentos" a 1 px no mural a 360.
+
+### R6. Guarda `letra.test.ts`
+- Fechados, cada um com teste de exemplo e com mutação real num arquivo do Portal (o teste
+  falhou nas 10 mutações e voltou a passar): `px|pt|pc|cm|mm|in|q` sem diferenciar maiúscula;
+  `vw`/`vh` na letra fora de `min(rem, vw)`; `var()` na letra com token absoluto (mesmo o token
+  liberado por comentário); teto de 4 px em borda, contorno e sublinhado; sombra em px só no
+  token `--sombra`; `/* px: */` só na mesma linha do px; `style={{}}` com px (ou número puro) nos
+  `.tsx`; o `<style>` do `index.html`; e media query de tamanho (R1).
+- **No CSS, por causa dela:** sombras em rem (`inset 0 -0.25rem 0` da placa, da grade, dos
+  blocos, da categoria e da enquete; a do flutuante e a da janela) e as faixas coloridas de 5 e
+  6 px (cartão do aviso, faixa de notificações) em rem. A 16 px, os mesmos pixels.
+
+### R7. `ambiente-conferencia.sh`
+- `subir` chama `descer` no começo e tem `trap … ERR` (e desce também quando a API não
+  responde); API e preview sobem com `setsid`, e o `descer` mata o grupo inteiro e a árvore
+  (`pgrep -P`), não só o pid do `uv run`/`npm exec`. **Conferido:** dois `subir` seguidos; ficaram
+  só os processos do segundo (o python e o node do primeiro morreram).
+
+### U3. Confirmação mais alta que a tela
+- `centralizar()` usa `block: 'start'` quando o bloco é mais alto que a altura visível (janela
+  menos o `scroll-padding` de cima e de baixo). `rolar.test.ts`.
+
+### U4. Menu lateral mais alto que a tela
+- `overflow-y: auto` no `.nav` do computador: a 1366 × 768 e 150 %, ele mede 859 px numa janela
+  de 768 e rola; o último item, a placa e a versão ficam alcançáveis. 1366 × 768 entrou na
+  conferência (o `--larguras` aceita `LxA`: `360,390x844,1280,1366x768`).
+
+### U5. Layout de celular numa tela larga
+- No layout de celular, o conteúdo, o que está dentro do topo e as abas de baixo ficam numa
+  coluna de 45rem centralizada (`max(16px, calc((100% - 45rem) / 2))`; o fundo das barras segue
+  de ponta a ponta), e o flutuante acompanha a coluna. Num celular, nada muda. **Muda a 16 px**
+  numa janela entre 752 e 899 px (tablet em pé): a coluna fica com 720 px em vez da largura
+  toda. Fora da rodada.
+
+### U6. Valores da ficha (Minha unidade, ficha da unidade, lista do painel)
+- `casca/Contato.tsx`: `Celular` deixa o número (sem o DDD) numa linha só (`.fone-numero`,
+  `nowrap`): só o "(81)" pode ficar na linha de cima. O número inteiro em `nowrap` passaria da
+  borda a 200 % num celular de 360 (~280 px numa ficha de 264). `Email` põe `<wbr>` depois do
+  `@` e antes de cada ponto (o texto copiado é o mesmo) e nunca ganha hífen.
+- **Mudança visível a 16 px, de propósito:** o e-mail na ficha da unidade e em Minha unidade
+  quebra em "gabriela.rangel.1101@" / "example.com" (era "…@exampl" / "e.com").
+- Com letra grande (`@container conteudo (max-width: 17.5rem)`), rótulo e valor um embaixo do
+  outro, os dois à esquerda.
+
+### U7. Hifenização e a confirmação da ficha
+- **Pesquisa (dados de compatibilidade do MDN, `css/properties/hyphens.json`):** `hyphens: auto`
+  no Chrome do Android desde o 55 e no de computador desde o 88; dicionário de português ("pt,
+  pt-*") no Chrome 87+ (o do Android segue o Chrome) e no Safari 9.1+ (o do iPhone segue o
+  Safari); Safari < 17 só com `-webkit-hyphens`. Só hifeniza com o `lang` certo e o dicionário
+  disponível (MDN); o `<html lang="pt-BR">` já existe. Confiável: usado.
+- **Decisão:** `hyphens: auto` em títulos e texto corrido, **só com letra grande** (com a de
+  fábrica mudaria a quebra de textos que hoje cabem), em palavra de 11 letras ou mais, 4 antes e
+  3 depois do hífen (`hyphenate-limit-chars`): "se-nha", "Co-missão" e "Ca-pibaribe" liam pior
+  que a palavra inteira na linha de baixo. Endereço, e-mail e telefone nunca ("portal-capi-
+  baribe"). "Representante/s" virou "Representan-/tes".
+- **Conferência:** o Chrome do Linux baixa os dicionários como componente, e o perfil temporário
+  nascia sem eles; o `conferir-letra.mjs` copia o `hyphen-data` do Chrome do sistema e deixa o
+  carregador de componentes ligado. A quebra numa caixa com `hyphens: auto` aparece à parte no
+  resumo ("hifenizada, não conta").
+- **Confirmação da ficha:** com letra grande, padding de 0.625rem/0.5rem e recuo da lista de 1rem
+  (eram 1rem e 1.375rem). Não abre na conferência (precisa do toque); a regra é a do comum.
+
+### U8. Grade de apartamentos com 4 colunas
+- **Painel:** em 4 colunas, cada andar ganha o rótulo em cima ("7º andar", "Térreo";
+  `aria-hidden`, cada casa já diz o apartamento) na linha inteira; com 8 colunas não aparece. As
+  casas continuam com 2.75rem (44 px) de altura. **"Quem leu" e "Votantes", não:** ali a grade
+  lista só quem leu ou votou (um subconjunto), e a linha nunca foi um andar.
+- **Os 3 números do painel:** com letra grande, uma coluna só, uma linha compacta cada ("128 já entraram"),
+  número a 1.375rem, à esquerda.
+
+### U9. Caixa de recado, erro e atenção com ícone
+- Com letra grande, `.aviso-caixa` empilha (ícone em cima, texto com a largura toda). O recado
+  do topo (sem ícone) deixa o "Fechar" descer para baixo da frase quando não cabe ao lado.
+
+### U11. Espaço entre os grupos do formulário · mudança visível a 16 px, de propósito
+- Token `--entre-grupos: 1.5rem` (era 1.125rem) no `label` e nas legendas; o rótulo continua a
+  0.375rem do campo dele. **Achado:** a legenda de um `fieldset` ignora a margem de cima (fica na
+  borda dele): "Categoria" (novo aviso), "Bloco" (entrar) e as legendas da nova enquete ficavam
+  a 0 px do campo de cima. Agora o espaço vai como `padding-top` da legenda. Muda a 16 px em todo
+  formulário: entrar, primeiro acesso, esqueci a senha, novo aviso, novo documento, nova enquete
+  (de 24 a 54 px mais altos).
+
+### Mural com letra grande
+- O resumo do cartão e o do fixado em até 3 linhas (`line-clamp`; o texto inteiro está no aviso
+  aberto). A faixa "Falta um passo": sem o sino, menos respiro e botões com a altura mínima de alvo
+  (2.75rem).
+
+### Rodada final
+`conferir-letra.mjs`, 28 telas, `--larguras 360,390x844,1280,1366x768 --temas claro,escuro`,
+letra 16/24/32: 672 prints (`/tmp/portal-letra-rev-final/`; o painel de novo em
+`/tmp/portal-letra-rev-final2/`, depois do último ajuste dos 3 números). Container
+`m5-letra-rev`. "Antes" = `ee10594` com o script novo (`/tmp/portal-letra-rev-antes/`), que já
+dava zero nas medidas automáticas: os achados das revisões eram de desenho, vistos nos prints.
+
+| fonte | largura | rolagem | fora | cortado | ícone encolhido | palavra quebrada | alvo < 44 | letra mediana |
+|---|---|---|---|---|---|---|---|---|
+| 16 | 360 | 0 | 0 | 0 | 0 | 0 | 4 (painel e "Quem leu", claro e escuro) | 18 |
+| 16 | 390 × 844 | 0 | 0 | 0 | 0 | 0 | 4 (os mesmos) | 18 |
+| 16 | 1280 | 0 | 0 | 0 | 0 | 0 | 0 | 17 |
+| 16 | 1366 × 768 | 0 | 0 | 0 | 0 | 0 | 0 | 17 |
+| 24 | 360 / 390 / 1280 / 1366 | 0 | 0 | 0 | 0 | 0 | 0 | 27 / 27 / 27 / 25,5 |
+| 32 | 360 / 390 / 1280 / 1366 | 0 | 0 | 0 | 0 | 0 | 0 | 36 |
+
+- **Alvos < 44:** só a grade de apartamentos de 38 × 44 a 360/390 px com a letra de fábrica, a
+  mesma de antes (dúvida 4). Nenhum novo.
+- **Palavra hifenizada (não conta):** listada à parte no resumo; olhada nos prints, é a quebra
+  na sílaba com hífen ("Representan-tes", "acompanha-mento", "notifi-cações").
+- **16 px, `comparar-prints` (claro e escuro, 112 cada):** 70 iguais e 42 diferentes, todos de
+  propósito ou dado: documento aberto e documento da gestão (topo "Documento", A), entrar,
+  primeiro acesso, esqueci a senha, novo aviso, novo documento e nova enquete (U11), ficha da
+  unidade e Minha unidade (e-mail, U6; em Minha unidade também o horário do "aparelho
+  conectado") e "O que mudou" a 1280/1366 (o horário do aparelho na página de trás, dado). O
+  painel, o mural e todo o resto: iguais.
+- **Olhados os prints a 24 e 32** das telas mexidas (mural, painel, ficha, Minha unidade,
+  documento, aviso, entrar, novo aviso, enquete, receber os avisos, "O que mudou"), claro e
+  escuro, e a 1280/1366 (coluna centralizada; faixa no layout de computador).
+- **Fora da rodada, medidos com sonda própria:** abas a 320/360/412 px com 4 e 5 abas (R5),
+  número de não lidos com 1, 12 e 120 (R4), o recado com a página rolada (A), o flutuante
+  (R1), o menu lateral a 1366 × 768 (U4) e o "Abrir o documento" a 390 × 844 (A).
+- **Suíte:** `npm test` (vitest 681, node --test 77), `npm run lint` e `npx tsc -b` verdes.
+
+### Dúvidas novas para o Erick
+- **[Erick] Topo no computador com letra grande:** a faixa (só tema, o título no conteúdo) vale
+  também no layout de computador quando a letra é grande; lá o topo de antes cabia. Dá para
+  restringir ao celular se ele preferir.
+- **[Erick] Hifenização com letra grande:** "Representan-tes" em vez de cortar sem hífen. Se a
+  Dona Socorro estranhar o hífen, é tirar uma regra.
+- **[Erick] Espaço entre os grupos (U11) e o topo do documento ("Documento")**: as duas mudanças
+  visíveis com a letra de fábrica.
