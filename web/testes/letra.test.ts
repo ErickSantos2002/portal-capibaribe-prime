@@ -16,9 +16,6 @@ const PENDENTES = new Set([
   'avisos/avisos.css',
   'avisos/anexos.css',
   // G2
-  'documentos/documentos.css',
-  'sobre/sobre.css',
-  'notificacoes/notificacoes.css',
   // G3
   'enquetes/gestao/gestao.css',
   'enquetes/votar/enquetes.css',
