@@ -10,8 +10,11 @@
 # Ex.: scripts/dev/ambiente-conferencia.sh subir m5-letra 55470 8170 5170
 #      → container portal-pg-<nome>, Portal em http://127.0.0.1:<porta-web>
 #
-# Só dados fictícios (RNF-16): nada de produção, Neon, R2 ou e-mail. Os arquivos (M3) ficam
-# desligados, então as telas de documento mostram a lista sem arquivo para abrir.
+# Só dados fictícios (RNF-16): nada de produção, Neon, R2 ou e-mail. Os arquivos (M3) vão para
+# um bucket de mentira, em memória (scripts/dev/api-conferencia.py), então dá para semear
+# documentos e anexos (conferir-letra.mjs --semear); e o push fica ligado com um par VAPID
+# gerado na hora (nenhuma notificação sai: ninguém se inscreve), para a faixa "Falta um passo"
+# e o "Receber os avisos" aparecerem como para o morador.
 # Os logs da API e do preview ficam em /tmp/portal-<nome>-{api,web}.log.
 set -euo pipefail
 
@@ -74,9 +77,14 @@ cd "$raiz/api"
 uv run --frozen alembic upgrade head >/dev/null
 uv run --frozen python -m app.comandos.carga_inicial
 uv run --frozen python -m app.comandos.dados_ficticios
+# Par VAPID só deste ambiente, nunca gravado: some quando o processo da API acaba.
+PORTAL_VAPID_PRIVADA="$(uv run --frozen python -m app.comandos.gerar_chaves_vapid |
+  sed -n 's/^PORTAL_VAPID_PRIVADA=//p')"
+export PORTAL_VAPID_PRIVADA
+export PORTAL_VAPID_CONTATO="mailto:conferencia@example.com"
 
 : >"$pids"
-nohup uv run --frozen uvicorn app.main:app --host 127.0.0.1 --port "$porta_api" \
+PYTHONPATH="$raiz/api" nohup uv run --frozen python "$raiz/scripts/dev/api-conferencia.py" --port "$porta_api" \
   >"/tmp/portal-$nome-api.log" 2>&1 &
 echo $! >>"$pids"
 
