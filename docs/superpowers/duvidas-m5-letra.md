@@ -260,3 +260,85 @@ tabela; o que mudou foi por tela (a letra da janela "O que mudou" estava parada 
 horário e a quantidade de "aparelhos conectados" em Minha unidade) e no ícone da G2-4.
 
 ## G3 · enquetes, acesso, recuperação, administração
+
+Branch `m5/letra-g3`. Os cinco CSS em rem (primeira passada com `px-para-rem.mjs`, depois linha a
+linha): sobrou px só em borda, canto, contorno de foco, sombra e sublinhado (spec 3.3); nenhum
+`/* px: motivo */` foi preciso. O ponto 21 de `web/testes/estilo-m4.test.ts` passou a ler o `gap`
+do `.enq-lado` em rem (≥ 1rem, os mesmos 16 px), e o ponto 18, a media query em `56.25em`.
+
+### G3.1 "Dia/Hora do término" empurrava a tela
+- **Achado:** a 360 px com letra de 32, a caixa de data mede o texto inteiro (357 px numa coluna
+  de 328) e a página rolava 13 px para o lado.
+- **Decisão:** `.enq-lado` com `grid-template-columns: minmax(0, 1fr)` (e `repeat(2, minmax(0,
+  1fr))` lado a lado). A caixa cabe na largura e o "mm/dd/yyyy" continua inteiro. Lado a lado a
+  partir de `37.5em` (era 600 px).
+
+### G3.2 Celular na ficha da unidade: alvo de 21 px → 45 px, sem mudar o desenho
+- **Decisão:** `padding-block: 0.75rem` no link. Ele é inline, e o padding vertical de um inline
+  aumenta a área de toque (e o anel de foco) sem mexer na altura da linha: com a letra de fábrica,
+  o print da ficha saiu igual pixel a pixel, e o alvo passou a 45 px (90 px a 200 %).
+- **Fica:** a grade de apartamentos de 38 × 44 px (dúvida 4), que é do comum e não mudou.
+
+### G3.3 Mudanças de desenho só com letra grande (com a letra de fábrica, iguais)
+Nenhuma era rolagem nem corte (o script não acusava), mas olhando os prints a 32 px não serviam:
+- **Resultado da enquete:** a contagem ("1 voto, 100%") não quebra e espremia o texto da opção em
+  colunas de 3 letras ("Sáb/ado/de/man/hã"). Agora a linha quebra (`flex-wrap`, texto com `flex:
+  1 1 8rem`): com letra grande a contagem desce para baixo do texto.
+- **Cédula da nova enquete:** marca e número ao lado deixavam a caixa da opção com 130 px. Com
+  letra grande (o mesmo `@container conteudo (max-width: 19.75rem)` da grade de apartamentos),
+  a marca e o "Tirar" ficam em cima e a caixa desce com a largura toda.
+- **"Mostrar" a senha** (entrar, trocar a senha, primeiro acesso, nova senha): dentro do campo,
+  a 200 % sobravam uns 100 px para digitar. Com letra grande ele desce para baixo do campo, à
+  direita. O campo é o próprio contêiner (`container-type: inline-size`), porque a tela de entrar
+  fica fora do `.conteudo`. Conferido a 32 px em entrar e em Minha unidade → Trocar a senha (o
+  primeiro acesso não abre no ambiente de conferência, que entra sem a troca obrigatória; usa o
+  mesmo `Campo`).
+
+### G3.4 Selo "Seu apartamento ainda não votou": canto em `1em` · [Erick]
+- **Achado:** com `border-radius: 999px`, quando o selo quebra em duas ou mais linhas ele vira
+  um ovo (a 200 %, um ovo de 4 linhas, com o pontinho achatado).
+- **Decisão:** canto de `1em` e o pontinho com `flex: none`. Numa linha só é a mesma pílula. **É
+  a única diferença com a letra de fábrica:** a 360 px o selo já quebrava em 2 linhas na lista de
+  enquetes, e os cantos ficaram menos redondos (`enquetes-360-16`, 395 px diferentes no
+  `comparar-prints`). Achei que melhora também ali; se preferir o de antes, é voltar o `999px`.
+
+### G3.5 O que é do comum (não mexi; para o coordenador)
+- **Ícone que encolhe ao lado de texto que quebra:** `.botao svg` e `.texto-link svg` não têm
+  `flex: none`. A 200 %, o ícone de "Ver documentos públicos" (entrar) mede 27 × 40 em vez de
+  40 × 40, e o de "Como instalar o Portal" (Minha unidade) quase some. Com a letra de fábrica não
+  encolhe (o texto cabe). Sugestão no `estilo.css`: `.botao svg, .texto-link svg { flex: none; }`.
+  O mesmo vale para o pontinho do `.selo.novo::before`.
+- **`.opcao` (rádio e caixa de marcar):** a 200 %, padding de 2rem, rádio de 3rem e gap de quase
+  2rem deixam uns 180 px para o texto, e "apartamentos" quebra em "apartamento/s" (o `anywhere`).
+  Não corta nem rola; é feio. Seria do comum decidir (ex.: padding e gap menores com letra grande).
+- **Letra menor que não cresce** nas minhas telas: só o "Versão 1.5.1" do rodapé (`sobre.css`,
+  G2) e as abas de baixo (teto da dúvida 1).
+
+### G3.6 Rodada antes × depois (`--grupo G3`, 11 telas, 66 prints)
+Antes (`/tmp/portal-letra-g3-antes/`, base com os CSS do G3 ainda em px):
+
+| fonte | largura | letra mediana (esperado) | rolagem | algo fora | cortado | alvo < 44 |
+|---|---|---|---|---|---|---|
+| 16 | 360 | 18 (18) | 0 | 0 | 0 | 2 (painel, ficha) |
+| 16 | 1280 | 17 (18) | 0 | 0 | 0 | 1 (ficha) |
+| 24 | 360 | 27 (27) | 0 | 0 | 0 | 0 |
+| 24 | 1280 | 27 (27) | 0 | 0 | 0 | 1 (ficha) |
+| 32 | 360 | 36 (36) | 1 (nova enquete) | 1 | 0 | 0 |
+| 32 | 1280 | 36 (36) | 0 | 0 | 0 | 1 (ficha) |
+
+Depois (`/tmp/portal-letra-g3-depois/`):
+
+| fonte | largura | letra mediana (esperado) | rolagem | algo fora | cortado | alvo < 44 |
+|---|---|---|---|---|---|---|
+| 16 | 360 | 18 (18) | 0 | 0 | 0 | 1 (painel, dúvida 4) |
+| 16 | 1280 | 17 (18) | 0 | 0 | 0 | 0 |
+| 24 | 360 | 27 (27) | 0 | 0 | 0 | 0 |
+| 24 | 1280 | 27 (27) | 0 | 0 | 0 | 0 |
+| 32 | 360 | 36 (36) | 0 | 0 | 0 | 0 |
+| 32 | 1280 | 36 (36) | 0 | 0 | 0 | 0 |
+
+`comparar-prints` a 16 px: 19 iguais, 3 diferentes: Minha unidade a 360 e 1280 (horário do
+"aparelho conectado", dado) e a lista de enquetes a 360 (o canto do selo, G3.4). A letra mediana
+já batia antes (a base resolveu o comum; o px dos CSS do G3 era quase todo espaço, não letra);
+a letra menor subiu em nova enquete (15 → 30 a 32 px), privacidade (20 → 36) e enquete aberta
+(24 → 32).

@@ -74,12 +74,14 @@ describe('telas de enquete', () => {
   })
 
   test('18: no computador, 8 por linha e o andar novo começa a linha', () => {
-    assert.match(enquetes, /@media \(min-width: 900px\)\s*\{[^@]*\.enq-grade\s*\{[^}]*repeat\(8,/)
+    // 900 px = 56.25em desde o M5 (media query em em, que acompanha a letra).
+    assert.match(enquetes, /@media \(min-width: 56\.25em\)\s*\{[^@]*\.enq-grade\s*\{[^}]*repeat\(8,/)
     assert.match(regra(enquetes, '.enq-andar-novo'), /grid-column-start:\s*1/)
   })
 
   test('21: no celular, dia e hora do término têm espaço entre eles', () => {
-    const gap = /gap:\s*(\d+)px/.exec(regra(gestao, '.enq-lado'))
-    assert.ok(gap && Number(gap[1]) >= 16, `gap do .enq-lado: ${gap?.[0]}`)
+    // Em rem desde o M5 (letra que cresce): 1rem = 16 px com a letra de fábrica.
+    const gap = /gap:\s*([\d.]+)rem/.exec(regra(gestao, '.enq-lado'))
+    assert.ok(gap && Number(gap[1]) >= 1, `gap do .enq-lado: ${gap?.[0]}`)
   })
 })

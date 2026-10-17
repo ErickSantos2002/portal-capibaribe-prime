@@ -15,11 +15,6 @@ const PENDENTES = new Set([
   // G1
   // G2
   // G3
-  'enquetes/gestao/gestao.css',
-  'enquetes/votar/enquetes.css',
-  'acesso/acesso.css',
-  'recuperacao/recuperacao.css',
-  'administracao/administracao.css',
 ])
 
 /** Propriedades que podem ter px sem justificar: espessura de linha, sombra e cantos (spec 3.3). */

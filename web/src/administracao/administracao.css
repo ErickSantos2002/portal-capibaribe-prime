@@ -14,8 +14,8 @@
 /* Grade ou lista, e o filtro da lista: chips em cima da lista. */
 .admin-controles {
   display: grid;
-  gap: 12px;
-  margin: 20px 0 0;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
 }
 
 .admin-controles .chips {
@@ -42,30 +42,30 @@
 
 /* Confirmação no lugar (padrão do protótipo): em cima das opções, com o que vai acontecer. */
 .confirmacao {
-  margin: 0 0 16px;
-  padding: 16px;
+  margin: 0 0 1rem;
+  padding: 1rem;
   border: 2px solid var(--erro);
   border-radius: var(--r-medio);
   background: var(--folha);
 }
 
 .confirmacao h2 {
-  margin: 0 0 8px;
-  font-size: 20px;
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
 }
 
 .confirmacao ul {
-  margin: 0 0 16px;
-  padding-left: 22px;
+  margin: 0 0 1rem;
+  padding-left: 1.375rem;
 }
 
 .confirmacao li {
-  margin-bottom: 4px;
+  margin-bottom: 0.25rem;
 }
 
 .acoes-admin {
   display: grid;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .acoes-admin .botao + .botao {
@@ -82,11 +82,14 @@
 }
 
 .carregar-mais {
-  margin-top: 16px;
+  margin-top: 1rem;
 }
 
-/* Celular na ficha: toca para ligar. Cor do Portal, não o azul/roxo padrão do navegador. */
+/* Celular na ficha: toca para ligar. Cor do Portal, não o azul/roxo padrão do navegador.
+   M5: o link é inline, e o padding vertical de um inline aumenta a área de toque (para 44 px ou
+   mais) sem mexer na altura da linha: o desenho da ficha fica igual (era 21 px de altura). */
 .ficha dd a {
+  padding-block: 0.75rem;
   color: var(--mata);
   text-underline-offset: 3px;
 }
