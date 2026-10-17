@@ -14,7 +14,6 @@ import type { ItemHistorico, PainelAtivacao, UnidadeAdmin, UnidadePainel } from 
 const textoInteiro = (texto: string) => (_: string, el: Element | null) =>
   el?.textContent === texto && el.parentElement?.textContent !== texto
 
-
 const ref = (login: string): UnidadeRef => ({
   login,
   bloco: Number(login[0]),
@@ -145,7 +144,11 @@ describe('painel de ativação (H-07)', () => {
     api({ 'GET /api/admin/unidades': () => json(200, PAINEL) })
     abrir('/unidades')
 
-    expect(await screen.findByText('Bloco 1: 2 de 3 (67%)')).toBeTruthy()
+    // Primeiro teste do arquivo: paga a primeira renderização da árvore de rotas inteira (dois
+    // pedidos em sequência: /eu e o painel). Sozinho leva ~250 ms; com a suíte em paralelo,
+    // estourou o 1 s padrão do findBy uma vez em 9 (2ª revisão do M5). O tempo aqui é o de
+    // espera pelo carregamento, não esconde erro: se o texto não vier, falha do mesmo jeito.
+    expect(await screen.findByText('Bloco 1: 2 de 3 (67%)', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText('50%')).toBeTruthy()
     const bloco1 = screen.getByRole('region', { name: 'Bloco 1' })
     const apartamentos = within(bloco1)

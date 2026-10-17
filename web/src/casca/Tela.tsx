@@ -1,6 +1,6 @@
 // A moldura de toda tela: topo (título, placa ou seta de voltar, botão de tema), conteúdo e
 // navegação. Celular e computador pelo mesmo HTML; o CSS (≥ 900 px) troca o layout.
-import { useContext, useEffect, useRef, type ReactNode } from 'react'
+import { useContext, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { BotaoTema } from './BotaoTema'
 import { ContextoLugarDoRecado } from './contextoRecado'
@@ -45,6 +45,12 @@ export function Tela({ titulo, tituloDaAba, voltar, entrada, extra, children }: 
   // 200 % num celular, o topo com o título chegava a ocupar mais da metade da tela, e o recado de
   // confirmação, que mora no topo, precisa continuar à vista. Com a letra de fábrica, o de sempre.
   const faixa = useLetraGrande()
+  // O h1 muda de lugar (topo ↔ conteúdo) quando a letra muda com a tela aberta, e o elemento é
+  // outro: se o foco estava nele, volta para o novo, senão cairia no body (2ª revisão do M5).
+  const tituloTinhaFoco = useRef(false)
+  useLayoutEffect(() => {
+    if (tituloTinhaFoco.current) titulo1.current?.focus({ preventScroll: true })
+  }, [faixa])
 
   useEffect(() => {
     document.title = entrada ? NOME_DO_PORTAL : `${tituloDaAba ?? titulo} · ${NOME_DO_PORTAL}`
@@ -63,7 +69,17 @@ export function Tela({ titulo, tituloDaAba, voltar, entrada, extra, children }: 
   }
 
   const h1 = (
-    <h1 ref={titulo1} tabIndex={-1} className={faixa ? 'titulo-tela' : undefined}>
+    <h1
+      ref={titulo1}
+      tabIndex={-1}
+      className={faixa ? 'titulo-tela' : undefined}
+      onFocus={() => (tituloTinhaFoco.current = true)}
+      // Saiu da página (a troca de lugar): o Chrome avisa blur do elemento já removido, e aí o
+      // foco tem de ir para o h1 novo; só um blur de verdade (outro elemento) zera a marca.
+      onBlur={(e) => {
+        if (e.currentTarget.isConnected) tituloTinhaFoco.current = false
+      }}
+    >
       {titulo}
     </h1>
   )

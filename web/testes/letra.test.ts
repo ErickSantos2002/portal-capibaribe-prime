@@ -119,17 +119,19 @@ function conferir(css: string, tokens: Map<string, string> = tokensDe(css)): Ach
     anterior = null
     const texto = pedaco.replaceAll(LIBERA, '').trim()
     if (texto && fim === '{') {
-      if (/^@(media|container|supports)/.test(texto) && PX.test(texto)) {
+      if (/^@(media|container|supports)/i.test(texto) && PX.test(texto)) {
         achados.push({ linha, texto, motivo: 'media query em px (use rem: 900px = 56.25rem)' })
-      } else if (/^@media/.test(texto) && /\((min-|max-)?(width|height|inline-size|block-size)\s*:/.test(texto)) {
-        // R1: media query de tamanho, em qualquer unidade, não acompanha o Dynamic Type do iPhone.
+      } else if (/^@media/i.test(texto) && /\b(width|height|inline-size|block-size|aspect-ratio)\b/i.test(texto)) {
+        // R1: media query de tamanho, em qualquer unidade e sintaxe (`min-width:`, a de faixa
+        // `(width >= 56.25em)`, `(35em > height)`), não acompanha o Dynamic Type do iPhone.
         achados.push({
           linha,
           texto,
           motivo: 'media query de tamanho (use @container raiz em rem, ou data-letra/data-altura)',
         })
-      } else if (/^@container/.test(texto) && /\d(em)\b/.test(texto)) {
-        achados.push({ linha, texto, motivo: 'container query em em (use rem)' })
+      } else if (/^@container/i.test(texto) && /\d(em|ch|ex)\b/i.test(texto)) {
+        // em, ch e ex medem pela fonte do contêiner, não pela do html.
+        achados.push({ linha, texto, motivo: 'container query em em/ch/ex (use rem)' })
       }
     } else if (texto && texto.includes(':')) {
       const dois = texto.indexOf(':')
@@ -164,7 +166,9 @@ function conferirTsx(codigo: string): Achado[] {
       const chave = par[1].replace(/['"]/g, '')
       const valor = par[2].trim()
       const numero = /^-?\d*\.?\d+$/.test(valor) && valor !== '0' && chave !== 'lineHeight'
-      if (MEDIDAS_REACT.test(chave) && (PX.test(valor) || numero)) {
+      // `${n}px` num template: o número vem de fora, a unidade está escrita depois dele.
+      const modelo = /\$\{[^}]*\}\s*(px|pt|pc|cm|mm|in|q)(?![\w-])/i.test(valor)
+      if (MEDIDAS_REACT.test(chave) && (PX.test(valor) || numero || modelo)) {
         achados.push({ linha, texto: `${chave}: ${valor}`, motivo: `style={{ ${chave} }} em px (use rem)` })
       }
     }
@@ -273,6 +277,15 @@ describe('a regra pega o que deve pegar', () => {
     assert.deepEqual(caso('@media not all and (min-width: 56.25rem) { a { gap: 1rem; } }'), ['media'])
     assert.deepEqual(caso('@container raiz (max-width: 22em) { a { gap: 1rem; } }'), ['container'])
     assert.deepEqual(caso('@media (prefers-reduced-motion: reduce) { a { gap: 1rem; } }'), [])
+    // 2ª revisão: a sintaxe de faixa, ao contrário, em maiúsculas, aspect-ratio; ch/ex no container.
+    assert.deepEqual(caso('@media (width >= 56.25em) { a { gap: 1rem; } }'), ['media'])
+    assert.deepEqual(caso('@media (35em > height) { a { gap: 1rem; } }'), ['media'])
+    assert.deepEqual(caso('@MEDIA (MIN-WIDTH: 56.25EM) { a { gap: 1rem; } }'), ['media'])
+    assert.deepEqual(caso('@media (min-aspect-ratio: 16/9) { a { gap: 1rem; } }'), ['media'])
+    assert.deepEqual(caso('@media (orientation: landscape) { a { gap: 1rem; } }'), [])
+    assert.deepEqual(caso('@container raiz (max-width: 40ch) { a { gap: 1rem; } }'), ['container'])
+    assert.deepEqual(caso('@container raiz (max-width: 80ex) { a { gap: 1rem; } }'), ['container'])
+    assert.deepEqual(caso('@container raiz (max-width: 22rem) { a { gap: 1rem; } }'), [])
   })
   test('R6: style={{}} dos .tsx com px (texto ou número puro)', () => {
     const tsx = (codigo: string) => conferirTsx(codigo).map((a) => a.texto.split(':')[0])
@@ -280,6 +293,18 @@ describe('a regra pega o que deve pegar', () => {
     assert.deepEqual(tsx("<span style={{ marginTop: '12px', opacity: 0.5 }} />"), ['marginTop'])
     assert.deepEqual(tsx("<span style={{ fontSize: '1.125rem', width: `${x}%` }} />"), [])
     assert.deepEqual(tsx('<span style={{ lineHeight: 1.5, zIndex: 3 }} />'), [])
+    // 2ª revisão: px num template e número cru nas medidas; sem falso positivo.
+    assert.deepEqual(tsx('<span style={{ width: `${n}px` }} />'), ['width'])
+    assert.deepEqual(tsx('<span style={{ fontSize: `${t} PX` }} />'), ['fontSize'])
+    assert.deepEqual(tsx('<span style={{ padding: 8, margin: 4 }} />'), ['padding', 'margin'])
+    assert.deepEqual(tsx('<span style={{ height: 0.5 }} />'), ['height'])
+    assert.deepEqual(tsx("<span style={{ backgroundImage: 'url(icon-24px.svg)' }} />"), [])
+    assert.deepEqual(tsx("<span style={{ width: `${n}%`, color: '#24cc00' }} />"), [])
+  })
+  test('2ª revisão: px em media query maiúscula; dppx e nome de arquivo continuam limpos', () => {
+    assert.deepEqual(caso('@MEDIA (MIN-WIDTH: 900PX) { a { gap: 1rem; } }'), ['media'])
+    assert.deepEqual(caso('@media (min-resolution: 2dppx) { a { gap: 1rem; } }'), [])
+    assert.deepEqual(caso('a { background: url(icon-24px.svg); }'), [])
   })
   test('R6: o <style> do index.html também é lido', () => {
     const html = '<head><style>\n  body { padding: 8px; }\n</style></head>'

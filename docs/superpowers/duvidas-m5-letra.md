@@ -660,6 +660,38 @@ CSS de `ee10594` e passam agora) e o `letra.test.ts` reescrito (R6).
   aberto). A faixa "Falta um passo": sem o sino, menos respiro e botões com a altura mínima de alvo
   (2.75rem).
 
+### 2ª revisão (de `ee10594..97b79e1`)
+- **1. Testes instáveis.** `documentos.test.tsx` (U17) conferia `document.title` sem esperar o
+  `useEffect` da `Tela` (falhou 2 em 8): agora `await waitFor(...)`. `administracao.test.tsx`, o
+  primeiro teste do painel (estourou 1 vez em 9): não achei nada de não determinístico. É o
+  primeiro teste do arquivo e paga a primeira renderização da árvore de rotas inteira, com dois
+  pedidos em sequência (`/eu` e o painel): ~250 ms sozinho, contra ~100 ms dos seguintes. Com a
+  suíte em paralelo, isso chega perto do 1 s padrão do `findBy`. O `findByText` desse teste tem
+  `timeout: 3000`, com o motivo escrito no teste. Não esconde erro: se o texto não vier, falha do
+  mesmo jeito. Na primeira rodada da suíte depois disso, falhou um terceiro teste do mesmo tipo:
+  `MinhaUnidade.test.tsx`, "confirmado, apaga e volta à entrada", conferia o recado sem esperar
+  o desenho depois da troca de rota. Agora também com `waitFor`. Com isso, `npx vitest run` 5
+  vezes seguidas: 683/683 nas 5.
+- **2. Foco.** Quando a letra muda com a tela aberta, o `h1` troca de lugar (topo ↔ conteúdo) e
+  o elemento é outro; o foco caía no `body`. Agora a `Tela` guarda num ref se o `h1` tinha o foco
+  (`onFocus`/`onBlur`). O blur só zera a marca se o elemento ainda está na página: o Chrome avisa
+  blur do elemento removido. Um `useLayoutEffect([faixa])` devolve o foco ao `h1` novo, com
+  `preventScroll`. Testes em `topo-letra.test.tsx`: o foco vai e volta com o título; sem foco no
+  título, a troca não rouba o foco. Conferido no Chrome: com o foco no `h1`, a letra a 24 px e
+  de volta a 16, ele continua no `h1` (no conteúdo e depois no topo).
+- **3. Guarda.** Media query de tamanho, em qualquer sintaxe e sem diferenciar maiúscula:
+  `width`, `height`, `inline-size`, `block-size` e `aspect-ratio` dentro do `@media` (pega
+  `(width >= 56.25em)`, `(35em > height)` e `@MEDIA (MIN-WIDTH:…)`). Container query em `ch` ou
+  `ex` também é recusada. Nos `style={{}}`: `` `${n}px` `` num template e número cru nas medidas.
+  Sem falso positivo: `url(icon-24px.svg)`, `2dppx`, `${n}%` e cores em hex continuam limpos.
+  Cada caso tem teste de exemplo, e 6 mutações reais novas (5 em CSS, 1 em `.tsx`) reprovam:
+  16 de 16 no total.
+- **4. `descer()`.** O `matar_arvore` vem antes do `kill -- "-$pid"`: depois de matar o pai, os
+  filhos são adotados pelo init e o `pgrep -P` não os acha. Conferido: dois `subir` seguidos
+  deixam só os processos do segundo.
+- **5. Barra de rolagem.** Documentado na spec 3.7 como aceito: a container query mede o
+  `#root` sem a barra clássica; de 900 a ~915 px de janela com barra fixa, layout de celular.
+
 ### Rodada final
 `conferir-letra.mjs`, 28 telas, `--larguras 360,390x844,1280,1366x768 --temas claro,escuro`,
 letra 16/24/32: 672 prints (`/tmp/portal-letra-rev-final/`; o painel de novo em

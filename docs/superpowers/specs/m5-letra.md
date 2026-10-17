@@ -198,7 +198,11 @@ ficam); a coluna de leitura continua com 45rem, centralizada (U5). O mesmo vale 
 larguras (`22rem` das abas, `37.5rem`, `45rem`). O que não é largura (a altura da tela, o topo)
 usa as marcas que `web/src/casca/letra.ts` põe no `html`: `data-letra="grande"` (a raiz com 20 px
 ou mais) e `data-altura="baixa"` (menos de 35 letras de altura). A guarda recusa media query de
-tamanho em qualquer unidade.
+tamanho em qualquer unidade (e container query em `em`, `ch` ou `ex`).
+
+**Aceito (2ª revisão):** a container query mede o `#root`, que não inclui a barra de rolagem
+clássica (a media query incluía). Num navegador de computador com barra fixa (~15 px), uma janela
+entre 900 e ~915 px fica no layout de celular, que lá também funciona (coluna de 45rem).
 
 ## 4. Tabela de conversão (1rem = 16 px)
 

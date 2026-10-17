@@ -216,7 +216,8 @@ describe('documento aberto', () => {
     await screen.findByRole('heading', { level: 2, name: 'Cronograma da obra' })
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Documento')
     expect(screen.getAllByText('Cronograma da obra')).toHaveLength(1)
-    expect(document.title).toBe('Cronograma da obra · Portal Capibaribe Prime')
+    // O título da aba vem num useEffect da Tela: espera (2ª revisão do M5; falhava 2 em 8).
+    await waitFor(() => expect(document.title).toBe('Cronograma da obra · Portal Capibaribe Prime'))
   })
 
   it('U12: o morador não vê "Quem vê"', async () => {

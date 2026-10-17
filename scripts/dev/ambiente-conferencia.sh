@@ -43,8 +43,10 @@ descer() {
   if [[ -f "$pids" ]]; then
     while read -r pid; do
       [[ -n "$pid" ]] || continue
-      kill -- "-$pid" 2>/dev/null || true
+      # A árvore primeiro: depois de matar o pai, os filhos são adotados pelo init e o
+      # pgrep -P já não os acha.
       matar_arvore "$pid"
+      kill -- "-$pid" 2>/dev/null || true
     done <"$pids"
     rm -f "$pids"
   fi

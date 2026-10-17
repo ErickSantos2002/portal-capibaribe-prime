@@ -320,7 +320,11 @@ describe('minha unidade · apagar meus dados', () => {
       confirmo: true,
       senha: 'minha-senha',
     })
-    expect(screen.getByRole('status').textContent).toContain('Seus dados foram apagados.')
+    // O recado vem no estado da navegação e aparece no desenho seguinte ao da troca de rota:
+    // espera (2ª revisão do M5; falhou 1 vez numa das rodadas da suíte inteira).
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('Seus dados foram apagados.'),
+    )
   })
 
   it('com papel de gestão, mostra o motivo da recusa', async () => {
