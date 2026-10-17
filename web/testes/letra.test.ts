@@ -14,9 +14,6 @@ const SRC = new URL('../src/', import.meta.url).pathname
 const PENDENTES = new Set([
   // G1
   // G2
-  'documentos/documentos.css',
-  'sobre/sobre.css',
-  'notificacoes/notificacoes.css',
   // G3
   'enquetes/gestao/gestao.css',
   'enquetes/votar/enquetes.css',

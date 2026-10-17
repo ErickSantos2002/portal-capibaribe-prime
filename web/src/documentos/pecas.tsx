@@ -1,6 +1,7 @@
 // Épico A do M3 · peças comuns às telas de documentos. Pertence ao épico A.
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
+import { emRem } from '../casca/emRem'
 import { Icone } from '../casca/Icone'
 import { enderecoParaAbrir } from './api'
 import {
@@ -26,8 +27,8 @@ const DESENHOS = {
 export function IconeDoc({ nome, tamanho = 24 }: { nome: keyof typeof DESENHOS; tamanho?: number }) {
   return (
     <svg
-      width={tamanho}
-      height={tamanho}
+      width={emRem(tamanho)}
+      height={emRem(tamanho)}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

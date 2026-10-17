@@ -3,8 +3,8 @@
 
 /* Cada passo é uma folha com respiro, como no protótipo (`#instalar`). */
 .notif-cartao {
-  margin-top: 16px;
-  padding: 18px 16px;
+  margin-top: 1rem;
+  padding: 1.125rem 1rem;
 }
 
 .notif-cartao h3 {
@@ -12,7 +12,7 @@
 }
 
 .notif-cartao > .ajuda {
-  margin: 4px 0 14px;
+  margin: 0.25rem 0 0.875rem;
 }
 
 .notif-cartao > :last-child {
@@ -32,8 +32,8 @@
 .notif-situacao {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 14px;
+  gap: 0.625rem;
+  margin: 0 0 0.875rem;
   color: var(--tinta-suave);
   font-weight: 700;
 }
@@ -53,12 +53,12 @@
 }
 
 .notif-dica {
-  margin: 12px 0 0;
+  margin: 0.75rem 0 0;
 }
 
 /* Passo a passo do iPhone: a ordem importa, então são números de verdade. */
 .notif-passos {
-  margin: 0 0 4px;
+  margin: 0 0 0.25rem;
   padding: 0;
   list-style: none;
   counter-reset: passo;
@@ -66,8 +66,8 @@
 
 .notif-passos li {
   position: relative;
-  min-height: 36px;
-  padding: 4px 0 10px 48px;
+  min-height: 2.25rem;
+  padding: 0.25rem 0 0.625rem 3rem;
   counter-increment: passo;
 }
 
@@ -78,8 +78,8 @@
   left: 0;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 2.125rem;
+  height: 2.125rem;
   border-radius: 50%;
   background: var(--mata-suave);
   color: var(--mata-forte);
@@ -91,10 +91,11 @@
 .notif-passos li:not(:last-child)::after {
   content: '';
   position: absolute;
-  top: 38px;
-  bottom: 2px;
-  left: 16px;
-  width: 2px;
+  top: 2.375rem;
+  bottom: 0.125rem;
+  /* No meio do número (2.125rem de largura), com a espessura de uma borda. */
+  left: calc(1.0625rem - 1px); /* px: marcador fino, como uma borda */
+  width: 2px; /* px: marcador fino, como uma borda */
   border-radius: 1px;
   background: var(--linha);
 }
@@ -104,26 +105,26 @@
 }
 
 .notif-mural {
-  margin-top: 24px;
+  margin-top: 1.5rem;
 }
 
 .notif-instalar {
-  margin: 4px 0 0;
+  margin: 0.25rem 0 0;
 }
 
 .notif-instalar .texto-link {
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 /* "Pronto, o apartamento está ativado." no topo da oferta, vindo do primeiro acesso. */
 .notif-ativado {
-  margin-bottom: 10px;
+  margin-bottom: 0.625rem;
 }
 
 /* Faixa do mural: convite discreto, na cor do ipê (atenção, não erro), acima dos fixados. */
 .notif-faixa {
-  margin: 0 0 20px;
-  padding: 14px 16px 16px;
+  margin: 0 0 1.25rem;
+  padding: 0.875rem 1rem 1rem;
   border: 1px solid var(--ipe);
   border-left-width: 6px;
   border-radius: var(--r-medio);
@@ -141,23 +142,54 @@
 
 .notif-faixa-texto {
   display: flex;
-  gap: 10px;
-  margin: 0 0 12px;
+  gap: 0.625rem;
+  margin: 0 0 0.75rem;
   font-weight: 700;
 }
 
 .notif-faixa-texto svg {
   flex: none;
-  margin-top: 2px;
+  margin-top: 0.125rem;
+}
+
+/* Letra muito grande (M5): a frase desce para baixo do sino em vez de espremer "notificações"
+   ao lado dele; com a letra de fábrica, continua ao lado. */
+.notif-faixa-texto {
+  flex-wrap: wrap;
+}
+
+.notif-faixa-texto > span {
+  flex: 1 1 10rem;
+  min-width: 0;
 }
 
 .notif-faixa-acoes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  /* Lado a lado com a letra de fábrica; com letra grande, um embaixo do outro. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: 0.625rem;
 }
 
 /* Lado a lado não somam margem (o `.botao + .botao` do estilo comum é para empilhados). */
 .notif-faixa-acoes .botao + .botao {
   margin-top: 0;
+}
+
+/* ---------- letra grande (M5) ---------- */
+
+/* O ícone do título não encolhe quando o título ocupa a linha toda (o `.com-icone` é flex). */
+.notif-cartao .com-icone svg {
+  flex: none;
+}
+
+/* A explicação com o ícone "i": com a letra muito grande, "notificações" não cabe ao lado do
+   ícone e passava da borda da caixa; o texto desce para a linha de baixo. Com a letra de
+   fábrica, ficam lado a lado (10rem cabem com folga num celular de 360 px). */
+.notif-cartao .aviso-caixa {
+  flex-wrap: wrap;
+}
+
+.notif-cartao .aviso-caixa > p {
+  flex: 1 1 10rem;
+  min-width: 0;
 }

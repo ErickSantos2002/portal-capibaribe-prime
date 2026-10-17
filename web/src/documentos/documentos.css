@@ -6,7 +6,7 @@
 /* ---------- lista ---------- */
 
 .doc-busca {
-  margin-bottom: 4px;
+  margin-bottom: 0.25rem;
 }
 
 .doc-busca label {
@@ -16,8 +16,8 @@
 .doc-marca {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 1px 8px;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.5rem;
   border-radius: 999px;
   background: var(--ipe-suave);
   color: var(--tinta);
@@ -29,11 +29,11 @@
 }
 
 .doc-rodape {
-  margin: 24px 0 0;
+  margin: 1.5rem 0 0;
 }
 
 .doc-intro {
-  margin: 0 0 4px;
+  margin: 0 0 0.25rem;
 }
 
 /* Públicos: cada item tem os próprios botões (sem a seta de "abrir a página"). */
@@ -44,14 +44,14 @@
 .doc-publico-acoes {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 0.625rem;
+  margin-top: 0.5rem;
 }
 
 .doc-publico-acoes .botao {
   width: auto;
-  min-height: 48px;
-  flex: 1 1 140px;
+  min-height: 3rem;
+  flex: 1 1 8.75rem;
   margin: 0;
 }
 
@@ -59,13 +59,13 @@
 
 .doc-folha {
   position: relative;
-  margin: 4px 0 16px;
-  padding: 22px 20px 20px;
+  margin: 0.25rem 0 1rem;
+  padding: 1.375rem 1.25rem 1.25rem;
   border: 1px solid var(--linha);
   border-radius: var(--r-medio) 0 var(--r-medio) var(--r-medio);
   background: var(--folha);
   /* O canto de cima, à direita, é cortado (com a borda junto); a dobra entra no lugar. */
-  clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 34px, 100% 100%, 0 100%);
+  clip-path: polygon(0 0, calc(100% - 2.125rem) 0, 100% 2.125rem, 100% 100%, 0 100%);
 }
 
 /* O canto dobrado: a parte de trás da folha, em ipê, virada para dentro. */
@@ -74,8 +74,8 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 34px;
-  height: 34px;
+  width: 2.125rem;
+  height: 2.125rem;
   background: linear-gradient(225deg, transparent 0 50%, var(--ipe) 50%);
   border-bottom-left-radius: 5px;
 }
@@ -83,51 +83,57 @@
 .doc-assunto {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 10px;
+  gap: 0.375rem;
+  margin: 0 0 0.625rem;
   color: var(--mata);
   font-weight: 700;
 }
 
 .doc-data {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .doc-arquivo {
-  margin: 14px 0 0;
+  margin: 0.875rem 0 0;
   font-weight: 700;
 }
 
 .doc-versao {
-  margin: 2px 0 0;
+  margin: 0.125rem 0 0;
 }
 
 .doc-botoes {
   display: grid;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 0.625rem;
+  margin-top: 1.125rem;
 }
 
 .doc-botoes .botao + .botao {
   margin-top: 0;
 }
 
+/* Letra muito grande (M5): "documento" e o ícone não cabem lado a lado; o texto desce para
+   baixo do ícone em vez de passar da borda. Com a letra de fábrica, fica tudo numa linha. */
+.doc-botoes .botao {
+  flex-wrap: wrap;
+}
+
 .doc-quem {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 0.5rem;
   margin: 0;
   color: var(--tinta-suave);
 }
 
 .doc-quem svg {
   flex: none;
-  margin-top: 1px;
+  margin-top: 0.0625rem;
 }
 
 .doc-versoes .ajuda {
-  margin: -4px 0 10px;
+  margin: -0.25rem 0 0.625rem;
 }
 
 .doc-versoes ul {
@@ -141,8 +147,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 16px;
-  padding: 14px 16px;
+  gap: 0.5rem 1rem;
+  padding: 0.875rem 1rem;
   border-top: 1px solid var(--linha);
 }
 
@@ -152,18 +158,18 @@
 
 .doc-versao-item > span {
   display: grid;
-  gap: 2px;
+  gap: 0.125rem;
 }
 
 .doc-versao-item .botao {
   width: auto;
-  min-height: 48px;
+  min-height: 3rem;
   margin: 0;
 }
 
 .doc-acoes {
   display: grid;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .doc-acoes .botao + .botao,
@@ -172,7 +178,7 @@
 }
 
 .doc-acoes .aviso-caixa .botao {
-  margin-top: 12px;
+  margin-top: 0.75rem;
 }
 
 /* ---------- formulários ---------- */
@@ -183,11 +189,11 @@
 
 .doc-lado {
   display: grid;
-  gap: 0 16px;
+  gap: 0 1rem;
 }
 
 .doc-rotulo {
-  margin: 18px 0 6px;
+  margin: 1.125rem 0 0.375rem;
   font-weight: 700;
 }
 
@@ -204,9 +210,9 @@
 .doc-escolhido {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 10px;
-  padding: 12px 14px;
+  gap: 0.625rem;
+  margin: 0 0 0.625rem;
+  padding: 0.75rem 0.875rem;
   border: 1px solid var(--linha);
   border-radius: var(--r-pequeno);
   background: var(--mata-suave);
@@ -223,35 +229,35 @@
 }
 
 .doc-erro-campo {
-  margin: 6px 0 0;
+  margin: 0.375rem 0 0;
   color: var(--erro);
   font-weight: 700;
 }
 
 .doc-niveis {
-  margin: 18px 0 0;
+  margin: 1.125rem 0 0;
   padding: 0;
   border: 0;
 }
 
 .doc-niveis legend {
-  margin-bottom: 6px;
+  margin-bottom: 0.375rem;
   padding: 0;
   font-weight: 700;
 }
 
 .doc-nivel {
   align-items: flex-start;
-  margin: 0 0 10px;
+  margin: 0 0 0.625rem;
 }
 
 .doc-nivel input {
-  margin-top: 2px;
+  margin-top: 0.125rem;
 }
 
 .doc-nivel > span {
   display: grid;
-  gap: 2px;
+  gap: 0.125rem;
 }
 
 .doc-nivel .suave {
@@ -259,7 +265,7 @@
 }
 
 .doc-avisar {
-  margin-top: 18px;
+  margin-top: 1.125rem;
 }
 
 .doc-avisar .opcao {
@@ -267,24 +273,25 @@
 }
 
 .doc-enviar {
-  margin-top: 28px;
+  margin-top: 1.75rem;
 }
 
 .doc-de {
   display: grid;
-  margin: 0 0 4px;
-  font-size: 18px;
+  margin: 0 0 0.25rem;
+  font-size: 1.125rem;
 }
 
 /* ---------- o documento no aviso automático (RF-33) ---------- */
 
 .doc-do-aviso {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
-  min-height: 72px;
-  margin: 20px 0;
-  padding: 14px 16px;
+  gap: 0.875rem;
+  min-height: 4.5rem;
+  margin: 1.25rem 0;
+  padding: 0.875rem 1rem;
   border: 2px solid var(--mata);
   border-radius: var(--r-medio);
   background: var(--folha);
@@ -303,8 +310,11 @@
 
 .doc-do-aviso > span {
   display: grid;
-  flex: 1;
-  gap: 2px;
+  /* Com letra muito grande (M5), o texto desce para a linha de baixo do ícone em vez de
+     espremer "Ver o documento" em 90 px; com a letra de fábrica, fica ao lado (10rem cabem). */
+  flex: 1 1 10rem;
+  min-width: 0;
+  gap: 0.125rem;
 }
 
 .doc-do-aviso b {
@@ -327,8 +337,8 @@
 }
 
 .doc-titulo {
-  margin: 0 0 8px;
-  font-size: 22px;
+  margin: 0 0 0.5rem;
+  font-size: 1.375rem;
   font-weight: 700;
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -347,34 +357,34 @@
 }
 
 .doc-rodape .botao {
-  margin-top: 12px;
+  margin-top: 0.75rem;
 }
 
 .doc-versoes summary {
   display: flex;
   align-items: center;
-  min-height: 48px;
-  margin: 20px 0 8px;
+  min-height: 3rem;
+  margin: 1.25rem 0 0.5rem;
   color: var(--mata);
   font-weight: 700;
   cursor: pointer;
 }
 
 .doc-versao-item .texto-link {
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 /* A prévia do aviso automático (U13): um cartão como o do mural, sem ser link. */
 .doc-previa {
-  margin-top: 14px;
-  padding: 14px 16px;
+  margin-top: 0.875rem;
+  padding: 0.875rem 1rem;
   border: 1px dashed var(--borda);
   border-radius: var(--r-medio);
   background: var(--folha);
 }
 
 .doc-previa p {
-  margin: 0 0 8px;
+  margin: 0 0 0.5rem;
 }
 
 .doc-previa p:last-child {
@@ -383,21 +393,21 @@
 
 .doc-previa-rotulo {
   color: var(--tinta-suave);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .doc-previa-categoria {
   color: var(--mata);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
 }
 
 .doc-previa-titulo {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 700;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 37.5em) {
   .doc-lado {
     grid-template-columns: 1fr 1fr;
   }
