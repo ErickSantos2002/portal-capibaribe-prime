@@ -19,15 +19,15 @@
 //   node scripts/dev/conferir-letra.mjs --base http://localhost:5171 --tarefa g1 --grupo G1
 //   node scripts/dev/conferir-letra.mjs ... --telas entrar,mural --larguras 360 --fontes 32
 // Opções: --grupo comum|G1|G2|G3 (só as telas do grupo; repetível com vírgula), --telas <nomes>,
-// --larguras 360,1280, --fontes 16,24,32, --temas claro[,escuro], --saida <pasta>,
+// --larguras 360,1280[,1366x768], --fontes 16,24,32, --temas claro[,escuro], --saida <pasta>,
 // --semear (cria, uma vez, os avisos, a enquete, os documentos e os anexos fictícios que as
 // telas usam; os arquivos vão para o bucket de mentira da api-conferencia.py), --listar.
 // Saída: <saida>/<tela>-<largura>-<fonte>[-escuro].png, resultado.json e resumo.txt
 // (padrão: /tmp/portal-letra-<tarefa>/). Sai com código 1 se houver algum problema.
 import { createRequire } from 'node:module'
 import { deflateSync } from 'node:zlib'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const exigir = createRequire(new URL('../../web/package.json', import.meta.url))
@@ -43,7 +43,12 @@ const lista = (texto) => texto.split(',').map((s) => s.trim()).filter(Boolean)
 const BASE = opcao('base', 'http://localhost:5170').replace(/\/$/, '')
 const TAREFA = opcao('tarefa', 'local')
 const SAIDA = opcao('saida', `/tmp/portal-letra-${TAREFA}`)
-const LARGURAS = lista(opcao('larguras', '360,1280')).map(Number)
+// Cada largura pode levar a altura (`1366x768`); sem ela, 780 no celular e 900 no computador.
+const LARGURAS = lista(opcao('larguras', '360,1280'))
+const janelaDe = (rotulo) => {
+  const [l, a] = rotulo.split('x').map(Number)
+  return { width: l, height: a || (l < 900 ? 780 : 900) }
+}
 const FONTES = lista(opcao('fontes', '16,24,32')).map(Number)
 const TEMAS = lista(opcao('temas', 'claro'))
 const SENHA = 'mudar123'
@@ -140,7 +145,13 @@ async function abrirChrome(fonte) {
   mkdirSync(join(perfil, 'Default'))
   const prefs = { webkit: { webprefs: { default_font_size: fonte, default_fixed_font_size: Math.round((fonte * 13) / 16) } } }
   writeFileSync(join(perfil, 'Default', 'Preferences'), JSON.stringify(prefs))
+  // Hifenização (revisões do M5, U7): o Chrome do Linux baixa os dicionários de hífen como
+  // componente, e o perfil temporário nasce sem eles (o hyphens: auto não fazia nada). Copia os
+  // do Chrome do sistema, se houver, e deixa o carregador de componentes ligado.
+  const hifen = join(homedir(), '.config/google-chrome/hyphen-data')
+  if (existsSync(hifen)) cpSync(hifen, join(perfil, 'hyphen-data'), { recursive: true })
   const c = await chromium.launchPersistentContext(perfil, {
+    ignoreDefaultArgs: ['--disable-component-update'],
     executablePath: process.env.CHROME ?? '/usr/bin/google-chrome-stable',
     headless: true,
     args: ['--lang=pt-BR'],
@@ -457,6 +468,9 @@ function medir() {
   // em hífen não conta (o hífen separa as duas palavras). Palavra mais comprida que isso pode
   // não caber na linha com letra grande (spec 3.5, overflow-wrap).
   const quebradas = []
+  // Quebra com hífen da hifenização (hyphens: auto, U7): é a quebra certa, na sílaba; listada à
+  // parte, não conta.
+  const hifenizadas = []
   const busca = document.createTreeWalker(base, NodeFilter.SHOW_TEXT)
   while (busca.nextNode()) {
     const no = busca.currentNode
@@ -473,7 +487,8 @@ function medir() {
         faixa.setEnd(no, inicio + m[0].length)
         const caixas = [...faixa.getClientRects()].filter((r) => r.width > 0)
         if (caixas.length > 1 && Math.abs(caixas[0].top - caixas[caixas.length - 1].top) > 2) {
-          quebradas.push(`"${m[0]}" em ${descrever(pai)}`)
+          const lista = getComputedStyle(pai).hyphens === 'auto' && m[0].length >= 5 ? hifenizadas : quebradas
+          lista.push(`"${m[0]}" em ${descrever(pai)}`)
         }
       }
     }
@@ -542,6 +557,7 @@ function medir() {
     pequenos,
     encolhidos,
     quebradas,
+    hifenizadas,
     resumidos,
     janela: Boolean(janela),
   }
@@ -584,7 +600,7 @@ for (const fonte of FONTES) {
             Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 })
           }, AGENTE_IPHONE)
         }
-        await pagina.setViewportSize({ width: largura, height: largura < 900 ? 780 : 900 })
+        await pagina.setViewportSize(janelaDe(largura))
         const errosJs = []
         pagina.on('pageerror', (e) => errosJs.push(e.message))
         await pagina.goto(`${BASE}${caminho}`, { waitUntil: 'networkidle' })
@@ -659,6 +675,7 @@ for (const r of resultados) {
     ...ate6('ícone encolhido', r.encolhidos),
     ...ate6('palavra quebrada', r.quebradas),
     ...ate6('resumido de propósito (não conta)', r.resumidos),
+    ...ate6('hifenizada (não conta)', r.hifenizadas ?? []),
     ...ate6('erro JS', r.errosJs),
   ]
   if (!itens.length) continue

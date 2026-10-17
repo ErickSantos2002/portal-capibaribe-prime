@@ -28,9 +28,24 @@ nome="${2:-}"
 container="portal-pg-$nome"
 pids="/tmp/portal-$nome.pids"
 
+# Mata um processo e todos os descendentes dele. O pid gravado é o do `uv run`/`npx`, que
+# abrem filhos (o python da API, o node do vite): matar só o pai deixava os filhos órfãos,
+# segurando a porta, e o próximo `subir` falhava ou conversava com o preview velho. Cada um
+# sobe na própria sessão (setsid), então o grupo inteiro cai junto; a descida pela árvore
+# (pgrep -P) pega quem tenha saído do grupo.
+matar_arvore() {
+  local pid="$1" filho
+  for filho in $(pgrep -P "$pid" 2>/dev/null); do matar_arvore "$filho"; done
+  kill "$pid" 2>/dev/null || true
+}
+
 descer() {
   if [[ -f "$pids" ]]; then
-    while read -r pid; do kill "$pid" 2>/dev/null || true; done <"$pids"
+    while read -r pid; do
+      [[ -n "$pid" ]] || continue
+      kill -- "-$pid" 2>/dev/null || true
+      matar_arvore "$pid"
+    done <"$pids"
     rm -f "$pids"
   fi
   docker rm -f "$container" >/dev/null 2>&1 || true
@@ -49,7 +64,10 @@ porta_pg="$3"
 porta_api="$4"
 porta_web="$5"
 
-docker rm -f "$container" >/dev/null 2>&1 || true
+# Subir duas vezes não deixa nada do ambiente anterior no ar; e, se algo falhar no meio, o que
+# já subiu cai junto (nada de processo órfão segurando a porta).
+descer >/dev/null
+trap 'echo "falhou na linha $LINENO; derrubando o que subiu" >&2; descer >&2' ERR
 docker run -d --name "$container" -e POSTGRES_PASSWORD=teste \
   -p "127.0.0.1:$porta_pg:5432" postgres:17 >/dev/null
 echo -n "esperando o Postgres"
@@ -84,13 +102,13 @@ export PORTAL_VAPID_PRIVADA
 export PORTAL_VAPID_CONTATO="mailto:conferencia@example.com"
 
 : >"$pids"
-PYTHONPATH="$raiz/api" nohup uv run --frozen python "$raiz/scripts/dev/api-conferencia.py" --port "$porta_api" \
+PYTHONPATH="$raiz/api" setsid nohup uv run --frozen python "$raiz/scripts/dev/api-conferencia.py" --port "$porta_api" \
   >"/tmp/portal-$nome-api.log" 2>&1 &
 echo $! >>"$pids"
 
 cd "$raiz/web"
 npx vite build --logLevel warn
-PORTAL_API_URL="http://127.0.0.1:$porta_api" nohup npx vite preview --host 127.0.0.1 \
+PORTAL_API_URL="http://127.0.0.1:$porta_api" setsid nohup npx vite preview --host 127.0.0.1 \
   --port "$porta_web" --strictPort >"/tmp/portal-$nome-web.log" 2>&1 &
 echo $! >>"$pids"
 
@@ -105,4 +123,5 @@ for _ in $(seq 60); do
   sleep 1
 done
 echo " não respondeu; veja /tmp/portal-$nome-api.log e /tmp/portal-$nome-web.log" >&2
+descer >&2
 exit 1
