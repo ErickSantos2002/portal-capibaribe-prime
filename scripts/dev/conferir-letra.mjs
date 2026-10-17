@@ -21,7 +21,8 @@
 // Saída: <saida>/<tela>-<largura>-<fonte>[-escuro].png, resultado.json e resumo.txt
 // (padrão: /tmp/portal-letra-<tarefa>/). Sai com código 1 se houver algum problema.
 import { createRequire } from 'node:module'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const exigir = createRequire(new URL('../../web/package.json', import.meta.url))
@@ -98,32 +99,35 @@ if (!escolhidas.length) {
 mkdirSync(SAIDA, { recursive: true })
 
 // ---------- navegador ----------
-const navegador = await chromium.launch({
-  executablePath: process.env.CHROME ?? '/usr/bin/google-chrome-stable',
-  headless: true,
-  args: ['--lang=pt-BR'],
-})
-
-async function contexto(largura, tema) {
-  const c = await navegador.newContext({
-    viewport: { width: largura, height: largura < 900 ? 780 : 900 },
+// Um Chrome por tamanho de fonte, com um perfil temporário cujas Preferences têm o "Tamanho da
+// fonte" escolhido (webkit.webprefs.default_font_size: o mesmo que a pessoa muda nas
+// configurações). O Page.setFontSizes do CDP foi descartado: o print da página inteira o desfaz.
+async function abrirChrome(fonte) {
+  const perfil = mkdtempSync(join(tmpdir(), `portal-letra-${fonte}-`))
+  mkdirSync(join(perfil, 'Default'))
+  const prefs = { webkit: { webprefs: { default_font_size: fonte, default_fixed_font_size: Math.round((fonte * 13) / 16) } } }
+  writeFileSync(join(perfil, 'Default', 'Preferences'), JSON.stringify(prefs))
+  const c = await chromium.launchPersistentContext(perfil, {
+    executablePath: process.env.CHROME ?? '/usr/bin/google-chrome-stable',
+    headless: true,
+    args: ['--lang=pt-BR'],
     locale: 'pt-BR',
     timezoneId: 'America/Recife',
-    hasTouch: largura < 900,
-    isMobile: false,
+    viewport: { width: 1280, height: 900 },
   })
-  await c.addInitScript((t) => {
-    try {
-      localStorage.setItem('portal-tema', t)
-    } catch {}
-  }, tema)
+  c.perfil = perfil
   return c
 }
 
-/** O `font-size: medium` do navegador, como a opção "Tamanho da fonte" das configurações. */
-async function usarFonte(pagina, px) {
-  const cdp = await pagina.context().newCDPSession(pagina)
-  await cdp.send('Page.setFontSizes', { fontSizes: { standard: px, fixed: Math.round((px * 13) / 16) } })
+async function fecharChrome(c) {
+  await c.close()
+  rmSync(c.perfil, { recursive: true, force: true })
+}
+
+// Sai da sessão: sem isso, cada rodada deixa um "aparelho conectado" a mais na conta.
+async function sair(c) {
+  await c.request.post(`${BASE}/api/acesso/sair`, { headers: { 'X-Portal': '1' } }).catch(() => {})
+  await c.clearCookies()
 }
 
 async function entrar(c, login) {
@@ -140,7 +144,7 @@ const TITULO_AVISO = 'Vistoria das áreas comuns: horários por bloco e o que le
 const PERGUNTA = 'Qual horário fica melhor para a próxima assembleia geral extraordinária dos condôminos?'
 
 async function semente(semear) {
-  const c = await contexto(1280, 'claro')
+  const c = await abrirChrome(16)
   await entrar(c, QUEM.admin)
   const api = (metodo, caminho, data) =>
     c.request.fetch(`${BASE}/api${caminho}`, { method: metodo, headers: { 'X-Portal': '1' }, data })
@@ -193,7 +197,7 @@ async function semente(semear) {
     enquete: (await enquetes()).find((e) => e.pergunta === PERGUNTA)?.id,
   }
   await c.request.post(`${BASE}/api/acesso/sair`, { headers: { 'X-Portal': '1' } })
-  await c.close()
+  await fecharChrome(c)
   return ids
 }
 
@@ -289,29 +293,40 @@ function medir() {
 // ---------- rodada ----------
 const ids = await semente(args.includes('--semear'))
 const resultados = []
-for (const tema of TEMAS) {
-  for (const largura of LARGURAS) {
-    // Um contexto por quem entra (o cookie da sessão é do contexto).
-    const porQuem = {}
-    for (const tela of escolhidas) {
-      const caminho = tela.caminho.replace(/\{(\w+)\}/g, (_, k) => ids[k] ?? `sem-${k}`)
-      if (caminho.includes('sem-')) {
-        console.log(`pulada: ${tela.nome} (sem dado; rode com --semear)`)
-        continue
-      }
-      if (!porQuem[tela.quem]) {
-        porQuem[tela.quem] = await contexto(largura, tema)
-        if (tela.quem !== 'anonimo') await entrar(porQuem[tela.quem], QUEM[tela.quem])
-      }
-      for (const fonte of FONTES) {
-        const pagina = await porQuem[tela.quem].newPage()
+for (const fonte of FONTES) {
+  const chrome = await abrirChrome(fonte)
+  for (const tema of TEMAS) {
+    await chrome.clearCookies()
+    await chrome.addInitScript((t) => {
+      try {
+        localStorage.setItem('portal-tema', t)
+      } catch {}
+    }, tema)
+    for (const largura of LARGURAS) {
+      // Entra uma vez por quem: o cookie da sessão é do Chrome inteiro.
+      let quemEstaDentro = 'anonimo'
+      for (const tela of escolhidas) {
+        const caminho = tela.caminho.replace(/\{(\w+)\}/g, (_, k) => ids[k] ?? `sem-${k}`)
+        if (caminho.includes('sem-')) {
+          console.log(`pulada: ${tela.nome} (sem dado; rode com --semear)`)
+          continue
+        }
+        if (tela.quem !== quemEstaDentro) {
+          await sair(chrome)
+          if (tela.quem !== 'anonimo') await entrar(chrome, QUEM[tela.quem])
+          quemEstaDentro = tela.quem
+        }
+        const pagina = await chrome.newPage()
+        await pagina.setViewportSize({ width: largura, height: largura < 900 ? 780 : 900 })
         const errosJs = []
         pagina.on('pageerror', (e) => errosJs.push(e.message))
-        await usarFonte(pagina, fonte)
         await pagina.goto(`${BASE}${caminho}`, { waitUntil: 'networkidle' })
         await pagina.waitForTimeout(200)
         if (tela.depois) await tela.depois(pagina)
         const m = await pagina.evaluate(medir)
+        if (Math.round(m.raiz) !== fonte) {
+          errosJs.push(`a fonte do navegador não pegou: html com ${m.raiz}px, pedido ${fonte}px`)
+        }
         const arquivo = `${tela.nome}-${largura}-${fonte}${tema === 'claro' ? '' : `-${tema}`}.png`
         await pagina.screenshot({ path: join(SAIDA, arquivo), fullPage: true })
         await pagina.close()
@@ -324,15 +339,11 @@ for (const tema of TEMAS) {
             `  fora ${m.foraDaTela.length}  cortado ${m.cortados.length}  alvo<44 ${m.pequenos.length}`,
         )
       }
-    }
-    // Sai de cada sessão: sem isso, cada rodada deixa um "aparelho conectado" a mais na conta.
-    for (const c of Object.values(porQuem)) {
-      await c.request.post(`${BASE}/api/acesso/sair`, { headers: { 'X-Portal': '1' } }).catch(() => {})
-      await c.close()
+      await sair(chrome)
     }
   }
+  await fecharChrome(chrome)
 }
-await navegador.close()
 
 // ---------- relatório ----------
 writeFileSync(join(SAIDA, 'resultado.json'), JSON.stringify(resultados, null, 2))

@@ -119,9 +119,10 @@ body {
   font-size: 1.125rem;
   line-height: 1.5;
   /* Teto da letra grande (spec 3.5): palavra que não cabe na linha (e-mail, link, ou só uma
-     palavra comprida com letra de 200 %) quebra em vez de empurrar a tela para o lado. `anywhere`
-     (e não `break-word`) porque também vale dentro de flex e grid, que medem a palavra inteira. */
-  overflow-wrap: anywhere;
+     palavra comprida com letra de 200 %) quebra em vez de empurrar a tela para o lado.
+     `break-word` aqui, e `anywhere` só onde precisa: o `anywhere` muda a medida mínima dos itens
+     de grid e flex, e com a letra de fábrica "Financeiro" virava "Financeir/o" nas categorias. */
+  overflow-wrap: break-word;
 }
 
 button,
@@ -149,7 +150,10 @@ select {
 .pular {
   position: absolute;
   left: 0.5rem;
-  top: -3.75rem;
+  /* Escondido acima da tela pela própria altura (M5): com letra grande o texto quebra em duas
+     linhas, e um top fixo deixava a ponta aparecendo. */
+  top: 0;
+  transform: translateY(-110%);
   z-index: 10;
   padding: 0.625rem 1rem;
   border-radius: var(--r-pequeno);
@@ -160,6 +164,7 @@ select {
 
 .pular:focus {
   top: 0.5rem;
+  transform: none;
 }
 
 /* ---------- topo ---------- */
@@ -178,7 +183,10 @@ select {
 }
 
 .topo h1 {
-  flex: 1;
+  /* Base de 10rem (M5): com a letra de fábrica tudo cabe numa linha, como antes; com letra
+     grande, a placa e o botão de tema descem para a linha de baixo em vez de o título quebrar
+     letra por letra ("Unid/ade/s"). */
+  flex: 1 1 10rem;
   /* O assunto do aviso vira o h1 (revisão, U9): título longo quebra, nunca vaza. */
   min-width: 0;
   overflow-wrap: anywhere;
@@ -352,9 +360,12 @@ p {
 }
 
 /* Cinco abas (gestão, com "Unidades"): cada uma tem 72 px no celular de 360 px, e o teto desce
-   para 4.3vw (15,5 px ali): "Documentos" é a palavra que precisa caber. */
-.nav:has(> a:nth-of-type(5)) a {
-  font-size: min(0.9375rem, 4.3vw);
+   para 4.3vw (15,5 px ali): "Documentos" é a palavra que precisa caber. Só nas abas de baixo: o
+   menu lateral do computador não tem teto (e este seletor, mais forte, venceria o dele). */
+@media not all and (min-width: 56.25em) {
+  .nav:has(> a:nth-of-type(5)) a {
+    font-size: min(0.9375rem, 4.3vw);
+  }
 }
 
 .nav a[aria-current='page'] {
@@ -720,6 +731,9 @@ select:focus-visible {
 
 .opcao {
   display: flex;
+  /* O texto é item do flex: sem `anywhere`, uma palavra comprida com letra grande ("apartamentos"
+     a 200 %) empurra a opção para fora da tela (M5). */
+  overflow-wrap: anywhere;
   align-items: center;
   gap: 0.875rem;
   min-height: 3.75rem;
@@ -952,9 +966,9 @@ input.apto {
 
 .ficha dd {
   /* min-width: 0 + anywhere: e-mail longo quebra em vez de empurrar a tela (revisão, U4).
-     flex 1 1 10rem: com a letra de fábrica, fica ao lado do rótulo como antes; quando rótulo e
-     10rem não cabem juntos (letra grande), desce para a linha de baixo (M5). */
-  flex: 1 1 10rem;
+     flex 1 1 4rem: com a letra de fábrica, fica ao lado do rótulo como antes; quando rótulo e
+     4rem não cabem juntos (letra grande), desce para a linha de baixo (M5). */
+  flex: 1 1 4rem;
   min-width: 0;
   margin: 0;
   font-weight: 700;
@@ -1151,9 +1165,7 @@ details[open] > summary::after {
     background: var(--folha);
   }
 
-  /* No menu lateral não há teto: o seletor de cinco abas entra aqui só para perder para este. */
-  .nav a,
-  .nav:has(> a:nth-of-type(5)) a {
+  .nav a {
     flex: 0;
     flex-direction: row;
     justify-content: flex-start;
