@@ -40,7 +40,7 @@ api/               FastAPI: app/ (rotas, serviços, modelos, comandos), migracoe
 docs/              visão, requisitos, histórias, modelo de dados, arquitetura, protótipo, roadmap
 docs/adr/          registros de decisão de arquitetura
 prototipo/         protótipo em HTML único, publicado na Vercel
-scripts/dev/       teste do protótipo, imagem de prévia, logo e ícones do Portal
+scripts/dev/       teste do protótipo, imagem de prévia, logo e ícones, conferência da letra (M5)
 scripts/backup/    backup diário do banco (dump, cifra, R2, retenção) e restauração
 vercel.json        front + API no mesmo projeto: /api/* vai para a FastAPI, o resto para o front
 ```

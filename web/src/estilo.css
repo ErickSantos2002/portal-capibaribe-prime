@@ -966,9 +966,9 @@ input.apto {
 
 .ficha dd {
   /* min-width: 0 + anywhere: e-mail longo quebra em vez de empurrar a tela (revisão, U4).
-     flex 1 1 4rem: com a letra de fábrica, fica ao lado do rótulo como antes; quando rótulo e
-     4rem não cabem juntos (letra grande), desce para a linha de baixo (M5). */
-  flex: 1 1 4rem;
+     flex 1 1 6rem: com a letra de fábrica, fica ao lado do rótulo como antes; quando rótulo e
+     6rem não cabem juntos (letra grande), desce para a linha de baixo (M5). */
+  flex: 1 1 6rem;
   min-width: 0;
   margin: 0;
   font-weight: 700;
