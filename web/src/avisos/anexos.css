@@ -161,6 +161,9 @@ div.anexo-pdf .anexo-nome {
 
 .anexo-visualizador-topo {
   display: flex;
+  /* Costura do M5: com letra grande, "Foto 1 de 2" ficava com 35 px ("F…") ao lado do
+     "Fechar"; agora desce para a linha de baixo. Com a letra de fábrica, cabe ao lado. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -169,6 +172,7 @@ div.anexo-pdf .anexo-nome {
 }
 
 .anexo-visualizador-topo p {
+  flex: 1 1 8rem;
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -211,7 +215,10 @@ div.anexo-pdf .anexo-nome {
 }
 
 .anexo-visualizador-passar .botao {
-  flex: 1;
+  /* Base 0 e min-width 0 (costura do M5): o `.botao` do comum tem `width: 100%`, e com letra
+     grande "Próxima" saía da tela; as duas metades dividem a linha e o texto quebra dentro. */
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 3.25rem;
   margin: 0;
   border-color: var(--folha);
@@ -221,6 +228,25 @@ div.anexo-pdf .anexo-nome {
 
 .anexo-visualizador-passar .botao:focus-visible {
   outline-color: var(--ipe);
+}
+
+/* Letra grande (costura do M5): "Anterior" e "Próxima" não cabem lado a lado em metades de
+   ~150 px a 200 % (a palavra passava da borda do botão); com a janela estreita para a letra
+   (menos de 17.5rem, o limite dos avisos, nunca com a letra de fábrica), um embaixo do outro. A
+   foto continua com o resto da altura. */
+.anexo-visualizador {
+  container-type: inline-size;
+}
+
+@container (max-width: 17.5rem) {
+  .anexo-visualizador-passar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .anexo-visualizador-passar .botao {
+    flex: none;
+  }
 }
 
 /* ---------- no formulário ---------- */
@@ -333,6 +359,22 @@ div.anexo-pdf .anexo-nome {
   .anexo-acoes {
     grid-column: 1 / -1;
   }
+
+  /* As fotos do aviso aberto, uma por linha (costura do M5): em duas colunas de ~150 px, o selo
+     "Ampliar" (texto, que cresce) ficava mais largo que a miniatura e era cortado na borda; e a
+     foto maior ajuda quem precisou da letra grande. */
+  .anexos-fotos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* O PDF do aviso aberto (costura do M5): o ícone em cima e o nome com a largura toda do
+     cartão; ao lado do ícone, "fiscalização" virava "fiscalizaçã/o" a 200 %. */
+  .anexo-pdf {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: 0.75rem;
+  }
 }
 
 @media (min-width: 37.5em) {
@@ -369,12 +411,6 @@ div.anexo-pdf .anexo-nome {
      com a letra, passava da borda e a página rolava para o lado. */
   clip-path: inset(50%);
   opacity: 0;
-}
-
-/* O clipe do "Anexar foto ou PDF" não encolhe quando o texto quebra linha (M5; o `.botao` do
-   comum não tem o `flex: none` no ícone). */
-.anexos-escolher label svg {
-  flex: none;
 }
 
 .anexos-input:focus-visible + label {

@@ -281,8 +281,6 @@
 }
 
 .selo.enq-falta::before {
-  /* O pontinho não encolhe quando o texto do selo quebra (M5). */
-  flex: none;
   content: '';
   width: 0.5625rem;
   height: 0.5625rem;

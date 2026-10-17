@@ -177,11 +177,6 @@
 
 /* ---------- letra grande (M5) ---------- */
 
-/* O ícone do título não encolhe quando o título ocupa a linha toda (o `.com-icone` é flex). */
-.notif-cartao .com-icone svg {
-  flex: none;
-}
-
 /* A explicação com o ícone "i": com a letra muito grande, "notificações" não cabe ao lado do
    ícone e passava da borda da caixa; o texto desce para a linha de baixo. Com a letra de
    fábrica, ficam lado a lado (10rem cabem com folga num celular de 360 px). */

@@ -11,7 +11,7 @@ import { describe, test } from 'node:test'
 const SRC = new URL('../src/', import.meta.url).pathname
 
 /** Ainda em px: cada grupo apaga as suas linhas ao converter (e o teste passa a cobri-las). */
-const PENDENTES = new Set([
+const PENDENTES = new Set<string>([
   // G1
   // G2
   // G3

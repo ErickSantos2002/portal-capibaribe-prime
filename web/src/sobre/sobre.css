@@ -242,3 +242,31 @@
     background: var(--folha);
   }
 }
+
+/* Letra grande (costura do M5): a 200 % num celular de 360 px, o padding da janela, o recuo da
+   linha do tempo e o da lista deixavam ~150 px para o texto das novidades, e palavras como
+   "apartamento" quebravam no meio. Com a janela estreita para a letra (menos de 17.5rem, o limite
+   dos avisos: nunca com a letra de fábrica, nem num celular de 320 px), os recuos encolhem; a
+   linha do tempo e o ponto continuam, mais junto do texto. */
+.janela-caixa {
+  container: janela / inline-size;
+}
+
+@container janela (max-width: 17.5rem) {
+  .janela-topo,
+  .janela-pe {
+    padding-inline: 0.75rem;
+  }
+
+  .janela-rolagem {
+    padding-inline: 0.625rem;
+  }
+
+  .novidades > li {
+    padding-left: 1rem;
+  }
+
+  .novidades ul {
+    padding-left: 0.875rem;
+  }
+}

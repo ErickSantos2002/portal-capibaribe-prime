@@ -196,6 +196,24 @@ select {
   line-height: 1.2;
 }
 
+/* Tela baixa para a letra (M5, costura; G2-5): a 200 % num celular de 360 × 780, o topo fixo
+   (título, placa, lua) ocupava 250 a 470 px dos 780, e o texto rolava numa fresta. Quando a
+   altura cabe menos de 35em (560 px com a letra de fábrica, 840 px a 150 %, 1120 px a 200 %), o
+   topo rola junto com a página; as abas de baixo continuam presas. É o mesmo limite da janela
+   "O que mudou" (G2-3). Com a letra de fábrica num celular em pé, nada muda; deitado (altura <
+   560 px), o topo também rola, que ali também ajuda. Cortar o título (line-clamp) não serviria:
+   no aviso aberto, o assunto só aparece ali. A folga das âncoras e do foco desce junto: sem topo
+   fixo, não há o que cobrir em cima. */
+@media (max-height: 35em) {
+  .topo {
+    position: static;
+  }
+
+  html {
+    scroll-padding-top: 0.75rem;
+  }
+}
+
 [data-tema='escuro'] .topo {
   background: var(--folha);
   color: var(--tinta);
@@ -365,6 +383,24 @@ p {
 @media not all and (min-width: 56.25em) {
   .nav:has(> a:nth-of-type(5)) a {
     font-size: min(0.9375rem, 4.3vw);
+    /* Costura do M5: com cinco abas, "Documentos" (83 px a 15 px de letra) não cabe na aba de
+       72 px já com a letra de fábrica, e encostava em "Enquetes" ("EnquetesDocumentos"). Aqui o
+       `min-content` de baixo vale sempre: a aba dela fica com a largura da palavra. */
+    min-width: min-content;
+  }
+}
+
+/* Com o teto acima, "Documentos" ainda é mais larga que 1/4 (ou 1/5) da tela quando a letra
+   passa da de fábrica: a 360 px e 200 %, 109 px numa aba de 90, encostando em "Enquetes" (G2-5).
+   Medido: a palavra mede 5,5 vezes a letra, e encosta a partir de uns 22em de tela (352 px com a
+   letra de fábrica, 528 px a 150 %). Ali, nenhuma aba fica mais estreita que a palavra mais
+   comprida dela (`min-content`): "Documentos" ganha a largura que precisa e as outras dividem o
+   resto, que sobra (a 360 px e 200 %, as quatro somam 338 px). Com a letra de fábrica num
+   celular de 360 px ou mais, nada muda; num de 320 px também passa a valer (lá "Documentos" já
+   encostava por 1 px). */
+@media (max-width: 22em) {
+  .nav a {
+    min-width: min-content;
   }
 }
 
@@ -387,7 +423,8 @@ p {
 .nav .conta {
   position: absolute;
   top: 0.4375rem;
-  left: calc(50% + 0.375rem);
+  /* Na aba estreita (letra grande, costura do M5), o número não passa da borda dela. */
+  left: min(calc(50% + 0.375rem), calc(100% - 1.25rem));
   display: grid;
   place-items: center;
   min-width: 1.125rem;
@@ -484,6 +521,20 @@ a.item:hover {
   height: 0.5625rem;
   border-radius: 50%;
   background: var(--mata);
+}
+
+/* Ícone nunca encolhe (M5, costura): todo ícone do Portal é SVG (`Icone`, os dos anexos, o dos
+   documentos) e quase sempre item de flex ao lado de texto (`.botao`, `.texto-link`,
+   `.com-icone`, `.rotulo`…). O padrão do flex é `flex-shrink: 1`: quando o texto ao lado quebra
+   linha, o ícone era espremido (27 × 40 em vez de 40 × 40 com a letra a 200 %; e já com a letra
+   de fábrica, a 360 px, o de "Como instalar o Portal"). Seletor de elemento, o mais fraco: quem
+   quiser um ícone que encolha diz isso no próprio componente. O pontinho do selo é o mesmo caso. */
+svg {
+  flex-shrink: 0;
+}
+
+.selo::before {
+  flex: none;
 }
 
 .com-icone {
@@ -879,6 +930,41 @@ input.apto {
 @container conteudo (max-width: 19.75rem) {
   .grade {
     grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Letra grande (M5, costura): o mesmo limite de 17.5rem dos avisos (dúvida G1.1). Nada muda com a
+   letra de fábrica, nem num celular de 320 px; num de 360 px, vale a partir de uns 19 px de letra.
+   O que não é texto (padding, gap, rádio, seta) encolhe para o texto ter a linha:
+   - `.opcao`: a 200 %, padding de 2rem, rádio de 3rem e gap de quase 2rem deixavam ~180 px de
+     texto, e "apartamentos" virava "apartamento/s" (G3.5). O rótulo inteiro continua sendo o alvo.
+   - `.item` (listas): a seta e o padding de 1rem quebravam "condomínio" no meio (G2-5). */
+@container conteudo (max-width: 17.5rem) {
+  .opcao {
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem;
+  }
+
+  .opcao input {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .item {
+    column-gap: 0.25rem;
+    padding: 0.75rem 0.5rem 0.75rem 0.75rem;
+  }
+
+  .item .seta svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  /* Botão com ícone: com o ícone sem encolher (acima), a palavra mais comprida do rótulo
+     ("notificações", "documento") não cabe ao lado dele e passava da borda do botão. O ícone
+     fica em cima e o texto embaixo, como no "Abrir o documento" (G2-2). */
+  .botao {
+    flex-wrap: wrap;
   }
 }
 

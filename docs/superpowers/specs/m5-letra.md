@@ -216,6 +216,10 @@ morador 1101 e admin 1002, dados fictícios), 360 e 1280 px, fonte padrão do na
 32 px pelo perfil do Chrome (`webkit.webprefs.default_font_size`, a mesma opção das
 configurações). Mede rolagem lateral, elemento que passa da borda, quem empurra a página, texto
 cortado, alvo < 44 px e a letra mediana. 126 prints por rodada, fora do repositório.
+Desde a costura (dúvidas, C2 e C3): 28 telas (com anexos, documento aberto, foto grande, faixa
+de push, iPhone e primeiro acesso, pelo bucket de mentira da `api-conferencia.py`), 168 prints,
+e três medidas a mais: ícone encolhido, palavra de até 12 letras quebrada no meio e texto que
+passa da borda do controle.
 
 **Antes** (commit `e8749ee`, `/tmp/portal-letra-base-antes/`):
 

@@ -342,3 +342,141 @@ Depois (`/tmp/portal-letra-g3-depois/`):
 já batia antes (a base resolveu o comum; o px dos CSS do G3 era quase todo espaço, não letra);
 a letra menor subiu em nova enquete (15 → 30 a 32 px), privacidade (20 → 36) e enquete aberta
 (24 → 32).
+
+## Costura
+
+Em `m5/integrado` (base + G1 + G2 + G3). O que os grupos deixaram para o comum, e a conferência
+passando a ver todas as telas. Guarda nova: `web/testes/costura-m5.test.ts` (16 testes; 14
+falhavam com o CSS de antes da costura; os 2 que passavam conferem o que não podia mudar).
+
+### C1. Ícone que encolhe: uma regra só, para todo SVG
+- **Decisão:** `svg { flex-shrink: 0 }` no `estilo.css` (seletor de elemento, o mais fraco: quem
+  quiser um ícone que encolha diz no próprio componente) e `.selo::before { flex: none }` (o
+  pontinho do "Novo" e do "Seu apartamento ainda não votou").
+- **Por quê no SVG e não em `:is(.botao, .texto-link, .com-icone, .rotulo) > svg`:** a lista de
+  peças flex que levam ícone não é só essa (`.doc-escolher`, `.enq-mais`, `h3.com-icone` dos
+  aparelhos, os botões do visualizador…), e cada peça nova esqueceria. O `Icone`, o `IconeAnexo`
+  e o `IconeDoc` são todos `<svg>`; nenhum SVG do Portal deve encolher.
+- **Apagados os contornos:** G1 (`.fixado .rotulo svg`, `.avisos-busca label svg`,
+  `.avisos-arquivados .texto-link svg`, `.anexos-escolher label svg`), G2 (`.notif-cartao
+  .com-icone svg`), G3 (o `flex: none` do `.selo.enq-falta::before`). Os `flex: none` em SVG que
+  já existiam antes do M5 (`.doc-quem svg`, `.enq-cartao svg`…) ficaram: não atrapalham.
+- **Efeito colateral, resolvido junto:** sem encolher, o ícone empurrava o rótulo e
+  "notificações" passava da borda do "Ativar notificações" a 200 %. Com letra grande, o `.botao`
+  ganha `flex-wrap: wrap` (ícone em cima, texto embaixo, como o "Abrir o documento" da G2-2).
+- **Com a letra de fábrica:** muda um ícone, o do "Como instalar o Portal na tela inicial" em
+  Minha unidade a 360 px, que já encolhia (22,7 × 24 → 24 × 24).
+
+### C2. Conferência: medidas novas, permanentes no `conferir-letra.mjs`
+- **Ícone encolhido:** SVG com largura e altura fora da proporção do `viewBox`, e pontinho
+  redondo em CSS (`::before` com `border-radius: 50%`) que deixou de ser redondo.
+- **Palavra quebrada:** palavra de 2 a 12 letras cujas letras caem em duas linhas (com
+  `Range.getClientRects`). Não contam: quebra no hífen, endereço e e-mail (são uma "palavra" só,
+  comprida) e palavra de 13 letras ou mais ("Representantes", "acompanhamento"), que a 200 % num
+  celular de 360 px não cabe numa linha mesmo (spec 3.5).
+- **Texto que passa da borda** do controle (botão, link, rótulo, campo): conta como "cortado". Foi
+  o que achou o "Documentos" encostado nas abas e o "notificações" fora do botão.
+- **Não contam como cortado:** a foto recortada na moldura (`object-fit`, só a imagem passa da
+  caixa) e o resumo de propósito (`line-clamp`, como o título do documento no topo, U17, que
+  aparece inteiro logo abaixo); este fica listado à parte no resumo, "não conta".
+- **Janela aberta** ("O que mudou", foto grande): mede só a janela e o print é da tela, não da
+  página inteira (a janela é fixa; a página atrás está coberta). Antes, o "O que mudou" media a
+  Minha unidade de trás.
+
+### C3. Ambiente de conferência com arquivos e push, sem R2 (G2-1, G1 "não conferido")
+- **Arquivos:** `scripts/dev/api-conferencia.py` sobe a mesma `app.main:app` trocando só a
+  dependência `obter_armazenamento` pelo `ArmazenamentoFalso` dos testes (em memória), como o
+  `conftest.py` faz. Os links assinados apontam para um R2 fictício
+  (`conferencia.r2.cloudflarestorage.com`, que a CSP de produção libera); o
+  `conferir-letra.mjs` intercepta esse endereço (rota do Playwright) e busca o conteúdo na rota
+  `/api/_conferencia/bucket/…` que o próprio script de dev acrescenta. A foto do aviso chega por
+  `…/abrir`, que redireciona; como o Playwright não intercepta o pedido redirecionado (sem a
+  rota, o Chrome tentava o domínio de verdade da Cloudflare), a rota segue o redirecionamento ela
+  mesma. Nada sai para a rede, nada vai para produção (só roda com `PORTAL_AMBIENTE=local`).
+- **Por que não o `moto`:** só está instalado o `moto[s3]` (dentro do processo), sem o servidor;
+  e o navegador precisa de um endereço que a CSP aceite. Interceptar no Playwright, como o G2 fez
+  à parte, agora está versionado no próprio script.
+- **Push:** o `ambiente-conferencia.sh` gera um par VAPID na hora (nunca gravado) e liga o push;
+  ninguém se inscreve, nenhuma notificação sai. Com isso aparecem a faixa "Falta um passo" no
+  mural e o "Receber os avisos" como para o morador.
+- **`--semear` agora cria também:** um aviso com duas fotos (PNG gerado pelo script, sem arquivo
+  no repositório) e um PDF; um documento das unidades com duas versões e o aviso automático da
+  versão nova ("Ver o documento"); um documento público.
+- **Telas novas (28 no total, eram 21):** `primeiro-acesso` (a primeira unidade ainda não
+  ativada, com a senha inicial: cai na troca obrigatória), `aviso-anexos`, `foto-grande` (o
+  visualizador aberto), `documento` (morador) e `documento-gestao`, `aviso-documento`,
+  `receber-avisos-iphone` (a página se apresenta como Safari do iPhone: o passo a passo da tela
+  inicial). A faixa de push entrou no `mural` (o morador ainda não ativou).
+
+### C4. `.opcao` e `.item` com letra grande
+- **Decisão:** no comum, `@container conteudo (max-width: 17.5rem)` (o limite dos avisos, G1.1:
+  nada muda com a letra de fábrica, nem num celular de 320 px): `.opcao` com gap e padding de
+  0.5rem e o rádio de 1.25rem (o rótulo inteiro continua sendo o alvo); `.item` com padding menor
+  (0.75rem; 0.5rem do lado da seta), `column-gap` de 0.25rem e a seta de 1rem. "apartamentos",
+  "Receber", "condomínio" deixaram de quebrar.
+
+### C5. Topo fixo numa tela baixa para a letra · [Erick]
+- **Escolha entre** `line-clamp` no `h1` do topo e o topo deixar de ser fixo: o `line-clamp` não
+  serve, porque no aviso aberto o assunto só aparece no topo (cortado, a pessoa não lê o
+  título). **Decidido:** `@media (max-height: 35em)` (o mesmo limite da janela "O que mudou",
+  G2-3): o `.topo` fica `position: static` e rola com a página, e o `scroll-padding-top` desce de
+  5rem para 0.75rem (sem topo fixo, não há o que cobrir em cima). As abas de baixo continuam
+  presas. 35em = 560 px de altura com a letra de fábrica, 840 a 150 %, 1120 a 200 %.
+- **Com a letra de fábrica:** num celular em pé, nada muda (prints iguais). Com o celular
+  **deitado** (altura < 560 px), o topo passa a rolar também, o que ali também ajuda.
+- **[Erick]:** com letra grande, o botão de voltar e o de tema somem quando a pessoa rola para
+  baixo (estão no topo). Voltar continua pelo gesto/botão do celular. Se a Dona Socorro sentir
+  falta, a alternativa é fixar só a linha da seta de voltar.
+
+### C6. Abas de baixo nunca encostam
+- **Medido** (texto de cada aba e a folga até a borda dela, 320, 360 e 412 px, letra 16 a 32):
+  "Documentos" mede 5,5 vezes a letra; com o teto da dúvida 1 (20 px a 360), dá 109 px numa aba
+  de 90, e invadia 9 px de cada lado ("Enquetes" encostava). Baixar o teto não resolvia sem
+  descer da letra mínima de 15 px (U10).
+- **Decisão, dentro do teto:** `min-width: min-content` nas abas quando a tela é estreita para a
+  letra (`@media (max-width: 22em)`: 352 px com a letra de fábrica, 528 a 150 %): "Documentos"
+  ganha a largura da palavra e as outras dividem o resto (a 360 px e 200 %, as quatro somam 338 px
+  e sobram pelo menos 7 px entre duas palavras). O número de não lidos ficou preso dentro da aba
+  (`left: min(…, 100% - 1.25rem)`; com a letra de fábrica, a mesma posição).
+- **Cinco abas (gestão) · [Erick]:** ali "Documentos" já não cabia **com a letra de fábrica**
+  (83 px numa aba de 72: "EnquetesDocumentos" colados no painel a 360 px). O `min-content` vale
+  sempre com cinco abas. **É a diferença de propósito nos prints a 16 px**: as abas de baixo do
+  painel (`painel-360-16`), que agora têm espaço entre "Enquetes" e "Documentos". Se preferir o
+  desenho antigo, é tirar uma linha.
+
+### C7. Achados nas telas novas (consertados)
+- **Foto grande:** "Próxima" saía da tela (o `.botao` tem `width: 100%`; agora `flex: 1 1 0` e
+  `min-width: 0`) e "Foto 1 de 2" virava "F…" ao lado do "Fechar" (o topo do visualizador agora
+  quebra a linha). Com letra grande (o visualizador é o próprio contêiner, 17.5rem), "Anterior" e
+  "Próxima" ficam um embaixo do outro.
+- **Aviso com anexos, letra grande:** as fotos em duas colunas de ~150 px cortavam o selo
+  "Ampliar"; agora uma por linha (a foto maior também ajuda quem pôs a letra grande). O PDF põe o
+  ícone em cima e o nome com a largura toda ("fiscalizaçã/o" deixou de quebrar).
+- **"O que mudou", letra grande:** o padding da janela, o recuo da linha do tempo e o da lista
+  deixavam ~150 px de texto (51 palavras quebradas no meio a 200 %). A `.janela-caixa` virou
+  contêiner (`janela`) e, abaixo de 17.5rem, os recuos encolhem; a linha do tempo continua.
+
+### C8. Alvos menores que 44 px: os mesmos de antes
+- Só a grade de apartamentos a 360 px com a letra de fábrica (painel e "Quem leu", 38 × 44,
+  dúvida 4). Nenhum alvo novo: o rádio menor da `.opcao` não é o alvo (o rótulo é).
+
+### C9. Rodada completa antes × depois
+`conferir-letra.mjs`, 28 telas, 360 e 1280 px, letra 16/24/32, tema claro; container
+`m5-letra-costura`. "Antes" = `m5/integrado` (`b5d2107`) com o script novo; "depois" = costura.
+Telas com o problema (e quantos achados, quando difere):
+
+| fonte | largura | rolagem | fora | cortado | ícone encolhido | palavra quebrada | alvo < 44 | letra mediana |
+|---|---|---|---|---|---|---|---|---|
+| 16 | 360 | 0 → 0 | 0 → 0 | 1 → 0 | 1 → 0 | 0 → 0 | 2 → 2 | 18 → 18 |
+| 16 | 1280 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 17 → 17 |
+| 24 | 360 | 0 → 0 | 1 → 0 | 9 → 0 | 6 (9) → 0 | 0 → 0 | 0 → 0 | 27 → 27 |
+| 24 | 1280 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 27 → 27 |
+| 32 | 360 | 0 → 0 | 1 → 0 | 9 → 0 | 7 (39) → 0 | 6 (61) → 0 | 0 → 0 | 36 → 36 |
+| 32 | 1280 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 0 → 0 | 36 → 36 |
+
+- **16 px, `comparar-prints`:** 52 iguais, 4 diferentes: Minha unidade a 360 e 1280 e o "O que
+  mudou" a 1280 (horário e quantidade de "aparelhos conectados", dado; a 360 também o ícone da
+  C1) e o painel a 360 (as cinco abas, C6).
+- **Não conferido:** tema escuro, e aparelho real (tarefa 6 do plano, do coordenador).
+- **De passagem:** com `PENDENTES` vazio depois do merge dos três grupos, o `tsc -b` acusava
+  `never` no `letra.test.ts`; o `Set` ganhou o tipo (`new Set<string>`). Nada muda no teste.

@@ -187,15 +187,6 @@ a.cartao-aviso:hover {
   }
 }
 
-/* Ícone ao lado de texto que quebra linha não encolhe (M5): com letra grande, o alfinete do
-   fixado ficava com metade do tamanho. As peças são do comum (`.fixado .rotulo`, `.com-icone`,
-   `.texto-link`), que não têm o `flex: none`; enquanto não tiverem, vale aqui para os avisos. */
-.fixado .rotulo svg,
-.avisos-busca label svg,
-.avisos-arquivados .texto-link svg {
-  flex: none;
-}
-
 /* O fixado continua com o fundo ipê (protótipo) e ganha a categoria. */
 .fixado .rotulo-cat {
   margin-top: 0.25rem;
