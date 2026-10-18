@@ -2,10 +2,14 @@
 import type { RouteObject } from 'react-router'
 import { ExigeUnidade } from '../casca/guardas'
 import { ListaIndicacoes } from './Lista'
+import { PaginaIndicacao } from './PrestadorAberto'
 
 export const rotasIndicacoes: RouteObject[] = [
   {
     element: <ExigeUnidade />,
-    children: [{ path: 'indicacoes', element: <ListaIndicacoes /> }],
+    children: [
+      { path: 'indicacoes', element: <ListaIndicacoes /> },
+      { path: 'indicacoes/:id', element: <PaginaIndicacao /> },
+    ],
   },
 ]
