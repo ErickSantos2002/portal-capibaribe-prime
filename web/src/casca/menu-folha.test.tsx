@@ -144,6 +144,16 @@ describe('fechar', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('se a página mudar com a folha aberta (voltar sem CloseWatcher), a folha não fica aberta na outra', async () => {
+    api(eu())
+    const roteador = abrir('/avisos')
+    await abrirFolha()
+    await act(() => roteador.navigate('/documentos'))
+    await waitFor(() => expect(roteador.state.location.pathname).toBe('/documentos'))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(document.body.style.position).toBe('')
+  })
+
   it('o fundo da página fica travado enquanto a folha está aberta, e volta ao fechar', async () => {
     api(eu())
     abrir('/avisos')
