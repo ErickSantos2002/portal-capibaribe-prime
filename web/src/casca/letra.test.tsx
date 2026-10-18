@@ -25,6 +25,7 @@ afterEach(() => {
   raiz.style.fontSize = ''
   delete raiz.dataset.letra
   delete raiz.dataset.altura
+  delete raiz.dataset.largura
 })
 
 describe('classificar', () => {
@@ -47,7 +48,27 @@ describe('classificar', () => {
   })
 })
 
+describe('classificar: tela estreita (barra do celular, "Docs")', () => {
+  it('abaixo de 340 px de largura é estreita, e a letra não interfere', () => {
+    expect(classificar(16, 800, 320).estreita).toBe(true)
+    expect(classificar(32, 800, 360).estreita).toBe(false)
+    expect(classificar(16, 800, 340).estreita).toBe(false)
+  })
+})
+
 describe('vigiarLetra', () => {
+  it('marca data-largura="estreita" pela largura da janela e tira quando ela passa', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 412 })
+    parar = vigiarLetra()
+    expect(raiz.dataset.largura).toBeUndefined()
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
+    window.dispatchEvent(new Event('resize'))
+    expect(raiz.dataset.largura).toBe('estreita')
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 412 })
+    window.dispatchEvent(new Event('resize'))
+    expect(raiz.dataset.largura).toBeUndefined()
+  })
+
   it('marca o html na hora: letra de fábrica sem marca, letra grande com data-letra', () => {
     parar = vigiarLetra()
     expect(raiz.dataset.letra).toBeUndefined()

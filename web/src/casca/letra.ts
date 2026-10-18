@@ -7,7 +7,12 @@
 // larguras, o CSS usa container query em rem (o rem de uma container query é o do <html>); para
 // o que não tem container query (a altura da tela, o topo), vale a marca daqui:
 //   - `data-letra="grande"`: o <html> com 20 px ou mais (125 % da letra de fábrica);
-//   - `data-altura="baixa"`: a janela com menos de 35 letras de altura (560 px com a de fábrica).
+//   - `data-altura="baixa"`: a janela com menos de 35 letras de altura (560 px com a de fábrica);
+//   - `data-largura="estreita"`: a janela com menos de 340 px CSS de largura (navegação com bola).
+//     Esta é em px reais, não em letras, de propósito: a letra da barra do celular não cresce com
+//     a letra grande (fica presa pela largura), então a letra grande não pode empurrar todo
+//     celular para o rótulo curto ("Docs" no lugar de "Documentos"). Só a tela estreita de
+//     verdade (320 px) precisa dele.
 // O tamanho é lido do próprio <html> (getComputedStyle), e uma régua invisível de 1rem avisa
 // quando ele muda (ResizeObserver): a pessoa trocou a letra com o Portal aberto.
 import { useSyncExternalStore } from 'react'
@@ -19,16 +24,20 @@ import { useSyncExternalStore } from 'react'
 export const LETRA_GRANDE_PX = 20
 /** Altura da janela, em letras, abaixo da qual a tela é "baixa" (o antigo `max-height: 35em`). */
 export const ALTURA_BAIXA_EM_LETRAS = 35
+/** Largura da janela, em px CSS, abaixo da qual a barra do celular usa os rótulos curtos. */
+export const LARGURA_ESTREITA_PX = 340
 
 export interface EstadoDaLetra {
   grande: boolean
   baixa: boolean
+  estreita: boolean
 }
 
-export function classificar(raizPx: number, alturaPx: number): EstadoDaLetra {
+export function classificar(raizPx: number, alturaPx: number, larguraPx = Infinity): EstadoDaLetra {
   return {
     grande: raizPx >= LETRA_GRANDE_PX,
     baixa: alturaPx < ALTURA_BAIXA_EM_LETRAS * raizPx,
+    estreita: larguraPx < LARGURA_ESTREITA_PX,
   }
 }
 
@@ -37,12 +46,14 @@ const ouvintes = new Set<() => void>()
 function atualizar(): void {
   const raiz = document.documentElement
   const px = parseFloat(getComputedStyle(raiz).fontSize) || 16
-  const { grande, baixa } = classificar(px, window.innerHeight)
+  const { grande, baixa, estreita } = classificar(px, window.innerHeight, window.innerWidth)
   const antes = raiz.dataset.letra
   if (grande) raiz.dataset.letra = 'grande'
   else delete raiz.dataset.letra
   if (baixa) raiz.dataset.altura = 'baixa'
   else delete raiz.dataset.altura
+  if (estreita) raiz.dataset.largura = 'estreita'
+  else delete raiz.dataset.largura
   if (antes !== raiz.dataset.letra) ouvintes.forEach((avisar) => avisar())
 }
 
