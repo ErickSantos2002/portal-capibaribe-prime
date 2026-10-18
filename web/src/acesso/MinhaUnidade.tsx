@@ -312,7 +312,8 @@ export function MinhaUnidade() {
           <h2 className="secao">Privacidade</h2>
           <p className="ajuda">
             Apaga nome, celular e e-mail, desconecta todos os aparelhos e volta a senha para a
-            inicial. Os votos e as leituras do apartamento continuam valendo.
+            inicial. Apaga também as opiniões e os avisos dados nas Indicações. Os votos e as
+            leituras do apartamento continuam valendo.
           </p>
           <p>
             <Link className="texto-link" to="/privacidade">
@@ -500,8 +501,9 @@ function ConfirmarApagar({
         Apagar os dados do apartamento?
       </h2>
       <p>
-        Nome, celular e e-mail somem, todos os aparelhos saem e a senha volta a ser a inicial. O
-        apartamento vai precisar fazer o primeiro acesso de novo.
+        Nome, celular e e-mail somem, todos os aparelhos saem e a senha volta a ser a inicial. As
+        opiniões e os avisos dados nas Indicações também são apagados. O apartamento vai precisar
+        fazer o primeiro acesso de novo.
       </p>
       {/* C1: o risco de a senha voltar a ser a inicial, em destaque. */}
       <div className="aviso-caixa atencao acesso-risco" role="note">

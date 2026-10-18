@@ -308,6 +308,18 @@ describe('minha unidade · apagar meus dados', () => {
     expect(screen.queryByRole('button', { name: 'Sim, apagar meus dados' })).toBeNull()
   })
 
+  it('avisa, na seção e na confirmação, que as opiniões e os avisos das Indicações vão junto', async () => {
+    await abrirMinhaUnidade()
+    // Revisão das indicações: apagar levava as opiniões sem a tela dizer.
+    const secao = screen.getByRole('heading', { name: 'Privacidade' }).nextElementSibling
+    expect(secao?.textContent).toContain('opiniões e os avisos dados nas Indicações')
+    fireEvent.click(screen.getByRole('button', { name: 'Apagar meus dados' }))
+    const confirmacao = screen.getByRole('heading', { name: 'Apagar os dados do apartamento?' })
+    expect(confirmacao.nextElementSibling?.textContent).toContain(
+      'opiniões e os avisos dados nas Indicações também são apagados',
+    )
+  })
+
   it('confirmado, apaga e volta à entrada', async () => {
     const { chamadas, roteador } = await abrirMinhaUnidade({
       'POST /api/minha-unidade/apagar-dados': json(204),
