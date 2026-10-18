@@ -245,6 +245,7 @@ morador. Cada um entra num marco quando alguém pedir ou quando o marco tocar no
 | Contador de enquetes por votar na aba "Enquetes" (como o número de avisos não lidos) | Pede uma rota de contagem e o encaixe no menu; a lista já diz "Seu apartamento ainda não votou" | Revisão de usabilidade do M4 (item 16) |
 | Apartamentos maiores na grade de Unidades a 360 px | Com a letra de fábrica, cada apartamento tem 38 px de largura (o alvo de toque é 44) | Conferência da navegação com a bola (18/10), já existia antes |
 | Faixa "Fixado pela Administração do Portal" cortada a 320 px e 200 % | O texto da faixa do aviso fixado não cabe no celular estreito com a letra no máximo | Conferência da navegação com a bola (18/10), já existia antes |
+| Botão flutuante cobre o primeiro cartão a 320 px e 200 % | Em Indicações ("Indicar alguém") e em Avisos ("Novo aviso") o botão fixo embaixo tapa o começo do primeiro cartão com a letra no máximo; mudar o padrão do botão flutuante com letra grande vale para as duas telas | Correções da revisão das Indicações (18/10) |
 
 ### Fora dos marcos · Navegação do celular com a bola do Menu (1.7.0)
 
@@ -259,6 +260,21 @@ plano: `superpowers/plans/2026-10-18-navegacao-bola.md`; escolhas: `superpowers/
 **Fechado em 18/10/2026.** No ar na versão 1.7.0 (`8cda855`), com revisão independente de
 código e de UX e 12 correções com teste, 0 erros depois do deploy. O Erick testou no celular
 dele: a bola abre e fecha a folha certinho, tudo funcionando.
+
+### Fora dos marcos · Indicações de serviços (1.8.0)
+
+Escolhida pelo grupo na votação de 18/10/2026 (a opção mais pedida). Moradores indicam prestadores
+(planejados, ar-condicionado, eletricista, encanador…), dizem se recomendam e contam como foi;
+uma opinião por apartamento e prestador, telefone único, WhatsApp direto, "Avisar a gestão" e a
+gestão pode esconder. Fica no Menu, grupo "Dia a dia". Alimentada pelos próprios moradores e útil
+também depois da entrega. Spec: `superpowers/specs/2026-10-18-indicacoes-design.md`; plano:
+`superpowers/plans/2026-10-18-indicacoes.md`; escolhas: `superpowers/duvidas-indicacoes.md`.
+
+**No ar em 18/10/2026, aguardando retorno dos moradores.** Versão 1.8.0 (`d3b83bc`), migração
+0010 aplicada no Neon antes do push, revisão independente de código e de UX com todas as
+correções feitas com teste (API 1980, vitest 797), 0 erros depois do deploy. Anúncio mandado no
+grupo pedindo que testem e indiquem quem já contrataram. **Pendente:** o retorno do pessoal e o
+teste do Erick no celular; ajustar o que aparecer e então fechar.
 
 ### M4 · Enquetes
 

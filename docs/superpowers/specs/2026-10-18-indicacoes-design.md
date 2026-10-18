@@ -1,6 +1,6 @@
 # Indicações de serviços (design)
 
-Data: 18/10/2026 · Versão alvo: **1.8.0** (novidade = minor) · Migração nova: **0010**
+Estado: **no ar (1.8.0, 18/10/2026), aguardando retorno dos moradores** · Data: 18/10/2026 · Versão alvo: **1.8.0** (novidade = minor) · Migração nova: **0010**
 Origem: votação no grupo de WhatsApp em 18/10/2026 (a opção 1, "Indicações de serviços", foi a
 mais pedida) e brainstorming com o Erick. Ele aprovou o desenho **sem mudanças**:
 `.superpowers/brainstorm/525159-1792347030/content/indicacoes.html` (fora do git; três telas e as
