@@ -90,3 +90,7 @@ regressão que falhava antes.
   vez pediria mexer no botão flutuante com a letra grande (padrão comum a outras telas), o que
   não fiz sem perguntar.
 - **Prestador escondido não anonimizado**, como pedido: fica para a decisão do dono.
+
+## Resposta do Erick (18/10/2026)
+
+- Prestador escondido: **guardar como está** (nome, Instagram e opiniões ficam guardados e invisíveis aos moradores; a gestão mantém o contexto e o engano pode ser desfeito). Não anonimizar.
