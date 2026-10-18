@@ -388,3 +388,14 @@ def test_carga_da_migracao_igual_a_constante():
     texto = (RAIZ_API / "migracoes" / "versions" / "0010_indicacoes.py").read_text()
     carga = re.findall(r"\('([^']+)', (\d+)\)", texto.split("CARGA", 1)[1])
     assert [(n, int(o)) for n, o in carga] == list(CATEGORIAS_INICIAIS)
+
+
+FUNCOES_DA_0010 = {"prestador_conferir", "opiniao_conferir", "aviso_servico_conferir"}
+
+
+def test_funcoes_de_trigger_da_0010_com_search_path_fixo(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    funcoes = _funcoes(banco_vazio)
+    assert set(funcoes) >= FUNCOES_DA_0010
+    for nome in FUNCOES_DA_0010:
+        assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome

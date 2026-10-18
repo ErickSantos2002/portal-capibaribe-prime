@@ -136,6 +136,188 @@ insert into categoria_servico (nome, ordem) values
     ('Outros', 999);
 """
 
+# Toda função de trigger fixa o search_path com pg_temp por último e usa nomes qualificados
+# (dúvida 20 do M0). O apagar não tem trigger: "apagar meus dados" e o reset apagam até a
+# opinião escondida; a recusa de a unidade apagar a própria opinião escondida é da rota.
+REGRAS = """
+-- Indicar: datas do banco, unidade ativa e no máximo 10 por unidade a cada 24 horas. Corrigir:
+-- nada muda no escondido (menos perder o autor), o autor só vira nulo, esconder é de nulo para
+-- a hora e não volta.
+create function public.prestador_conferir() returns trigger
+language plpgsql
+set search_path = pg_catalog, public, pg_temp
+as $$
+begin
+    if tg_op = 'INSERT' then
+        new.criado_em := now();
+        new.editado_em := null;
+        new.escondido_em := null;
+        new.escondido_por := null;
+        -- Trava a unidade: indicações ao mesmo tempo contam umas com as outras.
+        perform 1 from public.unidade u
+         where u.id = new.criado_por and u.ativa for no key update;
+        if not found then
+            raise exception 'Só unidade ativa indica um prestador.'
+                using errcode = 'check_violation', constraint = 'indicacao_de_unidade_inativa';
+        end if;
+        if (select count(*) from public.prestador p
+             where p.criado_por = new.criado_por
+               and p.criado_em > now() - interval '24 hours') >= 10 then
+            raise exception 'No máximo 10 indicações por apartamento a cada 24 horas.'
+                using errcode = 'check_violation', constraint = 'prestador_limite_dia';
+        end if;
+        return new;
+    end if;
+    if new.criado_por is distinct from old.criado_por and new.criado_por is not null then
+        raise exception 'Quem indicou não muda (só deixa de existir).'
+            using errcode = 'check_violation', constraint = 'prestador_autor_fixo';
+    end if;
+    if old.escondido_em is not null then
+        -- Escondido não muda, menos perder o autor ("apagar meus dados", reset).
+        if (new.categoria_id, new.nome, new.nome_busca, new.telefone, new.instagram,
+            new.escondido_em, new.escondido_por)
+           is distinct from
+           (old.categoria_id, old.nome, old.nome_busca, old.telefone, old.instagram,
+            old.escondido_em, old.escondido_por) then
+            raise exception 'Prestador escondido não muda.'
+                using errcode = 'check_violation', constraint = 'prestador_escondido';
+        end if;
+    elsif new.escondido_em is not null then
+        new.escondido_em := now();
+    end if;
+    new.criado_em := old.criado_em;
+    if (new.categoria_id, new.nome, new.telefone, new.instagram)
+       is distinct from (old.categoria_id, old.nome, old.telefone, old.instagram) then
+        new.editado_em := now();
+    else
+        new.editado_em := old.editado_em;
+    end if;
+    return new;
+end;
+$$;
+
+create trigger prestador_regras
+    before insert or update on prestador
+    for each row execute function public.prestador_conferir();
+
+-- Opinar: unidade ativa, prestador visível, no máximo 30 novas por unidade a cada 24 horas
+-- (contando as que ela mesma apagou, pelo histórico: senão apagar e escrever de novo não teria
+-- fim). Mudar a opinião é UPDATE e não conta. Esconder (a gestão) só carimba e trava a linha.
+create function public.opiniao_conferir() returns trigger
+language plpgsql
+set search_path = pg_catalog, public, pg_temp
+as $$
+begin
+    if tg_op = 'INSERT' then
+        new.criada_em := now();
+        new.editada_em := null;
+        new.escondida_em := null;
+        new.escondida_por := null;
+        if exists (select 1 from public.prestador p
+                    where p.id = new.prestador_id and p.escondido_em is not null) then
+            raise exception 'Prestador escondido não recebe opinião.'
+                using errcode = 'check_violation', constraint = 'prestador_escondido';
+        end if;
+        perform 1 from public.unidade u
+         where u.id = new.unidade_id and u.ativa for no key update;
+        if not found then
+            if exists (select 1 from public.unidade u where u.id = new.unidade_id) then
+                raise exception 'Só unidade ativa dá opinião.'
+                    using errcode = 'check_violation', constraint = 'indicacao_de_unidade_inativa';
+            end if;
+            return new;  -- a chave estrangeira recusa
+        end if;
+        if (select count(*) from public.opiniao_servico o
+             where o.unidade_id = new.unidade_id
+               and o.criada_em > now() - interval '24 hours')
+           + (select count(*) from public.historico h
+               where h.acao = 'indicacao_opiniao_apagada'
+                 and h.unidade_id = new.unidade_id
+                 and h.ocorrido_em > now() - interval '24 hours') >= 30 then
+            raise exception 'No máximo 30 opiniões novas por apartamento a cada 24 horas.'
+                using errcode = 'check_violation', constraint = 'opiniao_limite_dia';
+        end if;
+        return new;
+    end if;
+    if (new.prestador_id, new.unidade_id) is distinct from (old.prestador_id, old.unidade_id) then
+        raise exception 'A opinião não troca de prestador nem de unidade.'
+            using errcode = 'check_violation', constraint = 'opiniao_fixa';
+    end if;
+    if old.escondida_em is not null then
+        raise exception 'A gestão escondeu esta opinião: ela não muda mais.'
+            using errcode = 'check_violation', constraint = 'opiniao_escondida';
+    end if;
+    new.criada_em := old.criada_em;
+    if new.escondida_em is not null then
+        -- Esconder não muda o que a opinião diz.
+        if (new.recomenda, new.comentario) is distinct from (old.recomenda, old.comentario) then
+            raise exception 'Esconder a opinião não muda o que ela diz.'
+                using errcode = 'check_violation', constraint = 'opiniao_escondida';
+        end if;
+        new.escondida_em := now();
+        new.editada_em := old.editada_em;
+        return new;
+    end if;
+    if exists (select 1 from public.unidade u where u.id = new.unidade_id and not u.ativa) then
+        raise exception 'Só unidade ativa muda a opinião.'
+            using errcode = 'check_violation', constraint = 'indicacao_de_unidade_inativa';
+    end if;
+    if exists (select 1 from public.prestador p
+                where p.id = new.prestador_id and p.escondido_em is not null) then
+        raise exception 'Prestador escondido não recebe opinião.'
+            using errcode = 'check_violation', constraint = 'prestador_escondido';
+    end if;
+    new.editada_em := now();
+    return new;
+end;
+$$;
+
+create trigger opiniao_regras
+    before insert or update on opiniao_servico
+    for each row execute function public.opiniao_conferir();
+
+-- Avisar: unidade ativa e prestador visível. Depois, só resolver (de nulo para a hora) e a
+-- reserva de e-mails mudam.
+create function public.aviso_servico_conferir() returns trigger
+language plpgsql
+set search_path = pg_catalog, public, pg_temp
+as $$
+begin
+    if tg_op = 'INSERT' then
+        new.criado_em := now();
+        new.resolvido_em := null;
+        new.resolvido_por := null;
+        if exists (select 1 from public.unidade u where u.id = new.unidade_id and not u.ativa) then
+            raise exception 'Só unidade ativa avisa a gestão.'
+                using errcode = 'check_violation', constraint = 'indicacao_de_unidade_inativa';
+        end if;
+        if exists (select 1 from public.prestador p
+                    where p.id = new.prestador_id and p.escondido_em is not null) then
+            raise exception 'Prestador escondido não recebe aviso.'
+                using errcode = 'check_violation', constraint = 'prestador_escondido';
+        end if;
+        return new;
+    end if;
+    if (new.prestador_id, new.unidade_id, new.motivo, new.criado_em)
+       is distinct from (old.prestador_id, old.unidade_id, old.motivo, old.criado_em)
+       or (old.resolvido_em is not null
+           and (new.resolvido_em, new.resolvido_por)
+               is distinct from (old.resolvido_em, old.resolvido_por)) then
+        raise exception 'O aviso não muda; só é resolvido, uma vez.'
+            using errcode = 'check_violation', constraint = 'aviso_servico_fixo';
+    end if;
+    if old.resolvido_em is null and new.resolvido_em is not null then
+        new.resolvido_em := now();
+    end if;
+    return new;
+end;
+$$;
+
+create trigger aviso_servico_regras
+    before insert or update on aviso_servico
+    for each row execute function public.aviso_servico_conferir();
+"""
+
 # Padrão da 0007 e da 0008: só as colunas que a API escreve. Nada de DELETE em prestador nem em
 # categoria.
 PERMISSOES = """
@@ -153,9 +335,17 @@ def upgrade() -> None:
     app = _papel_app()
     op.execute(TABELAS)
     op.execute(CARGA)
+    op.execute(REGRAS)
     op.execute(PERMISSOES.format(app=app))
 
 
 def downgrade() -> None:
-    # As permissões saem com as tabelas.
-    op.execute("drop table aviso_servico, opiniao_servico, prestador, categoria_servico;")
+    # As permissões e as triggers saem com as tabelas; as funções, depois.
+    op.execute(
+        """
+        drop table aviso_servico, opiniao_servico, prestador, categoria_servico;
+        drop function public.aviso_servico_conferir();
+        drop function public.opiniao_conferir();
+        drop function public.prestador_conferir();
+        """
+    )
