@@ -1,6 +1,8 @@
 # Navegação do celular: barra com arco e a bola do Menu (design)
 
 Data: 18/10/2026 · Versão alvo: **1.7.0** (novidade visível = minor)
+Estado: **implementado** na branch `nav/bola` (versão 1.7.0); decisões tomadas sem perguntar em
+`docs/superpowers/duvidas-nav-bola.md`. Falta o teste em Android e iPhone reais.
 Origem: brainstorming com o Erick; desenhos em `.superpowers/brainstorm/222262-1792337475/content/`
 (`navbar.html` opção **C**, `menu.html` opção **1**, `menu-muitos.html`), fora do git. Revisão
 independente de UX feita antes deste documento (achados incorporados abaixo, marcados **[rev]**).

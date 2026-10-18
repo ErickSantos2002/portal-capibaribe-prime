@@ -17,6 +17,16 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.7.0',
+    data: '2026-10-18',
+    nome: 'Menu novo no celular',
+    itens: [
+      'No celular, a barra de baixo ganhou uma bola no meio, a "Menu". Avisos, Enquetes, Documentos e Minha unidade continuam na barra, sempre com o nome embaixo do desenho.',
+      'Tocando no "Menu", sobe uma lista com todos os lugares do Portal, cada um com uma frase dizendo o que tem lá. Para fechar, toque em "Fechar", fora da lista ou no voltar do celular.',
+      'Quem é da Comissão ou da administração encontra "Unidades" dentro do Menu, no grupo "Gestão".',
+    ],
+  },
+  {
     versao: '1.6.0',
     data: '2026-10-17',
     nome: 'Letra que cresce',
