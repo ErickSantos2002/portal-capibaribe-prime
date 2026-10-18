@@ -243,6 +243,22 @@ morador. Cada um entra num marco quando alguém pedir ou quando o marco tocar no
 | Uma pergunta só de "Sair sem publicar?" | Documentos e avisos têm cada um a sua (`window.confirm` e um diálogo próprio) | Revisão do épico A (U5) |
 | Cópia dos arquivos fora da Cloudflare (Backblaze B2) | Plano B escolhido para ter uma conta a menos; o B2 volta a cobrir a perda da conta, só trocando segredos | ADR-0011, revisão de 12/10/2026 |
 | Contador de enquetes por votar na aba "Enquetes" (como o número de avisos não lidos) | Pede uma rota de contagem e o encaixe no menu; a lista já diz "Seu apartamento ainda não votou" | Revisão de usabilidade do M4 (item 16) |
+| Apartamentos maiores na grade de Unidades a 360 px | Com a letra de fábrica, cada apartamento tem 38 px de largura (o alvo de toque é 44) | Conferência da navegação com a bola (18/10), já existia antes |
+| Faixa "Fixado pela Administração do Portal" cortada a 320 px e 200 % | O texto da faixa do aviso fixado não cabe no celular estreito com a letra no máximo | Conferência da navegação com a bola (18/10), já existia antes |
+
+### Fora dos marcos · Navegação do celular com a bola do Menu (1.7.0)
+
+Pedido do Erick, inspirado na barra do app da PlayStation. A barra de baixo do celular ganhou um
+arco, 4 abas com nome (Avisos, Enquetes, Documentos, Minha unidade) e uma bola "Menu" no meio,
+que abre uma folha com todos os lugares explicados e agrupados ("Dia a dia", "Gestão").
+"Unidades" saiu da barra e foi para a folha. Lugar novo = uma entrada na lista única
+(`web/src/casca/menu.ts`), que alimenta a barra, a folha e o menu lateral do computador; é aí
+que entram os lugares da E2. Spec: `superpowers/specs/2026-10-18-navegacao-bola-design.md`;
+plano: `superpowers/plans/2026-10-18-navegacao-bola.md`; escolhas: `superpowers/duvidas-nav-bola.md`.
+
+**Fechado em 18/10/2026.** No ar na versão 1.7.0 (`8cda855`), com revisão independente de
+código e de UX e 12 correções com teste, 0 erros depois do deploy. O Erick testou no celular
+dele: a bola abre e fecha a folha certinho, tudo funcionando.
 
 ### M4 · Enquetes
 

@@ -74,3 +74,10 @@ A conferência acusa 4 problemas que já existiam antes desta branch (conferido 
 commit `b1c2c11` no mesmo ambiente): o painel de unidades a 360 px com a letra de fábrica tem os
 apartamentos com 38 px de largura (alvo < 44), e o aviso fixado do mural a 320 px e 200 % corta o
 texto da faixa ("Fixado pela Administração do Portal"). Não mexi.
+
+## Fechamento (18/10/2026)
+
+No ar na versão 1.7.0 (`8cda855`). O Erick abriu no celular dele: a bola abre e fecha a folha
+certinho, "tudo funcionando perfeitamente". Nenhuma das escolhas acima precisou mudar. Os dois
+problemas que já existiam (grade de Unidades e faixa do aviso fixado) foram para o backlog do
+roadmap.
