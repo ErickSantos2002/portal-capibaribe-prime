@@ -72,7 +72,13 @@ const COMISSAO = eu(['comissao'], false, '2304')
 describe('encaixes', () => {
   it('"Enquetes" no menu para toda unidade', () => {
     for (const quem of [COMUM, COMISSAO]) {
-      expect(itemEnquetes(quem)).toEqual({ para: '/enquetes', icone: 'enquetes', texto: 'Enquetes' })
+      expect(itemEnquetes(quem)).toMatchObject({
+        para: '/enquetes',
+        icone: 'enquetes',
+        texto: 'Enquetes',
+        grupo: 'dia-a-dia',
+        naBarra: 2,
+      })
     }
   })
 

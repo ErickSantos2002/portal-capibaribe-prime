@@ -9,7 +9,7 @@ import { abrir, apiFalsa, eu, json } from './acesso/apoioDeTeste'
 import { oQueFez } from './administracao/frases'
 import type { ItemHistorico } from './administracao/tipos'
 import type { AvisoCompleto, EnqueteDoAviso as EnqueteDoAvisoTipo } from './avisos/tipos'
-import { itensDoMenu } from './casca/menu'
+import { lugaresDo } from './casca/menu'
 import * as enquetes from './enquetes/api'
 import * as caminhos from './enquetes/caminhos'
 import type { NovaEnquete } from './enquetes/tipos'
@@ -25,7 +25,14 @@ vi.mock('./enquetes/gestao/rotas', async () => {
   return { rotasGestaoEnquetes: [{ path: 'enquetes-gestao-encaixe', element: createElement('p') }] }
 })
 vi.mock('./enquetes/votar/menu', () => ({
-  itemEnquetes: () => ({ para: '/enquetes', icone: 'enquetes', texto: 'Enquetes' }),
+  itemEnquetes: () => ({
+    para: '/enquetes',
+    icone: 'enquetes',
+    texto: 'Enquetes',
+    frase: 'encaixe',
+    grupo: 'dia-a-dia',
+    naBarra: 2,
+  }),
 }))
 vi.mock('./enquetes/votar/EnqueteDoAviso', async () => {
   const { createElement } = await import('react')
@@ -158,7 +165,7 @@ describe('encaixes do M4 ligados', () => {
   })
 
   it('o menu chama itemEnquetes, logo depois de Avisos', () => {
-    expect(itensDoMenu(eu()).map((i) => i.texto)).toEqual(['Avisos', 'Enquetes', 'Documentos', 'Minha unidade'])
+    expect(lugaresDo(eu()).map((i) => i.texto)).toEqual(['Avisos', 'Enquetes', 'Documentos', 'Minha unidade'])
   })
 
   // Ajustes do M4, ponto 10: o cartão da enquete vem logo depois do título, antes do texto

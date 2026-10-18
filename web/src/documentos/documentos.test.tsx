@@ -41,10 +41,13 @@ function documento(id: number, extra: Partial<Documento> = {}): Documento {
 describe('encaixes', () => {
   it('o menu tem "Documentos" para toda unidade', () => {
     for (const quem of [eu(), eu(['comissao'])]) {
-      expect(itemDocumentos(quem)).toEqual({
+      expect(itemDocumentos(quem)).toMatchObject({
         para: '/documentos',
         icone: 'documentos',
         texto: 'Documentos',
+        curto: 'Docs',
+        grupo: 'dia-a-dia',
+        naBarra: 3,
       })
     }
   })

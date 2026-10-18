@@ -5,7 +5,7 @@ import type { Eu } from '../api/tipos'
 import { contarNaoLidos } from '../avisos/api'
 import { nomeDoPapel } from './formatar'
 import { Icone } from './Icone'
-import { itensDoMenu } from './menu'
+import { lugaresDo } from './menu'
 import { Logo } from '../marca/Logo'
 import { BotaoVersao } from '../sobre/BotaoVersao'
 import { Placa } from './Placa'
@@ -38,7 +38,7 @@ export function Navegacao({ eu }: { eu: Eu }) {
       <span className="nav-marca">
         <Logo cartao />
       </span>
-      {itensDoMenu(eu).map((item) => (
+      {lugaresDo(eu).map((item) => (
         <NavLink key={item.para} to={item.para}>
           <Icone nome={item.icone} />
           <span>{item.texto}</span>

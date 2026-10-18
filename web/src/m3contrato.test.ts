@@ -10,7 +10,7 @@ import { oQueFez } from './administracao/frases'
 import type { ItemHistorico } from './administracao/tipos'
 import * as avisos from './avisos/api'
 import type { AvisoCompleto, DocumentoDoAviso as DocumentoDoAvisoTipo } from './avisos/tipos'
-import { itensDoMenu } from './casca/menu'
+import { lugaresDo } from './casca/menu'
 import * as documentos from './documentos/api'
 import { rotas } from './rotas'
 
@@ -20,7 +20,14 @@ vi.mock('./documentos/rotas', async () => {
   return { rotasDocumentos: [{ path: 'documentos-encaixe', element: createElement('p') }] }
 })
 vi.mock('./documentos/menu', () => ({
-  itemDocumentos: () => ({ para: '/documentos', icone: 'documentos', texto: 'Documentos' }),
+  itemDocumentos: () => ({
+    para: '/documentos',
+    icone: 'documentos',
+    texto: 'Documentos',
+    frase: 'encaixe',
+    grupo: 'dia-a-dia',
+    naBarra: 3,
+  }),
 }))
 vi.mock('./documentos/LinkDocumentosPublicos', async () => {
   const { createElement } = await import('react')
@@ -184,8 +191,8 @@ describe('encaixes do épico A ligados', () => {
 
   // M4, épico B: "Enquetes" entrou entre Avisos e Documentos (dúvidas do épico B, item 1).
   it('o menu chama itemDocumentos, depois de Avisos e Enquetes', () => {
-    expect(itensDoMenu(eu()).map((i) => i.texto)).toEqual(['Avisos', 'Enquetes', 'Documentos', 'Minha unidade'])
-    expect(itensDoMenu(eu(['comissao'])).map((i) => i.para)).toEqual([
+    expect(lugaresDo(eu()).map((i) => i.texto)).toEqual(['Avisos', 'Enquetes', 'Documentos', 'Minha unidade'])
+    expect(lugaresDo(eu(['comissao'])).map((i) => i.para)).toEqual([
       '/avisos',
       '/enquetes',
       '/documentos',

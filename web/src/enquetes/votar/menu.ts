@@ -2,10 +2,17 @@
 // Chamado por `casca/menu.ts`, logo depois de "Avisos". Toda unidade vota (H-21); quais
 // enquetes cada uma vê quem decide é a API.
 import type { Eu } from '../../api/tipos'
-import type { Item } from '../../casca/menu'
+import type { Lugar } from '../../casca/menu'
 import { CAMINHO_ENQUETES } from '../caminhos'
 
-export function itemEnquetes(eu: Eu): Item | null {
+export function itemEnquetes(eu: Eu): Lugar | null {
   void eu
-  return { para: CAMINHO_ENQUETES, icone: 'enquetes', texto: 'Enquetes' }
+  return {
+    para: CAMINHO_ENQUETES,
+    icone: 'enquetes',
+    texto: 'Enquetes',
+    frase: 'Vote pela sua unidade',
+    grupo: 'dia-a-dia',
+    naBarra: 2,
+  }
 }
