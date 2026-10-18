@@ -33,7 +33,7 @@ from app.esquemas.comum import UnidadeRef
 from app.modelos import AvisoVersao, Bloco, Historico, Papel, Sessao, Unidade, UnidadePapel
 from app.seguranca.senhas import SENHA_INICIAL, gerar_hash
 from app.seguranca.sessoes import VALIDADE, encerrar_todas
-from app.servicos import tentativas
+from app.servicos import indicacoes, tentativas
 from app.servicos.historico import Acao, registrar
 
 _LOGIN = re.compile(r"^[1-9][0-7][0-9]{2}$")
@@ -201,7 +201,9 @@ def _entra_no_filtro(situacao: Situacao, ativada: bool, tem_papel: bool) -> bool
 
 
 def resetar(db: Session, login: str, admin_id: int) -> None:
-    """Volta a unidade ao estado inicial (RF-07). Leituras de aviso (e, depois, votos) ficam.
+    """Volta a unidade ao estado inicial (RF-07). Leituras de aviso e votos ficam. Das
+    indicações, saem as opiniões e os avisos da unidade, e os prestadores que ela indicou ficam
+    sem autor (como no "Apagar meus dados").
 
     Ordem obrigatória: retirar os papéis antes de voltar a unidade a "não ativada" (o banco
     recusa o contrário). Se a unidade é o último admin, nada muda e sobe 409 `ultimo_admin`.
@@ -218,6 +220,7 @@ def resetar(db: Session, login: str, admin_id: int) -> None:
         # Ajustes do M2: o apartamento recomeça com o padrão, como no "Apagar meus dados".
         unidade.receber_avisos_email = True
         tentativas.esquecer_login(db, unidade.login)
+        indicacoes.apagar_da_unidade(db, unidade.id)
         db.flush()
     except IntegrityError as erro:
         db.rollback()

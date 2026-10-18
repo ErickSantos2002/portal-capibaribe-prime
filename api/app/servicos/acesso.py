@@ -28,7 +28,7 @@ from app.seguranca.sessoes import (
     encerrar_sessao,
     trocar_senha_e_sessao,
 )
-from app.servicos import tentativas
+from app.servicos import indicacoes, tentativas
 from app.servicos.historico import Acao, registrar
 from app.servicos.tentativas import ErroQueConta
 
@@ -209,7 +209,9 @@ def desconectar_aparelho(db: Session, logado: Logado, sessao_id: int) -> None:
 def apagar_dados(db: Session, logado: Logado, senha: str, ip_hash: str) -> None:
     """H-06 / RF-08: apaga os contatos, volta a senha para `mudar123` e a unidade a "não
     ativada". As linhas de sessão são apagadas (a descrição do aparelho é dado pessoal); votos e
-    leituras ficam, porque são da unidade.
+    leituras ficam, porque são da unidade. Das indicações, saem as opiniões (as escondidas
+    também) e os avisos à gestão, e os prestadores que ela indicou ficam sem autor (o próximo
+    morador não herda o direito de corrigir); os prestadores ficam.
 
     Pede a senha atual (revisão do M1, C1): sem ela, uma sessão esquecida num aparelho bastava
     para tomar a conta (apagar → `mudar123` → primeiro acesso). Senha errada conta para o
@@ -244,6 +246,7 @@ def apagar_dados(db: Session, logado: Logado, senha: str, ip_hash: str) -> None:
     unidade.senha_hash = gerar_hash(SENHA_INICIAL)
     db.flush()
     db.execute(delete(Sessao).where(Sessao.unidade_id == unidade.id))
+    indicacoes.apagar_da_unidade(db, unidade.id)
     registrar(
         db, Acao.dados_apagados, unidade_id=unidade.id, entidade="unidade", entidade_id=unidade.id
     )
