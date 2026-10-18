@@ -2,10 +2,12 @@
 // celular (os lugares com `naBarra`), a folha do Menu e o menu lateral do computador (todos,
 // agrupados). Pôr um lugar novo = acrescentar uma entrada aqui.
 // "Unidades" é da gestão (Comissão e administração), que vê os contatos das unidades, e mora só
-// na folha. "Documentos" (M3) vem do épico A; "Enquetes" (M4), do épico B do M4.
+// na folha. "Documentos" (M3) vem do épico A; "Enquetes" (M4), do épico B do M4. "Indicações"
+// (spec de 18/10/2026) é o primeiro lugar que mora só na folha e no menu lateral.
 import type { Eu } from '../api/tipos'
 import { itemDocumentos } from '../documentos/menu'
 import { itemEnquetes } from '../enquetes/votar/menu'
+import { itemIndicacoes } from '../indicacoes/menu'
 import type { NomeDoIcone } from './Icone'
 
 export type Grupo = 'dia-a-dia' | 'gestao'
@@ -46,6 +48,7 @@ export function lugaresDo(eu: Eu): Lugar[] {
     },
     ...(enquetes ? [enquetes] : []),
     ...(documentos ? [documentos] : []),
+    itemIndicacoes(eu),
     {
       para: '/minha-unidade',
       icone: 'casa',

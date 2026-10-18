@@ -191,11 +191,18 @@ describe('encaixes do épico A ligados', () => {
 
   // M4, épico B: "Enquetes" entrou entre Avisos e Documentos (dúvidas do épico B, item 1).
   it('o menu chama itemDocumentos, depois de Avisos e Enquetes', () => {
-    expect(lugaresDo(eu()).map((i) => i.texto)).toEqual(['Avisos', 'Enquetes', 'Documentos', 'Minha unidade'])
+    expect(lugaresDo(eu()).map((i) => i.texto)).toEqual([
+      'Avisos',
+      'Enquetes',
+      'Documentos',
+      'Indicações',
+      'Minha unidade',
+    ])
     expect(lugaresDo(eu(['comissao'])).map((i) => i.para)).toEqual([
       '/avisos',
       '/enquetes',
       '/documentos',
+      '/indicacoes',
       '/minha-unidade',
       '/unidades',
     ])

@@ -8,6 +8,7 @@ import { NaoEncontrado } from './casca/guardas'
 import { Raiz } from './casca/Raiz'
 import { rotasDocumentos } from './documentos/rotas'
 import { rotasEnquetes } from './enquetes/rotas'
+import { rotasIndicacoes } from './indicacoes/rotas'
 import { rotasNotificacoes } from './notificacoes/rotas'
 import { rotasRecuperacao } from './recuperacao/rotas'
 
@@ -27,6 +28,8 @@ export const rotas: RouteObject[] = [
       // M4: épico A (criar e gerir) e épico B (votar e resultado), juntados em
       // `enquetes/rotas.tsx`.
       ...rotasEnquetes,
+      // Indicações de serviços (spec de 18/10/2026).
+      ...rotasIndicacoes,
       { path: '*', element: <NaoEncontrado /> },
     ],
   },

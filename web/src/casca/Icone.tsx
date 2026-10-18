@@ -9,6 +9,9 @@ const DESENHOS = {
   enquetes: '<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 12.5l3 3 5.5-6.5"/>',
   documentos:
     '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  // Indicações: polegar para cima (spec das indicações, seção 3.4).
+  indicacoes:
+    '<path d="M7.5 10.5V20H4v-9.5z"/><path d="M7.5 10.5 11 3.5a2 2 0 0 1 2.6 2.3L12.8 9.5H18a2 2 0 0 1 2 2.4l-1.3 6.4A2 2 0 0 1 16.7 20H7.5"/>',
   casa: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/>',
   painel:
     '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',

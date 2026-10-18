@@ -1,0 +1,140 @@
+/* Indicações de serviços (spec de 18/10/2026, seção 3). Só tokens do estilo.css (mata, ipê,
+   folha, linha, erro); o tema escuro vem de graça pelos tokens. Regra do M5: rem, sem media
+   query de tamanho (a letra grande vem de `data-letra` no html, casca/letra.ts). */
+
+/* ---------- lista ---------- */
+.ind-busca {
+  margin-bottom: 0.75rem;
+}
+
+.ind-busca input {
+  width: 100%;
+}
+
+/* A faixa de categorias rola para o lado DENTRO dela (a página não rola para o lado). Com a
+   letra grande, quebra em linhas: rolar para o lado com a letra a 200 % é pior que descer. */
+.faixa-categorias {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0.125rem 0 0.375rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.faixa-categorias .chip {
+  flex: none;
+  white-space: nowrap;
+}
+
+:root[data-letra='grande'] .faixa-categorias {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+:root[data-letra='grande'] .faixa-categorias .chip {
+  flex: 0 1 auto;
+  white-space: normal;
+}
+
+/* "N indicações com aviso da vizinhança": só a gestão, no topo; liga e desliga o filtro. */
+.ind-com-aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3rem;
+  margin: 0 0 1rem;
+  padding: 0.625rem 0.875rem;
+  border: 2px solid var(--ipe);
+  border-radius: var(--r-medio);
+  background: var(--ipe-suave);
+  color: var(--tinta);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ind-com-aviso[aria-pressed='true'] {
+  border-color: var(--ipe-forte);
+  box-shadow: inset 0 0 0 0.125rem var(--ipe-forte);
+}
+
+/* O cartão: categoria, nome, contagens e o trecho da opinião mais recente. A seta fica à
+   direita, ao lado de tudo. */
+.ind-cartao {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ind-cartao > :not(.seta) {
+  grid-column: 1;
+}
+
+.ind-cartao .seta {
+  grid-row: 1 / span 4;
+}
+
+.ind-cartao h3 {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.ind-categoria {
+  color: var(--ipe-forte);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ind-recomendam {
+  color: var(--mata);
+  font-weight: 700;
+}
+
+.ind-nao-recomendam {
+  color: var(--erro);
+  font-weight: 700;
+}
+
+.ind-selo-aviso {
+  color: var(--ipe-forte);
+}
+
+.ind-trecho {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: 0.375rem;
+  color: var(--tinta-suave);
+}
+
+.ind-trecho .placa {
+  flex: none;
+  color: var(--tinta-suave);
+}
+
+.ind-trecho-texto {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+:root[data-letra='grande'] .ind-trecho {
+  flex-wrap: wrap;
+}
+
+.ind-vazio .botao {
+  margin-top: 0.5rem;
+}
+
+/* O "＋ Indicar alguém" é ipê (spec, seção 3.1), e o texto escuro sobre ele. */
+.flutuante.ind-indicar {
+  background: var(--ipe);
+  color: var(--sobre-ipe);
+}

@@ -165,7 +165,13 @@ describe('encaixes do M4 ligados', () => {
   })
 
   it('o menu chama itemEnquetes, logo depois de Avisos', () => {
-    expect(lugaresDo(eu()).map((i) => i.texto)).toEqual(['Avisos', 'Enquetes', 'Documentos', 'Minha unidade'])
+    expect(lugaresDo(eu()).map((i) => i.texto)).toEqual([
+      'Avisos',
+      'Enquetes',
+      'Documentos',
+      'Indicações',
+      'Minha unidade',
+    ])
   })
 
   // Ajustes do M4, ponto 10: o cartão da enquete vem logo depois do título, antes do texto
