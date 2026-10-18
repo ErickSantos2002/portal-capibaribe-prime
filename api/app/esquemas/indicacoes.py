@@ -180,9 +180,10 @@ class ListaCategorias(Saida):
 
 
 class OpiniaoTrecho(Saida):
-    """A opinião visível mais recente com comentário, no cartão da lista."""
+    """A opinião visível mais recente com comentário, no cartão da lista, com o lado dela."""
 
     unidade: UnidadeRef
+    recomenda: bool
     comentario: str
     em: datetime
 

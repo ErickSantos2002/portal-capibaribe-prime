@@ -103,12 +103,16 @@ def test_ordem_mais_recomendados_e_desempate_pela_mais_recente(logar, engine_app
 
 def test_cartao_traz_o_trecho_mais_recente_com_comentario(logar, engine_app, predio):
     p = indicar(logar(COMUM), comentario="Primeira impressão")
-    opinar_no_banco(engine_app, p, predio[ADMIN], comentario="Voltou para ajustar, ótimo")
+    opinar_no_banco(
+        engine_app, p, predio[ADMIN], recomenda=False, comentario="Voltou para ajustar, demorou"
+    )
     opinar_no_banco(engine_app, p, predio[COMISSAO])  # sem comentário: não vira trecho
     cartao = logar(COMUM).get("/api/indicacoes").json()["itens"][0]
+    # Com o lado (revisão: o trecho não dizia se a pessoa recomenda ou não).
     assert cartao["trecho"] == {
         "unidade": {"login": "1101", "bloco": 1, "apartamento": "101"},
-        "comentario": "Voltou para ajustar, ótimo",
+        "recomenda": False,
+        "comentario": "Voltou para ajustar, demorou",
         "em": ANY,
     }
     assert cartao["categoria"] == {"id": 1, "nome": "Móveis planejados"}

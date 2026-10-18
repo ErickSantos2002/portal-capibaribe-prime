@@ -55,9 +55,10 @@ export interface ListaCategorias {
   itens: CategoriaServico[]
 }
 
-/** A opinião visível mais recente com comentário, no cartão da lista. */
+/** A opinião visível mais recente com comentário, no cartão da lista, com o lado dela. */
 export interface OpiniaoTrecho {
   unidade: UnidadeRef
+  recomenda: boolean
   comentario: string
   em: DataHora
 }

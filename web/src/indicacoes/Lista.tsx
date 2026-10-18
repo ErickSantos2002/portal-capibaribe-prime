@@ -1,7 +1,7 @@
 // Indicações · a lista (spec, seção 3.1): busca, faixa de categorias, os mais recomendados
 // primeiro (a ordem vem da API) e o botão "Indicar alguém". O filtro mora no endereço
 // (`?categoria=&busca=&com_aviso=1`): voltar do prestador aberto devolve a mesma lista.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useCarga } from '../avisos/carregar'
 import { Carregando, FalhaAoCarregar } from '../avisos/componentes'
@@ -11,7 +11,8 @@ import { Placa } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
 import { listarCategorias, listarIndicacoes } from './api'
 import { CAMINHO_NOVA_INDICACAO, caminhoIndicacao } from './caminhos'
-import { comAvisoEmTexto, encontradas, naoRecomendamEmTexto, recomendamEmTexto } from './formatos'
+import { Contagens } from './Contagens'
+import { comAvisoEmTexto, encontradas } from './formatos'
 import type { PrestadorResumo } from './tipos'
 import { useAtrasado } from './useAtrasado'
 import './indicacoes.css'
@@ -56,17 +57,33 @@ export function ListaIndicacoes() {
   )
   const lista = carga.dados
   const filtrando = categoria !== undefined || !!busca || comAviso
+  const campoDaBusca = useRef<HTMLInputElement>(null)
 
-  function trocar(chave: 'categoria' | 'com_aviso', valor: string | null) {
+  /** Muda o filtro no endereço; `null` tira a chave. */
+  function trocar(mudancas: Partial<Record<'categoria' | 'com_aviso', string | null>>) {
     setConsulta(
       (antes) => {
         const depois = new URLSearchParams(antes)
-        if (valor === null) depois.delete(chave)
-        else depois.set(chave, valor)
+        for (const [chave, valor] of Object.entries(mudancas)) {
+          if (valor === null || valor === undefined) depois.delete(chave)
+          else depois.set(chave, valor)
+        }
         return depois
       },
       { replace: true },
     )
+  }
+
+  function limparBusca() {
+    setDigitado('')
+    campoDaBusca.current?.focus()
+  }
+
+  /** Sem filtro nenhum: a lista inteira. */
+  function verTodas() {
+    setDigitado('')
+    trocar({ categoria: null, com_aviso: null })
+    campoDaBusca.current?.focus()
   }
 
   const indicarAlguem = (
@@ -77,14 +94,16 @@ export function ListaIndicacoes() {
 
   return (
     <Tela titulo="Indicações" extra={indicarAlguem}>
-      {!!lista?.com_aviso && (
+      {/* Com o filtro ligado, o botão fica mesmo com zero (a gestão resolveu tudo): é por ele
+          que se desliga o filtro. */}
+      {(comAviso || !!lista?.com_aviso) && (
         <button
           type="button"
           className="ind-com-aviso"
           aria-pressed={comAviso}
-          onClick={() => trocar('com_aviso', comAviso ? null : '1')}
+          onClick={() => trocar({ com_aviso: comAviso ? null : '1' })}
         >
-          <Icone nome="alerta" /> {comAvisoEmTexto(lista.com_aviso)}
+          <Icone nome="alerta" /> {comAvisoEmTexto(lista?.com_aviso ?? 0)}
         </button>
       )}
       <div className="ind-busca">
@@ -93,23 +112,26 @@ export function ListaIndicacoes() {
         </label>
         <input
           id="ind-busca"
+          ref={campoDaBusca}
           type="search"
           value={digitado}
           onChange={(e) => setDigitado(e.target.value)}
           maxLength={80}
           autoComplete="off"
         />
+        {/* Anuncia a contagem a cada busca, categoria ou filtro da gestão. */}
         <p className="oculto" aria-live="polite">
-          {busca && lista ? encontradas(lista.itens.length) : ''}
+          {filtrando && lista && carga.situacao === 'pronta' ? encontradas(lista.itens.length) : ''}
         </p>
       </div>
       {categorias.dados && (
         <nav className="faixa-categorias" aria-label="Categorias">
+          {/* "Todos" tira também o filtro "com aviso" da gestão. */}
           <button
             type="button"
             className="chip"
-            aria-pressed={categoria === undefined}
-            onClick={() => trocar('categoria', null)}
+            aria-pressed={categoria === undefined && !comAviso}
+            onClick={() => trocar({ categoria: null, com_aviso: null })}
           >
             Todos
           </button>
@@ -119,7 +141,7 @@ export function ListaIndicacoes() {
               type="button"
               className="chip"
               aria-pressed={categoria === c.id}
-              onClick={() => trocar('categoria', String(c.id))}
+              onClick={() => trocar({ categoria: String(c.id) })}
             >
               {c.nome}
             </button>
@@ -132,7 +154,25 @@ export function ListaIndicacoes() {
         <Carregando />
       ) : lista.itens.length === 0 ? (
         filtrando ? (
-          <p className="vazio">{encontradas(0)}</p>
+          <div className="ind-vazio">
+            <p className="vazio">{encontradas(0)}</p>
+            <div className="ind-acoes">
+              {busca ? (
+                <button type="button" className="botao leve" onClick={limparBusca}>
+                  Limpar a busca
+                </button>
+              ) : (
+                <button type="button" className="botao leve" onClick={verTodas}>
+                  Ver todas
+                </button>
+              )}
+              {categoria !== undefined && (
+                <Link className="botao" to={CAMINHO_NOVA_INDICACAO}>
+                  <Icone nome="mais" /> Indicar alguém
+                </Link>
+              )}
+            </div>
+          </div>
         ) : (
           <div className="ind-vazio">
             <p className="vazio">{CONVITE}</p>
@@ -143,6 +183,7 @@ export function ListaIndicacoes() {
         )
       ) : (
         <div className="folha">
+          {/* h2: o h1 é o título da tela (como no mural). */}
           {lista.itens.map((p) => (
             <Cartao key={p.id} prestador={p} />
           ))}
@@ -157,18 +198,12 @@ function Cartao({ prestador }: { prestador: PrestadorResumo }) {
   return (
     <Link className="item ind-cartao" to={caminhoIndicacao(prestador.id)}>
       <span className="ind-categoria">{prestador.categoria.nome}</span>
-      <h3>{prestador.nome}</h3>
+      <h2>{prestador.nome}</h2>
       <span className="seta">
         <Icone nome="seta" />
       </span>
       <span className="linha-meta">
-        <span className="ind-recomendam">
-          <span aria-hidden="true">👍 </span>
-          {recomendamEmTexto(prestador.recomendam)}
-        </span>
-        {prestador.nao_recomendam > 0 && (
-          <span className="ind-nao-recomendam">{naoRecomendamEmTexto(prestador.nao_recomendam)}</span>
-        )}
+        <Contagens recomendam={prestador.recomendam} naoRecomendam={prestador.nao_recomendam} />
         {avisos > 0 && (
           <span className="selo ind-selo-aviso">
             {avisos === 1 ? '1 aviso da vizinhança' : `${avisos} avisos da vizinhança`}
@@ -178,7 +213,13 @@ function Cartao({ prestador }: { prestador: PrestadorResumo }) {
       {prestador.trecho && (
         <span className="ind-trecho">
           <Placa unidade={prestador.trecho.unidade} />
-          <span className="ind-trecho-texto">“{prestador.trecho.comentario}”</span>
+          <span className="ind-trecho-texto">
+            <span aria-hidden="true">{prestador.trecho.recomenda ? '👍 ' : '👎 '}</span>
+            <span className="oculto">
+              {prestador.trecho.recomenda ? 'Recomenda: ' : 'Não recomenda: '}
+            </span>
+            “{prestador.trecho.comentario}”
+          </span>
         </span>
       )}
     </Link>

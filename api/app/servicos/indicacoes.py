@@ -140,13 +140,13 @@ select p.id, p.nome, c.id as categoria_id, c.nome as categoria_nome,
        coalesce(v.recomendam, 0) as recomendam, coalesce(v.nao_recomendam, 0) as nao_recomendam,
        v.prestador_id is not null as tem_opiniao, coalesce(v.comentarios, '') as comentarios,
        coalesce(a.avisos, 0) as avisos, t.login as trecho_login,
-       t.comentario as trecho_comentario, t.em as trecho_em
+       t.recomenda as trecho_recomenda, t.comentario as trecho_comentario, t.em as trecho_em
   from prestador p
   join categoria_servico c on c.id = p.categoria_id
   left join visiveis v on v.prestador_id = p.id
   left join abertos a on a.prestador_id = p.id
   left join lateral (
-      select u.login, o.comentario, coalesce(o.editada_em, o.criada_em) as em
+      select u.login, o.recomenda, o.comentario, coalesce(o.editada_em, o.criada_em) as em
         from opiniao_servico o join unidade u on u.id = o.unidade_id
        where o.prestador_id = p.id and o.escondida_em is null and o.comentario is not null
        order by coalesce(o.editada_em, o.criada_em) desc, o.id desc
@@ -189,6 +189,7 @@ def listar(
         if linha.trecho_login is not None:
             trecho = OpiniaoTrecho(
                 unidade=UnidadeRef.de_login(linha.trecho_login),
+                recomenda=linha.trecho_recomenda,
                 comentario=linha.trecho_comentario,
                 em=linha.trecho_em,
             )

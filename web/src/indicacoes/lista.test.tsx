@@ -33,6 +33,7 @@ const ITENS = [
     nao_recomendam: 1,
     trecho: {
       unidade: { login: '2304', bloco: 2, apartamento: '304' },
+      recomenda: true,
       comentario: 'Caprichoso e pontual.',
       em: '2026-10-15T15:00:00Z',
     },
@@ -166,6 +167,126 @@ describe('lista de indicações', () => {
     abrir('/indicacoes?categoria=5')
     expect(await screen.findByText('Fios & Cia')).toBeTruthy()
     expect(chamadas.some((c) => c.caminho === '/api/indicacoes?categoria=5')).toBe(true)
+  })
+})
+
+describe('lista de indicações · revisão', () => {
+  it('os cartões são h2 (o h1 é o título da tela)', async () => {
+    apiIndicacoes(MORADOR, { 'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: null }) })
+    abrir('/indicacoes')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Marcenaria Silva' })).toBeTruthy()
+    expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(0)
+  })
+
+  it('o trecho diz o lado: 👍 "Recomenda:" ou 👎 "Não recomenda:"', async () => {
+    const contra = resumo(8, {
+      nome: 'Pinta Rápido',
+      recomendam: 0,
+      nao_recomendam: 1,
+      trecho: {
+        unidade: { login: '1101', bloco: 1, apartamento: '101' },
+        recomenda: false,
+        comentario: 'Sujou tudo.',
+        em: '2026-10-15T15:00:00Z',
+      },
+    })
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes': json(200, { itens: [ITENS[0], contra], com_aviso: null }),
+    })
+    abrir('/indicacoes')
+    const a_favor = await screen.findByRole('link', { name: /Marcenaria Silva/ })
+    expect(a_favor.querySelector('.ind-trecho-texto')?.textContent).toBe('👍 Recomenda: “Caprichoso e pontual.”')
+    const contra_ = screen.getByRole('link', { name: /Pinta Rápido/ })
+    expect(contra_.querySelector('.ind-trecho-texto')?.textContent).toBe('👎 Não recomenda: “Sujou tudo.”')
+  })
+
+  it('zero recomendações não aparece verde com 👍; sem opinião nenhuma, o texto neutro', async () => {
+    apiIndicacoes(ADMIN, {
+      'GET /api/indicacoes': json(200, {
+        itens: [
+          resumo(8, { nome: 'Só contra', recomendam: 0, nao_recomendam: 2 }),
+          resumo(9, { nome: 'Sem opinião', recomendam: 0, nao_recomendam: 0 }),
+        ],
+        com_aviso: null,
+      }),
+    })
+    abrir('/indicacoes')
+    const contra = await screen.findByRole('link', { name: /Só contra/ })
+    expect(contra.querySelector('.ind-recomendam')).toBeNull()
+    expect(contra.textContent).not.toContain('👍')
+    expect(contra.querySelector('.ind-nao-recomendam')?.textContent).toBe('2 não recomendam')
+    const sem = screen.getByRole('link', { name: /Sem opinião/ })
+    expect(sem.querySelector('.ind-recomendam')).toBeNull()
+    expect(sem.querySelector('.ind-sem-opiniao')?.textContent).toBe('Nenhum vizinho recomenda ainda')
+  })
+
+  it('com o filtro "com aviso" ligado e zero, o botão continua (é por ele que se desliga)', async () => {
+    apiIndicacoes(ADMIN, {
+      'GET /api/indicacoes?com_aviso=true': json(200, { itens: [], com_aviso: 0 }),
+      'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: 0 }),
+    })
+    const roteador = abrir('/indicacoes?com_aviso=1')
+    const filtro = await screen.findByRole('button', { name: '0 indicações com aviso da vizinhança' })
+    expect(filtro.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(filtro)
+    await waitFor(() => expect(roteador.state.location.search).toBe(''))
+    expect(await screen.findByText('Marcenaria Silva')).toBeTruthy()
+  })
+
+  it('"Todos" tira também o filtro "com aviso"', async () => {
+    apiIndicacoes(ADMIN, {
+      'GET /api/indicacoes?com_aviso=true': json(200, { itens: [ITENS[1]], com_aviso: 1 }),
+      'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: 1 }),
+    })
+    const roteador = abrir('/indicacoes?com_aviso=1')
+    const faixa = await screen.findByRole('navigation', { name: 'Categorias' })
+    const todos = within(faixa).getByRole('button', { name: 'Todos' })
+    expect(todos.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(todos)
+    await waitFor(() => expect(roteador.state.location.search).toBe(''))
+    expect(await screen.findByText('Marcenaria Silva')).toBeTruthy()
+  })
+
+  it('busca sem resultado oferece "Limpar a busca"', async () => {
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: null }),
+      'GET /api/indicacoes?busca=zzz': json(200, { itens: [], com_aviso: null }),
+    })
+    abrir('/indicacoes?busca=zzz')
+    const limpar = await screen.findByRole('button', { name: 'Limpar a busca' })
+    fireEvent.click(limpar)
+    expect((screen.getByLabelText(/Procurar: nome ou serviço/) as HTMLInputElement).value).toBe('')
+    expect(document.activeElement).toBe(screen.getByLabelText(/Procurar: nome ou serviço/))
+    expect(await screen.findByText('Marcenaria Silva', {}, { timeout: 2000 })).toBeTruthy()
+  })
+
+  it('categoria sem resultado oferece "Ver todas" e "Indicar alguém"', async () => {
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: null }),
+      'GET /api/indicacoes?categoria=2': json(200, { itens: [], com_aviso: null }),
+    })
+    const roteador = abrir('/indicacoes?categoria=2')
+    const ver = await screen.findByRole('button', { name: 'Ver todas' })
+    const vazio = ver.closest('.ind-vazio') as HTMLElement
+    expect(within(vazio).getByRole('link', { name: /Indicar alguém/ }).getAttribute('href')).toBe(
+      '/indicacoes/nova',
+    )
+    fireEvent.click(ver)
+    await waitFor(() => expect(roteador.state.location.search).toBe(''))
+    expect(await screen.findByText('Marcenaria Silva')).toBeTruthy()
+  })
+
+  it('o anúncio do leitor de tela fala a contagem também ao trocar de categoria', async () => {
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: null }),
+      'GET /api/indicacoes?categoria=5': json(200, { itens: [ITENS[1]], com_aviso: null }),
+    })
+    abrir('/indicacoes')
+    const faixa = await screen.findByRole('navigation', { name: 'Categorias' })
+    const anuncio = document.querySelector('.ind-busca [aria-live]')!
+    expect(anuncio.textContent).toBe('')
+    fireEvent.click(within(faixa).getByRole('button', { name: 'Eletricista' }))
+    await waitFor(() => expect(anuncio.textContent).toBe('1 indicação encontrada.'))
   })
 })
 

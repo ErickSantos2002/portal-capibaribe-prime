@@ -11,8 +11,9 @@
   width: 100%;
 }
 
-/* A faixa de categorias rola para o lado DENTRO dela (a página não rola para o lado). Com a
-   letra grande, quebra em linhas: rolar para o lado com a letra a 200 % é pior que descer. */
+/* A faixa de categorias rola para o lado DENTRO dela (a página não rola para o lado), também com
+   a letra grande: quebrada em linhas, a 200 % em 320 px ela empurrava a lista para fora da
+   primeira tela (revisão das indicações). O guarda do M5 aceita a rolagem dentro do elemento. */
 .faixa-categorias {
   display: flex;
   flex-wrap: nowrap;
@@ -26,16 +27,6 @@
 .faixa-categorias .chip {
   flex: none;
   white-space: nowrap;
-}
-
-:root[data-letra='grande'] .faixa-categorias {
-  flex-wrap: wrap;
-  overflow-x: visible;
-}
-
-:root[data-letra='grande'] .faixa-categorias .chip {
-  flex: 0 1 auto;
-  white-space: normal;
 }
 
 /* "N indicações com aviso da vizinhança": só a gestão, no topo; liga e desliga o filtro. */
@@ -75,7 +66,7 @@
   grid-row: 1 / span 4;
 }
 
-.ind-cartao h3 {
+.ind-cartao h2 {
   overflow-wrap: anywhere;
   font-weight: 700;
 }
@@ -96,6 +87,11 @@
 .ind-nao-recomendam {
   color: var(--erro);
   font-weight: 700;
+}
+
+/* Nenhuma opinião visível: neutro, nem verde nem vermelho. */
+.ind-sem-opiniao {
+  color: var(--tinta-suave);
 }
 
 .ind-selo-aviso {
@@ -129,7 +125,7 @@
   flex-wrap: wrap;
 }
 
-.ind-vazio .botao {
+.ind-vazio > .botao {
   margin-top: 0.5rem;
 }
 
