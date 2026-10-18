@@ -395,10 +395,9 @@ def criar(db: Session, logado: Logado, dados: NovaIndicacao) -> int:
 # --- a minha opinião ---------------------------------------------------------------------------
 
 
-def _gravar_opiniao(db: Session, logado: Logado, prestador_id: int, dados: DarOpiniao) -> None:
-    """`select … for update` e depois `UPDATE` ou `INSERT`, nunca `insert … on conflict`: o
-    `BEFORE INSERT` contaria a mudança no limite do dia."""
-    atual = db.scalars(
+def _opiniao_da_unidade(db: Session, logado: Logado, prestador_id: int) -> OpiniaoServico | None:
+    """A opinião da unidade, travada até o fim da transação."""
+    return db.scalars(
         select(OpiniaoServico)
         .where(
             OpiniaoServico.prestador_id == prestador_id,
@@ -406,6 +405,12 @@ def _gravar_opiniao(db: Session, logado: Logado, prestador_id: int, dados: DarOp
         )
         .with_for_update()
     ).one_or_none()
+
+
+def _gravar_opiniao(db: Session, logado: Logado, prestador_id: int, dados: DarOpiniao) -> None:
+    """`select … for update` e depois `UPDATE` ou `INSERT`, nunca `insert … on conflict`: o
+    `BEFORE INSERT` contaria a mudança no limite do dia."""
+    atual = _opiniao_da_unidade(db, logado, prestador_id)
     if atual is None:
         db.add(
             OpiniaoServico(
@@ -448,14 +453,7 @@ def apagar_opiniao(db: Session, logado: Logado, prestador_id: int) -> None:
     """Apagar de verdade. A escondida pela gestão fica (409); a apagada conta no limite do dia
     (histórico `indicacao_opiniao_apagada`, lido pela trigger)."""
     _buscar(db, logado, prestador_id)
-    atual = db.scalars(
-        select(OpiniaoServico)
-        .where(
-            OpiniaoServico.prestador_id == prestador_id,
-            OpiniaoServico.unidade_id == logado.unidade_id,
-        )
-        .with_for_update()
-    ).one_or_none()
+    atual = _opiniao_da_unidade(db, logado, prestador_id)
     if atual is None:
         db.rollback()
         raise ErroApi(404, "opiniao_nao_encontrada", "Você ainda não deu opinião aqui.")
