@@ -94,8 +94,7 @@ class Prestador(Base):
             name="prestador_nome_tamanho",
         ),
         CheckConstraint(
-            "telefone ~ '^[1-9]{2}[0-9]{8,9}$'"
-            " and (char_length(telefone) = 10 or substr(telefone, 3, 1) = '9')",
+            "telefone ~ '^[1-9]{2}(9[0-9]{8}|[2-5][0-9]{7})$'",
             name="prestador_telefone_formato",
         ),
         CheckConstraint(
