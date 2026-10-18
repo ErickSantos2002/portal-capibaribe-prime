@@ -17,6 +17,7 @@ from app.rotas import (
     enquetes,
     enquetes_gestao,
     envios,
+    indicacoes,
     push,
     recuperacao,
     saude,
@@ -58,3 +59,5 @@ app.include_router(documentos.rotas)
 # criar e gerir (A).
 app.include_router(enquetes.rotas)
 app.include_router(enquetes_gestao.rotas)
+# Indicações de serviços (spec de 18/10/2026): o morador e, depois, a moderação.
+app.include_router(indicacoes.rotas)
