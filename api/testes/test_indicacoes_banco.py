@@ -225,6 +225,31 @@ def test_limite_de_30_opinioes_por_dia_conta_as_apagadas(engine_app, engine_supe
         opinar(con, prestadores[30], ids["u2"])
 
 
+def test_limite_de_10_avisos_por_dia(engine_app, engine_superusuario, ids):
+    # Revisão: o primeiro aviso de um prestador manda e-mail; sem teto, uma unidade gastaria a
+    # cota do Gmail do dia avisando de prestador em prestador.
+    prestadores = _prestadores_sem_regra(engine_superusuario, ids["v"], 11)
+    with engine_app.begin() as con:
+        for p in prestadores[:10]:
+            con.execute(
+                text("insert into aviso_servico (prestador_id, unidade_id) values (:p, :u)"),
+                {"p": p, "u": ids["u"]},
+            )
+    _recusado(
+        engine_app,
+        "aviso_servico_limite_dia",
+        "insert into aviso_servico (prestador_id, unidade_id) values (:p, :u)",
+        p=prestadores[10],
+        u=ids["u"],
+    )
+    # Outra unidade não tem nada com isso.
+    with engine_app.begin() as con:
+        con.execute(
+            text("insert into aviso_servico (prestador_id, unidade_id) values (:p, :u)"),
+            {"p": prestadores[10], "u": ids["u2"]},
+        )
+
+
 def test_mudar_a_opiniao_nao_conta_no_limite(engine_app, engine_superusuario, ids):
     prestadores = _prestadores_sem_regra(engine_superusuario, ids["v"], 31)
     with engine_app.begin() as con:

@@ -52,6 +52,11 @@ RESTRICOES: dict[str, tuple[int, str, str]] = {
         "limite_do_dia",
         "Seu apartamento já deu muitas opiniões hoje. Tente de novo amanhã.",
     ),
+    "aviso_servico_limite_dia": (
+        429,
+        "limite_do_dia",
+        "Seu apartamento já avisou a gestão muitas vezes hoje. Tente de novo amanhã.",
+    ),
     "prestador_escondido": _ESCONDIDO,
     "prestador_autor_fixo": _CONFLITO,
     "opiniao_escondida": _OPINIAO_ESCONDIDA,

@@ -163,6 +163,7 @@ class AvisoServico(Base):
             unique=True,
             postgresql_where=text("resolvido_em is null"),
         ),
+        Index("aviso_servico_unidade", "unidade_id", "criado_em"),
     )
 
     id: Mapped[int] = chave_primaria()

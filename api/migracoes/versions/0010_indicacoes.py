@@ -116,6 +116,8 @@ create table aviso_servico (
 );
 create unique index aviso_servico_aberto on aviso_servico (prestador_id, unidade_id)
     where resolvido_em is null;
+-- O limite do dia conta por unidade e data.
+create index aviso_servico_unidade on aviso_servico (unidade_id, criado_em);
 """
 
 # A mesma lista de `app.modelos.indicacoes.CATEGORIAS_INICIAIS` (congelada aqui; o teste
@@ -275,8 +277,9 @@ create trigger opiniao_regras
     before insert or update on opiniao_servico
     for each row execute function public.opiniao_conferir();
 
--- Avisar: unidade ativa e prestador visível. Depois, só resolver (de nulo para a hora) e a
--- reserva de e-mails mudam.
+-- Avisar: unidade ativa, prestador visível e no máximo 10 por unidade a cada 24 horas (o
+-- primeiro aviso de um prestador manda e-mail para a administração; sem teto, uma unidade
+-- gastaria a cota do Gmail do dia). Depois, só resolver (de nulo para a hora) muda.
 create function public.aviso_servico_conferir() returns trigger
 language plpgsql
 set search_path = pg_catalog, public, pg_temp
@@ -286,14 +289,26 @@ begin
         new.criado_em := now();
         new.resolvido_em := null;
         new.resolvido_por := null;
-        if exists (select 1 from public.unidade u where u.id = new.unidade_id and not u.ativa) then
-            raise exception 'Só unidade ativa avisa a gestão.'
-                using errcode = 'check_violation', constraint = 'indicacao_de_unidade_inativa';
-        end if;
         if exists (select 1 from public.prestador p
                     where p.id = new.prestador_id and p.escondido_em is not null) then
             raise exception 'Prestador escondido não recebe aviso.'
                 using errcode = 'check_violation', constraint = 'prestador_escondido';
+        end if;
+        -- Trava a unidade: avisos ao mesmo tempo contam uns com os outros.
+        perform 1 from public.unidade u
+         where u.id = new.unidade_id and u.ativa for no key update;
+        if not found then
+            if exists (select 1 from public.unidade u where u.id = new.unidade_id) then
+                raise exception 'Só unidade ativa avisa a gestão.'
+                    using errcode = 'check_violation', constraint = 'indicacao_de_unidade_inativa';
+            end if;
+            return new;  -- a chave estrangeira recusa
+        end if;
+        if (select count(*) from public.aviso_servico a
+             where a.unidade_id = new.unidade_id
+               and a.criado_em > now() - interval '24 hours') >= 10 then
+            raise exception 'No máximo 10 avisos por apartamento a cada 24 horas.'
+                using errcode = 'check_violation', constraint = 'aviso_servico_limite_dia';
         end if;
         return new;
     end if;

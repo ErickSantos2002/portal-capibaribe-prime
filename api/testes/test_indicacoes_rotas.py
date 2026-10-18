@@ -269,3 +269,14 @@ def test_limite_do_dia_vira_429(logar):
     r = comum.post("/api/indicacoes", json={**NOVA, "telefone": "81999998888"})
     assert (r.status_code, r.json()["codigo"]) == (429, "limite_do_dia")
     assert "indicações" in r.json()["mensagem"]
+
+
+def test_limite_de_avisos_do_dia_vira_429(logar):
+    admin, comum = logar(ADMIN), logar(COMUM)
+    prestadores = [indicar(admin, telefone=f"8199999{i:04d}", nome=f"P{i}") for i in range(10)]
+    prestadores.append(indicar(logar(COMISSAO), telefone="81999998888", nome="Outro"))
+    for p in prestadores[:10]:
+        assert comum.post(f"/api/indicacoes/{p}/aviso").status_code == 204
+    r = comum.post(f"/api/indicacoes/{prestadores[10]}/aviso")
+    assert (r.status_code, r.json()["codigo"]) == (429, "limite_do_dia")
+    assert "avisou a gestão" in r.json()["mensagem"]
