@@ -72,7 +72,8 @@
 }
 
 .ind-categoria {
-  color: var(--ipe-forte);
+  /* --ipe-texto e não --ipe-forte: este dava 4,35:1 no papel do prestador aberto. */
+  color: var(--ipe-texto);
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.04em;

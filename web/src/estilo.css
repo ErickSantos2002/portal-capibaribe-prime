@@ -11,6 +11,8 @@
   --ipe: #e8b22a;
   --ipe-suave: #fbf0cf;
   --ipe-forte: #9a6a00; /* foco e marcações sobre fundo claro: 4,35:1 */
+  /* Texto ipê (rótulo de categoria das indicações): ≥ 4,5:1 no papel, na folha e no ipê-suave. */
+  --ipe-texto: #8f6200;
   --papel: #f4f6f2;
   --folha: #ffffff;
   --tinta: #17231c;
@@ -84,6 +86,7 @@
   --ipe: #f0c14b;
   --ipe-suave: #3a3215;
   --ipe-forte: #f0c14b;
+  --ipe-texto: #f0c14b;
   --papel: #101713;
   --folha: #18221c;
   --tinta: #e8efe9;
