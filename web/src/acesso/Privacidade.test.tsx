@@ -67,6 +67,16 @@ describe('política de privacidade', () => {
     expect(texto).toMatch(/Apagar meus dados.*opiniões/s)
   })
 
+  it('não promete que Minha unidade mostra tudo: as opiniões ficam em cada prestador', async () => {
+    // Revisão das indicações: Minha unidade não lista as opiniões.
+    apiFalsa({})
+    abrir('/privacidade')
+    const direitos = await screen.findByRole('heading', { name: 'Seus direitos' })
+    const texto = direitos.nextElementSibling?.textContent ?? ''
+    expect(texto).not.toMatch(/vê tudo/)
+    expect(texto).toMatch(/opiniões nas Indicações\s+ficam à vista na página de cada prestador/)
+  })
+
   it('sem sessão, voltar leva à entrada', async () => {
     apiFalsa({})
     abrir('/privacidade')

@@ -93,11 +93,13 @@ export function TextoDaPolitica() {
 
       <h2>Seus direitos</h2>
       <p>
-        Em <b>Minha unidade</b> você vê tudo o que está guardado, corrige o que quiser e, em{' '}
-        <b>Apagar meus dados</b>, apaga nome, celular e e-mail. A conta do apartamento continua
-        existindo e volta para a senha inicial. Saem junto as suas opiniões e os seus avisos nas
-        Indicações; o prestador que você indicou continua na lista, sem ligação com o apartamento.
-        Para apagar só uma opinião, use “Apagar a minha opinião” na página do prestador.
+        Em <b>Minha unidade</b> você vê o nome, o celular e o e-mail guardados, corrige o que
+        quiser e, em <b>Apagar meus dados</b>, apaga tudo isso. As suas opiniões nas Indicações
+        ficam à vista na página de cada prestador, nas <b>Indicações</b>. A conta do apartamento
+        continua existindo e volta para a senha inicial. Saem junto as suas opiniões e os seus
+        avisos nas Indicações; o prestador que você indicou continua na lista, sem ligação com o
+        apartamento. Para apagar só uma opinião, use “Apagar a minha opinião” na página do
+        prestador.
       </p>
       <p>
         Um prestador que não quer aparecer nas Indicações pode pedir à Comissão para sair da lista. O
