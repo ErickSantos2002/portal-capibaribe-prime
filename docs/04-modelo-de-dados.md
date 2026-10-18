@@ -334,11 +334,16 @@ Inventário completo da E1. Se um dado não está aqui, o sistema não guarda.
 | Descrição do aparelho | `sessao.aparelho` | A unidade reconhecer e desconectar aparelhos | A própria unidade | Ao encerrar a sessão |
 | Endereço de push | `inscricao_push` | Entregar notificação | Ninguém (uso técnico) | Ao encerrar a sessão |
 | Código do IP (HMAC, não o IP) | `entrada_tentativa.ip_hash` (revisão do M1, migração 0003) | Bloquear quem tenta adivinhar a senha de uma unidade | Ninguém (uso técnico) | 15 minutos depois da última tentativa ou do fim do bloqueio |
+| Nome e telefone de prestador indicado (pode ser pessoa física; Instagram opcional) | `prestador` (indicações, migração 0010) | Mostrar aos moradores logados um contato profissional indicado por vizinhos | As unidades logadas | Some da lista quando a gestão esconde o prestador (a pedido dele ou por aviso); o telefone fica guardado para ele não voltar à lista |
+| Opinião sobre prestador (recomenda, comentário) e aviso à gestão | `opiniao_servico` e `aviso_servico` (indicações, migração 0010) | Ajudar os vizinhos a escolher; avisar a gestão de algo errado | A opinião: todas as unidades logadas, com a placa (bloco e apartamento) e sem o nome. O aviso: só a gestão, sem a placa | Em H-06 e H-08; a própria unidade também apaga a opinião. Escondida pela gestão, só sai em H-06 e H-08 |
 | Documentos e anexos enviados (o conteúdo e o nome do arquivo) | `arquivo` (`nome_original`) + bucket de arquivos e a cópia cifrada (M3) | Documentos do condomínio e fotos ou PDFs dos avisos; só a gestão envia | Quem vê o documento ou o aviso (o nome da foto só a gestão) | Nunca, de propósito (ADR-0011); tirar por obrigação (ex.: LGPD) é manual: arquivar e apagar os objetos à mão |
 
 **Não guardamos:** CPF, RG, contrato, renda, endereço IP no banco (só o código acima), localização, nem o conteúdo de
 votos trocados. A foto JPEG é regravada no celular antes do envio, o que tira os metadados (EXIF),
-inclusive a localização do GPS (fechamento do M3; PNG e WEBP só quando grandes). A unidade e o login (`1101`) não são dado pessoal sozinhos, porque identificam um
+inclusive a localização do GPS (fechamento do M3; PNG e WEBP só quando grandes). Nas indicações,
+"apagar meus dados" (H-06) e o reset (H-08) apagam as opiniões e os avisos da unidade, e o
+prestador que ela indicou **fica**, mas sem o vínculo com a unidade (`prestador.criado_por` vira
+nulo: o próximo morador do apartamento não herda o direito de corrigir). A unidade e o login (`1101`) não são dado pessoal sozinhos, porque identificam um
 apartamento e não uma pessoa. Viram dado pessoal junto com o nome do responsável, por isso o nome
 só aparece para a própria unidade e para a gestão.
 
@@ -353,6 +358,7 @@ Para dimensionar o plano gratuito no documento de arquitetura.
 | `aviso` | ~300 | ~3 por semana |
 | `aviso_leitura` | ~100 mil | 300 avisos × 320 unidades, no máximo |
 | `voto` | ~15 mil | ~50 enquetes × 320 |
+| `opiniao_servico` | ~3 mil | algumas centenas de prestadores, poucas opiniões cada (no máximo 30 novas por unidade a cada 24 h) |
 | `historico` | ~20 mil | |
 | **Banco inteiro** | **< 100 MB** | folgado em qualquer plano gratuito |
 | **Arquivos** | **1 a 3 GB** | PDFs da obra e imagens. **É aqui que o limite gratuito aperta**, o que justifica comprimir imagens no envio. Desde o plano B da ADR-0011, a cópia cifrada (o mesmo tamanho) também fica no R2: arquivos + cópia + dumps = 3 a 7 GB dos 10 GB. |

@@ -42,12 +42,23 @@ export function TextoDaPolitica() {
           </div>
         ))}
       </dl>
+      <p>
+        Em <b>Indicações</b>, guardamos também o que os moradores escrevem: o nome e o telefone (e,
+        se alguém informar, o Instagram) do prestador de serviço indicado, para os vizinhos falarem
+        com ele, e a sua opinião sobre ele (se recomenda e o que você contou), para ajudar os
+        vizinhos a escolher.
+      </p>
 
       <h2>Quem vê</h2>
       <p>
         Nome, celular e e-mail são vistos só pelo próprio apartamento, pela Comissão e pela
         administração do Portal. Os aparelhos conectados, só o próprio apartamento vê. Outros
         moradores não veem os dados de ninguém.
+      </p>
+      <p>
+        Nas Indicações, a sua opinião aparece com o bloco e o apartamento para quem entra no Portal,
+        nunca com o seu nome. O aviso “Tem algo errado aqui?” só a Comissão e a administração veem,
+        sem saber de qual apartamento veio.
       </p>
 
       <h2>Quem cuida dos dados</h2>
@@ -84,7 +95,13 @@ export function TextoDaPolitica() {
       <p>
         Em <b>Minha unidade</b> você vê tudo o que está guardado, corrige o que quiser e, em{' '}
         <b>Apagar meus dados</b>, apaga nome, celular e e-mail. A conta do apartamento continua
-        existindo e volta para a senha inicial.
+        existindo e volta para a senha inicial. Saem junto as suas opiniões e os seus avisos nas
+        Indicações; o prestador que você indicou continua na lista, sem ligação com o apartamento.
+        Para apagar só uma opinião, use “Apagar a minha opinião” na página do prestador.
+      </p>
+      <p>
+        Um prestador que não quer aparecer nas Indicações pode pedir à Comissão para sair da lista. O
+        telefone dele fica guardado só para ele não ser indicado de novo.
       </p>
       <p>
         Para qualquer outro pedido sobre os seus dados (ver, corrigir ou apagar) ou para tirar

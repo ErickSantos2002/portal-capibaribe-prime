@@ -54,6 +54,19 @@ describe('política de privacidade', () => {
     expect(texto).not.toMatch(/\bBloco \d|\bapto\b|\b[1-5]\d{3}\b|CPF d/i)
   })
 
+  // Indicações de serviços (spec de 18/10/2026, seção 6).
+  it('fala das indicações: opinião com bloco e apartamento, sem nome, e o prestador pode pedir para sair', async () => {
+    apiFalsa({})
+    abrir('/privacidade')
+    await screen.findByRole('heading', { name: 'Política de privacidade' })
+    expect(screen.getByText(/opinião .* bloco e o apartamento/i)).toBeTruthy()
+    expect(screen.getByText(/prestador .* pedir .* sair/i)).toBeTruthy()
+    const texto = document.querySelector('main')?.textContent ?? ''
+    expect(texto).toContain('Indicações')
+    expect(texto).toMatch(/nunca com o seu nome/)
+    expect(texto).toMatch(/Apagar meus dados.*opiniões/s)
+  })
+
   it('sem sessão, voltar leva à entrada', async () => {
     apiFalsa({})
     abrir('/privacidade')
