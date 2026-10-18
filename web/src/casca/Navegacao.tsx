@@ -2,13 +2,15 @@
 // de baixo com o arco: 4 lugares fixos e a bola "Menu" no meio, que abre a folha com todos os
 // lugares. No computador, o menu lateral verde, agrupado. Os dois saem da lista única de lugares
 // (casca/menu.ts) e estão sempre no DOM; o CSS mostra um ou outro pelo `@container raiz`.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import type { Eu } from '../api/tipos'
 import { contarNaoLidos } from '../avisos/api'
+import { Conta } from './Conta'
 import { nomeDoPapel } from './formatar'
 import { Icone } from './Icone'
 import { agrupados, daBarra, lugarAtual, lugaresDo, type Lugar } from './menu'
+import { MenuFolha } from './MenuFolha'
 import { Logo } from '../marca/Logo'
 import { BotaoVersao } from '../sobre/BotaoVersao'
 import { Placa } from './Placa'
@@ -31,16 +33,6 @@ function useNaoLidos(): number {
     }
   }, [pathname])
   return quantidade
-}
-
-/** A plaquinha com o número de não lidos (na aba, no menu lateral e na folha). */
-export function Conta({ lugar, naoLidos }: { lugar: Lugar; naoLidos: number }) {
-  if (lugar.contador !== 'nao-lidos' || naoLidos <= 0) return null
-  return (
-    <span className="conta" aria-label={`${naoLidos} não lidos`}>
-      {naoLidos}
-    </span>
-  )
 }
 
 function Aba({ lugar, atual, naoLidos }: { lugar: Lugar; atual?: Lugar; naoLidos: number }) {
@@ -68,6 +60,7 @@ export function Navegacao({ eu }: { eu: Eu }) {
   const naoLidos = useNaoLidos()
   const { pathname } = useLocation()
   const [aberta, setAberta] = useState(false)
+  const bola = useRef<HTMLButtonElement>(null)
   const papel = eu.papeis.includes('admin') ? 'admin' : eu.papeis[0]
   const lugares = lugaresDo(eu)
   const atual = lugarAtual(lugares, pathname)
@@ -96,12 +89,13 @@ export function Navegacao({ eu }: { eu: Eu }) {
         </svg>
         {barra.slice(0, 2).map(aba)}
         <button
+          ref={bola}
           type="button"
           className="nav-bola"
           aria-haspopup="dialog"
           aria-expanded={aberta}
           data-aqui={naBola ? '' : undefined}
-          onClick={() => setAberta((antes) => !antes)}
+          onClick={() => setAberta(true)}
         >
           <span className="nav-bola-circulo">
             <Icone nome="grade" />
@@ -111,6 +105,20 @@ export function Navegacao({ eu }: { eu: Eu }) {
         </button>
         {barra.slice(2).map((lugar, i) => aba(lugar, i + 2))}
       </div>
+      {aberta && (
+        <MenuFolha
+          lugares={lugares}
+          atual={atual}
+          naoLidos={naoLidos}
+          aoFechar={() => {
+            setAberta(false)
+            // A bola recebe o foco de volta (o navegador também faz, mas a folha sai do DOM ao
+            // fechar: garantimos aqui). Se a pessoa tocou num lugar, a tela nova leva o foco
+            // para o título dela logo depois.
+            bola.current?.focus()
+          }}
+        />
+      )}
 
       <div className="nav-lateral">
         <span className="nav-marca">

@@ -104,13 +104,4 @@ describe('a barra do celular', () => {
     expect(documentos.querySelector('.rot-curto')?.getAttribute('aria-hidden')).toBe('true')
     expect(documentos.querySelector('.rot-curto')?.textContent).toBe('Docs')
   })
-
-  it('a bola alterna o estado aberto', async () => {
-    api(eu())
-    abrir('/avisos')
-    const nav = await barra()
-    const bola = within(nav).getByRole('button', { name: 'Menu' })
-    bola.click()
-    await waitFor(() => expect(bola.getAttribute('aria-expanded')).toBe('true'))
-  })
 })

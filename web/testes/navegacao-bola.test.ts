@@ -188,3 +188,28 @@ describe('as regras velhas das abas saíram', () => {
     assert.doesNotMatch(estilo, /nth-of-type\(5\)/)
   })
 })
+
+describe('a folha do Menu (seção 4)', () => {
+  test('cresce até perto do topo (dvh) e a lista rola por dentro, sem levar a página junto', () => {
+    assert.match(regra(estilo, '.menu-folha'), /max-height:\s*calc\(100dvh - [\d.]+rem\)/)
+    assert.match(regra(estilo, '.menu-folha-lista'), /overflow-y:\s*auto/)
+    assert.match(regra(estilo, '.menu-folha-lista'), /overscroll-behavior:\s*contain/)
+  })
+
+  test('encosta no fundo e cobre a barra; a bola-X fica no lugar da bola', () => {
+    assert.match(regra(estilo, '.menu-folha'), /margin:\s*auto 0 0/)
+    assert.match(regra(estilo, '.menu-folha-pe'), /height:\s*calc\(var\(--altura-barra\) \+ env\(safe-area-inset-bottom\)\)/)
+  })
+
+  test('só a pegadinha e o cabeçalho arrastam (o navegador não rola ali)', () => {
+    assert.match(regra(estilo, '.menu-folha-topo'), /touch-action:\s*none/)
+  })
+
+  test('a animação de subir é curta e tem nome próprio (o prefers-reduced-motion global a desliga)', () => {
+    assert.match(regra(estilo, '.menu-folha[open]'), /animation:\s*menu-folha-sobe 0\.\d+s/)
+  })
+
+  test('as linhas têm pelo menos 3rem de altura', () => {
+    assert.match(regra(estilo, '.menu-folha-grupo a'), /min-height:\s*3(\.\d+)?rem/)
+  })
+})
