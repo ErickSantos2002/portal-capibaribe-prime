@@ -213,3 +213,24 @@ describe('a folha do Menu (seção 4)', () => {
     assert.match(regra(estilo, '.menu-folha-grupo a'), /min-height:\s*3(\.\d+)?rem/)
   })
 })
+
+describe('achados da conferência (Tarefa 5)', () => {
+  test('o número de não lidos não fica menor que 13 px no celular de 320 px', () => {
+    const tamanho = /font-size:\s*([^;]+)/.exec(regra(estilo, '.nav-barra .conta'))?.[1] ?? ''
+    assert.ok(emPx(tamanho, 16, 320, claro) >= 12.95, tamanho)
+  })
+
+  test('folha com letra grande num celular: sem o círculo do ícone e sem a seta, o nome cabe inteiro', () => {
+    const inicio = estilo.indexOf('@container raiz (max-width: 15rem) {')
+    assert.ok(inicio >= 0, 'sem o @container raiz (max-width: 15rem)')
+    const bloco = estilo.slice(inicio, estilo.indexOf('\n}', inicio))
+    assert.match(bloco, /\.menu-folha-ic,\s*\.menu-folha-grupo a > \.icone:last-child\s*\{[^}]*display:\s*none/)
+  })
+})
+
+describe('achados dos prints (Tarefa 5)', () => {
+  test('o realce de passar o mouse na folha só vale com mouse (no toque, o :hover gruda)', () => {
+    assert.doesNotMatch(estilo, /(^|\n)\.menu-folha-grupo a:hover/)
+    assert.match(estilo, /@media \(hover: hover\) \{\s*\.menu-folha-grupo a:hover/)
+  })
+})

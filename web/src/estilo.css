@@ -582,7 +582,8 @@ p {
   position: absolute;
   top: calc(var(--barra-topo) - 0.125rem);
   left: calc(50% + min(0.375rem, 1.46vw));
-  font-size: min(0.8125rem, 3.16vw);
+  /* 13 px a 320 px de largura (a de fábrica), e não passa disso com a letra de fábrica. */
+  font-size: min(0.8125rem, 4.06vw);
 }
 
 /* A bola: um botão da altura da barra inteira, com o círculo no alto (a saliência acima do
@@ -757,8 +758,11 @@ p {
   text-decoration: none;
 }
 
-.menu-folha-grupo a:hover {
-  background: var(--mata-suave);
+/* Só com mouse: no toque, o :hover gruda na linha tocada e parecia um segundo "você está aqui". */
+@media (hover: hover) {
+  .menu-folha-grupo a:hover {
+    background: var(--mata-suave);
+  }
 }
 
 .menu-folha-grupo a[aria-current='page'] {
@@ -819,6 +823,19 @@ p {
 
 .nav .menu-folha :focus-visible {
   outline-color: var(--ipe-forte);
+}
+
+/* Letra grande num celular (a tela com menos de 15 letras de largura: 360 px a 150 %, 320 a 32
+   px): o círculo do ícone e a seta saem, e o nome ("Documentos") cabe inteiro na linha. */
+@container raiz (max-width: 15rem) {
+  .menu-folha-ic,
+  .menu-folha-grupo a > .icone:last-child {
+    display: none;
+  }
+
+  .menu-folha-lista {
+    padding-inline: 0.5rem;
+  }
 }
 
 /* ---------- lista do mural (folha contínua, não cartões soltos) ---------- */
