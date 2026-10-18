@@ -27,6 +27,7 @@ from app.esquemas import (
     comum,
     documentos,
     enquetes,
+    indicacoes,
     push,
     recuperacao,
 )
@@ -46,6 +47,8 @@ ARQUIVOS_TS = {
     documentos: WEB / "documentos" / "tipos.ts",
     # M4: comum aos dois épicos (criar e gerir, votar e resultado).
     enquetes: WEB / "enquetes" / "tipos.ts",
+    # Indicações de serviços (spec de 18/10/2026).
+    indicacoes: WEB / "indicacoes" / "tipos.ts",
 }
 BASES = {comum.Entrada, comum.Saida}
 # Apelidos de tipo do front que valem o tipo básico.

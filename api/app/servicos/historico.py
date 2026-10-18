@@ -53,6 +53,17 @@ class Acao(enum.StrEnum):
     # vai para o histórico (dado sobre o comportamento das pessoas, sem uso).
     enquete_criada = "enquete_criada"
     enquete_editada = "enquete_editada"
+    # Indicações de serviços (spec de 18/10/2026, seção 4): entidade `prestador`, sem o nome
+    # dele. `indicacao_opiniao_escondida` leva `{"opiniao": id}`; `indicacao_opiniao_apagada`
+    # (a própria unidade) conta no limite de opiniões do dia (trigger da 0010).
+    indicacao_escondida = "indicacao_escondida"
+    indicacao_opiniao_escondida = "indicacao_opiniao_escondida"
+    indicacao_opiniao_apagada = "indicacao_opiniao_apagada"
+    indicacao_aviso_resolvido = "indicacao_aviso_resolvido"
+    # Categorias das indicações (administração): entidade `categoria_servico`, com
+    # `{"categoria": nome}` (a chave `nome` é proibida).
+    categoria_criada = "categoria_criada"
+    categoria_renomeada = "categoria_renomeada"
 
 
 # Chaves que denunciam dado pessoal ou segredo. Comparação por "contém", em minúsculas.
