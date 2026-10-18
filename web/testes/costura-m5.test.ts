@@ -85,27 +85,20 @@ describe('3 (revisões do M5, A): o topo continua fixo; com letra grande vira fa
   })
 })
 
+// Navegação com a bola (spec 2026-10-18-navegacao-bola-design.md): as cinco abas saíram, e a
+// barra tem tamanho fixo em qualquer letra (testes/navegacao-bola.test.ts). Ficam as garantias.
 describe('4: abas de baixo nunca encostam', () => {
-  test('com a tela estreita para a letra, a aba tem pelo menos a largura da palavra', () => {
-    assert.match(bloco(estilo, '@container raiz (max-width: 22rem)'), /\.nav a\s*\{[^}]*min-width:\s*min-content/)
+  test('cada aba tem pelo menos a largura da palavra', () => {
+    assert.match(regra(estilo, '.nav-barra a'), /min-width:\s*min-content/)
   })
 
-  test('com cinco abas, sempre (com a letra de fábrica "Documentos" já não cabia)', () => {
-    const cinco = bloco(estilo, '@container raiz not (min-width: 56.25rem)')
-    assert.match(cinco, /\.nav:has\(> a:nth-of-type\(5\)\) a\s*\{[^}]*min-width:\s*min-content/)
+  test('o teto da letra das abas (agora fixa pela largura) continua', () => {
+    assert.match(regra(estilo, '.nav-barra a'), /font-size:\s*min\(0\.9375rem, \d*\.?\d+vw\)/)
   })
 
-  test('o teto da letra das abas (dúvida 1) continua', () => {
-    assert.match(regra(estilo, '.nav a'), /font-size:\s*min\(0\.9375rem, 5\.5vw\)/)
-  })
-
-  test('o número de não lidos não passa da borda da aba (R4: preso no canto, letra com teto)', () => {
-    assert.match(regra(estilo, '.nav .conta'), /font-size:\s*min\(0\.8125rem, 4\.75vw\)/)
+  test('o número de não lidos não passa da borda da aba (R4: em em, letra com teto)', () => {
+    assert.match(regra(estilo, '.nav-barra .conta'), /font-size:\s*min\(0\.8125rem, \d*\.?\d+vw\)/)
     assert.match(regra(estilo, '.nav .conta'), /min-width:\s*1\.385em/)
-    const estreita = estilo.slice(estilo.lastIndexOf('@container raiz (max-width: 22rem)'))
-    assert.match(bloco(estreita, '@container raiz (max-width: 22rem)'), /\.nav \.conta\s*\{[^}]*right:\s*0\.125rem/)
-    // Depois da regra de base (mesmo peso: a última vence).
-    assert.ok(estilo.lastIndexOf('@container raiz (max-width: 22rem)') > estilo.indexOf('\n.nav .conta {'))
   })
 })
 

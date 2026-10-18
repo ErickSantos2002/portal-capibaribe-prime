@@ -2,7 +2,10 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover (navegação com bola): no iPhone instalado, a barra de baixo vai até a
+         borda e soma a safe-area (env(safe-area-inset-bottom)), para o indicador de início não
+         cobrir os rótulos. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- Letra que cresce (M5): no Android (Chrome 146+), o tamanho de letra escolhido no celular
          passa a valer no Portal, que mede tudo em rem (spec docs/superpowers/specs/m5-letra.md). -->
     <meta name="text-scale" content="scale" />

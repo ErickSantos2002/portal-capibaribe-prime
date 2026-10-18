@@ -61,16 +61,15 @@ describe('U4 e U5: menu lateral que rola; coluna de 45rem também no layout de c
   test('conteúdo, topo e abas de baixo na coluna de 45rem, centralizada', () => {
     assert.match(regra(estilo, '.conteudo'), /padding:[^;]*max\(16px, calc\(\(100% - 45rem\) \/ 2\)\)/)
     assert.match(regra(estilo, '.topo'), /padding:[^;]*max\(16px, calc\(\(100% - 45rem\) \/ 2\)\)/)
-    assert.match(regra(estilo, '.nav'), /padding-inline:\s*max\(0rem, calc\(\(100% - 45rem\) \/ 2\)\)/)
+    assert.match(regra(estilo, '.nav-barra'), /padding-inline:\s*max\(0rem, calc\(\(100% - 45rem\) \/ 2\)\)/)
   })
 })
 
-describe('R5: cinco abas a 320 px e 200 % sem rolagem lateral', () => {
-  test('na tela estreita, com cinco abas, o respiro lateral cai para a metade', () => {
-    assert.match(
-      bloco(estilo, '@container raiz (max-width: 22rem)'),
-      /\.nav:has\(> a:nth-of-type\(5\)\) a\s*\{[^}]*padding-inline:\s*0\.0625rem/,
-    )
+// Navegação com a bola: as cinco abas saíram (Unidades foi para a folha do Menu). A barra tem
+// 4 colunas e a da bola, e nenhuma coluna fica mais estreita que a palavra dela.
+describe('R5: a barra a 320 px e 200 % sem rolagem lateral', () => {
+  test('4 abas e a coluna da bola, cada aba com a largura mínima da palavra', () => {
+    assert.match(regra(estilo, '.nav-barra'), /grid-template-columns:\s*1fr 1fr var\(--bola-coluna\) 1fr 1fr/)
   })
 })
 

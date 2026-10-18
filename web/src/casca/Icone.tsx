@@ -47,6 +47,11 @@ const DESENHOS = {
   titulo: '<path d="M6 4.5v15M18 4.5v15M6 12h12"/>',
   negrito: '<path d="M7 4.5h6a3.75 3.75 0 0 1 0 7.5H7zM7 12h7a3.75 3.75 0 0 1 0 7.5H7z"/>',
   lista: '<path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20"/><path d="M4.5 6.5v.1M4.5 12v.1M4.5 17.5v.1"/>',
+  // A bola do Menu (spec da navegação com bola, seção 3): grade de 9 pontos (círculo de raio 1 com
+  // o traço de 2: um ponto cheio), que vira X com a folha aberta.
+  grade:
+    '<circle cx="6" cy="6" r="1"/><circle cx="12" cy="6" r="1"/><circle cx="18" cy="6" r="1"/><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/><circle cx="6" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="18" cy="18" r="1"/>',
+  fechar: '<path d="M6 6l12 12M18 6L6 18"/>',
 } as const
 
 export type NomeDoIcone = keyof typeof DESENHOS

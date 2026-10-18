@@ -26,6 +26,9 @@ export interface Lugar {
   grupo: Grupo
   /** Posição fixa na barra: 1 e 2 à esquerda da bola, 3 e 4 à direita. Sem ela, só na folha. */
   naBarra?: 1 | 2 | 3 | 4
+  /** Mostra o número de não lidos (hoje, só Avisos). Um lugar que mora só na folha e tem número
+   *  acende um pontinho na bola (spec, seção 3). */
+  contador?: 'nao-lidos'
 }
 
 export function lugaresDo(eu: Eu): Lugar[] {
@@ -39,6 +42,7 @@ export function lugaresDo(eu: Eu): Lugar[] {
       frase: 'Recados da Comissão e da obra',
       grupo: 'dia-a-dia',
       naBarra: 1,
+      contador: 'nao-lidos',
     },
     ...(enquetes ? [enquetes] : []),
     ...(documentos ? [documentos] : []),

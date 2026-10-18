@@ -1,5 +1,5 @@
 // Casca: guardas de rota, menu e layout com a API de mentira (spec do M1, seção 5.3).
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -161,9 +161,12 @@ describe('layout', () => {
   it('a aba ativa é marcada e mostra os não lidos', async () => {
     api(eu(), 3)
     abrir('/avisos')
-    const aba = await screen.findByRole('link', { name: /Avisos/ })
+    // A barra do celular e o menu lateral estão os dois no DOM (o CSS mostra um): olha a barra.
+    await screen.findByRole('navigation', { name: 'Seções do Portal' })
+    const barra = within(document.querySelector<HTMLElement>('.nav-barra')!)
+    const aba = barra.getByRole('link', { name: /Avisos/ })
     expect(aba.getAttribute('aria-current')).toBe('page')
-    expect(await screen.findByLabelText('3 não lidos')).toBeTruthy()
+    expect(await barra.findByLabelText('3 não lidos')).toBeTruthy()
   })
 
   it('o topo mostra a placa da unidade', async () => {

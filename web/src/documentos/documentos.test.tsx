@@ -95,7 +95,8 @@ describe('lista de documentos', () => {
     })
     abrir('/documentos')
     await screen.findByRole('heading', { name: 'Obra' })
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+    // Só os da página: o menu lateral tem os títulos dos grupos ("Dia a dia").
+    expect(within(screen.getByRole('main')).getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'Obra',
       'Convenção',
       'Atas',

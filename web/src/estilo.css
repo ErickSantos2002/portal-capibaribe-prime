@@ -42,6 +42,31 @@
   --entre-grupos: 1.5rem;
   --r-pequeno: 8px;
   --r-medio: 12px;
+  /* Número sobre o ipê (a plaquinha de não lidos): escuro nos dois temas. */
+  --sobre-ipe: #17231c;
+  /* Barra do celular com a bola do Menu (spec da navegação com bola, seção 3): tamanho fixo em
+     qualquer letra. Cada medida é a de fábrica em rem, com teto pela largura da tela (vw): o vw
+     vale a medida de fábrica num celular de ~412 px (no ícone, ~390 px), então com a letra de
+     fábrica nada muda e com a letra grande a barra não cresce. A letra tem piso de 15 px: o vw
+     dela vale 15 px a 340 px (abaixo disso, a marca data-largura sobe o vw, logo abaixo). */
+  --barra-letra: min(0.9375rem, 4.42vw);
+  --barra-icone: min(1.5rem, 6.15vw);
+  --barra-topo: min(0.375rem, 1.46vw); /* acima do ícone */
+  --barra-vao: min(0.125rem, 0.49vw); /* entre o ícone e o nome */
+  --barra-pe: min(0.25rem, 0.97vw); /* abaixo do nome */
+  --barra-flecha: min(0.875rem, 3.4vw); /* altura do arco, das pontas ao meio */
+  --barra-saliencia: min(0.5rem, 1.94vw); /* quanto a bola passa do alto do arco */
+  --bola: min(3.75rem, 14.56vw); /* com o anel */
+  --bola-coluna: min(4.25rem, 16.5vw);
+  /* Altura total da barra (o arco e a saliência da bola incluídos; a safe-area não): o nome
+     ocupa duas linhas ("Minha unidade"), de 1.1 cada. */
+  --altura-barra: calc(
+    var(--barra-flecha) + var(--barra-saliencia) + var(--barra-topo) + var(--barra-icone) +
+      var(--barra-vao) + 2.2 * var(--barra-letra) + var(--barra-pe)
+  );
+  /* A bola: verde-mata com a grade em ipê (6,1:1). */
+  --bola-fundo: #1f5e3b;
+  --bola-icone: #e8b22a;
   color-scheme: light;
 }
 
@@ -76,7 +101,18 @@
   --cat-financeiro-suave: #1c2e23;
   --cat-urgente: #f19a90;
   --cat-urgente-suave: #3a1d1a;
+  --sobre-ipe: #17231c;
+  /* O --mata do escuro com o ipê dá 1,2:1 e não serve: a bola guarda o verde do claro, e o ipê
+     do escuro sobre ele dá 4,9:1 (spec da navegação com bola, seção 3). */
+  --bola-fundo: #1f5e3b;
+  --bola-icone: #f0c14b;
   color-scheme: dark;
+}
+
+/* Tela estreita (< 340 px, casca/letra.ts): "Documentos" vira "Docs" na barra, e a letra dela
+   sobe o vw para não passar do piso de 15 px. */
+:root[data-largura='estreita'] {
+  --barra-letra: min(0.9375rem, 4.7vw);
 }
 
 * {
@@ -88,11 +124,12 @@ body {
   margin: 0;
 }
 
-/* O foco e as âncoras nunca param embaixo do topo fixo nem das abas de baixo (revisão, U2).
-   Em rem: o topo e as abas crescem com a letra, e a folga cresce junto (spec m5-letra, 3). */
+/* O foco e as âncoras nunca param embaixo do topo fixo nem da barra de baixo (revisão, U2).
+   Em rem: o topo cresce com a letra, e a folga cresce junto (spec m5-letra, 3). Embaixo, a
+   altura da barra inteira, com a saliência da bola (navegação com bola, WCAG 2.4.11). */
 html {
   scroll-padding-top: 5rem;
-  scroll-padding-bottom: 5.5rem;
+  scroll-padding-bottom: calc(var(--altura-barra) + env(safe-area-inset-bottom) + 0.5rem);
 }
 
 /* ---------- letra que cresce (M5, spec docs/superpowers/specs/m5-letra.md) ----------
@@ -390,130 +427,227 @@ p {
 /* Texto do aviso: parágrafos e `<br>` vêm do renderizador (avisos/formatacao.ts); o estilo das
    marcas mora em avisos/avisos.css. */
 
-/* ---------- navegação: abas embaixo no celular ---------- */
+/* ---------- navegação: a barra do celular com a bola do Menu ----------
+   Spec docs/superpowers/specs/2026-10-18-navegacao-bola-design.md, seção 3. Barra clara com a
+   borda de cima em arco, 4 lugares fixos com ícone e nome, e a bola "Menu" no meio.
+   Tamanho fixo em qualquer letra: tudo aqui é `min(<rem de fábrica>, <vw>)` (os tokens
+   --barra-* e --bola*, no :root), e para de crescer na letra de fábrica. Com a letra grande, a
+   barra fica do tamanho que a largura da tela deixa, e quem usa letra grande lê os nomes na folha
+   do Menu, que não tem teto. A conta da altura total (--altura-barra, saliência da bola
+   incluída) é conferida em testes/navegacao-bola.test.ts: ≤ 96 px a 16 px de letra e ≤ 104 px a
+   24 e 32 px, de 320 a 412 px de largura. */
 .nav {
   position: sticky;
   bottom: 0;
   z-index: 3;
-  display: flex;
-  /* U5: numa tela larga, as abas ficam na largura da coluna de leitura (45rem), centralizadas; o
-     fundo da barra continua de ponta a ponta. Num celular, 0. */
-  padding-inline: max(0rem, calc((100% - 45rem) / 2));
-  background: var(--folha);
-  border-top: 1px solid var(--linha);
 }
 
-.nav a {
+.nav-barra {
+  position: relative;
+  display: grid;
+  /* 1fr = minmax(auto, 1fr): nenhuma coluna fica mais estreita que a palavra mais comprida dela
+     (o `min-content` das abas), e nada encosta. */
+  grid-template-columns: 1fr 1fr var(--bola-coluna) 1fr 1fr;
+  height: calc(var(--altura-barra) + env(safe-area-inset-bottom));
+  /* Em cima, o espaço do arco e da saliência da bola; embaixo, o indicador de início do iPhone. */
+  padding-top: calc(var(--barra-flecha) + var(--barra-saliencia));
+  /* U5: numa tela larga com o layout de celular, as abas ficam na coluna de leitura (45rem),
+     centralizadas; o fundo e o arco vão de ponta a ponta. Num celular, 0. */
+  padding-inline: max(0rem, calc((100% - 45rem) / 2));
+  padding-bottom: env(safe-area-inset-bottom);
+  /* O fundo começa onde o arco termina (um fio antes, para não sobrar fresta entre os dois). */
+  background: linear-gradient(
+    transparent calc(var(--barra-flecha) + var(--barra-saliencia) - 0.0625rem),
+    var(--folha) 0
+  );
+  /* Os cantos transparentes acima do arco não pegam o toque: ele passa para a página. */
+  pointer-events: none;
+}
+
+.nav-barra > * {
+  pointer-events: auto;
+}
+
+.nav-arco {
+  position: absolute;
+  top: var(--barra-saliencia);
+  left: 0;
+  width: 100%;
+  height: var(--barra-flecha);
+  overflow: visible;
+  fill: var(--folha);
+  pointer-events: none;
+}
+
+.nav-arco-linha {
+  fill: none;
+  stroke: var(--linha);
+  stroke-width: 1px; /* px: linha fina, como a borda de cima da barra de antes */
+  vector-effect: non-scaling-stroke;
+}
+
+.nav-barra a {
   position: relative;
   display: flex;
-  flex: 1;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 0.1875rem;
-  min-width: 0;
-  min-height: 4rem;
-  padding: 0.625rem 0.125rem 0.5rem;
+  gap: var(--barra-vao);
+  min-width: min-content;
+  padding: var(--barra-topo) min(0.125rem, 0.49vw) var(--barra-pe);
   color: var(--tinta-suave);
-  /* 15 px no mínimo (revisão, U10): a persona mais velha lê as abas sem óculos. Teto (M5, spec
-     3.5): quatro abas dividem a largura do celular, e "Documentos" não cabe numa aba de 90 px com
-     letra maior que uns 20 px; o 5.5vw segura a letra das abas no que cabe (no celular de 360 px,
-     até 20 px; no de 412 px, até 23 px). O resto da tela não tem teto. */
-  font-size: min(0.9375rem, 5.5vw);
-  line-height: 1.15;
+  /* Piso de 15 px (o do projeto) e teto pela largura da tela: o mesmo que --barra-letra. */
+  font-size: min(0.9375rem, 4.42vw);
+  line-height: 1.1;
   text-align: center;
   text-decoration: none;
 }
 
-/* Cinco abas (gestão, com "Unidades"): cada uma tem 72 px no celular de 360 px, e o teto desce
-   para 4.3vw (15,5 px ali): "Documentos" é a palavra que precisa caber. Só nas abas de baixo: o
-   menu lateral do computador não tem teto (e este seletor, mais forte, venceria o dele). */
-@container raiz not (min-width: 56.25rem) {
-  .nav:has(> a:nth-of-type(5)) a {
-    font-size: min(0.9375rem, 4.3vw);
-    /* Costura do M5: com cinco abas, "Documentos" (83 px a 15 px de letra) não cabe na aba de
-       72 px já com a letra de fábrica, e encostava em "Enquetes" ("EnquetesDocumentos"). Aqui o
-       `min-content` de baixo vale sempre: a aba dela fica com a largura da palavra. */
-    min-width: min-content;
-  }
+/* Abaixo de 340 px (marca data-largura, casca/letra.ts), o teto sobe um pouco para a letra não
+   passar do piso de 15 px: lá "Documentos" vira "Docs", e sobra espaço. */
+:root[data-largura='estreita'] .nav-barra a {
+  font-size: min(0.9375rem, 4.7vw);
 }
 
-/* Com o teto acima, "Documentos" ainda é mais larga que 1/4 (ou 1/5) da tela quando a letra
-   passa da de fábrica: a 360 px e 200 %, 109 px numa aba de 90, encostando em "Enquetes" (G2-5).
-   Medido: a palavra mede 5,5 vezes a letra, e encosta a partir de uns 22em de tela (352 px com a
-   letra de fábrica, 528 px a 150 %). Ali, nenhuma aba fica mais estreita que a palavra mais
-   comprida dela (`min-content`): "Documentos" ganha a largura que precisa e as outras dividem o
-   resto, que sobra (a 360 px e 200 %, as quatro somam 338 px). Com a letra de fábrica num
-   celular de 360 px ou mais, nada muda; num de 320 px também passa a valer (lá "Documentos" já
-   encostava por 1 px). */
-@container raiz (max-width: 22rem) {
-  .nav a {
-    min-width: min-content;
-  }
-
-  /* R5 (revisões do M5): com cinco abas num celular de 320 px a 200 %, as larguras mínimas (com
-     o respiro de 0.125rem de cada lado) somavam 329 px e a página rolava 9 px para o lado. Com
-     cinco abas na tela estreita, o respiro cai para a metade: cabem, e "Documentos" continua
-     separada das vizinhas. Com quatro, fica o de antes (C6). */
-  .nav:has(> a:nth-of-type(5)) a {
-    padding-inline: 0.0625rem;
-  }
+.nav-barra .icone {
+  width: var(--barra-icone);
+  height: var(--barra-icone);
 }
 
-.nav a[aria-current='page'] {
+/* "Minha unidade" sempre em duas linhas, entre as palavras: a largura do rótulo é a da palavra
+   mais comprida. */
+.nav-rotulo {
+  max-width: min-content;
+}
+
+.nav-barra .rot-curto {
+  display: none;
+}
+
+/* Na tela estreita, o nome inteiro sai da vista mas fica para o leitor de tela. */
+:root[data-largura='estreita'] .nav-barra .rot-longo {
+  position: absolute;
+  width: 1px; /* px: escondido só da vista, como o "pular para o conteúdo" */
+  height: 1px; /* px: idem */
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:root[data-largura='estreita'] .nav-barra .rot-curto {
+  display: inline;
+}
+
+.nav-barra a[aria-current='page'] {
   color: var(--mata);
   font-weight: 700;
 }
 
-.nav a[aria-current='page']::before {
+/* O tracinho brilhante do lugar atual (o "glow" do app da PlayStation). */
+.nav-barra a[aria-current='page']::before,
+.nav-bola[data-aqui] .nav-bola-rotulo::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 24%;
-  right: 24%;
+  left: 50%;
+  width: min(2.125rem, 8.25vw);
   height: 3px; /* px: marcador fino, como uma borda */
-  border-radius: 0 0 3px 3px;
-  background: var(--mata);
+  border-radius: 3px;
+  background: currentColor;
+  box-shadow: 0 0 0.625rem currentColor;
+  transform: translateX(-50%);
 }
 
 .nav .conta {
-  position: absolute;
-  top: 0.4375rem;
-  left: calc(50% + 0.375rem);
   display: grid;
   place-items: center;
-  /* Revisões do M5 (R4, U10): a letra do número tem o mesmo teto da letra da aba (dúvida 1, 5.5vw
-     × 13/15) e o resto da plaquinha é em em, sobre ela: com "12" ou "99+" a 200 %, ela crescia
-     sem teto, passava da borda da aba e cobria o ícone. Com a letra de fábrica, 13 px de letra,
-     18 px de altura e 5 px de folga, como antes. */
+  /* A plaquinha mede em em, sobre a letra dela (13 px de fábrica, 18 px de altura): cresce e
+     para junto com a letra da barra (R4 do M5). */
   min-width: 1.385em;
   height: 1.385em;
   padding: 0 0.385em;
   border-radius: 9px;
   background: var(--ipe);
-  color: #17231c;
-  font-size: min(0.8125rem, 4.75vw);
+  color: var(--sobre-ipe);
+  font-size: 0.8125rem;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
-  /* Presa pela direita, a largura "cabe no que sobra" seria a do alinhamento ao centro da aba
+  /* Presa pela esquerda, a largura "cabe no que sobra" seria a do alinhamento ao centro da aba
      (o "120" vazava da plaquinha); a plaquinha mede o número inteiro. */
   width: max-content;
 }
 
-/* R4: na aba estreita (o mesmo limite das abas, acima; depois da regra de base, que tem o mesmo
-   peso), o número fica preso no canto de cima, à direita, dentro da aba: a largura dele depende
-   dos dígitos, então o canto é o que não passa da borda; fica sobre a ponta do ícone, como com a
-   letra de fábrica, e não no meio dele. */
-@container raiz (max-width: 22rem) {
-  .nav .conta {
-    top: 0.125rem;
-    right: 0.125rem;
-    left: auto;
-  }
+/* Na aba, no canto de cima do ícone, com a letra presa como a da barra. */
+.nav-barra .conta {
+  position: absolute;
+  top: calc(var(--barra-topo) - 0.125rem);
+  left: calc(50% + min(0.375rem, 1.46vw));
+  font-size: min(0.8125rem, 3.16vw);
 }
 
-.nav-marca,
-.nav-placa {
+/* A bola: um botão da altura da barra inteira, com o círculo no alto (a saliência acima do
+   arco) e "Menu" escrito embaixo. Nunca "+": é o mapa de todos os lugares, não "criar". */
+.nav-bola {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--barra-vao);
+  margin-top: calc(-1 * (var(--barra-flecha) + var(--barra-saliencia)));
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tinta-suave);
+  font-size: var(--barra-letra);
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.nav-bola-circulo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--bola);
+  height: var(--bola);
+  /* O anel da cor da página separa a bola do arco e do conteúdo atrás. */
+  border: min(0.25rem, 0.97vw) solid var(--papel);
+  border-radius: 50%;
+  background: var(--bola-fundo);
+  color: var(--bola-icone);
+}
+
+.nav-bola-rotulo {
+  position: relative;
+  padding-bottom: 0.25em;
+}
+
+/* Na bola, o tracinho fica embaixo de "Menu" (em cima, ele cairia fora da barra). */
+.nav-bola[data-aqui] .nav-bola-rotulo::after {
+  top: auto;
+  bottom: 0;
+}
+
+.nav-bola[data-aqui] {
+  color: var(--mata);
+  font-weight: 700;
+}
+
+.nav-bola-ponto {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(0.75rem, 2.9vw);
+  height: min(0.75rem, 2.9vw);
+  border-radius: 50%;
+  background: var(--ipe);
+}
+
+/* Sobre a barra clara, o foco é o ipê-forte de sempre (o ipê claro é do verde do computador). */
+.nav .nav-barra :focus-visible {
+  outline-color: var(--ipe-forte);
+}
+
+.nav-lateral {
   display: none;
 }
 
@@ -1246,7 +1380,8 @@ input.apto {
   position: fixed;
   /* U5: numa tela larga com o layout de celular, junto da coluna de leitura, não no canto. */
   right: max(1rem, calc((100% - 45rem) / 2));
-  bottom: 5.125rem;
+  /* Acima da barra inteira, com a saliência da bola (navegação com bola). */
+  bottom: calc(var(--altura-barra) + env(safe-area-inset-bottom) + 0.5rem);
   z-index: 4;
   display: inline-flex;
   align-items: center;
@@ -1449,7 +1584,44 @@ details[open] > summary::after {
     background: var(--folha);
   }
 
+  .nav-barra {
+    display: none;
+  }
+
+  /* O menu lateral: os filhos entram direto na coluna do .nav (a placa vai para o pé com o
+     margin-top: auto dela). */
+  .nav-lateral {
+    display: contents;
+  }
+
+  .nav-grupo-lugares {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  /* O título do grupo ("Dia a dia", "Gestão"), no peso do .secao e em tom claro sobre o verde. */
+  .nav-grupo {
+    margin: 1rem 0.875rem 0.25rem;
+    color: var(--sobre-mata);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.3;
+    opacity: 0.75;
+  }
+
+  .nav-grupo-lugares:first-of-type .nav-grupo {
+    margin-top: 0;
+  }
+
+  [data-tema='escuro'] .nav-grupo {
+    color: var(--tinta-suave);
+    opacity: 1;
+  }
+
   .nav a {
+    position: relative;
+    display: flex;
     flex: 0;
     flex-direction: row;
     justify-content: flex-start;
@@ -1460,7 +1632,9 @@ details[open] > summary::after {
     border-radius: var(--r-pequeno);
     color: var(--sobre-mata);
     font-size: 1.0625rem;
+    line-height: 1.15;
     text-align: left;
+    text-decoration: none;
     opacity: 0.88;
   }
 
@@ -1486,6 +1660,8 @@ details[open] > summary::after {
   }
 
   .nav a[aria-current='page']::before {
+    content: '';
+    position: absolute;
     top: 0.75rem;
     bottom: 0.75rem;
     left: 0;
