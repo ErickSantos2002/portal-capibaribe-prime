@@ -10,6 +10,7 @@ import { Placa } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
 import { useSessao } from '../casca/contextoSessao'
 import { formatarData, nomeDoPapel } from '../casca/formatar'
+import { CAMINHO_CATEGORIAS } from '../indicacoes/caminhos'
 import './administracao.css'
 import { buscarPainel } from './api'
 import type { PainelAtivacao, ResumoBloco, Situacao, UnidadePainel } from './tipos'
@@ -85,6 +86,10 @@ export function Painel() {
         <div className="carregar-mais">
           <Link className="botao leve" to="/historico">
             <Icone nome="relogio" /> Histórico de ações
+          </Link>
+          {/* Indicações de serviços (spec de 18/10/2026, seção 4): só a administração. */}
+          <Link className="botao leve" to={CAMINHO_CATEGORIAS}>
+            <Icone nome="indicacoes" /> Categorias das indicações
           </Link>
         </div>
       )}

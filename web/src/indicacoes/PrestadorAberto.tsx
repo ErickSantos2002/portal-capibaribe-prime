@@ -1,7 +1,7 @@
 // Indicações · o prestador aberto (spec, seção 3.2): categoria, nome, contagens, contatos
 // (WhatsApp sempre; "Ligar" quando o número é fixo; Instagram), a minha opinião, o que os
 // vizinhos disseram (com a placa, nunca o nome), avisar a gestão e corrigir os dados.
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { useCarga } from '../avisos/carregar'
 import { Carregando, FalhaAoCarregar } from '../avisos/componentes'
@@ -14,6 +14,7 @@ import { AvisarGestao } from './AvisarGestao'
 import { CAMINHO_INDICACOES } from './caminhos'
 import { CorrigirPrestador } from './CorrigirPrestador'
 import { FormOpiniao } from './FormOpiniao'
+import { EsconderOpiniao, ParaAGestao } from './ParaAGestao'
 import {
   linkInstagram,
   linkTelefone,
@@ -77,6 +78,7 @@ function Conteudo({ prestador, recarregar, trocar }: PropsConteudo) {
     <>
       <section className="ind-cabeca" aria-labelledby="ind-nome">
         <p className="ind-categoria">{prestador.categoria.nome}</p>
+        {prestador.escondido && <p className="selo ind-escondido">Escondido da lista</p>}
         <h2 id="ind-nome" className="ind-nome">
           {prestador.nome}
         </h2>
@@ -157,7 +159,15 @@ function Conteudo({ prestador, recarregar, trocar }: PropsConteudo) {
         ) : (
           <ul className="folha ind-lista-opinioes">
             {prestador.opinioes.map((o) => (
-              <ItemOpiniao key={o.id} opiniao={o} />
+              <ItemOpiniao
+                key={o.id}
+                opiniao={o}
+                esconder={
+                  prestador.avisos !== null && !prestador.escondido ? (
+                    <EsconderOpiniao opiniaoId={o.id} recarregar={recarregar} />
+                  ) : null
+                }
+              />
             ))}
           </ul>
         )}
@@ -184,11 +194,14 @@ function Conteudo({ prestador, recarregar, trocar }: PropsConteudo) {
             </button>
           ))}
       </div>
+
+      {/* Só a gestão recebe `avisos` (para o morador, vem nulo). */}
+      {prestador.avisos !== null && <ParaAGestao prestador={prestador} recarregar={recarregar} />}
     </>
   )
 }
 
-function ItemOpiniao({ opiniao }: { opiniao: Opiniao }) {
+function ItemOpiniao({ opiniao, esconder }: { opiniao: Opiniao; esconder: ReactNode }) {
   return (
     <li className="ind-opiniao">
       <Placa unidade={opiniao.unidade} />
@@ -200,6 +213,7 @@ function ItemOpiniao({ opiniao }: { opiniao: Opiniao }) {
           <span className="ind-data"> · {formatarData(opiniao.em)}</span>
         </p>
         {opiniao.comentario && <p className="ind-comentario">{opiniao.comentario}</p>}
+        {esconder}
       </div>
     </li>
   )

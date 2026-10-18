@@ -48,6 +48,11 @@ function origem(item: ItemHistorico): string {
   }
 }
 
+function categoria(item: ItemHistorico): string {
+  const valor = item.detalhes.categoria
+  return typeof valor === 'string' ? valor : '?'
+}
+
 function motivoSemLink(item: ItemHistorico): string {
   switch (item.detalhes.motivo) {
     case 'sem_email':
@@ -119,6 +124,19 @@ export function oQueFez(item: ItemHistorico): string {
       return 'criou uma enquete'
     case 'enquete_editada':
       return 'editou uma enquete'
+    // Indicações de serviços (spec de 18/10/2026). Nunca o nome do prestador.
+    case 'indicacao_escondida':
+      return 'escondeu uma indicação'
+    case 'indicacao_opiniao_escondida':
+      return 'escondeu uma opinião numa indicação'
+    case 'indicacao_opiniao_apagada':
+      return 'apagou a própria opinião numa indicação'
+    case 'indicacao_aviso_resolvido':
+      return 'resolveu um aviso numa indicação'
+    case 'categoria_criada':
+      return `criou a categoria “${categoria(item)}”`
+    case 'categoria_renomeada':
+      return `renomeou uma categoria para “${categoria(item)}”`
     case 'carga_inicial':
       return 'criou os blocos e as unidades'
     case 'dados_ficticios':

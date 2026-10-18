@@ -85,6 +85,11 @@
   margin-top: 1rem;
 }
 
+/* Histórico de ações e Categorias das indicações, um embaixo do outro. */
+.carregar-mais .botao + .botao {
+  margin-top: 0.5rem;
+}
+
 /* Celular na ficha: toca para ligar. Cor do Portal, não o azul/roxo padrão do navegador.
    M5: o link é inline, e o padding vertical de um inline aumenta a área de toque (para 44 px ou
    mais) sem mexer na altura da linha: o desenho da ficha fica igual (era 21 px de altura). */
