@@ -35,6 +35,10 @@ ADMIN_URL = os.environ.get(
 PAPEIS = {"dono": "dono-teste", "app": "app-teste"}
 BANCO = os.environ.get("PORTAL_TESTE_BANCO", "portal_teste")
 TABELAS = [
+    "aviso_servico",
+    "opiniao_servico",
+    "prestador",
+    "categoria_servico",
     "voto_opcao",
     "voto",
     "enquete_bloco",
@@ -249,6 +253,13 @@ def banco_limpo(url_dono: str) -> None:
     with psycopg.connect(url_dono, autocommit=True) as con:
         tabelas = sql.SQL(", ").join(sql.Identifier(t) for t in TABELAS)
         con.execute(sql.SQL("truncate {} restart identity cascade").format(tabelas))
+        # O truncate leva a carga das categorias que a migração 0010 fez: volta aqui.
+        from app.modelos.indicacoes import CATEGORIAS_INICIAIS
+
+        with con.cursor() as cur:
+            cur.executemany(
+                "insert into categoria_servico (nome, ordem) values (%s, %s)", CATEGORIAS_INICIAIS
+            )
 
 
 # --- enquetes (M4): os testes de banco das três regras ---------------------------------------

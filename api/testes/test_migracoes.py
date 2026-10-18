@@ -1,5 +1,7 @@
 """As migrações aplicam do zero, voltam e aplicam de novo (critério do M0)."""
 
+import re
+
 import psycopg
 import pytest
 
@@ -49,6 +51,10 @@ def test_upgrade_downgrade_upgrade(banco_vazio):
         "enquete_bloco",
         "voto",
         "voto_opcao",
+        "categoria_servico",
+        "prestador",
+        "opiniao_servico",
+        "aviso_servico",
     }
 
     rodar_alembic(banco_vazio, "upgrade", "head")
@@ -355,3 +361,30 @@ def test_funcoes_de_trigger_da_0008_com_search_path_fixo(banco_vazio):
     assert set(funcoes) >= FUNCOES_DA_0008
     for nome in FUNCOES_DA_0008:
         assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome
+
+
+NOVAS_DA_0010 = {"categoria_servico", "prestador", "opiniao_servico", "aviso_servico"}
+
+
+def test_downgrade_da_0010_volta_a_0009(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "0009")
+    funcoes_da_0009 = _funcoes(banco_vazio)
+    tabelas_da_0009 = _tabelas(banco_vazio)
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0010
+    rodar_alembic(banco_vazio, "downgrade", "0009")
+    # As quatro somem, as da 0009 ficam, e nada da 0010 fica para trás (funções incluídas).
+    assert _tabelas(banco_vazio) == tabelas_da_0009
+    assert _funcoes(banco_vazio) == funcoes_da_0009
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0010
+
+
+def test_carga_da_migracao_igual_a_constante():
+    # A migração fica congelada; a constante é a que a aplicação (e o `banco_limpo`) usa.
+    from app.modelos.indicacoes import CATEGORIAS_INICIAIS
+    from testes.apoio import RAIZ_API
+
+    texto = (RAIZ_API / "migracoes" / "versions" / "0010_indicacoes.py").read_text()
+    carga = re.findall(r"\('([^']+)', (\d+)\)", texto.split("CARGA", 1)[1])
+    assert [(n, int(o)) for n, o in carga] == list(CATEGORIAS_INICIAIS)

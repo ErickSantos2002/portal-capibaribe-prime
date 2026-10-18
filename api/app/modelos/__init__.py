@@ -10,6 +10,7 @@ from app.modelos.avisos import Aviso, AvisoAnexo, AvisoBloco, AvisoLeitura, Avis
 from app.modelos.base import Base
 from app.modelos.documentos import Documento, DocumentoVersao
 from app.modelos.enquetes import Enquete, EnqueteBloco, EnqueteOpcao, Voto, VotoOpcao
+from app.modelos.indicacoes import AvisoServico, CategoriaServico, OpiniaoServico, Prestador
 from app.modelos.notificacoes import (
     Canal,
     InscricaoPush,
@@ -25,10 +26,12 @@ __all__ = [
     "AvisoAnexo",
     "AvisoBloco",
     "AvisoLeitura",
+    "AvisoServico",
     "AvisoVersao",
     "Base",
     "Bloco",
     "Canal",
+    "CategoriaServico",
     "Documento",
     "DocumentoVersao",
     "Enquete",
@@ -39,7 +42,9 @@ __all__ = [
     "Historico",
     "InscricaoPush",
     "NotificacaoEnvio",
+    "OpiniaoServico",
     "Papel",
+    "Prestador",
     "Sessao",
     "SituacaoEnvio",
     "TokenRecuperacao",
