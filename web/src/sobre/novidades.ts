@@ -17,6 +17,16 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.8.0',
+    data: '2026-10-18',
+    nome: 'Indicações',
+    itens: [
+      'Novo lugar no Menu: "Indicações", com os prestadores de serviço que os vizinhos recomendam (marceneiro, eletricista, diarista e outros). Dá para procurar pelo nome ou pelo serviço e escolher a categoria, e os mais recomendados aparecem primeiro, com o botão do WhatsApp.',
+      'Em "Indicar alguém", você indica um prestador e diz se recomenda. Num prestador que já está na lista, dê a sua opinião: é uma por apartamento, e você pode mudar ou apagar quando quiser. A opinião aparece com o bloco e o apartamento, nunca com o seu nome.',
+      'Viu algo errado numa indicação? Toque em "Tem algo errado aqui? Avisar a gestão", e a Comissão e a administração dão uma olhada.',
+    ],
+  },
+  {
     versao: '1.7.0',
     data: '2026-10-18',
     nome: 'Menu novo no celular',
