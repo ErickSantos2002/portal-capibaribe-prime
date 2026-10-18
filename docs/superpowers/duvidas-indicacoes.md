@@ -85,8 +85,8 @@ regressão que falhava antes.
 - **Primeiro cartão com a letra a 200 % em 320 px.** A faixa rola dentro dela também com a
   letra grande, o rótulo da busca ficou em duas linhas e a faixa mais baixa: o cartão subiu de
   y = 715 para y = 581 numa janela de 780, acima das abas de baixo (698). Mas o botão flutuante
-  "Indicar alguém" ocupa de 570 a 682 nessa combinação e cobre o começo do cartão. Com 24 px, ou
-  de 360 px para cima com 32 px de altura de janela maior, o cartão aparece inteiro. Resolver de
+  "Indicar alguém" ocupa de 570 a 682 nessa combinação (e de 562 a 674 em 360 px) e cobre o começo
+  do cartão. Com a letra a 150 % ou menos, o cartão aparece inteiro acima do botão. Resolver de
   vez pediria mexer no botão flutuante com a letra grande (padrão comum a outras telas), o que
   não fiz sem perguntar.
 - **Prestador escondido não anonimizado**, como pedido: fica para a decisão do dono.
