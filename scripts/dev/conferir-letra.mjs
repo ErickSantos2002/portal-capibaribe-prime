@@ -11,7 +11,10 @@
 //   - ícone encolhido: SVG (ou o pontinho redondo desenhado em CSS) mais estreito ou mais baixo
 //     que o desenho pede, o que acontece quando ele é item de flex e o texto ao lado quebra;
 //   - palavra de até 12 letras quebrada no meio (as letras dela em duas linhas);
-//   - se a letra cresceu: o tamanho mediano e o menor do texto visível.
+//   - se a letra cresceu: o tamanho mediano e o menor do texto visível;
+//   - a barra do celular com a bola do Menu (spec 2026-10-18-navegacao-bola-design.md): a altura
+//     total (do topo da bola ao fim da barra, sem a safe-area) acima de 104 px, rótulo dela que
+//     não cabe, e o fim do conteúdo escondido atrás da barra (rolando a página até o fim).
 //
 // Precisa do Portal no ar com dados (scripts/dev/ambiente-conferencia.sh) e do Chrome do sistema
 // (/usr/bin/google-chrome-stable, ou CHROME=<caminho>). Uso, da raiz do repositório:
@@ -116,6 +119,39 @@ const TELAS = [
   { nome: 'nova-enquete', grupo: 'G3', quem: 'admin', caminho: '/enquetes/nova' },
   { nome: 'votantes', grupo: 'G3', quem: 'admin', caminho: '/enquetes/{enquete}/votantes' },
   { nome: 'painel', grupo: 'G3', quem: 'admin', caminho: '/unidades' },
+  // Navegação com a bola: a folha do Menu aberta, para o morador e para a gestão.
+  {
+    nome: 'menu-aberto',
+    grupo: 'comum',
+    quem: 'morador',
+    caminho: '/avisos',
+    depois: async (p) => {
+      // No computador não há bola nem folha: fica o print da tela, sem abrir nada.
+      const bola = p.getByRole('button', { name: 'Menu' })
+      if (!(await bola.isVisible())) return
+      await bola.click()
+      await p.getByRole('dialog').waitFor()
+      // O mouse sai de cima da folha: a linha que passou por baixo dele na animação ficava realçada.
+      await p.mouse.move(0, 0)
+      await p.waitForTimeout(400)
+    },
+  },
+  {
+    nome: 'menu-aberto-gestao',
+    grupo: 'comum',
+    quem: 'admin',
+    caminho: '/unidades',
+    depois: async (p) => {
+      // No computador não há bola nem folha: fica o print da tela, sem abrir nada.
+      const bola = p.getByRole('button', { name: 'Menu' })
+      if (!(await bola.isVisible())) return
+      await bola.click()
+      await p.getByRole('dialog').waitFor()
+      // O mouse sai de cima da folha: a linha que passou por baixo dele na animação ficava realçada.
+      await p.mouse.move(0, 0)
+      await p.waitForTimeout(400)
+    },
+  },
   { nome: 'ficha-unidade', grupo: 'G3', quem: 'admin', caminho: '/unidades/1101' },
   { nome: 'historico', grupo: 'G3', quem: 'admin', caminho: '/historico' },
 ]
@@ -533,7 +569,9 @@ function medir() {
     if (el.tagName.toLowerCase() === 'svg') {
       const caixa = el.viewBox?.baseVal
       const r = el.getBoundingClientRect()
-      if (caixa && caixa.width && caixa.height && Math.abs(r.width - (r.height * caixa.width) / caixa.height) > 1) {
+      // O SVG esticado de propósito (o arco da barra, preserveAspectRatio="none") não é ícone.
+      const esticado = el.getAttribute('preserveAspectRatio') === 'none'
+      if (!esticado && caixa && caixa.width && caixa.height && Math.abs(r.width - (r.height * caixa.width) / caixa.height) > 1) {
         encolhidos.push(`${descrever(el.parentElement ?? el)} > svg (${r.width.toFixed(1)}x${r.height.toFixed(1)})`)
       }
     }
@@ -544,7 +582,70 @@ function medir() {
       if (l && a && Math.abs(l - a) > 1) encolhidos.push(`${descrever(el)}::before (${l.toFixed(1)}x${a.toFixed(1)})`)
     }
   }
+  // A barra do celular com a bola do Menu. Com a folha aberta, a barra está atrás do véu.
+  const barra = janela ? null : document.querySelector('.nav-barra')
+  let alturaDaBarra = 0
+  const naBarra = []
+  if (barra && visivel(barra)) {
+    const caixa = barra.getBoundingClientRect()
+    const bola = barra.querySelector('.nav-bola-circulo')?.getBoundingClientRect()
+    const topo = Math.min(caixa.top, bola?.top ?? caixa.top)
+    const safeArea = parseFloat(getComputedStyle(barra).paddingBottom) || 0
+    alturaDaBarra = Math.round((caixa.bottom - safeArea - topo) * 10) / 10
+    // O teto de 104 px é do celular (spec, seção 3: 320 a 412 px). No layout de celular numa tela
+    // larga (notebook a 150 % ou 200 %), o teto pela largura (vw) não segura nada e a barra
+    // acompanha a letra, como o resto da página (docs/superpowers/duvidas-nav-bola.md).
+    if (largura < 600 && alturaDaBarra > 104) naBarra.push(`barra com ${alturaDaBarra} px de altura (> 104)`)
+    for (const el of barra.querySelectorAll('a, .nav-bola, .nav-rotulo, .nav-bola-rotulo')) {
+      if (visivel(el) && el.scrollWidth > el.clientWidth + 1) {
+        naBarra.push(`rótulo que não cabe: ${descrever(el)} (${el.scrollWidth} em ${el.clientWidth})`)
+      }
+    }
+    // Rótulos de abas vizinhas que se encostam (menos de 2 px entre as palavras).
+    const rotulos = [...barra.querySelectorAll('.nav-rotulo, .nav-bola-rotulo')]
+      .filter(visivel)
+      .map((el) => {
+        // Só o texto que se vê: o nome inteiro escondido para o leitor de tela ("Documentos"
+        // na tela estreita, recortado por clip-path) não conta.
+        const r = []
+        const andar = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+        for (let no = andar.nextNode(); no; no = andar.nextNode()) {
+          let pai = no.parentElement
+          let escondido = false
+          for (; pai && pai !== el.parentElement; pai = pai.parentElement) {
+            const st = getComputedStyle(pai)
+            if (st.clipPath !== 'none' || st.display === 'none') escondido = true
+          }
+          if (escondido) continue
+          const faixa = document.createRange()
+          faixa.selectNodeContents(no)
+          r.push(...[...faixa.getClientRects()].filter((q) => q.width > 0))
+        }
+        return { el, esquerda: Math.min(...r.map((q) => q.left)), direita: Math.max(...r.map((q) => q.right)) }
+      })
+      .sort((a, b) => a.esquerda - b.esquerda)
+    for (let i = 1; i < rotulos.length; i++) {
+      if (rotulos[i].esquerda - rotulos[i - 1].direita < 2) {
+        naBarra.push(`rótulos encostados: ${descrever(rotulos[i - 1].el)} e ${descrever(rotulos[i].el)}`)
+      }
+    }
+    // O fim do conteúdo nunca fica atrás da barra (nem da saliência da bola): rola até o fim,
+    // mede e volta para o alto (o print é da página inteira).
+    const principal = document.querySelector('main')
+    const ultimo = principal && [...principal.querySelectorAll('*')].filter(visivel).at(-1)
+    if (ultimo) {
+      window.scrollTo(0, raiz.scrollHeight)
+      const fimDoConteudo = ultimo.getBoundingClientRect().bottom
+      const topoDaBarra = Math.min(barra.getBoundingClientRect().top, barra.querySelector('.nav-bola-circulo')?.getBoundingClientRect().top ?? Infinity)
+      if (fimDoConteudo > topoDaBarra + 1) {
+        naBarra.push(`fim do conteúdo atrás da barra: ${descrever(ultimo)} (${Math.round(fimDoConteudo)} > ${Math.round(topoDaBarra)})`)
+      }
+      window.scrollTo(0, 0)
+    }
+  }
   return {
+    alturaDaBarra,
+    naBarra,
     raiz: parseFloat(getComputedStyle(raiz).fontSize),
     corpo: parseFloat(getComputedStyle(document.body).fontSize),
     letraMediana: tamanhos[Math.floor(tamanhos.length / 2)] ?? 0,
@@ -624,11 +725,13 @@ for (const fonte of FONTES) {
           m.pequenos.length +
           m.encolhidos.length +
           m.quebradas.length +
+          m.naBarra.length +
           errosJs.length
         console.log(
           `${problemas ? 'PROBLEMA' : 'ok      '} ${tela.nome.padEnd(20)} ${String(largura).padStart(4)} px  fonte ${fonte}` +
             `  letra ${m.letraMediana}/${m.letraMenor}  rolagem ${m.rolagemLateral ? 'SIM' : 'não'}` +
-            `  fora ${m.foraDaTela.length}  cortado ${m.cortados.length}  alvo<44 ${m.pequenos.length}  encolhido ${m.encolhidos.length}  quebrada ${m.quebradas.length}`,
+            `  fora ${m.foraDaTela.length}  cortado ${m.cortados.length}  alvo<44 ${m.pequenos.length}  encolhido ${m.encolhidos.length}  quebrada ${m.quebradas.length}` +
+            (m.alturaDaBarra ? `  barra ${m.alturaDaBarra}px${m.naBarra.length ? ` (${m.naBarra.length} problema)` : ''}` : ''),
         )
       }
       await sair(chrome)
@@ -674,6 +777,7 @@ for (const r of resultados) {
     ...ate6('alvo < 44', r.pequenos),
     ...ate6('ícone encolhido', r.encolhidos),
     ...ate6('palavra quebrada', r.quebradas),
+    ...ate6('barra', r.naBarra ?? []),
     ...ate6('resumido de propósito (não conta)', r.resumidos),
     ...ate6('hifenizada (não conta)', r.hifenizadas ?? []),
     ...ate6('erro JS', r.errosJs),
@@ -686,6 +790,13 @@ writeFileSync(join(SAIDA, 'resumo.txt'), linhas.join('\n') + '\n')
 console.log(`\n${linhas.slice(0, 3 + FONTES.length * LARGURAS.length).join('\n')}\n\nDetalhes: ${join(SAIDA, 'resumo.txt')}`)
 const algum = resultados.some(
   (r) =>
-    r.rolagemLateral || r.foraDaTela.length || r.cortados.length || r.pequenos.length || r.encolhidos.length || r.quebradas.length || r.errosJs.length,
+    r.rolagemLateral ||
+    r.foraDaTela.length ||
+    r.cortados.length ||
+    r.pequenos.length ||
+    r.encolhidos.length ||
+    r.quebradas.length ||
+    r.naBarra.length ||
+    r.errosJs.length,
 )
 process.exit(algum ? 1 : 0)
