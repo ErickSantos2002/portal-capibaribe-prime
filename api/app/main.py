@@ -18,6 +18,7 @@ from app.rotas import (
     enquetes_gestao,
     envios,
     indicacoes,
+    indicacoes_gestao,
     push,
     recuperacao,
     saude,
@@ -61,3 +62,4 @@ app.include_router(enquetes.rotas)
 app.include_router(enquetes_gestao.rotas)
 # Indicações de serviços (spec de 18/10/2026): o morador e, depois, a moderação.
 app.include_router(indicacoes.rotas)
+app.include_router(indicacoes_gestao.rotas)
