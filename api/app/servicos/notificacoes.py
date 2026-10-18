@@ -52,6 +52,7 @@ from app.banco import fabrica_de_sessoes
 from app.modelos import (
     Aviso,
     AvisoBloco,
+    AvisoServico,
     AvisoVersao,
     Bloco,
     Canal,
@@ -438,8 +439,8 @@ def destinos_email(db: Session, aviso: AvisoParaNotificar) -> list[DestinoEmail]
 
 def emails_nas_ultimas_24h(db: Session) -> int:
     """E-mails já gastos da cota: cópias de aviso **reservadas** (separadas antes de mandar; a
-    sobra volta quando o envio termina) e links de recuperação criados (cada token é um
-    e-mail)."""
+    sobra volta quando o envio termina), links de recuperação criados (cada token é um e-mail)
+    e os e-mails do primeiro aviso de uma indicação (reservados no próprio aviso)."""
     desde = func.now() - timedelta(hours=24)
     avisos = db.scalar(
         select(func.coalesce(func.sum(NotificacaoEnvio.reservados), 0)).where(
@@ -447,7 +448,13 @@ def emails_nas_ultimas_24h(db: Session) -> int:
         )
     )
     links = db.scalar(select(func.count()).where(TokenRecuperacao.criado_em > desde))
-    return int(avisos or 0) + int(links or 0)
+    # Indicações: os e-mails do primeiro aviso, reservados em `aviso_servico.emails_reservados`.
+    indicacoes = db.scalar(
+        select(func.coalesce(func.sum(AvisoServico.emails_reservados), 0)).where(
+            AvisoServico.criado_em > desde
+        )
+    )
+    return int(avisos or 0) + int(links or 0) + int(indicacoes or 0)
 
 
 def cota_email_avisos(db: Session) -> int:

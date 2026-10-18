@@ -37,6 +37,7 @@ from app.esquemas.indicacoes import (
 from app.modelos.indicacoes import LIMITE_NOME
 from app.seguranca.dependencias import Banco, UnidadeLogada, exige_cabecalho_portal
 from app.servicos import indicacoes as servico
+from app.servicos import indicacoes_email, segundo_plano
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(prefix="/api/indicacoes", dependencies=[Depends(exige_cabecalho_portal)])
@@ -103,5 +104,9 @@ def avisar(
     tarefas: BackgroundTasks,
     dados: AvisarGestao | None = None,
 ) -> Response:
-    servico.avisar(db, logado, prestador_id, dados or AvisarGestao())
+    aviso_id = servico.avisar(db, logado, prestador_id, dados or AvisarGestao())
+    # O primeiro aviso aberto do prestador acorda a administração por e-mail (depois da
+    # resposta; spec, seção 8).
+    if aviso_id is not None:
+        segundo_plano.agendar(tarefas, indicacoes_email.avisar_administracao, aviso_id)
     return Response(status_code=204)

@@ -450,6 +450,46 @@ def mensagem_de_recuperacao(
     return _mensagem(config, para, ASSUNTO_DA_RECUPERACAO, texto, html_)
 
 
+ASSUNTO_DO_AVISO_DE_INDICACAO = "Portal Capibaribe Prime: aviso numa indicação"
+RODAPE_DO_AVISO_DE_INDICACAO = (
+    "Enviado pelo Portal Capibaribe Prime à administração, só no primeiro aviso de cada "
+    "indicação. Os próximos ficam na página dela."
+)
+
+
+def mensagem_de_aviso_de_indicacao(
+    nome: str, categoria: str, prestador_id: int, para: str, config: ConfigEmail
+) -> EmailMessage:
+    """Alguém avisou a gestão sobre uma indicação (spec das indicações, seção 8): o nome e a
+    categoria do prestador e o link. Sem o motivo e sem a placa de quem avisou."""
+    endereco = f"{config.url_base}/indicacoes/{prestador_id}"
+    frase = (
+        "Um vizinho avisou que tem algo errado numa indicação de serviço. Abra para ver o "
+        "aviso e decidir: esconder o prestador, esconder uma opinião ou só resolver o aviso."
+    )
+    texto = (
+        f"Olá!\n\n{frase}\n\n{nome}\n{categoria}\n\nAbrir a indicação: {endereco}\n\n"
+        f"--\n{RODAPE_DO_AVISO_DE_INDICACAO}\n"
+    )
+    p, e = _E["p"], html.escape
+    miolo = (
+        f'<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;color:{_COR_TINTA}">'
+        f"Aviso numa indicação</h1>"
+        f'<p style="{p}">Olá!</p>'
+        f'<p style="{p}">{e(frase)}</p>'
+        f'<p style="{p}"><strong>{e(nome)}</strong><br>{e(categoria)}</p>'
+    )
+    html_ = _pagina(
+        "Aviso numa indicação",
+        f"Um vizinho avisou a gestão sobre {nome}.",
+        miolo,
+        "Abrir a indicação",
+        endereco,
+        RODAPE_DO_AVISO_DE_INDICACAO,
+    )
+    return _mensagem(config, para, ASSUNTO_DO_AVISO_DE_INDICACAO, texto, html_)
+
+
 # --- conexão (spec do épico B, seção 2.1) ---------------------------------------------------
 
 # Segundos de espera por resposta do servidor SMTP (conectar, login, cada mensagem).
