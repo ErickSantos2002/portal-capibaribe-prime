@@ -124,6 +124,61 @@ def test_dois_aparelhos_ao_mesmo_tempo_uma_opiniao_so(
     assert [u for u, _, _ in _opinioes(engine_app, p)].count(predio[COMUM]) == 1
 
 
+def _segurando_o_prestador(engine_app, prestador: int, comando: str, chamar, depois: str):
+    """Outra transação trava o prestador (`comando`), a chamada roda num fio e precisa ESPERAR;
+    `depois` muda o prestador e a transação termina. Devolve a resposta da chamada."""
+    resposta: dict = {}
+    with engine_app.connect() as con:
+        transacao = con.begin()
+        con.execute(text(comando), {"p": prestador})
+        fio = threading.Thread(target=lambda: resposta.update(r=chamar()))
+        fio.start()
+        fio.join(0.6)
+        esperou = fio.is_alive()
+        con.execute(text(depois), {"p": prestador})
+        transacao.commit()
+    fio.join(10)
+    assert esperou, "a chamada não esperou a trava do prestador"
+    return resposta["r"]
+
+
+def test_mudar_a_opiniao_espera_a_gestao_que_esconde(logar, engine_app, predio):
+    # Revisão: `opinar` não travava o prestador. Mudar a opinião é UPDATE só na opinião, então
+    # passava enquanto a gestão escondia o prestador.
+    p = indicar(logar(ADMIN))
+    comum = logar(COMUM)
+    comum.put(f"/api/indicacoes/{p}/opiniao", json={"recomenda": True})
+    r = _segurando_o_prestador(
+        engine_app,
+        p,
+        "select 1 from prestador where id = :p for update",
+        lambda: comum.put(f"/api/indicacoes/{p}/opiniao", json={"recomenda": False}),
+        f"update prestador set escondido_em = now(), escondido_por = {predio[COMISSAO]}"
+        " where id = :p",
+    )
+    assert r.status_code == 404
+    assert (predio[COMUM], True, None) in _opinioes(engine_app, p)
+
+
+def test_corrigir_confere_quem_indicou_com_o_prestador_travado(logar, engine_app):
+    # Revisão: `corrigir` lia o autor sem trava. "Apagar meus dados" no meio tirava a autoria e a
+    # correção passava mesmo assim.
+    comum = logar(COMUM)
+    p = indicar(comum)
+    r = _segurando_o_prestador(
+        engine_app,
+        p,
+        "select 1 from prestador where id = :p for no key update",
+        lambda: comum.put(
+            f"/api/indicacoes/{p}",
+            json={"categoria_id": 1, "nome": "Tomado", "telefone": "81999990001"},
+        ),
+        "update prestador set criado_por = null where id = :p",
+    )
+    assert r.status_code == 403
+    assert logar(ADMIN).get(f"/api/indicacoes/{p}").json()["nome"] == "Marcenaria Exemplo"
+
+
 def test_apagar_a_minha_opiniao_e_registrar(logar, engine_app, predio):
     p = indicar(logar(ADMIN))
     comum = logar(COMUM)

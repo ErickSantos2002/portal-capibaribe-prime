@@ -430,10 +430,14 @@ def _gravar_opiniao(db: Session, logado: Logado, prestador_id: int, dados: DarOp
 
 def opinar(db: Session, logado: Logado, prestador_id: int, dados: DarOpiniao) -> None:
     """Dar e mudar a opinião são a mesma coisa. Dois aparelhos da mesma unidade ao mesmo tempo:
-    o segundo `INSERT` esbarra na `opiniao_servico_unica` e tenta **uma vez** como `UPDATE`."""
-    _buscar(db, logado, prestador_id)
+    o segundo `INSERT` esbarra na `opiniao_servico_unica` e tenta **uma vez** como `UPDATE`.
+
+    O prestador fica travado até o fim (como em `avisar`): a gestão que o esconde no meio espera,
+    e mudar a opinião, que nem encosta no prestador, não passa por cima do "escondido"."""
     for tentativa in range(2):
         try:
+            # A cada tentativa: o rollback da anterior soltou a trava.
+            _buscar(db, logado, prestador_id, travar=True)
             _gravar_opiniao(db, logado, prestador_id, dados)
             db.commit()
             return
@@ -476,8 +480,9 @@ def apagar_opiniao(db: Session, logado: Logado, prestador_id: int) -> None:
 
 def corrigir(db: Session, logado: Logado, prestador_id: int, dados: CorrigirPrestador) -> None:
     """Quem indicou ou a gestão corrige nome, categoria e contatos. O telefone de outro
-    prestador dá o mesmo 409 de indicar."""
-    prestador = _buscar(db, logado, prestador_id)
+    prestador dá o mesmo 409 de indicar. O prestador fica travado da conferência de quem pode
+    até a gravação."""
+    prestador = _buscar(db, logado, prestador_id, travar=True)
     if not (logado.gestao or prestador.criado_por == logado.unidade_id):
         raise _sem_permissao()
     _conferir_categoria(db, dados.categoria_id)
