@@ -78,6 +78,22 @@ function emPx(
  *  que acha, então o bloco que sobrescreve vem na frente. */
 const cascata = (...blocos: string[]) => [...blocos].reverse().join('\n')
 
+/** O miolo de cada `cabecalho { … }` (ex.: um @container), com as chaves de dentro. */
+function blocos(css: string, cabecalho: string): string[] {
+  const achados: string[] = []
+  for (let i = css.indexOf(`${cabecalho} {`); i >= 0; i = css.indexOf(`${cabecalho} {`, i + 1)) {
+    const abre = css.indexOf('{', i)
+    let fundo = 1
+    let j = abre + 1
+    for (; j < css.length && fundo > 0; j++) {
+      if (css[j] === '{') fundo++
+      else if (css[j] === '}') fundo--
+    }
+    achados.push(css.slice(abre + 1, j - 1))
+  }
+  return achados
+}
+
 describe('a barra não cresce com a letra', () => {
   test('a letra das abas tem piso de 15 px e teto pela largura: min(0.9375rem, <vw>)', () => {
     assert.match(regra(estilo, '.nav-barra a'), /font-size:\s*min\(0\.9375rem, \d*\.?\d+vw\)/)
@@ -189,10 +205,9 @@ describe('a bola nos dois temas', () => {
     })
   }
 
-  test('a bola usa os tokens, e o anel e o arco usam papel e folha', () => {
+  test('a bola usa os tokens, e o arco usa a folha', () => {
     assert.match(regra(estilo, '.nav-bola-circulo'), /background:\s*var\(--bola-fundo\)/)
     assert.match(regra(estilo, '.nav-bola-circulo'), /color:\s*var\(--bola-icone\)/)
-    assert.match(regra(estilo, '.nav-bola-circulo'), /border:[^;]*var\(--papel\)/)
     assert.match(regra(estilo, '.nav-arco'), /fill:\s*var\(--folha\)/)
   })
 
@@ -219,7 +234,7 @@ describe('a folha do Menu (seção 4)', () => {
 
   test('encosta no fundo e cobre a barra; a bola-X fica no lugar da bola', () => {
     assert.match(regra(estilo, '.menu-folha'), /margin:\s*auto 0 0/)
-    assert.match(regra(estilo, '.menu-folha-pe'), /height:\s*calc\(var\(--altura-barra\) \+ env\(safe-area-inset-bottom\)\)/)
+    assert.match(regra(estilo, '.menu-folha-pe'), /min-height:\s*calc\(var\(--altura-barra\) \+ env\(safe-area-inset-bottom\)\)/)
   })
 
   test('só a pegadinha e o cabeçalho arrastam (o navegador não rola ali)', () => {
@@ -241,11 +256,10 @@ describe('achados da conferência (Tarefa 5)', () => {
     assert.ok(emPx(tamanho, 16, 320, claro) >= 12.95, tamanho)
   })
 
-  test('folha com letra grande num celular: sem o círculo do ícone e sem a seta, o nome cabe inteiro', () => {
-    const inicio = estilo.indexOf('@container raiz (max-width: 15rem) {')
-    assert.ok(inicio >= 0, 'sem o @container raiz (max-width: 15rem)')
-    const bloco = estilo.slice(inicio, estilo.indexOf('\n}', inicio))
-    assert.match(bloco, /\.menu-folha-ic,\s*\.menu-folha-grupo a > \.icone:last-child\s*\{[^}]*display:\s*none/)
+  test('folha com letra grande num celular: o nome ganha a linha inteira (o ícone sobe para cima dele)', () => {
+    const bloco = blocos(estilo, '@container raiz (max-width: 15rem)').join('\n')
+    assert.ok(bloco, 'sem o @container raiz (max-width: 15rem)')
+    assert.match(bloco, /\.menu-folha-texto\s*\{[^}]*grid-column:\s*1 \/ -1/)
   })
 })
 
@@ -253,5 +267,113 @@ describe('achados dos prints (Tarefa 5)', () => {
   test('o realce de passar o mouse na folha só vale com mouse (no toque, o :hover gruda)', () => {
     assert.doesNotMatch(estilo, /(^|\n)\.menu-folha-grupo a:hover/)
     assert.match(estilo, /@media \(hover: hover\) \{\s*\.menu-folha-grupo a:hover/)
+  })
+})
+
+describe('revisões da navegação com bola', () => {
+  test('C1: as regras do menu lateral (computador) não pegam os links da folha', () => {
+    // A folha (<dialog>) mora dentro do .nav: `.nav a` pintava os lugares dela de branco sobre a
+    // folha branca no tema claro, quando o iPhone grande gira com ela aberta.
+    const computador = blocos(estilo, '@container raiz (min-width: 56.25rem)')
+    assert.ok(computador.length > 0)
+    for (const { seletor } of computador.flatMap(regras)) {
+      for (const parte of seletor.split(',')) {
+        assert.doesNotMatch(parte, /\.nav\s+(a\b|\.conta\b)/, `escopar em .nav-lateral: ${parte.trim()}`)
+      }
+    }
+    assert.ok(computador.some((b) => /\.nav-lateral a\[aria-current='page'\]/.test(b)))
+    assert.ok(computador.some((b) => /\.nav-lateral \.conta\s*\{/.test(b)))
+  })
+
+  test('C2: a plaquinha de não lidos (1, 12 e 120) fica dentro da aba a 320 px, em toda letra', () => {
+    // Largura da plaquinha em em, medida no Chrome (Atkinson Hyperlegible negrito, 13 px):
+    // 18 px com "1" (o min-width), 23,5 com "12", 31,9 com "120".
+    const larguras: [string, number][] = [
+      ['1', 1.385],
+      ['12', 1.81],
+      ['120', 2.46],
+    ]
+    const base = regra(estilo, '.nav-barra .conta')
+    const bloco = cascata(claro, estreita)
+    for (const letra of [16, 24, 32]) {
+      // A 320 px, as quatro abas têm a mesma largura (com "Docs"): (320 − coluna da bola) / 4.
+      const coluna = (320 - emPx('var(--bola-coluna)', letra, 320, bloco)) / 4
+      const letraPx = emPx(/font-size:\s*([^;]+)/.exec(base)![1], letra, 320, bloco)
+      const contexto = { cem: coluna, letraPx }
+      const direita = /right:\s*([^;]+)/.exec(base)?.[1]
+      const esquerda = /left:\s*([^;]+)/.exec(base)?.[1]
+      for (const [numero, emLargura] of larguras) {
+        const largura = emLargura * letraPx
+        const [de, ate] =
+          direita && esquerda === 'auto'
+            ? [coluna - emPx(direita, letra, 320, bloco, contexto) - largura, coluna - emPx(direita, letra, 320, bloco, contexto)]
+            : [emPx(esquerda!, letra, 320, bloco, contexto), emPx(esquerda!, letra, 320, bloco, contexto) + largura]
+        assert.ok(ate <= coluna + 0.05, `letra ${letra}, "${numero}": borda direita ${ate.toFixed(1)} > aba ${coluna.toFixed(1)}`)
+        assert.ok(de >= -0.05, `letra ${letra}, "${numero}": borda esquerda ${de.toFixed(1)} < 0`)
+        // Com um algarismo, a plaquinha continua onde sempre esteve: no canto de cima do ícone.
+        if (numero === '1') {
+          const canto = coluna / 2 + emPx('min(0.375rem, 1.46vw)', letra, 320, bloco)
+          assert.ok(Math.abs(de - canto) < 0.5, `"1" saiu do canto do ícone: ${de.toFixed(1)} ≠ ${canto.toFixed(1)}`)
+        }
+      }
+    }
+  })
+
+  test('U2: um fio em cima do pé e embaixo do cabeçalho quando a lista continua', () => {
+    assert.match(regra(estilo, '.menu-folha-lista[data-mais-abaixo] + .menu-folha-pe::before'), /border-top-color:\s*var\(--linha\)/)
+    assert.match(regra(estilo, '.menu-folha-lista[data-mais-acima]'), /border-top-color:\s*var\(--linha\)/)
+    // O fio transparente existe sempre: a lista não pula 1 px quando ele acende; no pé, ele é
+    // desenhado por cima (::before absoluto), para a bola-X ficar no ponto exato da bola.
+    assert.match(regra(estilo, '.menu-folha-pe::before'), /position:\s*absolute/)
+    assert.match(regra(estilo, '.menu-folha-pe::before'), /border-top:\s*1px solid transparent/)
+    assert.match(regra(estilo, '.menu-folha-lista'), /border-top:\s*1px solid transparent/)
+  })
+
+  test('U3: "Fechar" cresce com a letra (1rem, sem teto) e o pé cresce junto, a partir da altura da barra', () => {
+    assert.match(regra(estilo, '.menu-folha-fechar'), /font-size:\s*1rem/)
+    const pe = regra(estilo, '.menu-folha-pe')
+    assert.match(pe, /min-height:\s*calc\(var\(--altura-barra\) \+ env\(safe-area-inset-bottom\)\)/)
+    assert.doesNotMatch(pe, /(^|[^-])height:/)
+  })
+
+  test('U4: com letra grande, as linhas da folha têm fio entre elas e o ícone menor em cima; só a seta sai', () => {
+    const bloco = blocos(estilo, '@container raiz (max-width: 15rem)').join('\n')
+    assert.match(bloco, /\.menu-folha-grupo a > \.icone:last-child\s*\{[^}]*display:\s*none/)
+    assert.doesNotMatch(bloco, /\.menu-folha-ic[^{]*\{[^}]*display:\s*none/)
+    assert.match(bloco, /\.menu-folha-grupo a \+ a\s*\{[^}]*border-top:\s*1px solid var\(--linha\)/)
+    assert.match(bloco, /\.menu-folha-texto\s*\{[^}]*grid-column:\s*1 \/ -1/)
+  })
+
+  test('U5: "Menu" na mesma linha dos nomes das abas: a bola mede o espaço até o nome da aba', () => {
+    // O nome da aba começa em flecha + saliência + topo + ícone (+ o vão); o de "Menu", em bola
+    // (+ o mesmo vão). Iguais em toda largura e letra.
+    const ateONome = 'calc(var(--barra-flecha) + var(--barra-saliencia) + var(--barra-topo) + var(--barra-icone))'
+    for (const largura of [320, 360, 412]) {
+      for (const letra of [16, 24, 32]) {
+        const bloco = largura < 340 ? cascata(claro, estreita) : claro
+        const bola = emPx('var(--bola)', letra, largura, bloco)
+        const aba = emPx(ateONome, letra, largura, bloco)
+        assert.ok(Math.abs(bola - aba) < 0.01, `${largura} px, letra ${letra}: bola ${bola.toFixed(1)} ≠ ${aba.toFixed(1)}`)
+      }
+    }
+  })
+
+  test('U6: o lugar atual tem fundo arredondado atrás do ícone (aba) e do círculo (bola acesa)', () => {
+    assert.match(regra(estilo, ".nav-barra a[aria-current='page'] .icone"), /background:\s*var\(--barra-aceso\)/)
+    assert.match(regra(estilo, ".nav-barra a[aria-current='page'] .icone"), /border-radius/)
+    assert.match(regra(estilo, '.nav-bola[data-aqui] .nav-bola-circulo'), /border-color:\s*var\(--barra-aceso\)/)
+    assert.equal(token(claro, 'barra-aceso'), 'var(--mata-suave)')
+    // No escuro, o --mata-suave (#1c2e23) some na barra (1,2:1 com a --folha): o token do escuro é
+    // um verde que aparece, mas continua fundo (o ícone verde-claro por cima, com contraste).
+    const acesoEscuro = token(escuro, 'barra-aceso')
+    assert.match(acesoEscuro, /^#[0-9a-f]{6}$/i)
+    assert.ok(contraste(acesoEscuro, token(escuro, 'folha')) >= 1.5, `aceso × folha: ${contraste(acesoEscuro, token(escuro, 'folha')).toFixed(2)}`)
+    assert.ok(contraste(acesoEscuro, token(escuro, 'mata')) >= 4.5, `ícone × aceso: ${contraste(acesoEscuro, token(escuro, 'mata')).toFixed(2)}`)
+  })
+
+  test('U7: no escuro, o anel da bola é a --linha (separa a bola da barra); no claro, o --papel', () => {
+    assert.match(regra(estilo, '.nav-bola-circulo'), /border:[^;]*var\(--bola-anel\)/)
+    assert.equal(token(claro, 'bola-anel'), 'var(--papel)')
+    assert.equal(token(escuro, 'bola-anel'), 'var(--linha)')
   })
 })

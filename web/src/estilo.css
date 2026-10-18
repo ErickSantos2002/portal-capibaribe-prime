@@ -51,12 +51,14 @@
      dela vale 15 px a 340 px (abaixo disso, a marca data-largura sobe o vw, logo abaixo). */
   --barra-letra: min(0.9375rem, 4.42vw);
   --barra-icone: min(1.5rem, 6.15vw);
-  --barra-topo: min(0.375rem, 1.46vw); /* acima do ícone */
+  --barra-topo: min(0.625rem, 2.43vw); /* acima do ícone */
   --barra-vao: min(0.125rem, 0.49vw); /* entre o ícone e o nome */
   --barra-pe: min(0.25rem, 0.97vw); /* abaixo do nome */
   --barra-flecha: min(0.875rem, 3.4vw); /* altura do arco, das pontas ao meio */
   --barra-saliencia: min(0.5rem, 1.94vw); /* quanto a bola passa do alto do arco */
-  --bola: min(3.75rem, 14.56vw); /* com o anel */
+  /* A bola (com o anel) mede da borda de cima da barra até onde começa o nome das abas: "Menu"
+     fica na mesma linha dos nomes (revisão U5). 56 px na letra de fábrica. */
+  --bola: calc(var(--barra-flecha) + var(--barra-saliencia) + var(--barra-topo) + var(--barra-icone));
   --bola-coluna: min(4.25rem, 16.5vw);
   /* Altura total da barra (o arco e a saliência da bola incluídos; a safe-area não): o nome
      ocupa duas linhas ("Minha unidade"), de 1.1 cada. */
@@ -67,6 +69,9 @@
   /* A bola: verde-mata com a grade em ipê (6,1:1). */
   --bola-fundo: #1f5e3b;
   --bola-icone: #e8b22a;
+  /* O anel em volta da bola (cor da página) e o fundo do lugar atual na barra (revisões U6, U7). */
+  --bola-anel: var(--papel);
+  --barra-aceso: var(--mata-suave);
   color-scheme: light;
 }
 
@@ -106,6 +111,11 @@
      do escuro sobre ele dá 4,9:1 (spec da navegação com bola, seção 3). */
   --bola-fundo: #1f5e3b;
   --bola-icone: #f0c14b;
+  /* No escuro, o anel da cor da página some contra a barra: vira o fio de divisória (U7). E o
+     --mata-suave do escuro dá 1,2:1 com a barra, não aparece: o fundo do lugar atual é um verde
+     mais aceso (1,7:1 com a barra, e o ícone --mata por cima com 4,9:1). */
+  --bola-anel: var(--linha);
+  --barra-aceso: #2b4a37;
   color-scheme: dark;
 }
 
@@ -542,6 +552,17 @@ p {
   font-weight: 700;
 }
 
+/* O lugar atual não depende só da cor (revisão U6): um fundo arredondado atrás do ícone, que sai
+   do ícone pela sombra (não mexe na medida da aba). */
+.nav-barra a[aria-current='page'] .icone {
+  border-radius: 999px;
+  background: var(--barra-aceso);
+  box-shadow:
+    0 0 0 min(0.25rem, 0.97vw) var(--barra-aceso),
+    min(0.5rem, 1.94vw) 0 0 min(0.25rem, 0.97vw) var(--barra-aceso),
+    calc(-1 * min(0.5rem, 1.94vw)) 0 0 min(0.25rem, 0.97vw) var(--barra-aceso);
+}
+
 /* O tracinho brilhante do lugar atual (o "glow" do app da PlayStation). */
 .nav-barra a[aria-current='page']::before,
 .nav-bola[data-aqui] .nav-bola-rotulo::after {
@@ -577,11 +598,16 @@ p {
   width: max-content;
 }
 
-/* Na aba, no canto de cima do ícone, com a letra presa como a da barra. */
+/* Na aba, no canto de cima do ícone, com a letra presa como a da barra. Presa pela DIREITA
+   (revisão C2): com um algarismo, a borda esquerda cai onde sempre caiu (50% + o respiro), e um
+   número comprido ("120") cresce para a esquerda, por cima do ícone, em vez de passar da borda
+   da aba (a 320 px, ele vazava 3 px; a 360 e 412 com letra grande, 7 a 8). O max() a segura
+   dentro da aba quando nem assim cabe. */
 .nav-barra .conta {
   position: absolute;
   top: calc(var(--barra-topo) - 0.125rem);
-  left: calc(50% + min(0.375rem, 1.46vw));
+  left: auto;
+  right: max(min(0.125rem, 0.49vw), calc(50% - min(0.375rem, 1.46vw) - 1.385em));
   /* 13 px a 320 px de largura (a de fábrica), e não passa disso com a letra de fábrica. */
   font-size: min(0.8125rem, 4.06vw);
 }
@@ -618,8 +644,8 @@ p {
   place-items: center;
   width: var(--bola);
   height: var(--bola);
-  /* O anel da cor da página separa a bola do arco e do conteúdo atrás. */
-  border: min(0.25rem, 0.97vw) solid var(--papel);
+  /* O anel separa a bola do arco e do conteúdo atrás (a cor da página; no escuro, o fio). */
+  border: min(0.25rem, 0.97vw) solid var(--bola-anel);
   border-radius: 50%;
   background: var(--bola-fundo);
   color: var(--bola-icone);
@@ -639,6 +665,11 @@ p {
 .nav-bola[data-aqui] {
   color: var(--mata);
   font-weight: 700;
+}
+
+/* Acesa, a bola ganha o mesmo fundo do ícone da aba atual, no anel (U6). */
+.nav-bola[data-aqui] .nav-bola-circulo {
+  border-color: var(--barra-aceso);
 }
 
 .nav-bola-ponto {
@@ -738,6 +769,24 @@ p {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 0.875rem 0.5rem;
+  /* O fio de cima acende quando há lugares escondidos acima (revisão U2). Transparente o resto
+     do tempo: a lista não pula 1 px quando ele aparece. */
+  border-top: 1px solid transparent;
+}
+
+/* Com letra grande, a lista rola e nada dizia que ela continua (U2): um fio embaixo do cabeçalho
+   quando há lugares acima, e um fio com sombra em cima do pé quando há lugares abaixo
+   (casca/MenuFolha.tsx marca data-mais-acima e data-mais-abaixo). */
+.menu-folha-lista[data-mais-acima] {
+  border-top-color: var(--linha);
+}
+
+.menu-folha-lista[data-mais-abaixo] + .menu-folha-pe {
+  box-shadow: 0 -0.5rem 0.75rem -0.5rem rgba(0, 0, 0, 0.18);
+}
+
+.menu-folha-lista[data-mais-abaixo] + .menu-folha-pe::before {
+  border-top-color: var(--linha);
 }
 
 .menu-folha-grupo h3 {
@@ -808,17 +857,29 @@ p {
   color: var(--tinta-suave);
 }
 
-/* O pé da folha tem a altura da barra: a bola-X fica no mesmo ponto da tela que a bola. */
+/* O pé da folha tem a altura da barra: a bola-X fica no mesmo ponto da tela que a bola. A folha
+   não tem teto de letra, e o "Fechar" cresce como o resto dela (revisão U3): com letra grande, o
+   pé cresce junto (min-height) e a bola-X sobe o tanto que o "Fechar" cresceu. */
 .menu-folha-pe {
   display: flex;
   flex: none;
   justify-content: center;
-  height: calc(var(--altura-barra) + env(safe-area-inset-bottom));
+  position: relative;
+  min-height: calc(var(--altura-barra) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* O fio de cima do pé (U2) é desenhado por cima, sem ocupar altura: a bola-X não desce 1 px. */
+.menu-folha-pe::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  border-top: 1px solid transparent;
+}
+
 .menu-folha-fechar {
-  width: var(--bola-coluna);
+  min-width: var(--bola-coluna);
+  font-size: 1rem;
 }
 
 .nav .menu-folha :focus-visible {
@@ -826,9 +887,47 @@ p {
 }
 
 /* Letra grande num celular (a tela com menos de 15 letras de largura: 360 px a 150 %, 320 a 32
-   px): o círculo do ícone e a seta saem, e o nome ("Documentos") cabe inteiro na linha. */
+   px): o nome ("Documentos") ganha a linha inteira. O ícone, menor, sobe para cima dele (com o
+   número de não lidos ao lado), a seta sai, e um fio separa as linhas: sem ícone, seta nem fio,
+   a lista virava texto corrido (revisão U4). */
 @container raiz (max-width: 15rem) {
-  .menu-folha-ic,
+  .menu-folha-grupo a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.375rem 0.5rem;
+    padding-block: 0.625rem;
+  }
+
+  .menu-folha-grupo a + a {
+    border-top: 1px solid var(--linha);
+  }
+
+  /* O realce do lugar atual tem cantos: o fio de cima e o de baixo não encostam nele. */
+  .menu-folha-grupo a[aria-current='page'],
+  .menu-folha-grupo a[aria-current='page'] + a {
+    border-top-color: transparent;
+  }
+
+  .menu-folha-ic {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .menu-folha-ic .icone {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .menu-folha-texto {
+    grid-column: 1 / -1;
+  }
+
+  .menu-folha-grupo a > .conta {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
   .menu-folha-grupo a > .icone:last-child {
     display: none;
   }
@@ -1801,7 +1900,9 @@ details[open] > summary::after {
     opacity: 1;
   }
 
-  .nav a {
+  /* Só os links do menu lateral: a folha do Menu (<dialog>) também mora no .nav, e `.nav a`
+     pintava os lugares dela de branco sobre a folha branca (revisão C1). */
+  .nav-lateral a {
     position: relative;
     display: flex;
     flex: 0;
@@ -1820,28 +1921,28 @@ details[open] > summary::after {
     opacity: 0.88;
   }
 
-  [data-tema='escuro'] .nav a,
+  [data-tema='escuro'] .nav-lateral a,
   [data-tema='escuro'] .nav-marca,
   [data-tema='escuro'] .nav-placa {
     color: var(--tinta);
   }
 
-  .nav a:hover {
+  .nav-lateral a:hover {
     background: rgba(255, 255, 255, 0.08);
     opacity: 1;
   }
 
-  .nav a[aria-current='page'] {
+  .nav-lateral a[aria-current='page'] {
     background: rgba(255, 255, 255, 0.14);
     color: var(--sobre-mata);
     opacity: 1;
   }
 
-  [data-tema='escuro'] .nav a[aria-current='page'] {
+  [data-tema='escuro'] .nav-lateral a[aria-current='page'] {
     color: var(--tinta);
   }
 
-  .nav a[aria-current='page']::before {
+  .nav-lateral a[aria-current='page']::before {
     content: '';
     position: absolute;
     top: 0.75rem;
@@ -1854,7 +1955,7 @@ details[open] > summary::after {
     background: var(--ipe);
   }
 
-  .nav .conta {
+  .nav-lateral .conta {
     position: static;
     margin-left: auto;
   }
