@@ -112,9 +112,7 @@ create table aviso_servico (
                            and char_length(motivo) <= 300)),
     criado_em          timestamptz not null default now(),
     resolvido_em       timestamptz,
-    resolvido_por      bigint references unidade (id),
-    -- E-mails do primeiro aviso reservados na cota do Gmail (`emails_nas_ultimas_24h`).
-    emails_reservados  smallint not null default 0
+    resolvido_por      bigint references unidade (id)
 );
 create unique index aviso_servico_aberto on aviso_servico (prestador_id, unidade_id)
     where resolvido_em is null;
@@ -328,7 +326,7 @@ grant update (categoria_id, nome, nome_busca, telefone, instagram, criado_por, e
               escondido_por) on prestador to {app};
 grant update (recomenda, comentario, escondida_em, escondida_por), delete
     on opiniao_servico to {app};
-grant update (resolvido_em, resolvido_por, emails_reservados), delete on aviso_servico to {app};
+grant update (resolvido_em, resolvido_por), delete on aviso_servico to {app};
 """
 
 

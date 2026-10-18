@@ -52,10 +52,10 @@ from app.banco import fabrica_de_sessoes
 from app.modelos import (
     Aviso,
     AvisoBloco,
-    AvisoServico,
     AvisoVersao,
     Bloco,
     Canal,
+    Historico,
     InscricaoPush,
     NotificacaoEnvio,
     Sessao,
@@ -65,6 +65,7 @@ from app.modelos import (
 )
 from app.seguranca.sessoes import VALIDADE
 from app.servicos import segundo_plano
+from app.servicos.historico import Acao
 
 log = logging.getLogger(__name__)
 
@@ -440,7 +441,7 @@ def destinos_email(db: Session, aviso: AvisoParaNotificar) -> list[DestinoEmail]
 def emails_nas_ultimas_24h(db: Session) -> int:
     """E-mails já gastos da cota: cópias de aviso **reservadas** (separadas antes de mandar; a
     sobra volta quando o envio termina), links de recuperação criados (cada token é um e-mail)
-    e os e-mails do primeiro aviso de uma indicação (reservados no próprio aviso)."""
+    e os e-mails do primeiro aviso de uma indicação (reservados no histórico, que ninguém apaga)."""
     desde = func.now() - timedelta(hours=24)
     avisos = db.scalar(
         select(func.coalesce(func.sum(NotificacaoEnvio.reservados), 0)).where(
@@ -448,10 +449,12 @@ def emails_nas_ultimas_24h(db: Session) -> int:
         )
     )
     links = db.scalar(select(func.count()).where(TokenRecuperacao.criado_em > desde))
-    # Indicações: os e-mails do primeiro aviso, reservados em `aviso_servico.emails_reservados`.
+    # Indicações: os e-mails do primeiro aviso, reservados no histórico (`indicacao_aviso_email`).
+    # Não na linha do aviso: "apagar meus dados" e o reset a apagam, e a cota voltaria.
     indicacoes = db.scalar(
-        select(func.coalesce(func.sum(AvisoServico.emails_reservados), 0)).where(
-            AvisoServico.criado_em > desde
+        select(func.coalesce(func.sum(Historico.detalhes["reservados"].as_integer()), 0)).where(
+            Historico.acao == Acao.indicacao_aviso_email.value,
+            Historico.ocorrido_em > desde,
         )
     )
     return int(avisos or 0) + int(links or 0) + int(indicacoes or 0)

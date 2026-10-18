@@ -6,15 +6,16 @@ um prestador, cada unidade com papel `admin` em vigor, ativa e com e-mail recebe
 Comissão também pode esconder, mas não é acordada por isso). Vai mesmo para quem desligou
 "receber os avisos por e-mail", que vale para o mural.
 
-Entra na cota do Gmail: em transação própria, com a trava da cota, reserva em
-`aviso_servico.emails_reservados` quantos couberem, e manda só esses. Nada aqui levanta para
+Entra na cota do Gmail: em transação própria, com a trava da cota, reserva quantos couberem no
+histórico (`indicacao_aviso_email`, que ninguém apaga: na linha do aviso, "apagar meus dados" e o
+reset devolveriam a cota), e manda só esses. Nada aqui levanta para
 fora: erro vira log só com o tipo (nem nome do prestador, nem endereço).
 """
 
 import logging
 from collections.abc import Callable
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.banco import fabrica_de_sessoes
@@ -22,6 +23,7 @@ from app.configuracao import config_email
 from app.modelos import Papel, Unidade, UnidadePapel
 from app.modelos.indicacoes import AvisoServico, CategoriaServico, Prestador
 from app.servicos import email, notificacoes
+from app.servicos.historico import Acao, registrar
 
 log = logging.getLogger(__name__)
 
@@ -61,10 +63,13 @@ def _reservar(abrir: Callable[[], Session], aviso_id: int) -> tuple[str, str, in
         para = _destinatarios(db)
         concedidos = min(len(para), notificacoes.cota_email_avisos(db))
         if concedidos > 0:
-            db.execute(
-                update(AvisoServico)
-                .where(AvisoServico.id == aviso_id)
-                .values(emails_reservados=AvisoServico.emails_reservados + concedidos)
+            registrar(
+                db,
+                Acao.indicacao_aviso_email,
+                unidade_id=None,
+                entidade="prestador",
+                entidade_id=prestador_id,
+                detalhes={"reservados": concedidos},
             )
         db.commit()
     if concedidos < len(para):

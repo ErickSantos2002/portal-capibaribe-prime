@@ -103,18 +103,54 @@ def test_cota_esgotada_nao_manda(logar, engine_app, email_ligado, prestador, mon
     monkeypatch.setattr(notificacoes, "LIMITE_EMAILS_24H", 0)
     _avisar(logar(COMUM), prestador)
     assert email_ligado.enviadas() == 0
-    with engine_app.connect() as con:
-        assert con.execute(text("select emails_reservados from aviso_servico")).scalar_one() == 0
+    assert _reservas(engine_app) == []
+
+
+def _reservas(engine) -> list[tuple]:
+    with engine.connect() as con:
+        return [
+            tuple(linha)
+            for linha in con.execute(
+                text(
+                    "select unidade_id, entidade, entidade_id, detalhes from historico"
+                    " where acao = 'indicacao_aviso_email' order by id"
+                )
+            )
+        ]
+
+
+def _gastos(engine) -> int:
+    with Session(engine) as db:
+        return notificacoes.emails_nas_ultimas_24h(db)
 
 
 def test_emails_reservados_entram_na_cota(logar, engine_app, email_ligado, prestador):
-    with Session(engine_app) as db:
-        antes = notificacoes.emails_nas_ultimas_24h(db)
+    antes = _gastos(engine_app)
     _avisar(logar(COMUM), prestador)
-    with Session(engine_app) as db:
-        assert notificacoes.emails_nas_ultimas_24h(db) == antes + 1
+    assert _gastos(engine_app) == antes + 1
+    # A reserva é ação do Portal, no histórico, sem a placa de quem avisou.
+    assert _reservas(engine_app) == [(None, "prestador", prestador, {"reservados": 1})]
+
+
+APAGAR = {"senha": f"senha-{COMUM}", "confirmo": True}
+
+
+@pytest.mark.parametrize("como", ["apagar meus dados", "reset"])
+def test_a_cota_gasta_nao_volta_quando_o_aviso_e_apagado(
+    logar, engine_app, email_ligado, prestador, como
+):
+    # Revisão: a reserva morava na linha do aviso, e "apagar meus dados" e o reset a apagam.
+    _avisar(logar(COMUM), prestador)
+    gastos = _gastos(engine_app)
+    if como == "reset":
+        r = logar(ADMIN).post(f"/api/admin/unidades/{COMUM}/resetar", json={"confirmo": True})
+        assert r.status_code == 200, r.text
+    else:
+        r = logar(COMUM).post("/api/minha-unidade/apagar-dados", json=APAGAR)
+        assert r.status_code == 204, r.text
     with engine_app.connect() as con:
-        assert con.execute(text("select emails_reservados from aviso_servico")).scalar_one() == 1
+        assert con.execute(text("select count(*) from aviso_servico")).scalar_one() == 0
+    assert _gastos(engine_app) == gastos
 
 
 def test_email_desligado_nao_levanta(logar, email_desligado, prestador):

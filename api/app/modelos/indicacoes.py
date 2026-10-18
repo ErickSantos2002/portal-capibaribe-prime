@@ -172,6 +172,3 @@ class AvisoServico(Base):
     criado_em: Mapped[datetime] = mapped_column(server_default=func.now())
     resolvido_em: Mapped[datetime | None] = mapped_column(server_onupdate=FetchedValue())
     resolvido_por: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("unidade.id"))
-    # E-mails do primeiro aviso reservados na cota do Gmail (somados em
-    # `notificacoes.emails_nas_ultimas_24h`).
-    emails_reservados: Mapped[int] = mapped_column(SmallInteger, server_default="0")

@@ -133,6 +133,13 @@ export function oQueFez(item: ItemHistorico): string {
       return 'apagou a própria opinião numa indicação'
     case 'indicacao_aviso_resolvido':
       return 'resolveu um aviso numa indicação'
+    // Ação do Portal: os e-mails do primeiro aviso, reservados na cota do Gmail.
+    case 'indicacao_aviso_email': {
+      const n = item.detalhes.reservados
+      return typeof n === 'number' && n > 1
+        ? `mandou ${n} e-mails à administração sobre um aviso numa indicação`
+        : 'mandou e-mail à administração sobre um aviso numa indicação'
+    }
     case 'categoria_criada':
       return `criou a categoria “${categoria(item)}”`
     case 'categoria_renomeada':

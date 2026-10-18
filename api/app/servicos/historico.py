@@ -60,6 +60,10 @@ class Acao(enum.StrEnum):
     indicacao_opiniao_escondida = "indicacao_opiniao_escondida"
     indicacao_opiniao_apagada = "indicacao_opiniao_apagada"
     indicacao_aviso_resolvido = "indicacao_aviso_resolvido"
+    # E-mails do primeiro aviso de uma indicação reservados na cota do Gmail (ação do sistema,
+    # entidade `prestador`, `{"reservados": n}`). Fica no histórico, que ninguém apaga: na linha
+    # do aviso, "apagar meus dados" e o reset devolveriam a cota (revisão das indicações).
+    indicacao_aviso_email = "indicacao_aviso_email"
     # Categorias das indicações (administração): entidade `categoria_servico`, com
     # `{"categoria": nome}` (a chave `nome` é proibida).
     categoria_criada = "categoria_criada"

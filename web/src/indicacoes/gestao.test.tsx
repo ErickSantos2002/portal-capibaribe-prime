@@ -195,6 +195,12 @@ describe('histórico', () => {
     )
     expect(oQueFez({ ...base, acao: 'indicacao_aviso_resolvido' })).toBe('resolveu um aviso numa indicação')
     expect(
+      oQueFez({ ...base, unidade: null, acao: 'indicacao_aviso_email', detalhes: { reservados: 2 } }),
+    ).toBe('mandou 2 e-mails à administração sobre um aviso numa indicação')
+    expect(
+      oQueFez({ ...base, unidade: null, acao: 'indicacao_aviso_email', detalhes: { reservados: 1 } }),
+    ).toBe('mandou e-mail à administração sobre um aviso numa indicação')
+    expect(
       oQueFez({ ...base, acao: 'categoria_criada', entidade: 'categoria_servico', detalhes: { categoria: 'Jardinagem' } }),
     ).toBe('criou a categoria “Jardinagem”')
     expect(
