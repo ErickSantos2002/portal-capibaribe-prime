@@ -13,6 +13,15 @@ export type ErrosDoPrestador = Partial<Record<keyof DadosDoPrestador, string>>
 const MIN_NOME = 2
 export const LIMITE_NOME = 80
 
+/** Os dígitos que a API guarda (a mesma regra de `validar_telefone`), ou `null` se não é um
+ *  telefone brasileiro com DDD. Sem o 55 do país; celular escrito sem o nono dígito (10 dígitos,
+ *  o terceiro de 6 a 9) ganha o 9; fixo começa de 2 a 5. */
+export function digitosDoTelefone(texto: string): string | null {
+  let digitos = texto.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
+  if (/^\d{2}[6-9]\d{7}$/.test(digitos)) digitos = `${digitos.slice(0, 2)}9${digitos.slice(2)}`
+  return /^[1-9]{2}(9\d{8}|[2-5]\d{7})$/.test(digitos) ? digitos : null
+}
+
 /** O que a tela confere antes de mandar (a API confere tudo de novo). */
 export function conferirPrestador(dados: DadosDoPrestador): ErrosDoPrestador {
   const erros: ErrosDoPrestador = {}
@@ -20,9 +29,8 @@ export function conferirPrestador(dados: DadosDoPrestador): ErrosDoPrestador {
   const nome = dados.nome.trim()
   if (!nome) erros.nome = 'Escreva o nome do prestador ou da empresa.'
   else if (nome.length < MIN_NOME) erros.nome = `Escreva pelo menos ${MIN_NOME} letras.`
-  const digitos = dados.telefone.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
   if (!dados.telefone.trim()) erros.telefone = 'Escreva o WhatsApp ou o telefone, com DDD.'
-  else if (!/^[1-9]{2}\d{8,9}$/.test(digitos) || (digitos.length === 11 && digitos[2] !== '9')) {
+  else if (digitosDoTelefone(dados.telefone) === null) {
     erros.telefone = 'Escreva o WhatsApp ou o telefone com DDD, por exemplo (81) 9 9999-0001.'
   }
   return erros

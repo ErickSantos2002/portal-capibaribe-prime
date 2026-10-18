@@ -64,10 +64,11 @@ create table prestador (
     -- Sem acento, minúsculo, espaços juntos: gravado pela API (`normalizar`).
     nome_busca     text not null constraint prestador_nome_busca check (
                        char_length(nome_busca) > 0),
-    -- Só dígitos: DDD sem zero e 8 ou 9 dígitos; com 11, o terceiro é 9 (celular).
+    -- Só dígitos: DDD sem zero e, depois dele, celular (9 e mais 8 dígitos) ou fixo (começa de
+    -- 2 a 5, com 8 dígitos). Celular sem o nono dígito não entra: a API põe o 9 antes de
+    -- gravar, senão o mesmo número entraria duas vezes, com e sem ele.
     telefone       text not null constraint prestador_telefone_formato check (
-                       telefone ~ '^[1-9]{2}[0-9]{8,9}$'
-                       and (char_length(telefone) = 10 or substr(telefone, 3, 1) = '9')),
+                       telefone ~ '^[1-9]{2}(9[0-9]{8}|[2-5][0-9]{7})$'),
     -- Sem o @.
     instagram      text constraint prestador_instagram_formato check (
                        instagram ~ '^[A-Za-z0-9._]{1,30}$'),

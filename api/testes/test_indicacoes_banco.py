@@ -52,7 +52,11 @@ def test_telefone_repetido_e_recusado_mesmo_escondido(engine_app, engine_dono, i
         criar_prestador(con, ids["v"], nome="Outra marcenaria")
 
 
-@pytest.mark.parametrize("telefone", ["0812345678", "8112345678x", "81812345678", "123"])
+@pytest.mark.parametrize(
+    "telefone",
+    # O celular sem o nono dígito também (a API põe o 9; direto no banco, não entra).
+    ["0812345678", "8112345678x", "81812345678", "123", "8199990001", "8112345678"],
+)
 def test_telefone_fora_do_formato(engine_app, ids, telefone):
     erro = pytest.raises(IntegrityError, match="prestador_telefone_formato")
     with erro, engine_app.begin() as con:

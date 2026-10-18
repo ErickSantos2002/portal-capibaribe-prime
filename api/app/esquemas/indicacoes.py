@@ -29,21 +29,25 @@ from app.modelos.indicacoes import (
     MIN_NOME,
 )
 
-# O mesmo formato do check `prestador_telefone_formato`: DDD sem zero e 8 ou 9 dígitos; com 11,
-# o terceiro é 9 (celular).
-_TELEFONE = re.compile(r"[1-9]{2}[0-9]{8,9}")
+# O mesmo formato do check `prestador_telefone_formato`: DDD sem zero e, depois dele, celular
+# (9 e mais 8 dígitos) ou fixo (começa de 2 a 5, com 8 dígitos).
+_TELEFONE = re.compile(r"[1-9]{2}(?:9[0-9]{8}|[2-5][0-9]{7})")
 _INSTAGRAM = re.compile(rf"[A-Za-z0-9._]{{1,{LIMITE_INSTAGRAM}}}")
 MSG_TELEFONE = "Escreva o WhatsApp ou o telefone com DDD, por exemplo (81) 9 9999-0001."
 
 
 def validar_telefone(valor: object) -> str:
-    """Aceita máscara, espaço e `+55`; guarda só os dígitos, sem o 55."""
+    """Aceita máscara, espaço e `+55`; guarda só os dígitos, sem o 55. Celular escrito sem o
+    nono dígito ("(81) 9999-0001", 10 dígitos com o terceiro de 6 a 9) ganha o 9: senão o mesmo
+    prestador entraria duas vezes, uma com e outra sem."""
     if not isinstance(valor, str):
         raise ValueError(MSG_TELEFONE)
     digitos = "".join(c for c in valor if c.isascii() and c.isdigit())
     if len(digitos) in (12, 13) and digitos.startswith("55"):
         digitos = digitos[2:]
-    if not _TELEFONE.fullmatch(digitos) or (len(digitos) == 11 and digitos[2] != "9"):
+    if len(digitos) == 10 and digitos[2] in "6789":
+        digitos = f"{digitos[:2]}9{digitos[2:]}"
+    if not _TELEFONE.fullmatch(digitos):
         raise ValueError(MSG_TELEFONE)
     return digitos
 

@@ -22,6 +22,13 @@ BASE = {"categoria_id": 1, "nome": "Marcenaria X", "telefone": "81999990001", "r
         ("81 3333-4444", "8133334444"),
         ("5581999990001", "81999990001"),
         ("55 81 3333-4444", "8133334444"),
+        # Celular sem o nono dígito (o terceiro de 6 a 9) ganha o 9: é o mesmo número.
+        ("(81) 9999-0001", "81999990001"),
+        ("81 8765-4321", "81987654321"),
+        ("+55 81 6123-4567", "81961234567"),
+        # Fixo (o terceiro de 2 a 5) fica com 10.
+        ("81 2123-4567", "8121234567"),
+        ("81 5123-4567", "8151234567"),
     ],
 )
 def test_telefone_vira_so_digitos(digitado, guardado):
@@ -29,7 +36,18 @@ def test_telefone_vira_so_digitos(digitado, guardado):
 
 
 @pytest.mark.parametrize(
-    "ruim", ["81 8999-00011", "0819999-0001", "9999-0001", "(81) 2999-000", "", "abc"]
+    "ruim",
+    [
+        "81 8999-00011",
+        "0819999-0001",
+        "9999-0001",
+        "(81) 2999-000",
+        "",
+        "abc",
+        # 10 dígitos começando com 0 ou 1 não é fixo nem celular.
+        "81 1999-0001",
+        "81 0999-0001",
+    ],
 )
 def test_telefone_invalido(ruim):
     with pytest.raises(ValidationError):

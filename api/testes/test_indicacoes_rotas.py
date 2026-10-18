@@ -61,7 +61,11 @@ def test_quem_indicou_ve_a_propria_opiniao_e_pode_corrigir(logar):
     assert outro["avisos"] == []
 
 
-@pytest.mark.parametrize("mesmo", ["(81) 9 9999-0001", "+55 81 99999 0001", "81999990001"])
+@pytest.mark.parametrize(
+    "mesmo",
+    # O último sem o nono dígito: é o mesmo celular, não um prestador novo (revisão).
+    ["(81) 9 9999-0001", "+55 81 99999 0001", "81999990001", "(81) 9999-0001"],
+)
 def test_telefone_igual_com_mascara_da_409_com_id(logar, mesmo):
     criado = indicar(logar(COMUM))
     r = logar(ADMIN).post("/api/indicacoes", json={**NOVA, "telefone": mesmo, "nome": "Outro"})
