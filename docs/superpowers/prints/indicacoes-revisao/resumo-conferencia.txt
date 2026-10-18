@@ -1,0 +1,334 @@
+Conferência da letra (fix-indicacoes) · 144 prints em docs/superpowers/prints/indicacoes-revisao (curados; os 144 ficaram fora do git)
+
+fonte  largura  letra mediana (esperado)  com rolagem  com algo fora  com cortado  com alvo<44  com ícone encolhido  com palavra quebrada
+   16      320             18 (18.0)            0              0            0            0                    0                     0
+   16      360             18 (18.0)            0              0            0            0                    0                     0
+   16      412             18 (18.0)            0              0            0            0                    0                     0
+   16     1280             18 (18.0)            0              0            0            0                    0                     0
+   24      320             27 (27.0)            0              0            0            0                    0                     0
+   24      360             27 (27.0)            0              0            0            0                    0                     0
+   24      412             27 (27.0)            0              0            0            0                    0                     0
+   24     1280             27 (27.0)            0              0            0            0                    0                     0
+   32      320             36 (36.0)            0              0            0            0                    0                     0
+   32      360             36 (36.0)            0              0            0            0                    0                     0
+   32      412             36 (36.0)            0              0            0            0                    0                     0
+   32     1280             36 (36.0)            0              0            0            0                    0                     0
+
+## indicacoes · 320 px · fonte 16 (indicacoes-320-16.png)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 468 > 320)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 676 > 320)
+- rola dentro (não conta): button.chip "Mudança" (direita 792 > 320)
+- rola dentro (não conta): button.chip "Eletricista" (direita 915 > 320)
+- rola dentro (não conta): button.chip "Encanador" (direita 1043 > 320)
+- rola dentro (não conta): button.chip "Pintura" (direita 1143 > 320)
+- rola dentro (não conta): … e mais 4
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (140x108 em 140x54)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (140x1026 em 140x54)
+## indicacoes · 360 px · fonte 16 (indicacoes-360-16.png)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 468 > 360)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 676 > 360)
+- rola dentro (não conta): button.chip "Mudança" (direita 792 > 360)
+- rola dentro (não conta): button.chip "Eletricista" (direita 915 > 360)
+- rola dentro (não conta): button.chip "Encanador" (direita 1043 > 360)
+- rola dentro (não conta): button.chip "Pintura" (direita 1143 > 360)
+- rola dentro (não conta): … e mais 4
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (180x81 em 180x54)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (180x702 em 180x54)
+## indicacoes · 412 px · fonte 16 (indicacoes-412-16.png)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 468 > 412)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 676 > 412)
+- rola dentro (não conta): button.chip "Mudança" (direita 792 > 412)
+- rola dentro (não conta): button.chip "Eletricista" (direita 915 > 412)
+- rola dentro (não conta): button.chip "Encanador" (direita 1043 > 412)
+- rola dentro (não conta): button.chip "Pintura" (direita 1143 > 412)
+- rola dentro (não conta): … e mais 4
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (232x513 em 232x54)
+## indicacoes · 1280 px · fonte 16 (indicacoes-1280-16.png)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1311 > 1280)
+- rola dentro (não conta): button.chip "Encanador" (direita 1439 > 1280)
+- rola dentro (não conta): button.chip "Pintura" (direita 1539 > 1280)
+- rola dentro (não conta): button.chip "Gesso" (direita 1632 > 1280)
+- rola dentro (não conta): button.chip "Vidraçaria e box" (direita 1804 > 1280)
+- rola dentro (não conta): button.chip "Diarista" (direita 1910 > 1280)
+- rola dentro (não conta): … e mais 1
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (572x216 em 572x54)
+## indicacoes · 320 px · fonte 16 · escuro (indicacoes-320-16-escuro.png)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 468 > 320)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 676 > 320)
+- rola dentro (não conta): button.chip "Mudança" (direita 792 > 320)
+- rola dentro (não conta): button.chip "Eletricista" (direita 915 > 320)
+- rola dentro (não conta): button.chip "Encanador" (direita 1043 > 320)
+- rola dentro (não conta): button.chip "Pintura" (direita 1143 > 320)
+- rola dentro (não conta): … e mais 4
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (140x108 em 140x54)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (140x1026 em 140x54)
+## indicacoes · 360 px · fonte 16 · escuro (indicacoes-360-16-escuro.png)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 468 > 360)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 676 > 360)
+- rola dentro (não conta): button.chip "Mudança" (direita 792 > 360)
+- rola dentro (não conta): button.chip "Eletricista" (direita 915 > 360)
+- rola dentro (não conta): button.chip "Encanador" (direita 1043 > 360)
+- rola dentro (não conta): button.chip "Pintura" (direita 1143 > 360)
+- rola dentro (não conta): … e mais 4
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (180x81 em 180x54)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (180x702 em 180x54)
+## indicacoes · 412 px · fonte 16 · escuro (indicacoes-412-16-escuro.png)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 468 > 412)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 676 > 412)
+- rola dentro (não conta): button.chip "Mudança" (direita 792 > 412)
+- rola dentro (não conta): button.chip "Eletricista" (direita 915 > 412)
+- rola dentro (não conta): button.chip "Encanador" (direita 1043 > 412)
+- rola dentro (não conta): button.chip "Pintura" (direita 1143 > 412)
+- rola dentro (não conta): … e mais 4
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (232x513 em 232x54)
+## indicacoes · 1280 px · fonte 16 · escuro (indicacoes-1280-16-escuro.png)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1311 > 1280)
+- rola dentro (não conta): button.chip "Encanador" (direita 1439 > 1280)
+- rola dentro (não conta): button.chip "Pintura" (direita 1539 > 1280)
+- rola dentro (não conta): button.chip "Gesso" (direita 1632 > 1280)
+- rola dentro (não conta): button.chip "Vidraçaria e box" (direita 1804 > 1280)
+- rola dentro (não conta): button.chip "Diarista" (direita 1910 > 1280)
+- rola dentro (não conta): … e mais 1
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (572x216 em 572x54)
+## indicacoes · 320 px · fonte 24 (indicacoes-320-24.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 416 > 320)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 671 > 320)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 973 > 320)
+- rola dentro (não conta): button.chip "Mudança" (direita 1140 > 320)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1316 > 320)
+- rola dentro (não conta): button.chip "Encanador" (direita 1500 > 320)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (226x122 em 226x81)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (226x1337 em 226x81)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao · 320 px · fonte 24 (indicacao-320-24.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-opinar · 320 px · fonte 24 (indicacao-opinar-320-24.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-gestao · 320 px · fonte 24 (indicacao-gestao-320-24.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacoes · 360 px · fonte 24 (indicacoes-360-24.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 416 > 360)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 671 > 360)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 973 > 360)
+- rola dentro (não conta): button.chip "Mudança" (direita 1140 > 360)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1316 > 360)
+- rola dentro (não conta): button.chip "Encanador" (direita 1500 > 360)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (266x122 em 266x81)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (266x1053 em 266x81)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao · 360 px · fonte 24 (indicacao-360-24.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "caprichosos" em p.ind-comentario "Fizeram a cozinha e os armários dos quar"
+## indicacao-opinar · 360 px · fonte 24 (indicacao-opinar-360-24.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "caprichosos" em p.ind-comentario "Fizeram a cozinha e os armários dos quar"
+## nova-indicacao · 360 px · fonte 24 (nova-indicacao-360-24.png)
+- hifenizada (não conta): "apartamento" em p.ajuda "Indique um prestador que atendeu bem (ou"
+## indicacao-gestao · 360 px · fonte 24 (indicacao-gestao-360-24.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "caprichosos" em p.ind-comentario "Fizeram a cozinha e os armários dos quar"
+## indicacoes · 412 px · fonte 24 (indicacoes-412-24.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 416 > 412)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 671 > 412)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 973 > 412)
+- rola dentro (não conta): button.chip "Mudança" (direita 1140 > 412)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1316 > 412)
+- rola dentro (não conta): button.chip "Encanador" (direita 1500 > 412)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (318x122 em 318x81)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (318x891 em 318x81)
+## indicacoes · 1280 px · fonte 24 (indicacoes-1280-24.png)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1400 > 1280)
+- rola dentro (não conta): button.chip "Encanador" (direita 1584 > 1280)
+- rola dentro (não conta): button.chip "Pintura" (direita 1726 > 1280)
+- rola dentro (não conta): button.chip "Gesso" (direita 1858 > 1280)
+- rola dentro (não conta): button.chip "Vidraçaria e box" (direita 2109 > 1280)
+- rola dentro (não conta): button.chip "Diarista" (direita 2259 > 1280)
+- rola dentro (não conta): … e mais 1
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (976x284 em 976x81)
+## indicacoes · 320 px · fonte 24 · escuro (indicacoes-320-24-escuro.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 416 > 320)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 671 > 320)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 973 > 320)
+- rola dentro (não conta): button.chip "Mudança" (direita 1140 > 320)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1316 > 320)
+- rola dentro (não conta): button.chip "Encanador" (direita 1500 > 320)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (226x122 em 226x81)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (226x1337 em 226x81)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao · 320 px · fonte 24 · escuro (indicacao-320-24-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-opinar · 320 px · fonte 24 · escuro (indicacao-opinar-320-24-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-gestao · 320 px · fonte 24 · escuro (indicacao-gestao-320-24-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacoes · 360 px · fonte 24 · escuro (indicacoes-360-24-escuro.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 416 > 360)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 671 > 360)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 973 > 360)
+- rola dentro (não conta): button.chip "Mudança" (direita 1140 > 360)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1316 > 360)
+- rola dentro (não conta): button.chip "Encanador" (direita 1500 > 360)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (266x122 em 266x81)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (266x1053 em 266x81)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao · 360 px · fonte 24 · escuro (indicacao-360-24-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "caprichosos" em p.ind-comentario "Fizeram a cozinha e os armários dos quar"
+## indicacao-opinar · 360 px · fonte 24 · escuro (indicacao-opinar-360-24-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "caprichosos" em p.ind-comentario "Fizeram a cozinha e os armários dos quar"
+## nova-indicacao · 360 px · fonte 24 · escuro (nova-indicacao-360-24-escuro.png)
+- hifenizada (não conta): "apartamento" em p.ajuda "Indique um prestador que atendeu bem (ou"
+## indicacao-gestao · 360 px · fonte 24 · escuro (indicacao-gestao-360-24-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "caprichosos" em p.ind-comentario "Fizeram a cozinha e os armários dos quar"
+## indicacoes · 412 px · fonte 24 · escuro (indicacoes-412-24-escuro.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 416 > 412)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 671 > 412)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 973 > 412)
+- rola dentro (não conta): button.chip "Mudança" (direita 1140 > 412)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1316 > 412)
+- rola dentro (não conta): button.chip "Encanador" (direita 1500 > 412)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (318x122 em 318x81)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (318x891 em 318x81)
+## indicacoes · 1280 px · fonte 24 · escuro (indicacoes-1280-24-escuro.png)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1400 > 1280)
+- rola dentro (não conta): button.chip "Encanador" (direita 1584 > 1280)
+- rola dentro (não conta): button.chip "Pintura" (direita 1726 > 1280)
+- rola dentro (não conta): button.chip "Gesso" (direita 1858 > 1280)
+- rola dentro (não conta): button.chip "Vidraçaria e box" (direita 2109 > 1280)
+- rola dentro (não conta): button.chip "Diarista" (direita 2259 > 1280)
+- rola dentro (não conta): … e mais 1
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (976x284 em 976x81)
+## indicacoes · 320 px · fonte 32 (indicacoes-320-32.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 547 > 320)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 885 > 320)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 1287 > 320)
+- rola dentro (não conta): button.chip "Mudança" (direita 1508 > 320)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1741 > 320)
+- rola dentro (não conta): button.chip "Encanador" (direita 1985 > 320)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (206x270 em 206x108)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (206x2700 em 206x108)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "Instalações" em h2 "Fios & Cia Instalações"
+## indicacao-opinar · 320 px · fonte 32 (indicacao-opinar-320-32.png)
+- hifenizada (não conta): "Recomendo" em span.ind-voto-texto "👍 Recomendo"
+- hifenizada (não conta): "recomendo" em span.ind-voto-texto "👎 Não recomendo"
+## nova-indicacao · 320 px · fonte 32 (nova-indicacao-320-32.png)
+- hifenizada (não conta): "apartamento" em p.ajuda "Indique um prestador que atendeu bem (ou"
+## indicacoes · 360 px · fonte 32 (indicacoes-360-32.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 547 > 360)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 885 > 360)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 1287 > 360)
+- rola dentro (não conta): button.chip "Mudança" (direita 1508 > 360)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1741 > 360)
+- rola dentro (não conta): button.chip "Encanador" (direita 1985 > 360)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (246x216 em 246x108)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (246x2214 em 246x108)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao · 360 px · fonte 32 (indicacao-360-32.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-opinar · 360 px · fonte 32 (indicacao-opinar-360-32.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "Recomendo" em span.ind-voto-texto "👍 Recomendo"
+## nova-indicacao · 360 px · fonte 32 (nova-indicacao-360-32.png)
+- hifenizada (não conta): "apartamento" em p.ajuda "Indique um prestador que atendeu bem (ou"
+## indicacao-gestao · 360 px · fonte 32 (indicacao-gestao-360-32.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacoes · 412 px · fonte 32 (indicacoes-412-32.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 547 > 412)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 885 > 412)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 1287 > 412)
+- rola dentro (não conta): button.chip "Mudança" (direita 1508 > 412)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1741 > 412)
+- rola dentro (não conta): button.chip "Encanador" (direita 1985 > 412)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (298x216 em 298x108)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (298x1782 em 298x108)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao · 412 px · fonte 32 (indicacao-412-32.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-opinar · 412 px · fonte 32 (indicacao-opinar-412-32.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-gestao · 412 px · fonte 32 (indicacao-gestao-412-32.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacoes · 1280 px · fonte 32 (indicacoes-1280-32.png)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 1287 > 1280)
+- rola dentro (não conta): button.chip "Mudança" (direita 1508 > 1280)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1741 > 1280)
+- rola dentro (não conta): button.chip "Encanador" (direita 1985 > 1280)
+- rola dentro (não conta): button.chip "Pintura" (direita 2174 > 1280)
+- rola dentro (não conta): button.chip "Gesso" (direita 2348 > 1280)
+- rola dentro (não conta): … e mais 3
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (1110x432 em 1110x108)
+## indicacoes · 320 px · fonte 32 · escuro (indicacoes-320-32-escuro.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 547 > 320)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 885 > 320)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 1287 > 320)
+- rola dentro (não conta): button.chip "Mudança" (direita 1508 > 320)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1741 > 320)
+- rola dentro (não conta): button.chip "Encanador" (direita 1985 > 320)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (206x270 em 206x108)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (206x2700 em 206x108)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "Instalações" em h2 "Fios & Cia Instalações"
+## indicacao-opinar · 320 px · fonte 32 · escuro (indicacao-opinar-320-32-escuro.png)
+- hifenizada (não conta): "Recomendo" em span.ind-voto-texto "👍 Recomendo"
+- hifenizada (não conta): "recomendo" em span.ind-voto-texto "👎 Não recomendo"
+## nova-indicacao · 320 px · fonte 32 · escuro (nova-indicacao-320-32-escuro.png)
+- hifenizada (não conta): "apartamento" em p.ajuda "Indique um prestador que atendeu bem (ou"
+## indicacoes · 360 px · fonte 32 · escuro (indicacoes-360-32-escuro.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 547 > 360)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 885 > 360)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 1287 > 360)
+- rola dentro (não conta): button.chip "Mudança" (direita 1508 > 360)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1741 > 360)
+- rola dentro (não conta): button.chip "Encanador" (direita 1985 > 360)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (246x216 em 246x108)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (246x2214 em 246x108)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao · 360 px · fonte 32 · escuro (indicacao-360-32-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-opinar · 360 px · fonte 32 · escuro (indicacao-opinar-360-32-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+- hifenizada (não conta): "Recomendo" em span.ind-voto-texto "👍 Recomendo"
+## nova-indicacao · 360 px · fonte 32 · escuro (nova-indicacao-360-32-escuro.png)
+- hifenizada (não conta): "apartamento" em p.ajuda "Indique um prestador que atendeu bem (ou"
+## indicacao-gestao · 360 px · fonte 32 · escuro (indicacao-gestao-360-32-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacoes · 412 px · fonte 32 · escuro (indicacoes-412-32-escuro.png)
+- rola dentro (não conta): button.chip "Móveis planejados" (direita 547 > 412)
+- rola dentro (não conta): button.chip "Ar-condicionado" (direita 885 > 412)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 1287 > 412)
+- rola dentro (não conta): button.chip "Mudança" (direita 1508 > 412)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1741 > 412)
+- rola dentro (não conta): button.chip "Encanador" (direita 1985 > 412)
+- rola dentro (não conta): … e mais 5
+- resumido de propósito (não conta): span.ind-trecho-texto "👎 Não recomenda: “Atrasou duas semanas " (298x216 em 298x108)
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (298x1782 em 298x108)
+- hifenizada (não conta): "Albuquerque" em h2 "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao · 412 px · fonte 32 · escuro (indicacao-412-32-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-opinar · 412 px · fonte 32 · escuro (indicacao-opinar-412-32-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacao-gestao · 412 px · fonte 32 · escuro (indicacao-gestao-412-32-escuro.png)
+- hifenizada (não conta): "Albuquerque" em h2#ind-nome.ind-nome "Marcenaria e Móveis Planejados Irmãos Al"
+## indicacoes · 1280 px · fonte 32 · escuro (indicacoes-1280-32-escuro.png)
+- rola dentro (não conta): button.chip "Cortinas e persianas" (direita 1287 > 1280)
+- rola dentro (não conta): button.chip "Mudança" (direita 1508 > 1280)
+- rola dentro (não conta): button.chip "Eletricista" (direita 1741 > 1280)
+- rola dentro (não conta): button.chip "Encanador" (direita 1985 > 1280)
+- rola dentro (não conta): button.chip "Pintura" (direita 2174 > 1280)
+- rola dentro (não conta): button.chip "Gesso" (direita 2348 > 1280)
+- rola dentro (não conta): … e mais 3
+- resumido de propósito (não conta): span.ind-trecho-texto "👍 Recomenda: “Instalou o quadro de dist" (1110x432 em 1110x108)

@@ -40,3 +40,53 @@ foi a que o spec mais sugere; dá para trocar sem mexer em regra nenhuma.
 ## Lembrete para o coordenador
 
 A migração **0010 precisa ir para o Neon antes do push** (regra do backup).
+
+## Correções das revisões (código e UX)
+
+Escolhas feitas ao corrigir os achados das revisões independentes. Cada conserto tem teste de
+regressão que falhava antes.
+
+13. **Cota do Gmail no histórico.** A reserva dos e-mails do primeiro aviso saiu da linha de
+    `aviso_servico` (que "apagar meus dados" e o reset apagam, e a cota voltava) e foi para o
+    `historico`, que o app só insere e ninguém apaga: ação do Portal `indicacao_aviso_email`
+    (unidade nula, entidade `prestador`, `{"reservados": n}`), somada em
+    `emails_nas_ultimas_24h`. Foi o mais simples e coerente: o `notificacao_envio` é por aviso
+    do mural e tem chave estrangeira para ele; uma tabela nova só para isso seria mais uma coisa
+    para o backup e a LGPD. Efeito visível: o Histórico da administração mostra "mandou e-mail à
+    administração sobre um aviso numa indicação" (sem a placa de quem avisou). A coluna
+    `emails_reservados` saiu da 0010 (ainda não aplicada no Neon).
+14. **Celular sem o nono dígito.** Com 10 dígitos e o terceiro de 6 a 9, a API põe o 9; de 2 a
+    5 é fixo; 0 e 1 são recusados ("Escreva o WhatsApp ou o telefone com DDD…"). O check da
+    0010, o modelo e a tela seguem a mesma regra.
+15. **Limite de avisos:** 10 por apartamento a cada 24 horas, na trigger (como os de indicação e
+    opinião). A frase do 429: "Seu apartamento já avisou a gestão muitas vezes hoje. Tente de
+    novo amanhã."
+16. **Telefone fixo:** "Ligar: (81) 3333-4444" vira o botão principal e o WhatsApp fica como
+    botão leve, sem sumir (fixo pode ter WhatsApp Business). O número só pode quebrar entre o
+    DDD e o resto.
+17. **Rascunho da opinião** (409 e "Dar minha opinião lá"): vai no `state` da navegação e só
+    preenche o formulário quando a unidade ainda não opinou; com opinião, vale a dela.
+18. **Foco.** Além do que a revisão pediu, "Corrigir os dados" também devolve o foco ao botão ao
+    fechar, e "Continuar escrevendo" em "Sair sem publicar?" faz o mesmo que o Esc (foco no
+    Voltar).
+19. **Erro de formulário.** No padrão das enquetes: um erro só, a caixa do topo diz qual; mais de
+    um, "Confira os campos marcados.". O erro do campo some ao editar, também em "Corrigir os
+    dados".
+20. **Busca ou categoria sem resultado.** Com busca: "Limpar a busca". Só com filtro (categoria
+    ou "com aviso"): "Ver todas". Com categoria, também "Indicar alguém". "Todos" fica
+    desmarcado enquanto o filtro "com aviso" está ligado (e tocar nele desliga os dois).
+21. **Contraste da categoria:** token novo `--ipe-texto` no `estilo.css` (arquivo comum), porque
+    nenhum token existente dava 4,5:1 em ipê. `--ipe-forte` continua nos focos e marcações.
+22. **Privacidade:** a frase diz que Minha unidade mostra nome, celular e e-mail, e que as
+    opiniões ficam à vista na página de cada prestador, nas Indicações.
+
+## Para o coordenador
+
+- **Primeiro cartão com a letra a 200 % em 320 px.** A faixa rola dentro dela também com a
+  letra grande, o rótulo da busca ficou em duas linhas e a faixa mais baixa: o cartão subiu de
+  y = 715 para y = 581 numa janela de 780, acima das abas de baixo (698). Mas o botão flutuante
+  "Indicar alguém" ocupa de 570 a 682 nessa combinação e cobre o começo do cartão. Com 24 px, ou
+  de 360 px para cima com 32 px de altura de janela maior, o cartão aparece inteiro. Resolver de
+  vez pediria mexer no botão flutuante com a letra grande (padrão comum a outras telas), o que
+  não fiz sem perguntar.
+- **Prestador escondido não anonimizado**, como pedido: fica para a decisão do dono.
