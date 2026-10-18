@@ -49,7 +49,13 @@ function contraste(a: string, b: string): number {
 // ---------- a conta da altura ----------
 /** Resolve um valor de token em px, para uma letra (rem) e uma largura de tela (vw). Entende
  *  var(), min(<rem>, <vw>), calc() com + e *, e números. */
-function emPx(valor: string, remPx: number, larguraPx: number, bloco: string): number {
+function emPx(
+  valor: string,
+  remPx: number,
+  larguraPx: number,
+  bloco: string,
+  { cem = NaN, letraPx = NaN }: { cem?: number; letraPx?: number } = {},
+): number {
   let expr = valor
   for (let i = 0; i < 10 && expr.includes('var('); i++) {
     expr = expr.replace(/var\(\s*--([\w-]+)\s*\)/g, (_, nome: string) => `(${token(bloco, nome)})`)
@@ -58,11 +64,19 @@ function emPx(valor: string, remPx: number, larguraPx: number, bloco: string): n
     .replace(/env\([^)]*\)/g, '0')
     .replace(/calc\(/g, '(')
     .replace(/(-?\d*\.?\d+)rem/g, (_, n: string) => String(Number(n) * remPx))
+    .replace(/(-?\d*\.?\d+)em/g, (_, n: string) => String(Number(n) * letraPx))
+    .replace(/(-?\d*\.?\d+)%/g, (_, n: string) => String((Number(n) * cem) / 100))
     .replace(/(-?\d*\.?\d+)vw/g, (_, n: string) => String((Number(n) * larguraPx) / 100))
-    .replace(/min\(/g, 'Math.min(')
-  assert.match(expr, /^[\d\s.+*()/,-]*(Math\.min[\d\s.+*()/,-]*)*$/, `não sei resolver: ${expr}`)
-  return Function(`return ${expr}`)() as number
+    .replace(/(min|max)\(/g, 'Math.$1(')
+  assert.match(expr, /^([\d\s.+*()/,-]|Math\.(min|max))*$/, `não sei resolver: ${expr}`)
+  const px = Function(`return ${expr}`)() as number
+  assert.ok(Number.isFinite(px), `faltou % ou em para resolver: ${valor}`)
+  return px
 }
+
+/** Os tokens de vários blocos, o de depois por cima (como na cascata): `token()` pega o primeiro
+ *  que acha, então o bloco que sobrescreve vem na frente. */
+const cascata = (...blocos: string[]) => [...blocos].reverse().join('\n')
 
 describe('a barra não cresce com a letra', () => {
   test('a letra das abas tem piso de 15 px e teto pela largura: min(0.9375rem, <vw>)', () => {
@@ -99,12 +113,19 @@ describe('a barra não cresce com a letra', () => {
 
   test('altura total (saliência da bola incluída): ≤ 96 px a 16 px e ≤ 104 px a 24 e 32 px', () => {
     for (const largura of [320, 360, 412]) {
-      const bloco = largura < 340 ? claro + estreita : claro
+      const bloco = largura < 340 ? cascata(claro, estreita) : claro
       for (const letra of [16, 24, 32]) {
         const altura = emPx('var(--altura-barra)', letra, largura, bloco)
         assert.ok(altura <= (letra === 16 ? 96 : 104), `${largura} px, letra ${letra}: ${altura.toFixed(1)} px`)
       }
     }
+  })
+
+  test('na tela estreita, a conta da altura usa a letra da tela estreita (4.7vw), não a do :root', () => {
+    const bloco = cascata(claro, estreita)
+    const letra = emPx('var(--barra-letra)', 32, 320, bloco)
+    assert.equal(letra, emPx(token(estreita, 'barra-letra'), 32, 320, claro))
+    assert.notEqual(letra, emPx(token(claro, 'barra-letra'), 32, 320, claro))
   })
 
   test('a barra tem a altura do token, e a bola sobressai no máximo meia altura', () => {
