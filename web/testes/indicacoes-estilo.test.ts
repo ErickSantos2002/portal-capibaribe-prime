@@ -39,7 +39,20 @@ describe('faixa de categorias', () => {
   test('rola para o lado dentro dela, também com a letra grande (não quebra em linhas)', () => {
     assert.match(regra(indicacoes, '.faixa-categorias'), /overflow-x:\s*auto/)
     assert.match(regra(indicacoes, '.faixa-categorias'), /flex-wrap:\s*nowrap/)
-    assert.doesNotMatch(indicacoes, /data-letra='grande'\]\s*\.faixa-categorias/)
+    // Com a letra grande, nada de quebrar em linhas nem de soltar a rolagem.
+    for (const m of indicacoes.matchAll(/data-letra='grande'\]\s*\.faixa-categorias[^{]*\{([^}]*)\}/g)) {
+      assert.doesNotMatch(m[1], /flex-wrap:\s*wrap|overflow-x:\s*visible|white-space:\s*normal/)
+    }
+  })
+})
+
+describe('o primeiro cartão na primeira tela, com a letra grande', () => {
+  // A 320 px e 200 %, o cartão ficava logo abaixo da dobra (y = 715 numa janela de 780). Medido
+  // depois: y = 581, acima das abas de baixo (698).
+  test('o rótulo da busca sem o respiro de grupo; sem o ícone e a faixa mais baixa na letra grande', () => {
+    assert.match(regra(indicacoes, '.ind-busca label'), /margin-top:\s*0/)
+    assert.match(regra(indicacoes, ":root[data-letra='grande'] .ind-busca label svg"), /display:\s*none/)
+    assert.match(regra(indicacoes, ":root[data-letra='grande'] .faixa-categorias .chip"), /min-height:\s*0/)
   })
 })
 
