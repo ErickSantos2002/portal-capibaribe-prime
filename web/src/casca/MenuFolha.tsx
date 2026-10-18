@@ -3,7 +3,7 @@
 // e uma frase do que tem lá. O padrão de janela é o de `sobre/BotaoVersao.tsx`: `<dialog>` com
 // showModal(), que deixa o resto da tela inerte, prende o foco, fecha no Esc e, no Chrome do
 // Android (120+), fecha no gesto de voltar sem mexer no histórico. Montada só enquanto aberta.
-import { useEffect, useId, useRef, type PointerEvent } from 'react'
+import { useEffect, useId, useRef, type PointerEvent, type RefObject } from 'react'
 import { Link } from 'react-router'
 import { Icone } from './Icone'
 import { agrupados, type Lugar } from './menu'
@@ -39,13 +39,45 @@ function useTravarRolagem() {
   }, [])
 }
 
+/** Marca na lista se há lugares escondidos abaixo ou acima (`data-mais-abaixo`, `data-mais-acima`):
+ *  com a letra grande ela rola, e o CSS desenha um fio no pé e embaixo do cabeçalho para mostrar
+ *  que continua. Direto no DOM, sem estado: medir a cada rolagem não redesenha a folha. */
+function useMarcarRolagem(lista: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const elemento = lista.current
+    if (!elemento) return
+    const medir = () => {
+      // 1 px de folga: o zoom deixa scrollTop fracionário e o fim nunca bate exato.
+      elemento.toggleAttribute('data-mais-acima', elemento.scrollTop > 1)
+      elemento.toggleAttribute(
+        'data-mais-abaixo',
+        elemento.scrollTop + elemento.clientHeight < elemento.scrollHeight - 1,
+      )
+    }
+    medir()
+    elemento.addEventListener('scroll', medir, { passive: true })
+    // A letra mudou com a folha aberta, ou a tela girou: a altura da lista muda sem rolar.
+    const observador = typeof ResizeObserver === 'function' ? new ResizeObserver(medir) : null
+    observador?.observe(elemento)
+    return () => {
+      elemento.removeEventListener('scroll', medir)
+      observador?.disconnect()
+    }
+  }, [lista])
+}
+
 export function MenuFolha({ lugares, atual, naoLidos, aoFechar }: Props) {
   const janela = useRef<HTMLDialogElement>(null)
   const caixa = useRef<HTMLDivElement>(null)
   const titulo = useRef<HTMLHeadingElement>(null)
+  const lista = useRef<HTMLDivElement>(null)
   const arrasto = useRef<{ inicio: number; altura: number; desce: number } | null>(null)
+  // O toque que fecha pelo véu tem que COMEÇAR no véu: arrastar de dentro da folha até fora
+  // termina com um click no próprio <dialog> (o ancestral comum), e não pode fechar.
+  const comecouNoVeu = useRef(false)
   const idTitulo = useId()
   useTravarRolagem()
+  useMarcarRolagem(lista)
 
   useEffect(() => {
     const dialogo = janela.current
@@ -53,6 +85,9 @@ export function MenuFolha({ lugares, atual, naoLidos, aoFechar }: Props) {
     if (dialogo && !dialogo.open) dialogo.showModal()
     // O foco vai para o título (o leitor de tela anuncia a pergunta), não para o primeiro lugar.
     titulo.current?.focus()
+    // Com a letra grande, a lista rola e o lugar atual pode abrir fora da vista (ex.: Unidades, o
+    // último): ela rola só o necessário para ele aparecer. O foco continua no título.
+    lista.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest' })
   }, [])
 
   const fechar = () => janela.current?.close()
@@ -101,9 +136,14 @@ export function MenuFolha({ lugares, atual, naoLidos, aoFechar }: Props) {
           ultimo.focus()
         }
       }}
+      onPointerDown={(evento) => {
+        comecouNoVeu.current = evento.target === evento.currentTarget
+      }}
       onClick={(evento) => {
-        // O clique cai no próprio <dialog> só fora da caixa (no véu).
-        if (evento.target === evento.currentTarget) fechar()
+        // O clique cai no próprio <dialog> só fora da caixa (no véu), e o toque começou lá.
+        const doVeu = comecouNoVeu.current
+        comecouNoVeu.current = false
+        if (doVeu && evento.target === evento.currentTarget) fechar()
       }}
     >
       <div ref={caixa} className="menu-folha-caixa">
@@ -119,7 +159,7 @@ export function MenuFolha({ lugares, atual, naoLidos, aoFechar }: Props) {
             Para onde você quer ir?
           </h2>
         </header>
-        <div className="menu-folha-lista">
+        <div ref={lista} className="menu-folha-lista">
           {agrupados(lugares).map((grupo) => (
             <div key={grupo.grupo} className="menu-folha-grupo">
               <h3>{grupo.nome}</h3>

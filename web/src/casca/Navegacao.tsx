@@ -61,6 +61,7 @@ export function Navegacao({ eu }: { eu: Eu }) {
   const { pathname } = useLocation()
   const [aberta, setAberta] = useState(false)
   const bola = useRef<HTMLButtonElement>(null)
+  const barraRef = useRef<HTMLDivElement>(null)
   const papel = eu.papeis.includes('admin') ? 'admin' : eu.papeis[0]
   const lugares = lugaresDo(eu)
   const atual = lugarAtual(lugares, pathname)
@@ -70,6 +71,19 @@ export function Navegacao({ eu }: { eu: Eu }) {
   const naBola = !atual?.naBarra
   // Um lugar que mora só na folha e tem número (ex.: Encomendas, na E2) acende um pontinho na bola.
   const avisoNaBola = naoLidos > 0 && lugares.some((l) => !l.naBarra && l.contador === 'nao-lidos')
+
+  // A folha é do celular. Se a tela virar layout de computador com ela aberta (o iPhone grande
+  // que gira, a janela que alarga), a barra some (display: none no @container do computador) e a
+  // folha fecha junto, em vez de ficar aberta por cima do menu lateral.
+  useEffect(() => {
+    const elemento = barraRef.current
+    if (!aberta || !elemento || typeof ResizeObserver !== 'function') return
+    const observador = new ResizeObserver(() => {
+      if (elemento.getClientRects().length === 0) setAberta(false)
+    })
+    observador.observe(elemento)
+    return () => observador.disconnect()
+  }, [aberta])
 
   const aba = (lugar: Lugar | null, posicao: number) =>
     lugar ? (
@@ -81,7 +95,7 @@ export function Navegacao({ eu }: { eu: Eu }) {
 
   return (
     <nav className="nav" aria-label="Seções do Portal">
-      <div className="nav-barra">
+      <div ref={barraRef} className="nav-barra">
         {/* O arco da borda de cima: desenho só, os cantos transparentes não pegam o toque. */}
         <svg className="nav-arco" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
           <path d="M0 10Q50-10 100 10Z" />

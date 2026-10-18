@@ -128,8 +128,47 @@ describe('fechar', () => {
     api(eu())
     abrir('/avisos')
     const folha = await abrirFolha()
+    fireEvent.pointerDown(folha)
     fireEvent.click(folha)
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('arrastar o dedo (ou o mouse) de dentro da folha até o véu não fecha', async () => {
+    // O navegador manda o click para o ancestral comum de onde o dedo desceu e de onde subiu: o
+    // próprio <dialog>. Só o toque que também começou no véu fecha.
+    api(eu())
+    abrir('/avisos')
+    const folha = await abrirFolha()
+    fireEvent.pointerDown(within(folha).getByRole('link', { name: /Enquetes/ }))
+    fireEvent.click(folha)
+    expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+
+  it('se a tela virar layout de computador com a folha aberta (iPhone que gira), ela fecha', async () => {
+    // O ResizeObserver da barra avisa quando ela some (display: none no @container do
+    // computador): getClientRects vazio.
+    const avisos: (() => void)[] = []
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(avisar: () => void) {
+          avisos.push(avisar)
+        }
+        observe() {}
+        disconnect() {}
+      },
+    )
+    api(eu())
+    abrir('/avisos')
+    await abrirFolha()
+    const barra = document.querySelector<HTMLElement>('.nav-barra')!
+    const visivel = vi.spyOn(barra, 'getClientRects').mockReturnValue([{}] as unknown as DOMRectList)
+    act(() => avisos.forEach((avisar) => avisar()))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    visivel.mockReturnValue([] as unknown as DOMRectList)
+    act(() => avisos.forEach((avisar) => avisar()))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(document.body.style.position).toBe('')
   })
 
   it('tocar num lugar navega e fecha; o voltar seguinte leva à tela anterior', async () => {
@@ -180,5 +219,73 @@ describe('fechar', () => {
     fireEvent.pointerMove(topo, { clientY: 250, pointerId: 1 })
     fireEvent.pointerUp(topo, { clientY: 250, pointerId: 1 })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+})
+
+describe('teclado', () => {
+  it('o Tab fica preso na folha: do último (Fechar) volta ao primeiro lugar', async () => {
+    api(eu())
+    abrir('/avisos')
+    const folha = await abrirFolha()
+    const fecharBotao = within(folha).getByRole('button', { name: 'Fechar' })
+    fecharBotao.focus()
+    fireEvent.keyDown(fecharBotao, { key: 'Tab' })
+    expect(document.activeElement).toBe(within(folha).getAllByRole('link')[0])
+  })
+
+  it('Shift+Tab no título (onde o foco começa) vai para o último (Fechar)', async () => {
+    api(eu())
+    abrir('/avisos')
+    const folha = await abrirFolha()
+    const titulo = within(folha).getByRole('heading', { name: 'Para onde você quer ir?' })
+    await waitFor(() => expect(document.activeElement).toBe(titulo))
+    fireEvent.keyDown(titulo, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(within(folha).getByRole('button', { name: 'Fechar' }))
+  })
+
+  it('Shift+Tab no primeiro lugar também vai para o último', async () => {
+    api(eu())
+    abrir('/avisos')
+    const folha = await abrirFolha()
+    const primeiro = within(folha).getAllByRole('link')[0]
+    primeiro.focus()
+    fireEvent.keyDown(primeiro, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(within(folha).getByRole('button', { name: 'Fechar' }))
+  })
+})
+
+describe('letra grande: a lista rola', () => {
+  it('ao abrir, o lugar atual rola para a vista dentro da lista, e o foco fica no título', async () => {
+    const rolar = vi.fn()
+    Element.prototype.scrollIntoView = rolar
+    try {
+      api(eu(['admin']))
+      abrir('/unidades')
+      const folha = await abrirFolha()
+      const unidades = within(folha).getByRole('link', { name: /Unidades/ })
+      await waitFor(() => expect(rolar).toHaveBeenCalled())
+      expect(rolar.mock.contexts.at(-1)).toBe(unidades)
+      expect(rolar).toHaveBeenLastCalledWith({ block: 'nearest' })
+      expect(document.activeElement).toBe(within(folha).getByRole('heading', { name: 'Para onde você quer ir?' }))
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView
+    }
+  })
+
+  it('a lista marca quando há mais lugares abaixo e acima (o CSS desenha o fio)', async () => {
+    api(eu(['admin']))
+    abrir('/avisos')
+    const folha = await abrirFolha()
+    const lista = folha.querySelector<HTMLElement>('.menu-folha-lista')!
+    expect(lista.hasAttribute('data-mais-abaixo')).toBe(false)
+    Object.defineProperty(lista, 'scrollHeight', { configurable: true, value: 600 })
+    Object.defineProperty(lista, 'clientHeight', { configurable: true, value: 300 })
+    fireEvent.scroll(lista)
+    expect(lista.hasAttribute('data-mais-abaixo')).toBe(true)
+    expect(lista.hasAttribute('data-mais-acima')).toBe(false)
+    lista.scrollTop = 300
+    fireEvent.scroll(lista)
+    expect(lista.hasAttribute('data-mais-abaixo')).toBe(false)
+    expect(lista.hasAttribute('data-mais-acima')).toBe(true)
   })
 })
