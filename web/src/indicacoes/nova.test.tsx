@@ -53,7 +53,7 @@ describe('indicar alguém', () => {
     expect(screen.getAllByRole('radio').every((r) => !(r as HTMLInputElement).checked)).toBe(true)
   })
 
-  it('digitar "Marcen" mostra "Já tem uma Marcenaria Silva na lista" com o link para /indicacoes/3?opinar=1', async () => {
+  it('digitar "Marcen" mostra "Já tem “Marcenaria Silva” na lista" com o link para /indicacoes/3?opinar=1', async () => {
     const chamadas = apiIndicacoes(MORADOR, {
       'GET /api/indicacoes/parecidos?nome=Marcen': json(200, {
         itens: [{ id: 3, nome: 'Marcenaria Silva', categoria: { id: 1, nome: 'Móveis planejados' } }],
@@ -64,8 +64,11 @@ describe('indicar alguém', () => {
     fireEvent.change(screen.getByLabelText('Nome do prestador ou da empresa'), {
       target: { value: 'Marcen' },
     })
-    const aviso = await screen.findByText(/Já tem uma/, {}, ESPERA)
-    expect(aviso.closest('div')?.textContent).toContain('Já tem uma Marcenaria Silva na lista. É a mesma?')
+    const aviso = await screen.findByText(/Já tem/, {}, ESPERA)
+    // Sem gênero (revisão): "uma"/"a mesma" não servia para "João Eletricista".
+    expect(aviso.textContent).toContain('Já tem “Marcenaria Silva” na lista. É o mesmo prestador?')
+    // A região que o leitor de tela escuta já estava na página antes do texto chegar.
+    expect(aviso.closest('[aria-live]')).not.toBeNull()
     const link = screen.getByRole('link', { name: 'Dar minha opinião lá' })
     expect(link.getAttribute('href')).toBe('/indicacoes/3?opinar=1')
     expect(chamadas.filter((c) => c.caminho.startsWith('/api/indicacoes/parecidos'))).toHaveLength(1)
@@ -197,5 +200,90 @@ describe('indicar alguém', () => {
     expect(await screen.findByText(/A gestão escondeu a sua opinião/, {}, ESPERA)).toBeTruthy()
     expect(screen.queryByRole('radio')).toBeNull()
     expect(screen.queryByRole('button', { name: /minha opinião/ })).toBeNull()
+  })
+
+  it('publicar com erro: a caixa do topo leva o foco; mexer no campo tira o erro dele', async () => {
+    apiIndicacoes(MORADOR)
+    abrir('/indicacoes/nova')
+    await formulario()
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar indicação' }))
+    const alerta = await screen.findByRole('alert')
+    expect(alerta.textContent).toBe('Confira os campos marcados.')
+    expect(document.activeElement).toBe(alerta)
+    expect(screen.getByRole('group', { name: 'Você recomenda?' }).getAttribute('aria-invalid')).toBe('true')
+    const nome = screen.getByLabelText('Nome do prestador ou da empresa')
+    fireEvent.change(nome, { target: { value: 'Fios & Cia' } })
+    expect(nome.getAttribute('aria-invalid')).toBeNull()
+    expect(screen.queryByText('Escreva o nome do prestador ou da empresa.')).toBeNull()
+    // Os outros continuam marcados, e a caixa do topo também.
+    expect(screen.getByText('Escolha o serviço.')).toBeTruthy()
+    expect(screen.getByRole('alert')).toBeTruthy()
+  })
+
+  it('só um erro: a caixa do topo diz qual', async () => {
+    apiIndicacoes(MORADOR)
+    abrir('/indicacoes/nova')
+    await formulario()
+    preencher()
+    fireEvent.change(screen.getByLabelText('WhatsApp ou telefone'), { target: { value: '123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar indicação' }))
+    const alerta = await screen.findByRole('alert')
+    expect(alerta.textContent).toBe('Escreva o WhatsApp ou o telefone com DDD, por exemplo (81) 9 9999-0001.')
+    fireEvent.change(screen.getByLabelText('WhatsApp ou telefone'), { target: { value: '(81) 3333-4444' } })
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('o 409 leva a opinião já escrita para o formulário do prestador', async () => {
+    apiIndicacoes(MORADOR, {
+      'POST /api/indicacoes': json(409, {
+        codigo: 'prestador_ja_existe',
+        mensagem: 'Esse telefone já está na lista. Dê a sua opinião lá.',
+        id: 3,
+      }),
+      'GET /api/indicacoes/3': json(200, prestador({ id: 3 })),
+    })
+    abrir('/indicacoes/nova')
+    await formulario()
+    preencher({ recomenda: false })
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar indicação' }))
+    await screen.findByRole('heading', { level: 2, name: 'Marcenaria Exemplo' }, ESPERA)
+    expect((screen.getByRole('radio', { name: /Não recomendo/ }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByLabelText(/Conte como foi/) as HTMLTextAreaElement).value).toBe('Rápido.')
+  })
+
+  it('"Dar minha opinião lá" dos parecidos leva a opinião já escrita', async () => {
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes/parecidos?nome=Marcen': json(200, {
+        itens: [{ id: 3, nome: 'Marcenaria Silva', categoria: { id: 1, nome: 'Móveis planejados' } }],
+      }),
+      'GET /api/indicacoes/3': json(200, prestador({ id: 3 })),
+    })
+    abrir('/indicacoes/nova')
+    await formulario()
+    fireEvent.click(screen.getByRole('radio', { name: /Recomendo$/ }))
+    fireEvent.change(screen.getByLabelText(/Conte como foi/), { target: { value: 'Caprichou.' } })
+    fireEvent.change(screen.getByLabelText('Nome do prestador ou da empresa'), {
+      target: { value: 'Marcen' },
+    })
+    fireEvent.click(await screen.findByRole('link', { name: 'Dar minha opinião lá' }, ESPERA))
+    fireEvent.click(await screen.findByRole('button', { name: 'Sair sem publicar' }))
+    await screen.findByRole('heading', { level: 2, name: 'Marcenaria Exemplo' }, ESPERA)
+    expect((screen.getByRole('radio', { name: /Recomendo$/ }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByLabelText(/Conte como foi/) as HTMLTextAreaElement).value).toBe('Caprichou.')
+  })
+
+  it('Esc em "Sair sem publicar?" fica e devolve o foco ao Voltar', async () => {
+    apiIndicacoes(MORADOR, { 'GET /api/indicacoes': json(200, { itens: [], com_aviso: null }) })
+    abrir('/indicacoes/nova')
+    await formulario()
+    fireEvent.change(screen.getByLabelText('Nome do prestador ou da empresa'), {
+      target: { value: 'Fu' },
+    })
+    const voltar = screen.getByRole('button', { name: 'Voltar' })
+    fireEvent.click(voltar)
+    const pergunta = await screen.findByRole('alertdialog', { name: 'Sair sem publicar?' })
+    fireEvent.keyDown(pergunta, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Voltar' }))
   })
 })

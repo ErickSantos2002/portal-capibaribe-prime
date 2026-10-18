@@ -170,7 +170,14 @@
 }
 
 .ind-contatos .botao {
-  overflow-wrap: anywhere;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.25em;
+}
+
+/* O número não quebra no meio: no máximo o DDD fica numa linha e o resto na outra. */
+.ind-numero {
+  white-space: nowrap;
 }
 
 /* O WhatsApp é a ação principal da página: verde-mata, como todo botão principal. */
@@ -209,10 +216,18 @@
   margin: 0;
 }
 
-.ind-data,
-.ind-sua {
+.ind-data {
   color: var(--tinta-suave);
   font-weight: 400;
+}
+
+/* "Sua opinião": selo na própria opinião, em vez do "· a sua" no meio da linha. */
+.ind-sua {
+  margin: 0.25rem 0 0;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--r-pequeno);
+  background: var(--mata-suave);
+  color: var(--mata);
 }
 
 .ind-comentario {
@@ -295,6 +310,11 @@
 
 .ind-voto-texto {
   min-width: 0;
+}
+
+/* Sem escolha ao publicar: as duas opções com a borda de erro. */
+.ind-recomenda[aria-invalid='true'] .ind-voto {
+  border-color: var(--erro);
 }
 
 .ind-voto.marcado {

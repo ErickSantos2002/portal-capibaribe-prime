@@ -5,13 +5,21 @@ import { useEffect, useRef } from 'react'
 import type { Blocker } from 'react-router'
 import { Icone } from '../casca/Icone'
 
-/** Por cima da tela, com o foco em "Continuar escrevendo" (o caminho seguro). */
+/** Por cima da tela, com o foco em "Continuar escrevendo" (o caminho seguro). Ficar (Esc ou o
+ *  botão) devolve o foco ao Voltar do topo, de onde a pessoa quis sair; sem isso, ele caía no
+ *  body. */
 export function PerguntaSairSemPublicar({ blocker }: { blocker: Blocker }) {
   const ficar = useRef<HTMLButtonElement>(null)
   const bloqueado = blocker.state === 'blocked'
   useEffect(() => {
     if (bloqueado) ficar.current?.focus()
   }, [bloqueado])
+
+  function continuar() {
+    blocker.reset?.()
+    document.querySelector<HTMLButtonElement>('.topo .voltar')?.focus()
+  }
+
   if (!bloqueado) return null
   return (
     <div className="ind-sair-fundo">
@@ -22,13 +30,13 @@ export function PerguntaSairSemPublicar({ blocker }: { blocker: Blocker }) {
         aria-labelledby="ind-sair-titulo"
         aria-describedby="ind-sair-texto"
         onKeyDown={(e) => {
-          if (e.key === 'Escape') blocker.reset()
+          if (e.key === 'Escape') continuar()
         }}
       >
         <Icone nome="alerta" tamanho={28} />
         <h2 id="ind-sair-titulo">Sair sem publicar?</h2>
         <p id="ind-sair-texto">O que você escreveu na indicação vai se perder.</p>
-        <button ref={ficar} type="button" className="botao" onClick={() => blocker.reset()}>
+        <button ref={ficar} type="button" className="botao" onClick={continuar}>
           Continuar escrevendo
         </button>
         <button type="button" className="botao leve" onClick={() => blocker.proceed()}>

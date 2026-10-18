@@ -7,6 +7,13 @@ export function telefoneNaTela(d: string): string {
   return d
 }
 
+/** O DDD entre parênteses e o resto, para a tela não quebrar o número no meio. */
+export function partesDoTelefone(d: string): [string, string] {
+  const tela = telefoneNaTela(d)
+  const espaco = tela.indexOf(' ')
+  return espaco > 0 ? [tela.slice(0, espaco), tela.slice(espaco + 1)] : [tela, '']
+}
+
 /** Celular tem 11 dígitos (o terceiro é 9); fixo, 10. */
 export const ehCelular = (d: string) => d.length === 11
 

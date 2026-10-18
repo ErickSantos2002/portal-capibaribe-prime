@@ -7,6 +7,7 @@ import { useRecado } from '../casca/contextoRecado'
 import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { avisarGestao } from './api'
+import { useDevolverFoco } from './useDevolverFoco'
 
 export const LIMITE_MOTIVO = 300
 
@@ -26,6 +27,8 @@ export function AvisarGestao({ prestadorId, jaAvisei, aoAvisar }: Props) {
   const [erro, setErro] = useState('')
   const caixa = useRef<HTMLDivElement>(null)
   const campo = useRef<HTMLTextAreaElement>(null)
+  // Cancelar: o foco volta ao "Tem algo errado aqui?".
+  const botao = useDevolverFoco<HTMLButtonElement>(aberto)
 
   useEffect(() => {
     if (aberto) centralizar(caixa.current, campo.current)
@@ -58,7 +61,12 @@ export function AvisarGestao({ prestadorId, jaAvisei, aoAvisar }: Props) {
 
   if (!aberto) {
     return (
-      <button type="button" className="texto-link ind-avisar" onClick={() => setAberto(true)}>
+      <button
+        type="button"
+        className="texto-link ind-avisar"
+        ref={botao}
+        onClick={() => setAberto(true)}
+      >
         Tem algo errado aqui? Avisar a gestão
       </button>
     )

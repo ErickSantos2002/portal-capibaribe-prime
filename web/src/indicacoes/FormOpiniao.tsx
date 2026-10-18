@@ -8,10 +8,23 @@ import { Icone } from '../casca/Icone'
 import { centralizar } from '../casca/rolar'
 import { comoErroDaApi } from '../avisos/carregar'
 import { apagarOpiniao, opinar } from './api'
+import { LIMITE_COMENTARIO, MSG_CONFIRA, type RascunhoDaOpiniao } from './formulario'
 import type { MinhaOpiniao, Prestador } from './tipos'
+import { useDevolverFoco } from './useDevolverFoco'
 
-export const LIMITE_COMENTARIO = 500
 export const MSG_ESCOLHA = 'Escolha se você recomenda ou não.'
+
+/** A caixa de erro do topo do formulário, com o foco nela (como `ErroGeral` das enquetes). */
+export function ErroGeral({ mensagem }: { mensagem: string }) {
+  const caixa = useRef<HTMLDivElement>(null)
+  useEffect(() => caixa.current?.focus(), [mensagem])
+  return (
+    <div className="aviso-caixa erro" role="alert" tabIndex={-1} ref={caixa}>
+      <Icone nome="alerta" />
+      <p>{mensagem}</p>
+    </div>
+  )
+}
 
 interface PropsCampos {
   /** Prefixo dos ids (a tela pode ter mais de um formulário). */
@@ -37,6 +50,7 @@ export function CamposDaOpiniao({
     <>
       <fieldset
         className="ind-recomenda"
+        aria-invalid={erroRecomenda ? true : undefined}
         aria-describedby={erroRecomenda ? `${id}-recomenda-erro` : undefined}
       >
         <legend>Você recomenda?</legend>
@@ -94,6 +108,10 @@ export function CamposDaOpiniao({
 interface Props {
   prestadorId: number
   inicial: MinhaOpiniao | null
+  /** Sem opinião ainda: o que a pessoa escreveu em "Indicar alguém", para não perder. */
+  rascunho?: RascunhoDaOpiniao | null
+  /** Aberto por um toque: o foco vai ao título (aberto com a página, fica no h1 da tela). */
+  focarAoAbrir?: boolean
   /** Salvou: a API devolve o prestador já com a opinião nova. */
   aoSalvar: (prestador: Prestador) => void
   /** Apagou: a tela recarrega o prestador. */
@@ -101,23 +119,53 @@ interface Props {
   aoCancelar: () => void
 }
 
-export function FormOpiniao({ prestadorId, inicial, aoSalvar, aoApagar, aoCancelar }: Props) {
+export function FormOpiniao({
+  prestadorId,
+  inicial,
+  rascunho,
+  focarAoAbrir = false,
+  aoSalvar,
+  aoApagar,
+  aoCancelar,
+}: Props) {
   const recado = useRecado()
-  const [recomenda, setRecomenda] = useState<boolean | null>(inicial?.recomenda ?? null)
-  const [comentario, setComentario] = useState(inicial?.comentario ?? '')
+  const comeco = inicial ?? rascunho ?? null
+  const [recomenda, setRecomenda] = useState<boolean | null>(comeco?.recomenda ?? null)
+  const [comentario, setComentario] = useState(comeco?.comentario ?? '')
   const [erros, setErros] = useState<{ recomenda?: string; comentario?: string; geral?: string }>({})
   const [ocupado, setOcupado] = useState(false)
   const [apagando, setApagando] = useState(false)
   const pergunta = useRef<HTMLDivElement>(null)
+  const formulario = useRef<HTMLFormElement>(null)
+  const titulo = useRef<HTMLHeadingElement>(null)
+  const botaoApagar = useDevolverFoco<HTMLButtonElement>(apagando)
+
+  useEffect(() => {
+    if (focarAoAbrir) centralizar(formulario.current, titulo.current)
+    // Só ao abrir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (apagando) centralizar(pergunta.current)
   }, [apagando])
 
+  /** Mexeu no campo: o erro dele some, e o do topo também quando não sobra nenhum. */
+  function limparErro(campo: 'recomenda' | 'comentario') {
+    setErros((antes) => {
+      if (!antes[campo]) return antes
+      const resto = { ...antes, [campo]: undefined }
+      if (resto.geral === MSG_CONFIRA || resto.geral === antes[campo]) {
+        if (!resto.recomenda && !resto.comentario) resto.geral = undefined
+      }
+      return resto
+    })
+  }
+
   async function salvar(evento: FormEvent) {
     evento.preventDefault()
     if (recomenda === null) {
-      setErros({ recomenda: MSG_ESCOLHA })
+      setErros({ recomenda: MSG_ESCOLHA, geral: MSG_ESCOLHA })
       return
     }
     setOcupado(true)
@@ -131,7 +179,8 @@ export function FormOpiniao({ prestadorId, inicial, aoSalvar, aoApagar, aoCancel
       aoSalvar(prestador)
     } catch (e) {
       const erro = comoErroDaApi(e)
-      setErros({ comentario: erro.doCampo('comentario'), geral: erro.mensagem })
+      const doComentario = erro.doCampo('comentario')
+      setErros({ comentario: doComentario, geral: doComentario ?? erro.mensagem })
     } finally {
       setOcupado(false)
     }
@@ -153,20 +202,23 @@ export function FormOpiniao({ prestadorId, inicial, aoSalvar, aoApagar, aoCancel
   }
 
   return (
-    <form className="ind-form-opiniao" onSubmit={salvar} noValidate>
-      <h3>{inicial ? 'Mudar a minha opinião' : 'Dar a minha opinião'}</h3>
-      {erros.geral && (
-        <div className="aviso-caixa erro" role="alert">
-          <Icone nome="alerta" />
-          <p>{erros.geral}</p>
-        </div>
-      )}
+    <form className="ind-form-opiniao" onSubmit={salvar} noValidate ref={formulario}>
+      <h3 ref={titulo} tabIndex={-1}>
+        {inicial ? 'Mudar a minha opinião' : 'Dar a minha opinião'}
+      </h3>
+      {erros.geral && <ErroGeral mensagem={erros.geral} />}
       <CamposDaOpiniao
         id="minha"
         recomenda={recomenda}
-        setRecomenda={setRecomenda}
+        setRecomenda={(valor) => {
+          setRecomenda(valor)
+          limparErro('recomenda')
+        }}
         comentario={comentario}
-        setComentario={setComentario}
+        setComentario={(valor) => {
+          setComentario(valor)
+          limparErro('comentario')
+        }}
         erroRecomenda={erros.recomenda}
         erroComentario={erros.comentario}
       />
@@ -207,7 +259,12 @@ export function FormOpiniao({ prestadorId, inicial, aoSalvar, aoApagar, aoCancel
             </div>
           </div>
         ) : (
-          <button type="button" className="texto-link ind-apagar" onClick={() => setApagando(true)}>
+          <button
+            type="button"
+            className="texto-link ind-apagar"
+            ref={botaoApagar}
+            onClick={() => setApagando(true)}
+          >
             Apagar a minha opinião
           </button>
         ))}

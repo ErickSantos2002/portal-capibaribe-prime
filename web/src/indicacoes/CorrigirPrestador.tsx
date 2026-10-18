@@ -195,7 +195,11 @@ export function CorrigirPrestador({ prestador, aoCorrigir, aoCancelar }: Props) 
       <CamposDoPrestador
         id="corrigir"
         dados={dados}
-        mudar={(campo, valor) => setDados((antes) => ({ ...antes, [campo]: valor }))}
+        mudar={(campo, valor) => {
+          setDados((antes) => ({ ...antes, [campo]: valor }))
+          // Mexeu no campo: o erro dele some (como em "Indicar alguém").
+          if (erros[campo]) setErros((antes) => ({ ...antes, [campo]: undefined }))
+        }}
         erros={erros}
       />
       <div className="ind-acoes">

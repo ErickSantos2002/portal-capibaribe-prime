@@ -74,8 +74,18 @@ describe('prestador aberto', () => {
     const recomendo = screen.getByRole('radio', { name: /^👍 Recomendo|Recomendo$/ }) as HTMLInputElement
     expect(recomendo.checked).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Salvar a minha opinião' }))
-    expect(await screen.findByText('Escolha se você recomenda ou não.')).toBeTruthy()
+    // Revisão: o erro de baixo não aparecia para quem tocou em Salvar. A caixa do topo diz e
+    // leva o foco, e o grupo fica marcado como inválido.
+    const alerta = await screen.findByRole('alert')
+    expect(alerta.textContent).toBe('Escolha se você recomenda ou não.')
+    expect(document.activeElement).toBe(alerta)
+    expect(screen.getByRole('group', { name: 'Você recomenda?' }).getAttribute('aria-invalid')).toBe('true')
     expect(chamadas.some((c) => c.metodo === 'PUT')).toBe(false)
+    // Escolheu: o erro some (do campo e do topo).
+    fireEvent.click(recomendo)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText('Escolha se você recomenda ou não.')).toBeNull()
+    expect(screen.getByRole('group', { name: 'Você recomenda?' }).getAttribute('aria-invalid')).toBeNull()
   })
 
   it('salvar chama PUT /api/indicacoes/7/opiniao com {recomenda, comentario} e atualiza a contagem', async () => {
@@ -248,5 +258,128 @@ describe('prestador aberto', () => {
     })
     abrir('/indicacoes/7')
     expect(await screen.findByText('Indicação não encontrada.', {}, ESPERA)).toBeTruthy()
+  })
+})
+
+describe('prestador aberto · revisão', () => {
+  it('abrir o formulário leva o foco ao título; Cancelar devolve ao botão', async () => {
+    apiIndicacoes(MORADOR, { 'GET /api/indicacoes/7': json(200, prestador()) })
+    abrir('/indicacoes/7')
+    await aberto()
+    fireEvent.click(screen.getByRole('button', { name: 'Dar a minha opinião' }))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: 'Dar a minha opinião' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Dar a minha opinião' })),
+    )
+  })
+
+  it('"Manter a minha opinião" devolve o foco ao "Apagar a minha opinião"', async () => {
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes/7': json(
+        200,
+        prestador({ minha_opiniao: { recomenda: true, comentario: null, escondida: false } }),
+      ),
+    })
+    abrir('/indicacoes/7')
+    await aberto()
+    fireEvent.click(screen.getByRole('button', { name: 'Mudar a minha opinião' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apagar a minha opinião' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Manter a minha opinião' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Apagar a minha opinião' })),
+    )
+  })
+
+  it('Cancelar o aviso à gestão devolve o foco ao link que abriu', async () => {
+    apiIndicacoes(MORADOR, { 'GET /api/indicacoes/7': json(200, prestador()) })
+    abrir('/indicacoes/7')
+    await aberto()
+    fireEvent.click(screen.getByRole('button', { name: 'Tem algo errado aqui? Avisar a gestão' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Tem algo errado aqui? Avisar a gestão' }),
+      ),
+    )
+  })
+
+  it('número fixo: "Ligar" é o botão principal e o WhatsApp fica leve; o número não quebra', async () => {
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes/7': json(200, prestador({ telefone: '8133334444', celular: false })),
+    })
+    abrir('/indicacoes/7')
+    await aberto()
+    const ligar = screen.getByRole('link', { name: 'Ligar: (81) 3333-4444' })
+    const whats = screen.getByRole('link', { name: 'WhatsApp: (81) 3333-4444' })
+    expect(ligar.className).toBe('botao ind-ligar')
+    expect(whats.classList.contains('leve')).toBe(true)
+    // O Ligar vem primeiro.
+    expect(ligar.compareDocumentPosition(whats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect([...ligar.querySelectorAll('.ind-numero')].map((n) => n.textContent)).toEqual([
+      '(81)',
+      '3333-4444',
+    ])
+  })
+
+  it('celular: o WhatsApp é o principal, sem Ligar', async () => {
+    apiIndicacoes(MORADOR, { 'GET /api/indicacoes/7': json(200, prestador()) })
+    abrir('/indicacoes/7')
+    await aberto()
+    const whats = screen.getByRole('link', { name: 'WhatsApp: (81) 9 9999-0001' })
+    expect(whats.classList.contains('leve')).toBe(false)
+    expect(screen.queryByRole('link', { name: /Ligar/ })).toBeNull()
+  })
+
+  it('zero recomendações: sem a linha verde; sem opinião nenhuma, o texto neutro', async () => {
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes/7': json(200, prestador({ recomendam: 0, nao_recomendam: 1 })),
+    })
+    abrir('/indicacoes/7')
+    await aberto()
+    const contagens = document.querySelector('.ind-contagens')!
+    expect(contagens.querySelector('.ind-recomendam')).toBeNull()
+    expect(contagens.textContent).toBe('👎 1 não recomenda')
+
+    cleanup()
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes/7': json(200, prestador({ recomendam: 0, nao_recomendam: 0, opinioes: [] })),
+    })
+    abrir('/indicacoes/7')
+    await aberto()
+    expect(document.querySelector('.ind-contagens')?.textContent).toBe('Nenhum vizinho recomenda ainda')
+    expect(document.querySelector('.ind-contagens .ind-recomendam')).toBeNull()
+  })
+
+  it('corrigir: mexer no campo com erro tira o erro dele', async () => {
+    apiIndicacoes(MORADOR, { 'GET /api/indicacoes/7': json(200, prestador({ pode_corrigir: true })) })
+    abrir('/indicacoes/7')
+    await aberto()
+    fireEvent.click(screen.getByRole('button', { name: /Corrigir os dados/ }))
+    const nome = screen.getByLabelText('Nome do prestador ou da empresa')
+    fireEvent.change(nome, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar as correções' }))
+    expect(await screen.findByText('Escreva o nome do prestador ou da empresa.')).toBeTruthy()
+    fireEvent.change(nome, { target: { value: 'Marcenaria Nova' } })
+    expect(screen.queryByText('Escreva o nome do prestador ou da empresa.')).toBeNull()
+    expect(nome.getAttribute('aria-invalid')).toBeNull()
+  })
+
+  it('a própria opinião tem o selo "Sua opinião"', async () => {
+    const base = prestador()
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes/7': json(
+        200,
+        prestador({ opinioes: [{ ...base.opinioes[0], minha: true }, base.opinioes[1]] }),
+      ),
+    })
+    abrir('/indicacoes/7')
+    await aberto()
+    const itens = within(screen.getByRole('region', { name: 'O que os vizinhos disseram' })).getAllByRole(
+      'listitem',
+    )
+    expect(itens[0].querySelector('.selo.ind-sua')?.textContent).toBe('Sua opinião')
+    expect(itens[0].textContent).not.toContain('· a sua')
+    expect(itens[1].querySelector('.ind-sua')).toBeNull()
   })
 })
