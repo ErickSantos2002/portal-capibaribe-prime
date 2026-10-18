@@ -47,7 +47,9 @@ export function CamposDaOpiniao({
             checked={recomenda === true}
             onChange={() => setRecomenda(true)}
           />
-          <span aria-hidden="true">👍 </span>Recomendo
+          <span className="ind-voto-texto">
+            <span aria-hidden="true">👍 </span>Recomendo
+          </span>
         </label>
         <label className={recomenda === false ? 'ind-voto marcado' : 'ind-voto'}>
           <input
@@ -56,7 +58,9 @@ export function CamposDaOpiniao({
             checked={recomenda === false}
             onChange={() => setRecomenda(false)}
           />
-          <span aria-hidden="true">👎 </span>Não recomendo
+          <span className="ind-voto-texto">
+            <span aria-hidden="true">👎 </span>Não recomendo
+          </span>
         </label>
       </fieldset>
       {erroRecomenda && (

@@ -167,6 +167,10 @@
 
 .ind-contatos .texto-link {
   align-self: flex-start;
+  /* O @ do Instagram é uma palavra só: com a letra grande, quebra em vez de empurrar a página. */
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .ind-contatos .botao {
@@ -287,6 +291,16 @@
   cursor: pointer;
 }
 
+/* Com a letra grande numa tela estreita, o texto desce para baixo da bolinha em vez de empurrar
+   a página para o lado. */
+.ind-voto {
+  flex-wrap: wrap;
+}
+
+.ind-voto-texto {
+  min-width: 0;
+}
+
 .ind-voto.marcado {
   border-color: var(--mata);
   background: var(--mata-suave);
@@ -332,7 +346,7 @@
 
 /* ---------- indicar alguém ---------- */
 .ind-nova select,
-.ind-nova input,
+.ind-nova input:not([type='radio']),
 .ind-nova textarea,
 .ind-form-corrigir select,
 .ind-form-corrigir input,

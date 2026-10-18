@@ -21,10 +21,13 @@
 //   node scripts/dev/conferir-letra.mjs --base http://localhost:5170 --tarefa base --semear
 //   node scripts/dev/conferir-letra.mjs --base http://localhost:5171 --tarefa g1 --grupo G1
 //   node scripts/dev/conferir-letra.mjs ... --telas entrar,mural --larguras 360 --fontes 32
-// Opções: --grupo comum|G1|G2|G3 (só as telas do grupo; repetível com vírgula), --telas <nomes>,
+// Opções: --grupo comum|G1|G2|G3|indicacoes (só as telas do grupo; repetível com vírgula), --telas <nomes>,
 // --larguras 360,1280[,1366x768], --fontes 16,24,32, --temas claro[,escuro], --saida <pasta>,
-// --semear (cria, uma vez, os avisos, a enquete, os documentos e os anexos fictícios que as
-// telas usam; os arquivos vão para o bucket de mentira da api-conferencia.py), --listar.
+// --semear (cria, uma vez, os avisos, a enquete, os documentos, os anexos e as indicações fictícias
+// que as telas usam; os arquivos vão para o bucket de mentira da api-conferencia.py), --listar.
+// Rolagem dentro de um elemento (a faixa de categorias das indicações): o que passa da borda dentro
+// de um ancestral com overflow-x auto/scroll que cabe na tela sai de "fora da tela" e vai para
+// "rola dentro" (informativo, não conta). A rolagem da página continua sendo problema.
 // Saída: <saida>/<tela>-<largura>-<fonte>[-escuro].png, resultado.json e resumo.txt
 // (padrão: /tmp/portal-letra-<tarefa>/). Sai com código 1 se houver algum problema.
 import { createRequire } from 'node:module'
@@ -59,7 +62,7 @@ const SENHA = 'mudar123'
 // 1003 é da Comissão, 1101 é um morador comum já ativado.
 // `novo`: uma unidade ainda não ativada (a semente acha a primeira), que entra com a senha
 // inicial e cai na troca obrigatória do primeiro acesso.
-const QUEM = { admin: '1002', morador: '1101', novo: null }
+const QUEM = { admin: '1002', comissao: '1003', morador: '1101', novo: null }
 // O R2 fictício dos links assinados (scripts/dev/api-conferencia.py): o Chrome pede o arquivo
 // nesse endereço (a CSP de produção libera *.r2.cloudflarestorage.com) e a rota abaixo busca o
 // conteúdo no bucket de mentira da API.
@@ -154,6 +157,15 @@ const TELAS = [
   },
   { nome: 'ficha-unidade', grupo: 'G3', quem: 'admin', caminho: '/unidades/1101' },
   { nome: 'historico', grupo: 'G3', quem: 'admin', caminho: '/historico' },
+  // Indicações de serviços (spec de 18/10/2026). `{indicacao}`: o primeiro prestador da semente,
+  // com nome longo, um "não recomendo" e um aviso da Comissão.
+  { nome: 'indicacoes', grupo: 'indicacoes', quem: 'morador', caminho: '/indicacoes' },
+  { nome: 'indicacao', grupo: 'indicacoes', quem: 'morador', caminho: '/indicacoes/{indicacao}' },
+  // O formulário da opinião aberto (o 1101 ainda não opinou no primeiro prestador).
+  { nome: 'indicacao-opinar', grupo: 'indicacoes', quem: 'morador', caminho: '/indicacoes/{indicacao}?opinar=1' },
+  { nome: 'nova-indicacao', grupo: 'indicacoes', quem: 'morador', caminho: '/indicacoes/nova' },
+  { nome: 'indicacao-gestao', grupo: 'indicacoes', quem: 'admin', caminho: '/indicacoes/{indicacao}' },
+  { nome: 'categorias-servico', grupo: 'indicacoes', quem: 'admin', caminho: '/indicacoes/categorias' },
 ]
 
 if (args.includes('--listar')) {
@@ -274,6 +286,27 @@ function fotoPng(largura, altura, cores) {
     pedaco('IEND', Buffer.alloc(0)),
   ])
 }
+// Indicações (idempotentes pelo telefone: o 409 devolve o id do que já existe).
+const INDICACOES = [
+  {
+    categoria: 'Móveis planejados',
+    nome: 'Marcenaria e Móveis Planejados Irmãos Albuquerque de Paulista',
+    telefone: '81999990101',
+    instagram: '@marcenaria.exemplo',
+    recomenda: true,
+    comentario: 'Fizeram a cozinha e os armários dos quartos. Pontuais e caprichosos, entregaram no prazo combinado.',
+  },
+  {
+    categoria: 'Eletricista',
+    nome: 'Fios & Cia Instalações',
+    telefone: '8133330102',
+    recomenda: true,
+    comentario: ('Instalou o quadro de distribuição e os pontos de tomada da sala e da varanda. ' +
+      'Explicou tudo com calma, deixou o serviço limpo e voltou para conferir a ligação do chuveiro. ').repeat(4).slice(0, 500),
+  },
+  { categoria: 'Diarista', nome: 'Limpeza Pós-Obra Exemplo', telefone: '81999990103', recomenda: false, comentario: null },
+]
+
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n')
 
 async function semente(semear) {
@@ -393,12 +426,51 @@ async function semente(semear) {
         'documento público',
       )
     }
+    // Indicações: três prestadores do admin; a Comissão dá um "não recomendo" e avisa a gestão
+    // no primeiro.
+    const categorias = (await (await api('GET', '/indicacoes/categorias')).json()).itens
+    for (const i of INDICACOES) {
+      const r = await api('POST', '/indicacoes', {
+        categoria_id: categorias.find((c) => c.nome === i.categoria).id,
+        nome: i.nome,
+        telefone: i.telefone,
+        instagram: i.instagram ?? null,
+        recomenda: i.recomenda,
+        comentario: i.comentario,
+      })
+      if (!r.ok() && r.status() !== 409) throw new Error(`semear indicação: ${r.status()} ${await r.text()}`)
+    }
     // Um voto (do admin) para o resultado ter barra.
     const id = (await enquetes()).find((e) => e.pergunta === PERGUNTA).id
     const aberta = await (await api('GET', `/enquetes/${id}`)).json()
     if (!aberta.ja_votou) await api('PUT', `/enquetes/${id}/voto`, { opcoes: [aberta.opcoes[0].id] })
   }
+  const indicacoes = (await (await api('GET', '/indicacoes')).json()).itens
+  const indicacao = indicacoes.find((i) => i.nome === INDICACOES[0].nome)?.id
+  if (semear && indicacao) {
+    await c.request.post(`${BASE}/api/acesso/sair`, { headers: { 'X-Portal': '1' } })
+    await entrar(c, QUEM.comissao)
+    const aberto = await (await api('GET', `/indicacoes/${indicacao}`)).json()
+    if (!aberto.minha_opiniao) {
+      await exigirOk(
+        await api('PUT', `/indicacoes/${indicacao}/opiniao`, {
+          recomenda: false,
+          comentario: 'Atrasou duas semanas a entrega dos armários.',
+        }),
+        'opinião da Comissão',
+      )
+    }
+    if (!aberto.ja_avisei) {
+      await exigirOk(
+        await api('POST', `/indicacoes/${indicacao}/aviso`, { motivo: 'O número do WhatsApp não atende.' }),
+        'aviso da Comissão',
+      )
+    }
+    await c.request.post(`${BASE}/api/acesso/sair`, { headers: { 'X-Portal': '1' } })
+    await entrar(c, QUEM.admin)
+  }
   const ids = {
+    indicacao,
     fixado: (await avisos()).find((a) => a.titulo === TITULO_FIXADO)?.id,
     aviso: (await avisos()).find((a) => a.titulo === TITULO_AVISO)?.id,
     enquete: (await enquetes()).find((e) => e.pergunta === PERGUNTA)?.id,
@@ -435,11 +507,22 @@ function medir() {
   const base = janela ?? document.body
   const todos = [...base.querySelectorAll('*')].filter(visivel)
 
-  const foraDaTela = todos
+  // Rola dentro: o elemento passa da borda, mas dentro de um ancestral com rolagem lateral
+  // própria (overflow-x auto/scroll) que cabe na tela. A pessoa rola a faixa, não a página.
+  const rolaDentro = (el) => {
+    for (let pai = el.parentElement; pai && pai !== document.body; pai = pai.parentElement) {
+      const ox = getComputedStyle(pai).overflowX
+      if (ox === 'auto' || ox === 'scroll') return pai.getBoundingClientRect().right <= largura + 1
+    }
+    return false
+  }
+  const vazadosDaTela = todos
     .filter((el) => el.getBoundingClientRect().right > largura + 1)
     // Só o mais externo de cada galho: o filho de quem já vazou repete a mesma notícia.
     .filter((el, _, vazados) => !vazados.some((outro) => outro !== el && outro.contains(el)))
-    .map((el) => `${descrever(el)} (direita ${Math.round(el.getBoundingClientRect().right)} > ${largura})`)
+  const fora = (el) => `${descrever(el)} (direita ${Math.round(el.getBoundingClientRect().right)} > ${largura})`
+  const foraDaTela = vazadosDaTela.filter((el) => !rolaDentro(el)).map(fora)
+  const rolamDentro = vazadosDaTela.filter(rolaDentro).map(fora)
 
   // Quem empurra a página quando nada visível passa da borda (ex.: um rádio invisível largo):
   // os elementos mais internos cujo conteúdo é mais largo que eles.
@@ -653,6 +736,7 @@ function medir() {
     rolagemLateral: raiz.scrollWidth > raiz.clientWidth,
     larguraDaPagina: raiz.scrollWidth,
     foraDaTela,
+    rolamDentro,
     transbordam,
     cortados,
     pequenos,
@@ -778,6 +862,7 @@ for (const r of resultados) {
     ...ate6('ícone encolhido', r.encolhidos),
     ...ate6('palavra quebrada', r.quebradas),
     ...ate6('barra', r.naBarra ?? []),
+    ...ate6('rola dentro (não conta)', r.rolamDentro ?? []),
     ...ate6('resumido de propósito (não conta)', r.resumidos),
     ...ate6('hifenizada (não conta)', r.hifenizadas ?? []),
     ...ate6('erro JS', r.errosJs),

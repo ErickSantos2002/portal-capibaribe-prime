@@ -61,6 +61,7 @@ export function PaginaCategorias() {
         <label htmlFor="ind-categoria-nova">Categoria nova</label>
         <input
           id="ind-categoria-nova"
+          type="text"
           value={nova}
           onChange={(e) => setNova(e.target.value)}
           maxLength={LIMITE_CATEGORIA}
@@ -131,6 +132,7 @@ function ItemCategoria({ categoria, recarregar }: { categoria: CategoriaServico;
         <label htmlFor={id}>Novo nome de {categoria.nome}</label>
         <input
           id={id}
+          type="text"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           maxLength={LIMITE_CATEGORIA}

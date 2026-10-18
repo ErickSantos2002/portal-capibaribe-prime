@@ -75,6 +75,7 @@ export function CamposDoPrestador({ id, dados, mudar, erros, depoisDoNome }: Pro
       <label htmlFor={`${id}-nome`}>Nome do prestador ou da empresa</label>
       <input
         id={`${id}-nome`}
+        type="text"
         value={dados.nome}
         onChange={(e) => mudar('nome', e.target.value)}
         maxLength={LIMITE_NOME}
@@ -107,6 +108,7 @@ export function CamposDoPrestador({ id, dados, mudar, erros, depoisDoNome }: Pro
       <label htmlFor={`${id}-instagram`}>Instagram (opcional)</label>
       <input
         id={`${id}-instagram`}
+        type="text"
         value={dados.instagram}
         onChange={(e) => mudar('instagram', e.target.value)}
         maxLength={31}
