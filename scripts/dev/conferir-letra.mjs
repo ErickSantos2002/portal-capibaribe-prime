@@ -21,7 +21,7 @@
 //   node scripts/dev/conferir-letra.mjs --base http://localhost:5170 --tarefa base --semear
 //   node scripts/dev/conferir-letra.mjs --base http://localhost:5171 --tarefa g1 --grupo G1
 //   node scripts/dev/conferir-letra.mjs ... --telas entrar,mural --larguras 360 --fontes 32
-// Opções: --grupo comum|G1|G2|G3|indicacoes (só as telas do grupo; repetível com vírgula), --telas <nomes>,
+// Opções: --grupo comum|G1|G2|G3|indicacoes|classificados (só as telas do grupo; repetível com vírgula), --telas <nomes>,
 // --larguras 360,1280[,1366x768], --fontes 16,24,32, --temas claro[,escuro], --saida <pasta>,
 // --semear (cria, uma vez, os avisos, a enquete, os documentos, os anexos e as indicações fictícias
 // que as telas usam; os arquivos vão para o bucket de mentira da api-conferencia.py), --listar.
@@ -166,6 +166,18 @@ const TELAS = [
   { nome: 'nova-indicacao', grupo: 'indicacoes', quem: 'morador', caminho: '/indicacoes/nova' },
   { nome: 'indicacao-gestao', grupo: 'indicacoes', quem: 'admin', caminho: '/indicacoes/{indicacao}' },
   { nome: 'categorias-servico', grupo: 'indicacoes', quem: 'admin', caminho: '/indicacoes/categorias' },
+  // Classificados entre vizinhos (spec de 20/10/2026). `{classificado}`: o primeiro anúncio da
+  // semente (do admin), com título longo, 3 fotos e um aviso da Comissão.
+  { nome: 'classificados', grupo: 'classificados', quem: 'morador', caminho: '/classificados' },
+  { nome: 'classificado', grupo: 'classificados', quem: 'morador', caminho: '/classificados/{classificado}' },
+  { nome: 'novo-classificado', grupo: 'classificados', quem: 'morador', caminho: '/classificados/novo' },
+  // O dono: "Meus anúncios" (com um encerrado) e o próprio anúncio, com as ações.
+  { nome: 'meus-classificados', grupo: 'classificados', quem: 'admin', caminho: '/classificados/meus' },
+  { nome: 'classificado-dono', grupo: 'classificados', quem: 'admin', caminho: '/classificados/{classificado}' },
+  { nome: 'classificado-editar', grupo: 'classificados', quem: 'admin', caminho: '/classificados/{classificado}/editar' },
+  // A gestão vendo o anúncio de outra unidade (o da Comissão), com o aviso do admin.
+  { nome: 'classificado-gestao', grupo: 'classificados', quem: 'admin', caminho: '/classificados/{classificado_comissao}' },
+  { nome: 'categorias-classificado', grupo: 'classificados', quem: 'admin', caminho: '/classificados/categorias' },
 ]
 
 if (args.includes('--listar')) {
@@ -250,6 +262,7 @@ const PERGUNTA = 'Qual horário fica melhor para a próxima assembleia geral ext
 const TITULO_ANEXOS = 'Fotos da concretagem do Bloco 3 e o relatório da fiscalização'
 const TITULO_DOC = 'Relatório mensal de acompanhamento da obra pela Comissão de Representantes'
 const TITULO_DOC_PUBLICO = 'Memorial descritivo do empreendimento e especificações das áreas comuns'
+const CLASSIFICADO_LONGO = 'Sobra de porcelanato 60x60 acetinado cinza claro, 12 caixas fechadas e argamassa'
 
 // Uma "foto" PNG de verdade (faixas de cor), sem arquivo no repositório.
 function fotoPng(largura, altura, cores) {
@@ -469,7 +482,115 @@ async function semente(semear) {
     await c.request.post(`${BASE}/api/acesso/sair`, { headers: { 'X-Portal': '1' } })
     await entrar(c, QUEM.admin)
   }
+  // Classificados (idempotentes pelo título, em "Meus anúncios" de quem anuncia).
+  const fotoDoClassificado = async (cores) => {
+    const png = fotoPng(800, 600, cores)
+    const pedido = await exigirOk(
+      await api('POST', '/classificados/fotos', { tipo: 'image/png', tamanho_bytes: png.length }),
+      'foto de classificado',
+    )
+    await exigirOk(
+      await c.request.put(NO_BUCKET(pedido.url), { headers: { 'Content-Type': 'image/png' }, data: png }),
+      'mandar a foto ao bucket',
+    )
+    await exigirOk(await api('POST', `/classificados/fotos/${pedido.foto_id}/confirmar`), 'confirmar a foto')
+    return pedido.foto_id
+  }
+  const meusClassificados = async () => (await (await api('GET', '/classificados/meus')).json()).itens
+  const categoriaDoClassificado = async (nome) =>
+    (await (await api('GET', '/classificados/categorias')).json()).itens.find((x) => x.nome === nome).id
+  const anunciar = async (dados, fotos = []) => {
+    if ((await meusClassificados()).some((a) => a.titulo === dados.titulo)) return
+    const ids = []
+    for (const cores of fotos) ids.push(await fotoDoClassificado(cores))
+    await exigirOk(
+      await api('POST', '/classificados', {
+        ...dados,
+        categoria_id: await categoriaDoClassificado(dados.categoria_id),
+        fotos: ids,
+      }),
+      `anúncio ${dados.titulo}`,
+    )
+  }
+  if (semear) {
+    await anunciar(
+      {
+        tipo: 'venda',
+        categoria_id: 'Material de obra e acabamento',
+        titulo: CLASSIFICADO_LONGO,
+        descricao:
+          'Sobraram 12 caixas fechadas do porcelanato do apartamento, mais 3 sacos de argamassa e o rejunte da mesma cor.\nRetirar no Bloco 1, de noite ou no fim de semana. ' +
+          'Dá para levar só uma parte, se preferir. '.repeat(10),
+        preco_centavos: 125050,
+        contato: '81999990201',
+      },
+      [
+        [[176, 190, 197], [207, 216, 220], [144, 164, 174]],
+        [[121, 85, 72], [161, 136, 127], [93, 64, 55]],
+        [[255, 213, 79], [255, 224, 130], [255, 193, 7]],
+      ],
+    )
+    await anunciar({
+      tipo: 'venda',
+      categoria_id: 'Eletrodomésticos',
+      titulo: 'Geladeira frost free 400 litros',
+      descricao: null,
+      preco_centavos: null,
+      contato: '8133330202',
+    })
+    await anunciar({
+      tipo: 'troca',
+      categoria_id: 'Infantil',
+      titulo: 'Berço de madeira com colchão',
+      descricao: 'Troco por um cercadinho.',
+      preco_centavos: null,
+      contato: '81999990201',
+    })
+    const berco = (await meusClassificados()).find((a) => a.titulo === 'Berço de madeira com colchão')
+    if (berco && berco.situacao !== 'encerrado') {
+      await exigirOk(await api('POST', `/classificados/${berco.id}/encerrar`, { motivo: 'troquei' }), 'encerrar')
+    }
+  }
+  const classificado = (await meusClassificados()).find((a) => a.titulo === CLASSIFICADO_LONGO)?.id
+  if (semear && classificado) {
+    await c.request.post(`${BASE}/api/acesso/sair`, { headers: { 'X-Portal': '1' } })
+    await entrar(c, QUEM.comissao)
+    await anunciar(
+      {
+        tipo: 'doacao',
+        categoria_id: 'Móveis',
+        titulo: 'Cadeira de escritório',
+        descricao: 'Funciona, só o encosto está gasto.',
+        preco_centavos: null,
+        contato: '81999990203',
+      },
+      [[[69, 90, 100], [96, 125, 139], [38, 50, 56]]],
+    )
+    const aberto = await (await api('GET', `/classificados/${classificado}`)).json()
+    if (!aberto.ja_avisei) {
+      await exigirOk(
+        await api('POST', `/classificados/${classificado}/aviso`, { motivo: 'O preço parece errado.' }),
+        'aviso da Comissão',
+      )
+    }
+    await c.request.post(`${BASE}/api/acesso/sair`, { headers: { 'X-Portal': '1' } })
+    await entrar(c, QUEM.admin)
+  }
+  const classificadoDaComissao = (await (await api('GET', '/classificados')).json()).itens.find(
+    (a) => a.titulo === 'Cadeira de escritório',
+  )?.id
+  if (semear && classificadoDaComissao) {
+    const aberto = await (await api('GET', `/classificados/${classificadoDaComissao}`)).json()
+    if (!aberto.ja_avisei) {
+      await exigirOk(
+        await api('POST', `/classificados/${classificadoDaComissao}/aviso`, { motivo: 'A foto não é do produto.' }),
+        'aviso do admin',
+      )
+    }
+  }
   const ids = {
+    classificado,
+    classificado_comissao: classificadoDaComissao,
     indicacao,
     fixado: (await avisos()).find((a) => a.titulo === TITULO_FIXADO)?.id,
     aviso: (await avisos()).find((a) => a.titulo === TITULO_AVISO)?.id,

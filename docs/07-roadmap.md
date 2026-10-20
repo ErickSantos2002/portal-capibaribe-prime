@@ -261,6 +261,22 @@ plano: `superpowers/plans/2026-10-18-navegacao-bola.md`; escolhas: `superpowers/
 código e de UX e 12 correções com teste, 0 erros depois do deploy. O Erick testou no celular
 dele: a bola abre e fecha a folha certinho, tudo funcionando.
 
+### Fora dos marcos · Classificados entre vizinhos (1.9.0)
+
+Segunda opção da votação do grupo em 18/10/2026. Moradores anunciam para vender, trocar ou doar
+(a sobra de piso, o móvel que não coube, o eletrodoméstico trocado), com até 4 fotos e o WhatsApp
+escolhido para cada anúncio; quem se interessa chama com a mensagem pronta. O anúncio vence em 30
+dias e sai sozinho (renovável), o dono marca reservado e encerra, e uma faxina diária (Vercel Cron)
+apaga de verdade o que acabou, fotos inclusive (pasta `classificados/` sem trava, ADR-0012). "Avisar
+a gestão" e a gestão pode esconder, como nas Indicações. Fica no Menu, grupo "Dia a dia". Spec:
+`superpowers/specs/2026-10-20-classificados-design.md`; plano:
+`superpowers/plans/2026-10-20-classificados.md`; escolhas: `superpowers/duvidas-classificados.md`.
+
+**Em construção** (branch `classificados/construcao`, sem deploy): migração 0011, API, telas,
+conferência visual headless e versão 1.9.0 prontas. **Antes do push:** a 0011 no Neon, o
+`CRON_SECRET` na Vercel e a conferência, no bucket real, de que `classificados/` não está travada.
+Seguem a revisão independente de código e de UX e as perguntas ao Erick.
+
 ### Fora dos marcos · Indicações de serviços (1.8.0)
 
 Escolhida pelo grupo na votação de 18/10/2026 (a opção mais pedida). Moradores indicam prestadores

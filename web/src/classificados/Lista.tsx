@@ -139,7 +139,8 @@ export function ListaClassificados() {
           {filtrando && lista && carga.situacao === 'pronta' ? encontrados(lista.itens.length) : ''}
         </p>
       </div>
-      <div className="cla-tipos" role="group" aria-label="O que você procura">
+      {/* A mesma faixa das categorias: rola dentro dela, também com a letra grande. */}
+      <div className="faixa-categorias cla-tipos" role="group" aria-label="O que você procura">
         {TIPOS.map((t) => (
           <button
             key={t.texto}

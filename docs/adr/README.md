@@ -17,3 +17,4 @@ substitui.
 | [0009](0009-backup-bucket-papel-e-chave.md) | Backup em bucket próprio, papel só de leitura e chave de restauração no Actions (complementa 0007 e 0004) |
 | [0010](0010-envio-em-segundo-plano.md) | Notificações depois da resposta, com `wait_until` e caixa de saída no banco (complementa 0002 e 0006) |
 | [0011](0011-arquivos-protegidos-contra-perda.md) | Arquivos protegidos contra perda: trava no bucket (`arquivos/` nunca apagado) e cópia diária cifrada (plano B desde 12/10/2026: na pasta `arquivos/` do bucket de backups, travada); link de leitura de 1 hora (complementa 0004, 0007 e 0009) |
+| [0012](0012-fotos-descartaveis-dos-classificados.md) | Fotos dos classificados descartáveis: pasta `classificados/` sem trava e fora da cópia, tabela própria, um único "apagar" que só aceita essa pasta, faxina diária pelo Vercel Cron (complementa 0004 e 0011) |
