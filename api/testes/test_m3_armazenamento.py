@@ -169,7 +169,8 @@ def test_chave_fora_do_formato_nunca_vira_caminho(arm, chave):
 
 
 def test_nao_existe_jeito_de_apagar_o_publicado():
-    # A interface só tem `descartar_envio` (pasta envios/). ADR-0011.
+    # A interface só apaga em `envios/` (`descartar_envio`, ADR-0011) e em `classificados/`
+    # (`apagar_classificado`, que recusa `arquivos/`: test_classificados_fotos.py, ADR-0012).
     publicos = {n for n in dir(ArmazenamentoS3) if not n.startswith("_")}
     assert publicos == {
         "url_de_envio",
@@ -178,6 +179,9 @@ def test_nao_existe_jeito_de_apagar_o_publicado():
         "inicio_do_envio",
         "publicar",
         "descartar_envio",
+        "publicar_foto",
+        "url_da_foto",
+        "apagar_classificado",
     }
 
 

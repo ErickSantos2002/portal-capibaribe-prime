@@ -9,8 +9,11 @@ uma URL assinada, curta, e confere depois. Duas pastas no bucket:
   assinados). Pode ser apagado; o R2 apaga sozinho o que ficar mais de 1 dia (regra de ciclo
   de vida), então apagar aqui é só faxina: se falhar, nada quebra.
 - `arquivos/<chave>`: o que foi conferido e publicado. **Nunca apagado nem sobrescrito**: o R2
-  tem uma trava nesta pasta, e esta camada nem tem como pedir isso (só recebe a chave, e o único
-  "apagar" é o do envio).
+  tem uma trava nesta pasta, e esta camada nem tem como pedir isso (só recebe a chave, e os
+  únicos "apagar" são o do envio e o dos classificados).
+- `classificados/<chave>` (ADR-0012): as fotos dos classificados, descartáveis. **Sem trava**:
+  apagadas de verdade quando o anúncio acaba. `apagar_classificado` só aceita esta pasta (recusa
+  `arquivos/` e qualquer outra coisa), e as fotos não entram na cópia diária.
 
 `ArmazenamentoS3` fala com o R2 (API do S3, `boto3`, como o `scripts/backup/s3.py`);
 `ArmazenamentoFalso` guarda em memória, para os testes. A rota recebe um ou outro por
@@ -40,6 +43,7 @@ VALIDADE_ENVIO = timedelta(minutes=10)
 VALIDADE_LEITURA = timedelta(hours=1)
 PASTA_ENVIOS = "envios/"
 PASTA_ARQUIVOS = "arquivos/"
+PASTA_CLASSIFICADOS = "classificados/"
 # O navegador guarda o arquivo pelo tempo do link (o conteúdo em `arquivos/` nunca muda).
 CACHE_DA_LEITURA = f"private, max-age={int(VALIDADE_LEITURA.total_seconds())}"
 # Extensões de cada tipo aceito; a primeira é a que se acrescenta quando falta.
@@ -50,6 +54,7 @@ EXTENSOES = {
     "image/webp": (".webp",),
 }
 _CHAVE = re.compile(r"[0-9a-f]{32}")
+_FOTO_DE_CLASSIFICADO = re.compile(r"classificados/[0-9a-f]{32}")
 _FORA_DO_ASCII_SEGURO = re.compile(r"[^A-Za-z0-9 ._()-]")
 
 
@@ -103,6 +108,26 @@ class Armazenamento(Protocol):
 
     # Quem chama apaga o envio depois de publicar (e não falha se não conseguir).
     def descartar_envio(self, chave: str) -> None: ...
+
+    # Classificados (ADR-0012): a foto conferida vai para `classificados/<chave>`, sem trava.
+    def publicar_foto(self, chave: str, tipo: str, *, etag: str) -> None: ...
+
+    def url_da_foto(self, chave: str, *, tipo: str) -> UrlAssinada: ...
+
+    # O único "apagar" fora de `envios/`: só `classificados/<chave>` (ValueError no resto).
+    def apagar_classificado(self, caminho: str) -> None: ...
+
+
+def caminho_da_foto(chave: str) -> str:
+    """`classificados/<chave>`: o que `apagar_classificado` aceita."""
+    return PASTA_CLASSIFICADOS + _conferir(chave)
+
+
+def _conferir_classificado(caminho: str) -> str:
+    """Só `classificados/<32 hexadecimais>`: nada em `arquivos/`, `envios/` nem caminho torto."""
+    if not _FOTO_DE_CLASSIFICADO.fullmatch(caminho):
+        raise ValueError("só se apaga foto em classificados/<chave>")
+    return caminho
 
 
 def _conferir(chave: str) -> str:
@@ -258,7 +283,31 @@ class ArmazenamentoS3:
             return resposta["Body"].read(n)
 
     def publicar(self, chave: str, tipo: str, *, etag: str) -> None:
-        destino = PASTA_ARQUIVOS + _conferir(chave)
+        self._copiar_do_envio(PASTA_ARQUIVOS + _conferir(chave), chave, tipo, etag=etag)
+
+    def publicar_foto(self, chave: str, tipo: str, *, etag: str) -> None:
+        self._copiar_do_envio(caminho_da_foto(chave), chave, tipo, etag=etag)
+
+    def url_da_foto(self, chave: str, *, tipo: str) -> UrlAssinada:
+        url = self.cliente.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": self._bucket,
+                "Key": caminho_da_foto(chave),
+                "ResponseContentType": tipo,
+                "ResponseCacheControl": CACHE_DA_LEITURA,
+            },
+            ExpiresIn=int(VALIDADE_LEITURA.total_seconds()),
+        )
+        return UrlAssinada(url=url, expira_em=_agora() + VALIDADE_LEITURA)
+
+    def apagar_classificado(self, caminho: str) -> None:
+        caminho = _conferir_classificado(caminho)
+        # Apagar o que não existe não é erro no S3: a faxina pode tentar de novo.
+        with self._falando_com_o_bucket(caminho):
+            self.cliente.delete_object(Bucket=self._bucket, Key=caminho)
+
+    def _copiar_do_envio(self, destino: str, chave: str, tipo: str, *, etag: str) -> None:
         # Idempotente: uma tentativa anterior pode ter copiado e falhado depois (a linha ficou
         # pendente). Copiar por cima de arquivos/ travado falharia sempre no R2.
         publicado = self._cabecalho(destino)
@@ -345,6 +394,21 @@ class ArmazenamentoFalso:
 
     def descartar_envio(self, chave: str) -> None:
         self.objetos.pop(PASTA_ENVIOS + _conferir(chave), None)
+
+    def publicar_foto(self, chave: str, tipo: str, *, etag: str) -> None:
+        destino = caminho_da_foto(chave)
+        if destino in self.objetos:
+            if _etag_de(self.objetos[destino][0]) == etag:
+                return
+            raise ObjetoTravado(destino)
+        self.objetos[destino] = (self._envio(chave, etag), tipo)
+
+    def url_da_foto(self, chave: str, *, tipo: str) -> UrlAssinada:
+        url = f"{self.BASE}/{caminho_da_foto(chave)}?tipo={quote(tipo, safe='')}"
+        return UrlAssinada(url=url, expira_em=_agora() + VALIDADE_LEITURA)
+
+    def apagar_classificado(self, caminho: str) -> None:
+        self.objetos.pop(_conferir_classificado(caminho), None)
 
 
 @cache
