@@ -94,6 +94,13 @@ de vida em `envios/`) e a cópia cifrada no bucket de backups: `docs/superpowers
 [ADR-0011](docs/adr/0011-arquivos-protegidos-contra-perda.md). Um S3 falso para desenvolver:
 `uv run --with 'moto[server]' moto_server -p 9000` (exemplo comentado em `api/.env.example`).
 
+As fotos dos classificados (1.9.0) usam o mesmo bucket, na pasta `classificados/`, **sem trava e
+fora da cópia diária**, e são apagadas de verdade quando o anúncio acaba
+([ADR-0012](docs/adr/0012-fotos-descartaveis-dos-classificados.md)). A faxina diária roda pelo
+Vercel Cron (`crons` no `vercel.json`, `GET /api/classificados/faxina`) e só funciona com a
+variável `CRON_SECRET` na Vercel; sem ela, a rota responde 503 e os anúncios vencidos só saem da
+lista.
+
 ## Versões
 
 A versão do Portal mora num lugar só, o `version` de `web/package.json`; o Vite a injeta no app
