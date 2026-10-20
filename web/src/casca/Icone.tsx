@@ -12,6 +12,9 @@ const DESENHOS = {
   // Indicações: polegar para cima (spec das indicações, seção 3.4).
   indicacoes:
     '<path d="M7.5 10.5V20H4v-9.5z"/><path d="M7.5 10.5 11 3.5a2 2 0 0 1 2.6 2.3L12.8 9.5H18a2 2 0 0 1 2 2.4l-1.3 6.4A2 2 0 0 1 16.7 20H7.5"/>',
+  // Classificados: uma etiqueta de preço (spec dos classificados, seção 3.4).
+  classificados:
+    '<path d="M3.5 4.5v6.3a1 1 0 0 0 .3.7l8.7 8.7a1 1 0 0 0 1.4 0l6.3-6.3a1 1 0 0 0 0-1.4L11.5 3.8a1 1 0 0 0-.7-.3H4.5a1 1 0 0 0-1 1z"/><circle cx="8" cy="8" r="1.5"/>',
   casa: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/>',
   painel:
     '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',

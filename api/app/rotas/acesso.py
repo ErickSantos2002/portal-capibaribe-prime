@@ -27,7 +27,8 @@ from app.seguranca.dependencias import (
 )
 from app.seguranca.ip import hash_do_ip, ip_do_cliente
 from app.seguranca.sessoes import apagar_cookie, gravar_cookie
-from app.servicos import acesso
+from app.servicos import acesso, classificados_fotos
+from app.servicos.armazenamento import Armazenado
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(dependencies=[Depends(exige_cabecalho_portal)])
@@ -111,13 +112,21 @@ def desconectar_aparelho(
 
 @rotas.post("/api/minha-unidade/apagar-dados", status_code=204)
 def apagar_dados(
-    dados: ApagarDados, logado: UnidadeLogada, request: Request, resposta: Response, db: Banco
+    dados: ApagarDados,
+    logado: UnidadeLogada,
+    request: Request,
+    resposta: Response,
+    db: Banco,
+    bucket: Armazenado,
 ) -> None:
     try:
-        acesso.apagar_dados(db, logado, dados.senha, hash_do_ip(ip_do_cliente(request)))
+        fotos = acesso.apagar_dados(db, logado, dados.senha, hash_do_ip(ip_do_cliente(request)))
     except acesso.ErroEntrar:
         # Senha errada conta para o bloqueio daquele IP (revisão do M1, C1).
         db.commit()
         raise
     db.commit()
+    # As fotos dos classificados saem do bucket de verdade (ADR-0012); o que falhar, a faxina
+    # termina.
+    classificados_fotos.varrer(db, bucket, fotos, apagar_linhas=True)
     apagar_cookie(resposta)

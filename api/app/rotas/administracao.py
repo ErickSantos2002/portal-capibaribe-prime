@@ -30,6 +30,8 @@ from app.esquemas.administracao import (
 from app.esquemas.comum import IdBanco
 from app.seguranca.dependencias import Admin, Banco, Gestao, exige_cabecalho_portal
 from app.servicos import administracao as servico
+from app.servicos import classificados_fotos
+from app.servicos.armazenamento import Armazenado
 
 # Toda alteração exige `X-Portal: 1` (CSRF, ADR-0005).
 rotas = APIRouter(prefix="/api/admin", dependencies=[Depends(exige_cabecalho_portal)])
@@ -66,10 +68,14 @@ def unidade(login: str, _: Gestao, db: Banco) -> UnidadeAdmin:
 
 
 @rotas.post("/unidades/{login}/resetar")
-def resetar(login: str, _confirmacao: ConfirmarReset, logado: Admin, db: Banco) -> UnidadeAdmin:
+def resetar(
+    login: str, _confirmacao: ConfirmarReset, logado: Admin, db: Banco, bucket: Armazenado
+) -> UnidadeAdmin:
     with _um_de_cada_vez(db):
-        servico.resetar(db, login, logado.unidade_id)
+        fotos = servico.resetar(db, login, logado.unidade_id)
         db.commit()
+    # As fotos dos classificados saem do bucket de verdade (ADR-0012).
+    classificados_fotos.varrer(db, bucket, fotos, apagar_linhas=True)
     return servico.ficha(db, login)
 
 

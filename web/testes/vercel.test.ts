@@ -27,3 +27,12 @@ test('/api vai para a FastAPI antes do resto ir para o front', () => {
   ])
   assert.deepEqual(config.regions, ['gru1'])
 })
+
+test('a faxina dos classificados roda uma vez por dia, de madrugada em Recife (ADR-0012)', () => {
+  // Plano Hobby: no máximo 1 vez por dia, e a Vercel escolhe o minuto dentro da hora. 07:00 UTC
+  // é 04:00 em Recife. A rota está em api/app/rotas/classificados_gestao.py e exige o CRON_SECRET.
+  assert.deepEqual(config.crons, [{ path: '/api/classificados/faxina', schedule: '0 7 * * *' }])
+  const rota = readFileSync(new URL('api/app/rotas/classificados_gestao.py', raiz), 'utf8')
+  assert.match(rota, /@rotas\.get\("\/faxina"/)
+  assert.match(rota, /CRON_SECRET/)
+})

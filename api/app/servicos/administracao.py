@@ -33,7 +33,7 @@ from app.esquemas.comum import UnidadeRef
 from app.modelos import AvisoVersao, Bloco, Historico, Papel, Sessao, Unidade, UnidadePapel
 from app.seguranca.senhas import SENHA_INICIAL, gerar_hash
 from app.seguranca.sessoes import VALIDADE, encerrar_todas
-from app.servicos import indicacoes, tentativas
+from app.servicos import classificados, indicacoes, tentativas
 from app.servicos.historico import Acao, registrar
 
 _LOGIN = re.compile(r"^[1-9][0-7][0-9]{2}$")
@@ -200,10 +200,11 @@ def _entra_no_filtro(situacao: Situacao, ativada: bool, tem_papel: bool) -> bool
 # --- reset (H-08) -----------------------------------------------------------------------------
 
 
-def resetar(db: Session, login: str, admin_id: int) -> None:
+def resetar(db: Session, login: str, admin_id: int) -> list[int]:
     """Volta a unidade ao estado inicial (RF-07). Leituras de aviso e votos ficam. Das
     indicações, saem as opiniões e os avisos da unidade, e os prestadores que ela indicou ficam
-    sem autor (como no "Apagar meus dados").
+    sem autor (como no "Apagar meus dados"). Dos classificados, saem os anúncios, os avisos e as
+    fotos: devolve as ids das fotos, para a rota apagá-las do bucket depois do commit.
 
     Ordem obrigatória: retirar os papéis antes de voltar a unidade a "não ativada" (o banco
     recusa o contrário). Se a unidade é o último admin, nada muda e sobe 409 `ultimo_admin`.
@@ -221,6 +222,7 @@ def resetar(db: Session, login: str, admin_id: int) -> None:
         unidade.receber_avisos_email = True
         tentativas.esquecer_login(db, unidade.login)
         indicacoes.apagar_da_unidade(db, unidade.id)
+        fotos = classificados.apagar_da_unidade(db, unidade.id)
         db.flush()
     except IntegrityError as erro:
         db.rollback()
@@ -238,6 +240,7 @@ def resetar(db: Session, login: str, admin_id: int) -> None:
         entidade_id=unidade.id,
         detalhes={"papeis_retirados": [p.value for p in retirados]},
     )
+    return fotos
 
 
 def _retirar_todos(db: Session, unidade_id: int, admin_id: int) -> list[Papel]:

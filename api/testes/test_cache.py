@@ -19,6 +19,8 @@ SEM_DADO = {
     "/api/avisos/{aviso_id}/anexos/{arquivo_id}/link",
     # Indicações: o prestador 1 não existe neste teste.
     "/api/indicacoes/{prestador_id}",
+    # Classificados: o anúncio 1 não existe neste teste.
+    "/api/classificados/{anuncio_id}",
 }
 # M4: 501 enquanto o épico B não implementa; depois, 200 (a lista) ou 404 (a enquete 1 não
 # existe neste teste). Os épicos não precisam mexer aqui.
@@ -56,6 +58,7 @@ def test_todo_get_da_api_sai_sem_cache(logar):
         "{arquivo_id}": "1",
         "{enquete_id}": "1",
         "{prestador_id}": "1",
+        "{anuncio_id}": "1",
     }
     caminhos = _caminhos_get()
     assert "/api/avisos" in caminhos and "/api/avisos/{aviso_id}" in caminhos
