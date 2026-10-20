@@ -8,7 +8,14 @@ import { Icone } from '../casca/Icone'
 /** Por cima da tela, com o foco em "Continuar escrevendo" (o caminho seguro). Ficar (Esc ou o
  *  botão) devolve o foco ao Voltar do topo, de onde a pessoa quis sair; sem isso, ele caía no
  *  body. */
-export function PerguntaSairSemPublicar({ blocker }: { blocker: Blocker }) {
+export function PerguntaSairSemPublicar({
+  blocker,
+  texto = 'O que você escreveu na indicação vai se perder.',
+}: {
+  blocker: Blocker
+  /** A frase de baixo (os classificados falam do anúncio e das fotos). */
+  texto?: string
+}) {
   const ficar = useRef<HTMLButtonElement>(null)
   const bloqueado = blocker.state === 'blocked'
   useEffect(() => {
@@ -35,7 +42,7 @@ export function PerguntaSairSemPublicar({ blocker }: { blocker: Blocker }) {
       >
         <Icone nome="alerta" tamanho={28} />
         <h2 id="ind-sair-titulo">Sair sem publicar?</h2>
-        <p id="ind-sair-texto">O que você escreveu na indicação vai se perder.</p>
+        <p id="ind-sair-texto">{texto}</p>
         <button ref={ficar} type="button" className="botao" onClick={continuar}>
           Continuar escrevendo
         </button>

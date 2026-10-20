@@ -55,21 +55,24 @@ describe('abrir', () => {
     expect((await bola()).getAttribute('aria-expanded')).toBe('true')
   })
 
-  it('o admin vê os grupos Dia a dia e Gestão, e 6 lugares com nome e frase', async () => {
+  it('o admin vê os grupos Dia a dia e Gestão, e 7 lugares com nome e frase', async () => {
     api(eu(['admin']))
     abrir('/avisos')
     const folha = await abrirFolha()
     const grupos = within(folha).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
     expect(grupos).toEqual(['Dia a dia', 'Gestão'])
     const links = within(folha).getAllByRole('link')
-    expect(links).toHaveLength(6)
+    expect(links).toHaveLength(7)
     expect(links[1].textContent).toContain('Enquetes')
     expect(links[1].textContent).toContain('Vote pela sua unidade')
     // Indicações (spec das indicações, seção 3.4): só na folha, entre Documentos e Minha unidade.
     expect(links[3].textContent).toContain('Indicações')
     expect(links[3].textContent).toContain('Serviços que os vizinhos recomendam')
-    expect(links[5].textContent).toContain('Unidades')
-    expect(links[5].textContent).toContain('Quem já entrou e os contatos')
+    // Classificados (spec dos classificados, seção 3.4): logo depois de Indicações.
+    expect(links[4].textContent).toContain('Classificados')
+    expect(links[4].textContent).toContain('Vender, trocar ou doar entre vizinhos')
+    expect(links[6].textContent).toContain('Unidades')
+    expect(links[6].textContent).toContain('Quem já entrou e os contatos')
   })
 
   it('o morador não tem o grupo Gestão', async () => {
@@ -77,7 +80,7 @@ describe('abrir', () => {
     abrir('/avisos')
     const folha = await abrirFolha()
     expect(within(folha).queryByRole('heading', { name: 'Gestão' })).toBeNull()
-    expect(within(folha).getAllByRole('link')).toHaveLength(5)
+    expect(within(folha).getAllByRole("link")).toHaveLength(6)
   })
 
   it('o lugar atual: aria-current, "Você está aqui" e o contador de não lidos', async () => {

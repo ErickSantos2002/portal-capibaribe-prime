@@ -20,8 +20,8 @@ interface PropsConfirmar {
   discreto?: boolean
 }
 
-/** Um botão que pergunta antes: "Esconder de vez" ou "Cancelar". */
-function Confirmar({ id, acao, explicacao, executar, discreto }: PropsConfirmar) {
+/** Um botão que pergunta antes: "Esconder de vez" ou "Cancelar". Também nos classificados. */
+export function Confirmar({ id, acao, explicacao, executar, discreto }: PropsConfirmar) {
   const [aberto, setAberto] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')

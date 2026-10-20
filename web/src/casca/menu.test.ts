@@ -7,8 +7,8 @@ import { agrupados, daBarra, lugarAtual, lugaresDo } from './menu'
 const MORADOR = eu()
 const COMISSAO = eu(['comissao'])
 const ADMIN = eu(['admin'])
-const DIA_A_DIA = ['Avisos', 'Enquetes', 'Documentos', 'Indicações', 'Minha unidade']
-// A barra do celular continua com 4 (Indicações mora só na folha e no menu lateral).
+const DIA_A_DIA = ['Avisos', 'Enquetes', 'Documentos', 'Indicações', 'Classificados', 'Minha unidade']
+// A barra do celular continua com 4 (Indicações e Classificados moram só na folha e no menu lateral).
 const BARRA = ['Avisos', 'Enquetes', 'Documentos', 'Minha unidade']
 
 describe('lugaresDo', () => {
@@ -40,6 +40,17 @@ describe('lugaresDo', () => {
       grupo: 'dia-a-dia',
     })
     expect(indicacoes?.naBarra).toBeUndefined()
+  })
+
+  it('Classificados fica fora da barra, logo depois de Indicações, com a frase', () => {
+    const classificados = lugaresDo(MORADOR).find((l) => l.texto === 'Classificados')
+    expect(classificados).toMatchObject({
+      para: '/classificados',
+      icone: 'classificados',
+      frase: 'Vender, trocar ou doar entre vizinhos',
+      grupo: 'dia-a-dia',
+    })
+    expect(classificados?.naBarra).toBeUndefined()
   })
 
   it('nenhum lugar repete a posição da barra', () => {

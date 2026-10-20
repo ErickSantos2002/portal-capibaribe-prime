@@ -15,9 +15,19 @@ interface Props {
   prestadorId: number
   jaAvisei: boolean
   aoAvisar: () => void
+  /** Outro lugar que usa a mesma confirmação (os classificados): quem manda o aviso e o que a
+   *  gestão vai olhar ("esta indicação", "este anúncio"). */
+  enviar?: (motivo: string | null) => Promise<void>
+  oQue?: string
 }
 
-export function AvisarGestao({ prestadorId, jaAvisei, aoAvisar }: Props) {
+export function AvisarGestao({
+  prestadorId,
+  jaAvisei,
+  aoAvisar,
+  enviar,
+  oQue = 'esta indicação',
+}: Props) {
   const recado = useRecado()
   const [aberto, setAberto] = useState(false)
   // Avisou agora: o texto aparece na hora, sem esperar o prestador recarregar.
@@ -46,7 +56,8 @@ export function AvisarGestao({ prestadorId, jaAvisei, aoAvisar }: Props) {
     setOcupado(true)
     setErro('')
     try {
-      await avisarGestao(prestadorId, { motivo: motivo.trim() ? motivo : null })
+      const escrito = motivo.trim() ? motivo : null
+      await (enviar ? enviar(escrito) : avisarGestao(prestadorId, { motivo: escrito }))
       recado('A gestão foi avisada. Obrigado!')
       setAberto(false)
       setAvisou(true)
@@ -83,7 +94,7 @@ export function AvisarGestao({ prestadorId, jaAvisei, aoAvisar }: Props) {
       <Icone nome="alerta" />
       <div>
         <p id="ind-avisar-titulo">
-          <strong>Avisar a gestão?</strong> A Comissão e a administração vão olhar esta indicação.
+          <strong>Avisar a gestão?</strong> A Comissão e a administração vão olhar {oQue}.
           Elas não veem quem avisou.
         </p>
         {erro && (

@@ -67,6 +67,20 @@ describe('política de privacidade', () => {
     expect(texto).toMatch(/Apagar meus dados.*opiniões/s)
   })
 
+  // Classificados entre vizinhos (spec de 20/10/2026, seção 7).
+  it('fala dos classificados: contato por anúncio, placa sem nome, fotos sem GPS e prazo curto', async () => {
+    apiFalsa({})
+    abrir('/privacidade')
+    await screen.findByRole('heading', { name: 'Política de privacidade' })
+    const texto = document.querySelector('main')?.textContent ?? ''
+    expect(texto).toContain('Classificados')
+    expect(texto).toMatch(/contato que você escolheu/)
+    expect(texto).toMatch(/Classificados, o anúncio aparece com o bloco e o apartamento/)
+    expect(texto).toMatch(/localização \(GPS\)/)
+    expect(texto).toMatch(/encerrado é apagado de vez em 7 dias e o vencido, em 30/)
+    expect(texto).toMatch(/Apagar meus dados.*anúncios dos Classificados/s)
+  })
+
   it('não promete que Minha unidade mostra tudo: as opiniões ficam em cada prestador', async () => {
     // Revisão das indicações: Minha unidade não lista as opiniões.
     apiFalsa({})

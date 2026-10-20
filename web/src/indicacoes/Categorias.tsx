@@ -12,9 +12,31 @@ import './indicacoes.css'
 
 const LIMITE_CATEGORIA = 40
 
+/** De onde vêm as categorias: as indicações ou os classificados (a mesma tela, as mesmas regras). */
+export interface OrigemDasCategorias {
+  titulo: string
+  explicacao: string
+  listar: () => Promise<{ itens: CategoriaServico[] }>
+  criar: (nome: string) => Promise<CategoriaServico>
+  renomear: (id: number, nome: string) => Promise<CategoriaServico>
+}
+
+const DAS_INDICACOES: OrigemDasCategorias = {
+  titulo: 'Categorias das indicações',
+  explicacao:
+    'As categorias aparecem na faixa da lista de indicações e no formulário de indicar alguém. Uma categoria nova entra antes de “Outros”. Categoria não é apagada.',
+  listar: listarCategorias,
+  criar: criarCategoria,
+  renomear: renomearCategoria,
+}
+
 export function PaginaCategorias() {
+  return <PaginaDeCategorias origem={DAS_INDICACOES} />
+}
+
+export function PaginaDeCategorias({ origem }: { origem: OrigemDasCategorias }) {
   const recado = useRecado()
-  const [carga, recarregar] = useCarga(() => listarCategorias(), [])
+  const [carga, recarregar] = useCarga(() => origem.listar(), [origem])
   const [nova, setNova] = useState('')
   const [erro, setErro] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -28,7 +50,7 @@ export function PaginaCategorias() {
     setOcupado(true)
     setErro('')
     try {
-      const criada = await criarCategoria(nova)
+      const criada = await origem.criar(nova)
       recado(`Categoria “${criada.nome}” criada.`)
       setNova('')
       recarregar()
@@ -41,11 +63,8 @@ export function PaginaCategorias() {
   }
 
   return (
-    <Tela titulo="Categorias das indicações" voltar="/unidades">
-      <p className="ajuda">
-        As categorias aparecem na faixa da lista de indicações e no formulário de indicar alguém.
-        Uma categoria nova entra antes de “Outros”. Categoria não é apagada.
-      </p>
+    <Tela titulo={origem.titulo} voltar="/unidades">
+      <p className="ajuda">{origem.explicacao}</p>
       {carga.situacao === 'erro' && !carga.dados ? (
         <FalhaAoCarregar mensagem={carga.erro.mensagem} tentar={recarregar} />
       ) : !carga.dados ? (
@@ -53,7 +72,12 @@ export function PaginaCategorias() {
       ) : (
         <ul className="folha ind-categorias" aria-label="Categorias">
           {carga.dados.itens.map((c) => (
-            <ItemCategoria key={c.id} categoria={c} recarregar={recarregar} />
+            <ItemCategoria
+              key={c.id}
+              categoria={c}
+              recarregar={recarregar}
+              renomear={origem.renomear}
+            />
           ))}
         </ul>
       )}
@@ -83,7 +107,13 @@ export function PaginaCategorias() {
   )
 }
 
-function ItemCategoria({ categoria, recarregar }: { categoria: CategoriaServico; recarregar: () => void }) {
+interface PropsItem {
+  categoria: CategoriaServico
+  recarregar: () => void
+  renomear: OrigemDasCategorias['renomear']
+}
+
+function ItemCategoria({ categoria, recarregar, renomear }: PropsItem) {
   const recado = useRecado()
   const [editando, setEditando] = useState(false)
   const [nome, setNome] = useState(categoria.nome)
@@ -96,7 +126,7 @@ function ItemCategoria({ categoria, recarregar }: { categoria: CategoriaServico;
     setOcupado(true)
     setErro('')
     try {
-      const nova = await renomearCategoria(categoria.id, nome)
+      const nova = await renomear(categoria.id, nome)
       recado(`Categoria renomeada para “${nova.nome}”.`)
       setEditando(false)
       recarregar()

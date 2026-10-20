@@ -336,6 +336,9 @@ Inventário completo da E1. Se um dado não está aqui, o sistema não guarda.
 | Código do IP (HMAC, não o IP) | `entrada_tentativa.ip_hash` (revisão do M1, migração 0003) | Bloquear quem tenta adivinhar a senha de uma unidade | Ninguém (uso técnico) | 15 minutos depois da última tentativa ou do fim do bloqueio |
 | Nome e telefone de prestador indicado (pode ser pessoa física; Instagram opcional) | `prestador` (indicações, migração 0010) | Mostrar aos moradores logados um contato profissional indicado por vizinhos | As unidades logadas | Some da lista quando a gestão esconde o prestador (a pedido dele ou por aviso); o telefone fica guardado para ele não voltar à lista |
 | Opinião sobre prestador (recomenda, comentário) e aviso à gestão | `opiniao_servico` e `aviso_servico` (indicações, migração 0010) | Ajudar os vizinhos a escolher; avisar a gestão de algo errado | A opinião: todas as unidades logadas, com a placa (bloco e apartamento) e sem o nome. O aviso: só a gestão, sem a placa | Em H-06 e H-08; a própria unidade também apaga a opinião. Escondida pela gestão, só sai em H-06 e H-08 |
+| Anúncio dos classificados (tipo, título, descrição, preço) e o contato escolhido para ele (WhatsApp ou telefone) | `anuncio` (classificados, migração 0011) | Vender, trocar ou doar entre vizinhos; quem se interessa chama o dono | As unidades logadas, com a placa (bloco e apartamento) e sem o nome, enquanto o anúncio está aberto e no prazo; vencido, encerrado ou escondido, só o próprio apartamento e a gestão | Apagado de vez pela faxina diária: encerrado há 7 dias, vencido há 30. Também em H-06 e H-08 |
+| Fotos dos anúncios (podem mostrar o interior do apartamento) | `anuncio_foto` (só a chave, o tipo e o tamanho) + bucket de arquivos, pasta `classificados/`, **sem trava e fora da cópia diária** (ADR-0012) | Mostrar o que está sendo anunciado | Quem vê o anúncio | Apagadas de verdade no bucket: ao tirar na edição, com o anúncio na faxina, em H-06 e H-08; a foto enviada e nunca usada, em 1 dia. A linha (sem o conteúdo) fica até 1 dia depois do envio, só para contar no limite do dia |
+| Aviso à gestão sobre um anúncio (motivo opcional) | `aviso_anuncio` (classificados, migração 0011) | Avisar a gestão de algo errado | Só a gestão, sem a placa de quem avisou | Com o anúncio, em H-06 e H-08 |
 | Documentos e anexos enviados (o conteúdo e o nome do arquivo) | `arquivo` (`nome_original`) + bucket de arquivos e a cópia cifrada (M3) | Documentos do condomínio e fotos ou PDFs dos avisos; só a gestão envia | Quem vê o documento ou o aviso (o nome da foto só a gestão) | Nunca, de propósito (ADR-0011); tirar por obrigação (ex.: LGPD) é manual: arquivar e apagar os objetos à mão |
 
 **Não guardamos:** CPF, RG, contrato, renda, endereço IP no banco (só o código acima), localização, nem o conteúdo de
@@ -343,7 +346,10 @@ votos trocados. A foto JPEG é regravada no celular antes do envio, o que tira o
 inclusive a localização do GPS (fechamento do M3; PNG e WEBP só quando grandes). Nas indicações,
 "apagar meus dados" (H-06) e o reset (H-08) apagam as opiniões e os avisos da unidade, e o
 prestador que ela indicou **fica**, mas sem o vínculo com a unidade (`prestador.criado_por` vira
-nulo: o próximo morador do apartamento não herda o direito de corrigir). A unidade e o login (`1101`) não são dado pessoal sozinhos, porque identificam um
+nulo: o próximo morador do apartamento não herda o direito de corrigir). Nos classificados, os
+dois apagam de vez os anúncios, os avisos e as fotos da unidade, inclusive no bucket; o contato
+do anúncio é digitado (ou confirmado) a cada anúncio e não é o celular da unidade, que continua
+visível só para a gestão. A unidade e o login (`1101`) não são dado pessoal sozinhos, porque identificam um
 apartamento e não uma pessoa. Viram dado pessoal junto com o nome do responsável, por isso o nome
 só aparece para a própria unidade e para a gestão.
 
@@ -359,6 +365,7 @@ Para dimensionar o plano gratuito no documento de arquitetura.
 | `aviso_leitura` | ~100 mil | 300 avisos × 320 unidades, no máximo |
 | `voto` | ~15 mil | ~50 enquetes × 320 |
 | `opiniao_servico` | ~3 mil | algumas centenas de prestadores, poucas opiniões cada (no máximo 30 novas por unidade a cada 24 h) |
+| `anuncio` | algumas centenas ao mesmo tempo | a faxina apaga o que acabou (no máximo 10 abertos por unidade); as fotos, até 4 por anúncio, comprimidas (~300 KB cada): algumas centenas de MB no uso esperado. O teto teórico (320 unidades × 10 abertos × 4 fotos) passaria de 3 GB; o vencimento em 30 dias e a faxina seguram |
 | `historico` | ~20 mil | |
 | **Banco inteiro** | **< 100 MB** | folgado em qualquer plano gratuito |
 | **Arquivos** | **1 a 3 GB** | PDFs da obra e imagens. **É aqui que o limite gratuito aperta**, o que justifica comprimir imagens no envio. Desde o plano B da ADR-0011, a cópia cifrada (o mesmo tamanho) também fica no R2: arquivos + cópia + dumps = 3 a 7 GB dos 10 GB. |

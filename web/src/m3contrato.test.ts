@@ -196,6 +196,7 @@ describe('encaixes do épico A ligados', () => {
       'Enquetes',
       'Documentos',
       'Indicações',
+      'Classificados',
       'Minha unidade',
     ])
     expect(lugaresDo(eu(['comissao'])).map((i) => i.para)).toEqual([
@@ -203,6 +204,7 @@ describe('encaixes do épico A ligados', () => {
       '/enquetes',
       '/documentos',
       '/indicacoes',
+      '/classificados',
       '/minha-unidade',
       '/unidades',
     ])

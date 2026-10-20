@@ -170,6 +170,7 @@ describe('encaixes do M4 ligados', () => {
       'Enquetes',
       'Documentos',
       'Indicações',
+      'Classificados',
       'Minha unidade',
     ])
   })

@@ -144,6 +144,29 @@ export function oQueFez(item: ItemHistorico): string {
       return `criou a categoria “${categoria(item)}”`
     case 'categoria_renomeada':
       return `renomeou uma categoria para “${categoria(item)}”`
+    // Classificados (spec de 20/10/2026). Nunca o título do anúncio nem a placa de quem avisou.
+    case 'classificado_escondido':
+      return 'escondeu um anúncio dos classificados'
+    case 'classificado_aviso_resolvido':
+      return 'resolveu um aviso num anúncio dos classificados'
+    case 'classificado_aviso_email': {
+      const n = item.detalhes.reservados
+      return typeof n === 'number' && n > 1
+        ? `mandou ${n} e-mails à administração sobre um aviso num anúncio`
+        : 'mandou e-mail à administração sobre um aviso num anúncio'
+    }
+    case 'categoria_classificado_criada':
+      return `criou a categoria “${categoria(item)}” nos classificados`
+    case 'categoria_classificado_renomeada':
+      return `renomeou uma categoria dos classificados para “${categoria(item)}”`
+    // Ação do Portal: a faxina diária (anúncio vencido há 30 dias ou encerrado há 7).
+    case 'classificados_faxina': {
+      const anuncios = Number(item.detalhes.anuncios ?? 0)
+      const fotos = Number(item.detalhes.fotos ?? 0)
+      const a = anuncios === 1 ? '1 anúncio' : `${anuncios} anúncios`
+      const f = fotos === 1 ? '1 foto' : `${fotos} fotos`
+      return `apagou ${a} e ${f} dos classificados que já tinham acabado`
+    }
     case 'carga_inicial':
       return 'criou os blocos e as unidades'
     case 'dados_ficticios':

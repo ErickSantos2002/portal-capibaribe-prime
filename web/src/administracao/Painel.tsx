@@ -10,6 +10,7 @@ import { Placa } from '../casca/Placa'
 import { Tela } from '../casca/Tela'
 import { useSessao } from '../casca/contextoSessao'
 import { formatarData, nomeDoPapel } from '../casca/formatar'
+import { CAMINHO_CATEGORIAS_CLASSIFICADOS } from '../classificados/caminhos'
 import { CAMINHO_CATEGORIAS } from '../indicacoes/caminhos'
 import './administracao.css'
 import { buscarPainel } from './api'
@@ -90,6 +91,10 @@ export function Painel() {
           {/* Indicações de serviços (spec de 18/10/2026, seção 4): só a administração. */}
           <Link className="botao leve" to={CAMINHO_CATEGORIAS}>
             <Icone nome="indicacoes" /> Categorias das indicações
+          </Link>
+          {/* Classificados (spec de 20/10/2026, seção 4): só a administração. */}
+          <Link className="botao leve" to={CAMINHO_CATEGORIAS_CLASSIFICADOS}>
+            <Icone nome="classificados" /> Categorias dos classificados
           </Link>
         </div>
       )}

@@ -48,6 +48,12 @@ export function TextoDaPolitica() {
         com ele, e a sua opinião sobre ele (se recomenda e o que você contou), para ajudar os
         vizinhos a escolher.
       </p>
+      <p>
+        Em <b>Classificados</b>, guardamos o anúncio que o apartamento publica (o que é, a
+        descrição, o preço e até 4 fotos) e o WhatsApp ou telefone que você escolher para aquele
+        anúncio, para os vizinhos falarem com você. As fotos ficam guardadas na Cloudflare, a
+        empresa que guarda os documentos do Portal.
+      </p>
 
       <h2>Quem vê</h2>
       <p>
@@ -59,6 +65,12 @@ export function TextoDaPolitica() {
         Nas Indicações, a sua opinião aparece com o bloco e o apartamento para quem entra no Portal,
         nunca com o seu nome. O aviso “Tem algo errado aqui?” só a Comissão e a administração veem,
         sem saber de qual apartamento veio.
+      </p>
+      <p>
+        Nos Classificados, o anúncio aparece com o bloco e o apartamento e com o contato que você
+        escolheu, só para quem entra no Portal, nunca com o seu nome. As fotos também aparecem para
+        todos os vizinhos: evite pessoas e documentos nelas. A localização (GPS) que a foto do
+        celular costuma trazer é apagada antes do envio.
       </p>
 
       <h2>Quem cuida dos dados</h2>
@@ -90,6 +102,11 @@ export function TextoDaPolitica() {
         inicial. O registro de ações do Portal (por exemplo, “o apartamento entrou pela primeira
         vez”) fica guardado, mas sem nome, celular nem e-mail.
       </p>
+      <p>
+        Os anúncios dos Classificados duram pouco, sem ninguém precisar apagar: o encerrado é
+        apagado de vez em 7 dias e o vencido, em 30, com as fotos. As fotos não entram na cópia de
+        segurança do Portal.
+      </p>
 
       <h2>Seus direitos</h2>
       <p>
@@ -100,6 +117,10 @@ export function TextoDaPolitica() {
         avisos nas Indicações; o prestador que você indicou continua na lista, sem ligação com o
         apartamento. Para apagar só uma opinião, use “Apagar a minha opinião” na página do
         prestador.
+      </p>
+      <p>
+        <b>Apagar meus dados</b> também apaga de vez os seus anúncios dos Classificados, com as
+        fotos, e os avisos que você mandou sobre anúncios.
       </p>
       <p>
         Um prestador que não quer aparecer nas Indicações pode pedir à Comissão para sair da lista. O

@@ -5,6 +5,7 @@ import { rotasAcesso } from './acesso/rotas'
 import { rotasAdministracao } from './administracao/rotas'
 import { rotasAvisos } from './avisos/rotas'
 import { NaoEncontrado } from './casca/guardas'
+import { rotasClassificados } from './classificados/rotas'
 import { Raiz } from './casca/Raiz'
 import { rotasDocumentos } from './documentos/rotas'
 import { rotasEnquetes } from './enquetes/rotas'
@@ -30,6 +31,8 @@ export const rotas: RouteObject[] = [
       ...rotasEnquetes,
       // Indicações de serviços (spec de 18/10/2026).
       ...rotasIndicacoes,
+      // Classificados entre vizinhos (spec de 20/10/2026).
+      ...rotasClassificados,
       { path: '*', element: <NaoEncontrado /> },
     ],
   },
