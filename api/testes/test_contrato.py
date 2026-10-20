@@ -24,6 +24,7 @@ from app.esquemas import (
     administracao,
     arquivos,
     avisos,
+    classificados,
     comum,
     documentos,
     enquetes,
@@ -32,6 +33,7 @@ from app.esquemas import (
     recuperacao,
 )
 from app.modelos import Canal, Papel, SituacaoEnvio
+from app.modelos.classificados import MotivoEncerramento, SituacaoAnuncio, TipoAnuncio
 
 WEB = Path(__file__).resolve().parents[2] / "web" / "src"
 ARQUIVOS_TS = {
@@ -49,6 +51,8 @@ ARQUIVOS_TS = {
     enquetes: WEB / "enquetes" / "tipos.ts",
     # Indicações de serviços (spec de 18/10/2026).
     indicacoes: WEB / "indicacoes" / "tipos.ts",
+    # Classificados entre vizinhos (spec de 20/10/2026).
+    classificados: WEB / "classificados" / "tipos.ts",
 }
 BASES = {comum.Entrada, comum.Saida}
 # Apelidos de tipo do front que valem o tipo básico.
@@ -152,7 +156,9 @@ def _definidos(modulo, tipo) -> list:
 
 
 ESQUEMAS = [(m, e) for m in ARQUIVOS_TS for e in _definidos(m, BaseModel)]
-ENUMS = [Papel, Canal, SituacaoEnvio] + [e for m in ARQUIVOS_TS for e in _definidos(m, enum.Enum)]
+ENUMS = [Papel, Canal, SituacaoEnvio, TipoAnuncio, SituacaoAnuncio, MotivoEncerramento] + [
+    e for m in ARQUIVOS_TS for e in _definidos(m, enum.Enum)
+]
 
 
 @pytest.mark.parametrize(("modulo", "esquema"), ESQUEMAS, ids=lambda x: getattr(x, "__name__", ""))

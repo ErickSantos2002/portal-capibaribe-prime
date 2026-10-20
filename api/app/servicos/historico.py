@@ -68,6 +68,20 @@ class Acao(enum.StrEnum):
     # `{"categoria": nome}` (a chave `nome` é proibida).
     categoria_criada = "categoria_criada"
     categoria_renomeada = "categoria_renomeada"
+    # Classificados (spec de 20/10/2026): entidade `anuncio`, sem o título nem a placa. O que o
+    # dono faz (reservar, renovar, encerrar) não vai para o histórico.
+    classificado_escondido = "classificado_escondido"
+    classificado_aviso_resolvido = "classificado_aviso_resolvido"
+    # E-mails do primeiro aviso de um anúncio reservados na cota do Gmail (ação do sistema,
+    # entidade `anuncio`, `{"reservados": n}`), como `indicacao_aviso_email`.
+    classificado_aviso_email = "classificado_aviso_email"
+    # Categorias dos classificados (administração): entidade `categoria_classificado`, com
+    # `{"categoria": nome}`.
+    categoria_classificado_criada = "categoria_classificado_criada"
+    categoria_classificado_renomeada = "categoria_classificado_renomeada"
+    # A faxina diária (ação do sistema, sem entidade): `{"anuncios": n, "fotos": m}`, só quando
+    # apaga alguma coisa.
+    classificados_faxina = "classificados_faxina"
 
 
 # Chaves que denunciam dado pessoal ou segredo. Comparação por "contém", em minúsculas.
