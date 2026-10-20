@@ -8,6 +8,7 @@ from app.modelos.acesso import Bloco, EntradaTentativa, Papel, Sessao, Unidade, 
 from app.modelos.arquivos import Arquivo
 from app.modelos.avisos import Aviso, AvisoAnexo, AvisoBloco, AvisoLeitura, AvisoVersao
 from app.modelos.base import Base
+from app.modelos.classificados import Anuncio, AnuncioFoto, AvisoAnuncio, CategoriaClassificado
 from app.modelos.documentos import Documento, DocumentoVersao
 from app.modelos.enquetes import Enquete, EnqueteBloco, EnqueteOpcao, Voto, VotoOpcao
 from app.modelos.indicacoes import AvisoServico, CategoriaServico, OpiniaoServico, Prestador
@@ -21,9 +22,12 @@ from app.modelos.notificacoes import (
 from app.modelos.registro import Erro, Historico
 
 __all__ = [
+    "Anuncio",
+    "AnuncioFoto",
     "Arquivo",
     "Aviso",
     "AvisoAnexo",
+    "AvisoAnuncio",
     "AvisoBloco",
     "AvisoLeitura",
     "AvisoServico",
@@ -31,6 +35,7 @@ __all__ = [
     "Base",
     "Bloco",
     "Canal",
+    "CategoriaClassificado",
     "CategoriaServico",
     "Documento",
     "DocumentoVersao",

@@ -399,3 +399,37 @@ def test_funcoes_de_trigger_da_0010_com_search_path_fixo(banco_vazio):
     assert set(funcoes) >= FUNCOES_DA_0010
     for nome in FUNCOES_DA_0010:
         assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome
+
+
+NOVAS_DA_0011 = {"categoria_classificado", "anuncio", "anuncio_foto", "aviso_anuncio"}
+FUNCOES_DA_0011 = {"anuncio_conferir", "anuncio_foto_conferir", "aviso_anuncio_conferir"}
+
+
+def test_downgrade_da_0011_volta_a_0010(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "0010")
+    funcoes_da_0010 = _funcoes(banco_vazio)
+    tabelas_da_0010 = _tabelas(banco_vazio)
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0011
+    rodar_alembic(banco_vazio, "downgrade", "0010")
+    assert _tabelas(banco_vazio) == tabelas_da_0010
+    assert _funcoes(banco_vazio) == funcoes_da_0010
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    assert _tabelas(banco_vazio) >= NOVAS_DA_0011
+
+
+def test_carga_da_0011_igual_a_constante():
+    from app.modelos.classificados import CATEGORIAS_INICIAIS
+    from testes.apoio import RAIZ_API
+
+    texto = (RAIZ_API / "migracoes" / "versions" / "0011_classificados.py").read_text()
+    carga = re.findall(r"\('([^']+)', (\d+)\)", texto.split("CARGA", 1)[1])
+    assert [(n, int(o)) for n, o in carga] == list(CATEGORIAS_INICIAIS)
+
+
+def test_funcoes_de_trigger_da_0011_com_search_path_fixo(banco_vazio):
+    rodar_alembic(banco_vazio, "upgrade", "head")
+    funcoes = _funcoes(banco_vazio)
+    assert set(funcoes) >= FUNCOES_DA_0011
+    for nome in FUNCOES_DA_0011:
+        assert funcoes[nome] == ["search_path=pg_catalog, public, pg_temp"], nome

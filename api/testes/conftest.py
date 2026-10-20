@@ -35,6 +35,10 @@ ADMIN_URL = os.environ.get(
 PAPEIS = {"dono": "dono-teste", "app": "app-teste"}
 BANCO = os.environ.get("PORTAL_TESTE_BANCO", "portal_teste")
 TABELAS = [
+    "aviso_anuncio",
+    "anuncio_foto",
+    "anuncio",
+    "categoria_classificado",
     "aviso_servico",
     "opiniao_servico",
     "prestador",
@@ -259,6 +263,13 @@ def banco_limpo(url_dono: str) -> None:
         with con.cursor() as cur:
             cur.executemany(
                 "insert into categoria_servico (nome, ordem) values (%s, %s)", CATEGORIAS_INICIAIS
+            )
+            # E a dos classificados (0011).
+            from app.modelos.classificados import CATEGORIAS_INICIAIS as DOS_CLASSIFICADOS
+
+            cur.executemany(
+                "insert into categoria_classificado (nome, ordem) values (%s, %s)",
+                DOS_CLASSIFICADOS,
             )
 
 
