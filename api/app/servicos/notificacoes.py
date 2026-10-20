@@ -441,7 +441,8 @@ def destinos_email(db: Session, aviso: AvisoParaNotificar) -> list[DestinoEmail]
 def emails_nas_ultimas_24h(db: Session) -> int:
     """E-mails já gastos da cota: cópias de aviso **reservadas** (separadas antes de mandar; a
     sobra volta quando o envio termina), links de recuperação criados (cada token é um e-mail)
-    e os e-mails do primeiro aviso de uma indicação (reservados no histórico, que ninguém apaga)."""
+    e os e-mails do primeiro aviso de uma indicação ou de um anúncio (reservados no histórico,
+    que ninguém apaga)."""
     desde = func.now() - timedelta(hours=24)
     avisos = db.scalar(
         select(func.coalesce(func.sum(NotificacaoEnvio.reservados), 0)).where(
@@ -451,9 +452,12 @@ def emails_nas_ultimas_24h(db: Session) -> int:
     links = db.scalar(select(func.count()).where(TokenRecuperacao.criado_em > desde))
     # Indicações: os e-mails do primeiro aviso, reservados no histórico (`indicacao_aviso_email`).
     # Não na linha do aviso: "apagar meus dados" e o reset a apagam, e a cota voltaria.
+    # Classificados: o mesmo, com `classificado_aviso_email`.
     indicacoes = db.scalar(
         select(func.coalesce(func.sum(Historico.detalhes["reservados"].as_integer()), 0)).where(
-            Historico.acao == Acao.indicacao_aviso_email.value,
+            Historico.acao.in_(
+                [Acao.indicacao_aviso_email.value, Acao.classificado_aviso_email.value]
+            ),
             Historico.ocorrido_em > desde,
         )
     )

@@ -13,6 +13,7 @@ from app.rotas import (
     arquivos,
     avisos,
     classificados,
+    classificados_gestao,
     diagnostico,
     documentos,
     enquetes,
@@ -64,5 +65,7 @@ app.include_router(enquetes_gestao.rotas)
 # Indicações de serviços (spec de 18/10/2026): o morador e, depois, a moderação.
 app.include_router(indicacoes.rotas)
 app.include_router(indicacoes_gestao.rotas)
-# Classificados entre vizinhos (spec de 20/10/2026): o morador e, depois, a moderação e a faxina.
+# Classificados entre vizinhos (spec de 20/10/2026): a moderação e a faxina antes do morador, para
+# `/faxina` e `/categorias` não caírem em `/{anuncio_id}`.
+app.include_router(classificados_gestao.rotas)
 app.include_router(classificados.rotas)

@@ -490,6 +490,46 @@ def mensagem_de_aviso_de_indicacao(
     return _mensagem(config, para, ASSUNTO_DO_AVISO_DE_INDICACAO, texto, html_)
 
 
+ASSUNTO_DO_AVISO_DE_CLASSIFICADO = "Portal Capibaribe Prime: aviso num anúncio dos classificados"
+RODAPE_DO_AVISO_DE_CLASSIFICADO = (
+    "Enviado pelo Portal Capibaribe Prime à administração, só no primeiro aviso de cada "
+    "anúncio. Os próximos ficam na página dele."
+)
+
+
+def mensagem_de_aviso_de_classificado(
+    titulo: str, categoria: str, anuncio_id: int, para: str, config: ConfigEmail
+) -> EmailMessage:
+    """Alguém avisou a gestão sobre um anúncio dos classificados (spec dos classificados, seção
+    9): o título e a categoria do anúncio e o link. Sem o motivo e sem a placa de ninguém."""
+    endereco = f"{config.url_base}/classificados/{anuncio_id}"
+    frase = (
+        "Um vizinho avisou que tem algo errado num anúncio dos classificados. Abra para ver o "
+        "aviso e decidir: esconder o anúncio ou só resolver o aviso."
+    )
+    texto = (
+        f"Olá!\n\n{frase}\n\n{titulo}\n{categoria}\n\nAbrir o anúncio: {endereco}\n\n"
+        f"--\n{RODAPE_DO_AVISO_DE_CLASSIFICADO}\n"
+    )
+    p, e = _E["p"], html.escape
+    miolo = (
+        f'<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;color:{_COR_TINTA}">'
+        f"Aviso num anúncio</h1>"
+        f'<p style="{p}">Olá!</p>'
+        f'<p style="{p}">{e(frase)}</p>'
+        f'<p style="{p}"><strong>{e(titulo)}</strong><br>{e(categoria)}</p>'
+    )
+    html_ = _pagina(
+        "Aviso num anúncio",
+        f"Um vizinho avisou a gestão sobre o anúncio {titulo}.",
+        miolo,
+        "Abrir o anúncio",
+        endereco,
+        RODAPE_DO_AVISO_DE_CLASSIFICADO,
+    )
+    return _mensagem(config, para, ASSUNTO_DO_AVISO_DE_CLASSIFICADO, texto, html_)
+
+
 # --- conexão (spec do épico B, seção 2.1) ---------------------------------------------------
 
 # Segundos de espera por resposta do servidor SMTP (conectar, login, cada mensagem).

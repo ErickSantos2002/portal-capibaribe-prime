@@ -28,8 +28,9 @@ from app.servicos.historico import Acao, registrar
 log = logging.getLogger(__name__)
 
 
-def _destinatarios(db: Session) -> list[str]:
-    """E-mails das unidades com papel `admin` em vigor, ativas e com e-mail, por id."""
+def destinatarios_da_administracao(db: Session) -> list[str]:
+    """E-mails das unidades com papel `admin` em vigor, ativas e com e-mail, por id. Também
+    usado pelos classificados (`classificados_email.py`)."""
     return list(
         db.scalars(
             select(Unidade.email)
@@ -60,7 +61,7 @@ def _reservar(abrir: Callable[[], Session], aviso_id: int) -> tuple[str, str, in
             db.rollback()
             return "", "", 0, []
         prestador_id, nome, categoria = linha
-        para = _destinatarios(db)
+        para = destinatarios_da_administracao(db)
         concedidos = min(len(para), notificacoes.cota_email_avisos(db))
         if concedidos > 0:
             registrar(
