@@ -26,6 +26,7 @@ export function resumo(id: number, extra: Partial<AnuncioResumo> = {}): AnuncioR
     situacao: 'ativo',
     vencido: false,
     escondido: false,
+    vence_em: new Date(Date.now() + 25 * 864e5).toISOString(),
     avisos_abertos: null,
     ...extra,
   }

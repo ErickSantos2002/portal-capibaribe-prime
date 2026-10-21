@@ -210,10 +210,11 @@ def varrer(
     apagados = 0
     for foto in db.scalars(consulta.order_by(AnuncioFoto.id)).all():
         try:
-            if foto.confirmada_em is None:
-                armazenamento.descartar_envio(foto.chave)
-            else:
-                armazenamento.apagar_classificado(caminho_da_foto(foto.chave))
+            # Os dois, sempre (os dois apagares aceitam o que não existe): a cópia para
+            # `classificados/` pode ter chegado ao bucket sem a confirmação ter sido gravada
+            # (revisão M2), e o envio pode ter sobrado em `envios/`.
+            armazenamento.descartar_envio(foto.chave)
+            armazenamento.apagar_classificado(caminho_da_foto(foto.chave))
         except FalhaNoArmazenamento:
             log.warning("foto de classificado não apagada agora (a faxina tenta de novo)")
             continue

@@ -74,7 +74,9 @@ def listar(
 
 @rotas.get("/meus")
 def meus(logado: UnidadeLogada, db: Banco, bucket: Armazenado) -> MeusAnuncios:
-    return MeusAnuncios(itens=servico.meus(db, logado, bucket))
+    return MeusAnuncios(
+        itens=servico.meus(db, logado, bucket), limite=servico.limite_atingido(db, logado)
+    )
 
 
 @rotas.post("/fotos", status_code=201)

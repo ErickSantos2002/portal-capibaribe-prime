@@ -142,6 +142,9 @@ class Anuncio(Base):
             " and (situacao = 'encerrado') = (encerrado_em is not null)",
             name="anuncio_encerramento",
         ),
+        CheckConstraint(
+            "(escondido_em is null) = (escondido_por is null)", name="anuncio_escondimento"
+        ),
         Index("anuncio_unidade", "unidade_id", "publicado_em"),
         Index("anuncio_vence", "vence_em"),
     )

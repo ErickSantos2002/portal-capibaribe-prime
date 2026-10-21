@@ -499,7 +499,10 @@ def test_escondido_nao_recebe_aviso_e_aviso_resolvido_nao_reabre(engine_app, ids
             text("update aviso_anuncio set resolvido_em = now(), resolvido_por = :g where id = :i"),
             {"i": aviso, "g": ids["u2"]},
         )
-        con.execute(text("update anuncio set escondido_em = now() where id = :a"), {"a": a})
+        con.execute(
+            text("update anuncio set escondido_em = now(), escondido_por = :g where id = :a"),
+            {"a": a, "g": ids["u2"]},
+        )
     assert (
         _recusa(
             engine_app,

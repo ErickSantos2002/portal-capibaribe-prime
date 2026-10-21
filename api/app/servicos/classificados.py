@@ -29,6 +29,8 @@ from app.esquemas.comum import UnidadeRef
 from app.esquemas.indicacoes import AvisarGestao, AvisoRecebido
 from app.modelos import Unidade
 from app.modelos.classificados import (
+    ANUNCIOS_ABERTOS,
+    ANUNCIOS_POR_DIA,
     DIAS_PARA_RENOVAR,
     AnuncioFoto,
     AvisoAnuncio,
@@ -44,6 +46,7 @@ from app.servicos.armazenamento import Armazenamento
 from app.servicos.indicacoes import normalizar
 
 _JANELA_DE_RENOVAR = literal_column(f"interval '{DIAS_PARA_RENOVAR} days'")
+_UM_DIA = literal_column("interval '24 hours'")
 
 # --- erros -------------------------------------------------------------------------------------
 
@@ -88,7 +91,7 @@ def listar_categorias(db: Session) -> list[CategoriaClassificado]:
 # avisos abertos e o vencido calculado pelo relógio do banco. Quem filtra é o `where` de cada uso.
 _CARTOES = """
 select a.id, a.tipo, a.titulo, a.descricao, a.preco_centavos, a.situacao,
-       coalesce(a.renovado_em, a.publicado_em) as em, a.vence_em <= now() as vencido,
+       coalesce(a.renovado_em, a.publicado_em) as em, a.vence_em, a.vence_em <= now() as vencido,
        a.escondido_em is not null as escondido, a.unidade_id,
        c.id as categoria_id, c.nome as categoria_nome, u.login,
        f.chave as capa_chave, f.tipo as capa_tipo,
@@ -123,12 +126,18 @@ def _resumo(linha: Row, logado: Logado, armazenamento: Armazenamento | None) -> 
         situacao=SituacaoAnuncio(linha.situacao),
         vencido=linha.vencido,
         escondido=linha.escondido,
-        avisos_abertos=linha.avisos if logado.gestao else None,
+        vence_em=linha.vence_em,
+        # O próprio anúncio a gestão vê como dono (revisão UX 5): sem os avisos.
+        avisos_abertos=(
+            linha.avisos if logado.gestao and linha.unidade_id != logado.unidade_id else None
+        ),
     )
 
 
 def _bate(linha: Row, termo: str) -> bool:
-    return termo in normalizar(f"{linha.titulo} {linha.descricao or ''} {linha.categoria_nome}")
+    """Todas as palavras da busca, em qualquer ordem (revisão UX 3)."""
+    texto = normalizar(f"{linha.titulo} {linha.descricao or ''} {linha.categoria_nome}")
+    return all(palavra in texto for palavra in termo.split())
 
 
 def listar(
@@ -152,11 +161,16 @@ def listar(
             " order by coalesce(a.renovado_em, a.publicado_em) desc, a.id desc"
         )
     ).all()
-    contagem = sum(1 for linha in linhas if linha.avisos > 0)
+
+    # Os avisos sobre os anúncios da própria unidade não contam para ela (revisão UX 5).
+    def tem_aviso(linha: Row) -> bool:
+        return linha.avisos > 0 and linha.unidade_id != logado.unidade_id
+
+    contagem = sum(1 for linha in linhas if tem_aviso(linha))
     itens = []
     for linha in linhas:
         if com_aviso:
-            if linha.avisos == 0:
+            if not tem_aviso(linha):
                 continue
         elif linha.vencido:
             continue
@@ -167,14 +181,42 @@ def listar(
         if termo and not _bate(linha, termo):
             continue
         itens.append(_resumo(linha, logado, armazenamento))
-    meus = db.scalar(
-        select(func.count())
-        .select_from(AnuncioModelo)
-        .where(AnuncioModelo.unidade_id == logado.unidade_id)
-    )
+    meus, abertos = db.execute(
+        select(
+            func.count(),
+            func.count().filter(
+                AnuncioModelo.situacao != SituacaoAnuncio.encerrado.value,
+                AnuncioModelo.vence_em > func.now(),
+            ),
+        ).where(AnuncioModelo.unidade_id == logado.unidade_id)
+    ).one()
     return ListaClassificados(
-        itens=itens, com_aviso=contagem if logado.gestao else None, meus=int(meus or 0)
+        itens=itens,
+        com_aviso=contagem if logado.gestao else None,
+        meus=int(meus or 0),
+        meus_abertos=int(abertos or 0),
     )
+
+
+def limite_atingido(db: Session, logado: Logado) -> str | None:
+    """A frase do limite que a unidade já bateu (5 por dia, 10 abertos), para a tela avisar ao
+    abrir "Anunciar" (revisão UX 11), ou `None`. As mesmas contas da trigger da 0011."""
+    do_dia, abertos = db.execute(
+        select(
+            func.count().filter(AnuncioModelo.publicado_em > func.now() - _UM_DIA),
+            func.count().filter(
+                AnuncioModelo.situacao.in_(
+                    [SituacaoAnuncio.ativo.value, SituacaoAnuncio.reservado.value]
+                ),
+                AnuncioModelo.vence_em > func.now(),
+            ),
+        ).where(AnuncioModelo.unidade_id == logado.unidade_id)
+    ).one()
+    if do_dia >= ANUNCIOS_POR_DIA:
+        return classificados_banco.RESTRICOES["anuncio_limite_dia"][2]
+    if abertos >= ANUNCIOS_ABERTOS:
+        return classificados_banco.RESTRICOES["anuncio_limite_abertos"][2]
+    return None
 
 
 def meus(db: Session, logado: Logado, armazenamento: Armazenamento | None) -> list[AnuncioResumo]:
@@ -273,7 +315,8 @@ def abrir(
         is not None
     )
     avisos = None
-    if logado.gestao:
+    # No próprio anúncio, a gestão é dona (revisão UX 5): sem "Para a gestão".
+    if logado.gestao and not achado.meu:
         avisos = [
             AvisoRecebido(id=v.id, motivo=v.motivo, em=v.criado_em)
             for v in db.scalars(
@@ -451,6 +494,13 @@ def avisar(db: Session, logado: Logado, anuncio_id: int, dados: AvisarGestao) ->
     if not achado.visivel:
         db.rollback()
         raise indisponivel()
+    if achado.meu:
+        db.rollback()
+        raise ErroApi(
+            409,
+            "aviso_do_proprio",
+            "Este anúncio é seu. Para tirá-lo da lista, use Encerrar.",
+        )
     abertos = list(
         db.scalars(
             select(AvisoAnuncio.unidade_id).where(

@@ -4,8 +4,8 @@
   na mesma transação e vai para o histórico, sem o título nem a placa.
 - Categorias: só a administração, como nas indicações.
 - Faxina diária (Vercel Cron, ADR-0012): apaga o anúncio vencido há mais de 30 dias e o encerrado
-  há mais de 7 (com os avisos e as fotos), e as fotos esquecidas (enviadas há mais de 1 dia e
-  nunca postas num anúncio). Falhar só atrasa: a lista já filtra o vencido pela data.
+  ou escondido há mais de 7 (com os avisos e as fotos), e as fotos esquecidas (enviadas há mais de
+  1 dia e nunca postas num anúncio). Falhar só atrasa: a lista já filtra o vencido pela data.
 """
 
 import logging
@@ -199,6 +199,8 @@ def faxinar(db: Session, armazenamento: Armazenamento | None) -> ResultadoDaFaxi
             Anuncio.vence_em < func.now() - _dias(FAXINA_VENCIDO_DIAS),
             (Anuncio.situacao == SituacaoAnuncio.encerrado.value)
             & (Anuncio.encerrado_em < func.now() - _dias(FAXINA_ENCERRADO_DIAS)),
+            # O escondido pela gestão sai como o encerrado (revisão M3, decisão do coordenador).
+            Anuncio.escondido_em < func.now() - _dias(FAXINA_ENCERRADO_DIAS),
         )
     )
     ids = list(db.scalars(vao_sair.with_for_update()))

@@ -18,8 +18,11 @@ As regras ficam aqui, não na API:
   horas** (as descartadas contam enquanto a linha existe: a faxina só as apaga depois de 1 dia);
 - **um aviso aberto por unidade e anúncio** (índice único parcial) e 10 avisos por unidade a
   cada 24 horas;
-- anúncio com foto presa não é apagado (chave estrangeira sem cascata): quem apaga descarta as
-  fotos antes, e o objeto no bucket nunca fica órfão;
+- anúncio com foto presa não é apagado (chave estrangeira sem cascata), e só a linha da foto
+  descartada é apagada: quem apaga descarta as fotos antes, e o objeto no bucket nunca fica órfão;
+- só unidade ativa, com o primeiro acesso feito, anuncia, envia foto e avisa (a que acabou de
+  passar por "apagar meus dados" ou pelo reset não consegue, nem de outro aparelho);
+- vencido, encerrado e escondido não recebem foto nova;
 - o `app` não apaga categoria.
 """
 
@@ -95,7 +98,9 @@ create table anuncio (
     -- Encerrado tem motivo e data; aberto não tem nenhum dos dois.
     constraint anuncio_encerramento check (
         (situacao = 'encerrado') = (motivo_encerramento is not null)
-        and (situacao = 'encerrado') = (encerrado_em is not null))
+        and (situacao = 'encerrado') = (encerrado_em is not null)),
+    -- Escondido tem a data e quem escondeu, ou nenhum dos dois (revisão B1).
+    constraint anuncio_escondimento check ((escondido_em is null) = (escondido_por is null))
 );
 -- Os limites do dia e de abertos contam por unidade; a lista e a faxina, por data.
 create index anuncio_unidade on anuncio (unidade_id, publicado_em);
@@ -188,7 +193,9 @@ begin
         new.escondido_por := null;
         -- Trava a unidade: anúncios ao mesmo tempo contam uns com os outros.
         perform 1 from public.unidade u
-         where u.id = new.unidade_id and u.ativa for no key update;
+         where u.id = new.unidade_id and u.ativa and not u.precisa_trocar_senha
+           and u.ativada_em is not null
+           for no key update;
         if not found then
             if exists (select 1 from public.unidade u where u.id = new.unidade_id) then
                 raise exception 'Só unidade ativa anuncia.'
@@ -326,6 +333,15 @@ as $$
 declare
     dono bigint;
 begin
+    if tg_op = 'DELETE' then
+        -- Só sai a linha da foto descartada: quem apaga (a faxina, "apagar meus dados", o reset)
+        -- descarta antes e apaga o objeto no bucket, senão ele ficaria órfão (revisão B1).
+        if old.descartada_em is null then
+            raise exception 'Só a foto descartada é apagada.'
+                using errcode = 'check_violation', constraint = 'anuncio_foto_nao_descartada';
+        end if;
+        return old;
+    end if;
     if tg_op = 'INSERT' then
         new.enviada_em := now();
         new.confirmada_em := null;
@@ -333,7 +349,9 @@ begin
         new.anuncio_id := null;
         new.ordem := null;
         perform 1 from public.unidade u
-         where u.id = new.unidade_id and u.ativa for no key update;
+         where u.id = new.unidade_id and u.ativa and not u.precisa_trocar_senha
+           and u.ativada_em is not null
+           for no key update;
         if not found then
             if exists (select 1 from public.unidade u where u.id = new.unidade_id) then
                 raise exception 'Só unidade ativa envia foto.'
@@ -378,13 +396,15 @@ begin
             using errcode = 'check_violation', constraint = 'anuncio_foto_fixa';
     end if;
     if old.anuncio_id is null and new.anuncio_id is not null then
-        -- Trava o anúncio: duas fotos ao mesmo tempo contam uma com a outra.
+        -- Trava o anúncio: duas fotos ao mesmo tempo contam uma com a outra. Encerrado, escondido
+        -- ou vencido não recebe foto nova (o vencido também não é editado).
         select a.unidade_id into dono from public.anuncio a
          where a.id = new.anuncio_id and a.situacao <> 'encerrado' and a.escondido_em is null
+           and a.vence_em > now()
            for no key update;
         if not found then
             if exists (select 1 from public.anuncio a where a.id = new.anuncio_id) then
-                raise exception 'Anúncio encerrado ou escondido não recebe foto.'
+                raise exception 'Anúncio encerrado, escondido ou vencido não recebe foto.'
                     using errcode = 'check_violation',
                           constraint = 'anuncio_foto_anuncio_fechado';
             end if;
@@ -410,7 +430,7 @@ end;
 $$;
 
 create trigger anuncio_foto_regras
-    before insert or update on anuncio_foto
+    before insert or update or delete on anuncio_foto
     for each row execute function public.anuncio_foto_conferir();
 
 -- Avisar: unidade ativa, anúncio não escondido nem encerrado e no máximo 10 por unidade a cada
@@ -431,7 +451,9 @@ begin
                 using errcode = 'check_violation', constraint = 'anuncio_escondido';
         end if;
         perform 1 from public.unidade u
-         where u.id = new.unidade_id and u.ativa for no key update;
+         where u.id = new.unidade_id and u.ativa and not u.precisa_trocar_senha
+           and u.ativada_em is not null
+           for no key update;
         if not found then
             if exists (select 1 from public.unidade u where u.id = new.unidade_id) then
                 raise exception 'Só unidade ativa avisa a gestão.'

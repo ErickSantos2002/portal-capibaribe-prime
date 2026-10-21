@@ -82,6 +82,8 @@ export interface AnuncioResumo {
   situacao: SituacaoAnuncio
   vencido: boolean
   escondido: boolean
+  /** Até quando fica na lista. */
+  vence_em: DataHora
   /** Só a gestão; nulo para o morador. */
   avisos_abertos: number | null
 }
@@ -92,10 +94,14 @@ export interface ListaClassificados {
   com_aviso: number | null
   /** Quantos anúncios a unidade logada tem (todos os estados). */
   meus: number
+  /** Desses, os abertos (não encerrados nem vencidos). */
+  meus_abertos: number
 }
 
 export interface MeusAnuncios {
   itens: AnuncioResumo[]
+  /** A frase do limite que a unidade já bateu (5 por dia, 10 abertos), ou nulo. */
+  limite: string | null
 }
 
 export interface Anuncio {

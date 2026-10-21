@@ -200,7 +200,9 @@ class AnuncioResumo(Saida):
     situacao: SituacaoAnuncio
     vencido: bool
     escondido: bool
-    # Avisos abertos (só a gestão; nulo para o morador).
+    # Até quando fica na lista ("Fica na lista até 19 de novembro", em "Meus anúncios").
+    vence_em: datetime
+    # Avisos abertos (só a gestão, e nunca nos da própria unidade; nulo para os outros).
     avisos_abertos: int | None
 
 
@@ -213,12 +215,17 @@ class ListaClassificados(Saida):
     com_aviso: int | None
     # Quantos anúncios a unidade logada tem (todos os estados): a entrada "Meus anúncios".
     meus: int
+    # Desses, os abertos (não encerrados nem vencidos): o número ao lado de "Meus anúncios".
+    meus_abertos: int
 
 
 class MeusAnuncios(Saida):
     """`GET /api/classificados/meus`: todos os da unidade, enquanto existirem."""
 
     itens: list[AnuncioResumo]
+    # A frase do limite que a unidade já bateu (5 por dia, 10 abertos), ou nulo: a tela de
+    # anunciar avisa logo ao abrir.
+    limite: str | None
 
 
 class Anuncio(Saida):

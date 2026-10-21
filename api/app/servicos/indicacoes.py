@@ -159,7 +159,9 @@ select p.id, p.nome, c.id as categoria_id, c.nome as categoria_nome,
 
 
 def _bate(linha: Row, termo: str) -> bool:
-    return termo in normalizar(f"{linha.nome} {linha.categoria_nome} {linha.comentarios}")
+    """Todas as palavras da busca, em qualquer ordem (revisão dos classificados, UX 3)."""
+    texto = normalizar(f"{linha.nome} {linha.categoria_nome} {linha.comentarios}")
+    return all(palavra in texto for palavra in termo.split())
 
 
 def listar(
