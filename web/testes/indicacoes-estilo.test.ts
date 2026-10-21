@@ -35,24 +35,34 @@ function contraste(a: string, b: string): number {
   return (x + 0.05) / (y + 0.05)
 }
 
-describe('faixa de categorias', () => {
-  test('rola para o lado dentro dela, também com a letra grande (não quebra em linhas)', () => {
-    assert.match(regra(indicacoes, '.faixa-categorias'), /overflow-x:\s*auto/)
-    assert.match(regra(indicacoes, '.faixa-categorias'), /flex-wrap:\s*nowrap/)
-    // Com a letra grande, nada de quebrar em linhas nem de soltar a rolagem.
-    for (const m of indicacoes.matchAll(/data-letra='grande'\]\s*\.faixa-categorias[^{]*\{([^}]*)\}/g)) {
-      assert.doesNotMatch(m[1], /flex-wrap:\s*wrap|overflow-x:\s*visible|white-space:\s*normal/)
-    }
+describe('filtro de categoria (lista de escolher, 1.9.1)', () => {
+  test('a faixa que rolava para o lado saiu do CSS (sem chip nem rolagem sobrando)', () => {
+    assert.doesNotMatch(indicacoes, /\.faixa-categorias/)
+  })
+
+  test('o rótulo fica colado na lista de escolher, e cada filtro tem o seu respiro embaixo', () => {
+    assert.match(regra(indicacoes, '.ind-filtro'), /margin:\s*0 0 [\d.]+rem/)
+    assert.match(regra(indicacoes, '.ind-filtro label'), /margin:\s*0 0 [\d.]+rem/)
+  })
+
+  test('a lista de escolher segue o campo do Portal: largura da coluna, 56 px, borda e foco comuns', () => {
+    // O select não ganha regra própria: herda a de todos os campos (estilo.css).
+    assert.doesNotMatch(indicacoes, /\.ind-filtro select/)
+    const campo = /select\s*\{([^}]*)\}/.exec(estilo.slice(estilo.indexOf("input[type='text'],")))![1]
+    assert.match(campo, /width:\s*100%/)
+    assert.match(campo, /border:\s*2px solid var\(--borda\)/)
+    assert.match(campo, /font-size:\s*1\.125rem/)
+    assert.match(estilo, /select\s*\)\s*\{\s*height:\s*3\.5rem/)
+    assert.match(estilo, /:focus-visible\s*\{\s*outline:\s*3px solid var\(--ipe-forte\)/)
   })
 })
 
 describe('o primeiro cartão na primeira tela, com a letra grande', () => {
   // A 320 px e 200 %, o cartão ficava logo abaixo da dobra (y = 715 numa janela de 780). Medido
   // depois: y = 581, acima das abas de baixo (698).
-  test('o rótulo da busca sem o respiro de grupo; sem o ícone e a faixa mais baixa na letra grande', () => {
+  test('o rótulo da busca sem o respiro de grupo; sem o ícone na letra grande', () => {
     assert.match(regra(indicacoes, '.ind-busca label'), /margin-top:\s*0/)
     assert.match(regra(indicacoes, ":root[data-letra='grande'] .ind-busca label svg"), /display:\s*none/)
-    assert.match(regra(indicacoes, ":root[data-letra='grande'] .faixa-categorias .chip"), /min-height:\s*0/)
   })
 })
 

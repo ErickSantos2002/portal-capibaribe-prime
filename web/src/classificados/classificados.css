@@ -1,5 +1,5 @@
 /* Classificados entre vizinhos (spec de 20/10/2026, seção 3). Por cima do indicacoes.css (a busca,
-   a faixa de categorias, os formulários e a seção da gestão são os mesmos). Só tokens do
+   os filtros de tipo e categoria, os formulários e a seção da gestão são os mesmos). Só tokens do
    estilo.css; o tema escuro vem pelos tokens. Regra do M5: rem, sem media query de tamanho (a letra
    grande vem de `data-letra` no html, casca/letra.ts). */
 
@@ -24,21 +24,6 @@
 .cla-meus .seta {
   margin-left: auto;
   color: var(--tinta-suave);
-}
-
-/* Tudo · Vende · Troca · Doa · Procura: todas sempre à vista, quebrando em linha (revisão UX 4); a
-   faixa das categorias, logo abaixo, é que rola dentro dela. Com a letra grande, chips mais
-   baixos, como os da faixa. */
-.cla-tipos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0 0 0.5rem;
-}
-
-:root[data-letra='grande'] .cla-tipos .chip {
-  min-height: 0;
-  padding: 0.25rem 0.875rem;
 }
 
 /* "Eletrodomésticos" com a letra grande: quebra com hífen, não no meio sem aviso. */

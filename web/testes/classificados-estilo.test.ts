@@ -31,10 +31,9 @@ describe('visor de fotos (comum)', () => {
   })
 })
 
-describe('faixa de tipo', () => {
-  test('quebra em linha, nunca rola (as quatro à vista)', () => {
-    const bloco = regra(classificados, '.cla-tipos')
-    assert.match(bloco, /flex-wrap:\s*wrap/)
-    assert.doesNotMatch(bloco, /overflow-x:\s*(auto|scroll)/)
+describe('filtro de tipo (lista de escolher, 1.9.1)', () => {
+  test('os chips de tipo saíram do CSS (o filtro é o mesmo .ind-filtro das indicações)', () => {
+    assert.doesNotMatch(classificados, /\.cla-tipos/)
+    assert.doesNotMatch(classificados, /\.chip/)
   })
 })

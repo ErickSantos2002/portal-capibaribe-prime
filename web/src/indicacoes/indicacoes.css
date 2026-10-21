@@ -12,10 +12,9 @@
 }
 
 /* O primeiro cartão aparece na primeira tela, também com a letra a 200 % em 320 px (revisão das
-   indicações: ele ficava em y = 2097, e com a faixa rolando dentro, logo abaixo da dobra). O
-   rótulo da busca é o primeiro do conteúdo e não precisa do respiro entre grupos; com a letra
-   grande, o ícone sai (o rótulo cabe em duas linhas em vez de três) e a faixa fica mais baixa,
-   com os chips ainda acima de 44 px de altura. */
+   indicações: ele ficava em y = 2097). O rótulo da busca é o primeiro do conteúdo e não precisa
+   do respiro entre grupos; com a letra grande, o ícone sai (o rótulo cabe em duas linhas em vez
+   de três). */
 .ind-busca label {
   margin-top: 0;
 }
@@ -24,31 +23,16 @@
   display: none;
 }
 
-:root[data-letra='grande'] .faixa-categorias {
-  margin-bottom: 0.5rem;
+/* Os filtros (1.9.1): rótulo em cima e a lista de escolher nativa embaixo, da largura da coluna.
+   A lista não tem regra própria: é o `select` de todos os campos do estilo.css (borda, 56 px,
+   letra em rem, foco em ipê-forte, claro e escuro). Os classificados usam o mesmo, dois deles,
+   um embaixo do outro. Substitui a faixa de chips que rolava para o lado sem sinal. */
+.ind-filtro {
+  margin: 0 0 0.75rem;
 }
 
-:root[data-letra='grande'] .faixa-categorias .chip {
-  min-height: 0;
-  padding: 0.25rem 0.875rem;
-}
-
-/* A faixa de categorias rola para o lado DENTRO dela (a página não rola para o lado), também com
-   a letra grande: quebrada em linhas, a 200 % em 320 px ela empurrava a lista para fora da
-   primeira tela (revisão das indicações). O guarda do M5 aceita a rolagem dentro do elemento. */
-.faixa-categorias {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.5rem;
-  margin: 0 0 1rem;
-  padding: 0.125rem 0 0.375rem;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-}
-
-.faixa-categorias .chip {
-  flex: none;
-  white-space: nowrap;
+.ind-filtro label {
+  margin: 0 0 0.375rem;
 }
 
 /* "N indicações com aviso da vizinhança": só a gestão, no topo; liga e desliga o filtro. */
