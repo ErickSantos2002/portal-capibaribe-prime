@@ -25,7 +25,9 @@ o resto do bucket continua com a garantia da ADR-0011.
 - A chave é a mesma da ADR-0011: 32 hexadecimais aleatórios (128 bits), nunca reaproveitados.
 - O envio é o do M3 (`envios/<chave>` por URL assinada → conferência do tamanho e dos bytes do
   começo → cópia), com o destino em `classificados/` e só imagem (JPEG, PNG, WEBP; PDF é
-  recusado). A compressão no navegador é a mesma, e o JPEG é sempre regravado (sai o GPS).
+  recusado). A compressão no navegador é a mesma, e **toda** foto é regravada, JPEG, PNG ou WEBP,
+  mesmo pequena (sai o GPS e qualquer outro metadado; `comprimir(…, sempreRegravar)`, revisão
+  M1). Os anexos do M3 continuam como eram.
 - A leitura é por link assinado de 1 hora (`VALIDADE_LEITURA`), como os anexos; a capa da lista
   vem no mesmo formato.
 
@@ -49,11 +51,15 @@ pendente → pronta (confirmada, sem anúncio) → no anúncio → descartada. O
 anúncio, da mesma unidade, só confirmada entra, só sai do anúncio descartada, descartada não volta,
 40 fotos enviadas por unidade a cada 24 horas. O anúncio com foto presa **não** é apagado (chave
 estrangeira sem cascata): quem apaga descarta as fotos antes, e o objeto nunca fica órfão no bucket.
+Revisão de código (B1): a trigger também recusa apagar a linha de foto que não foi descartada, e
+anúncio vencido não recebe foto nova.
 
 ### 4. Apagar de verdade: descartar e varrer
-Tirar a foto na edição, encerrar (depois de 7 dias, para o dono ainda ver o encerrado em "Meus
-anúncios"), vencer (depois de 30 dias), "apagar meus dados" (H-06) e o reset (H-08) **descartam**
-a foto na transação. Depois do commit, `varrer` apaga o objeto no bucket e a linha (a linha da
+Tirar a foto na edição, encerrar ou ser escondido (depois de 7 dias, para o dono ainda ver em
+"Meus anúncios"), vencer (depois de 30 dias), "apagar meus dados" (H-06) e o reset (H-08)
+**descartam** a foto na transação. Depois do commit, `varrer` apaga o objeto no bucket (sempre os
+dois lugares, `envios/<chave>` e `classificados/<chave>`: a cópia pode ter chegado ao bucket sem a
+confirmação gravada, revisão M2) e a linha (a linha da
 foto enviada há menos de 1 dia fica, descartada e sem o conteúdo, só para contar no limite do
 dia; sem isso, mandar e tirar não teria fim). Se o bucket falhar, a foto continua descartada e a
 faxina tenta de novo: nada quebra.
@@ -64,8 +70,8 @@ faxina tenta de novo: nada quebra.
 - A rota exige `Authorization: Bearer <CRON_SECRET>`, que a Vercel manda sozinha quando a variável
   `CRON_SECRET` existe no projeto. Sem a variável, responde 503 e não faz nada; com outro valor,
   401. Comparação em tempo constante.
-- Cada rodada apaga o anúncio vencido há mais de 30 dias e o encerrado há mais de 7 (com os avisos
-  e as fotos), descarta a foto enviada há mais de 1 dia e nunca posta num anúncio, e varre todas
+- Cada rodada apaga o anúncio vencido há mais de 30 dias e o encerrado ou escondido pela gestão há
+  mais de 7 (com os avisos e as fotos), descarta a foto enviada há mais de 1 dia e nunca posta num anúncio, e varre todas
   as descartadas. Quando apaga alguma coisa, registra `classificados_faxina` no histórico (só as
   contagens), o que deixa ver na tela do Histórico se o cron está rodando.
 - **Falhar só atrasa:** a lista já esconde o vencido pela data (a consulta compara `vence_em` com

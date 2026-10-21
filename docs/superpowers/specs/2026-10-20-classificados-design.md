@@ -64,7 +64,9 @@ Os dois critérios do Erick para toda função nova:
   título, categoria, descrição, placa da unidade, data.
 - Botão **"Chamar no WhatsApp"** (`https://wa.me/55<dígitos>?text=<mensagem>`), mensagem pronta:
   "Oi! Vi seu anúncio "<título>" no Portal Capibaribe Prime. Ainda está disponível?".
-  Fixo sem WhatsApp → "Ligar" (`tel:`), mesma regra do telefone das Indicações.
+  Fixo sem WhatsApp → "Ligar" (`tel:`), mesma regra do telefone das Indicações: "Ligar" é o
+  principal e o WhatsApp continua como botão leve (fixo pode ter WhatsApp Business), com a mesma
+  mensagem pronta (confirmado na revisão de UX, item 13).
 - Para o dono: **Editar**, **Marcar como reservado / Tirar a reserva**, **Renovar** (quando
   vencido ou a menos de 7 dias de vencer), **Encerrar** (confirmação com o motivo: Vendi · Troquei
   · Doei · Desisti). Encerrado não volta (anuncia de novo, se quiser).
@@ -145,8 +147,9 @@ Decisão (escrever como **ADR-0012**, complementando a 0011):
   sem as fotos (aceito; são efêmeros).
 - **Apaga de verdade** as fotos: ao tirar a foto na edição, ao encerrar (depois de 7 dias, para
   o dono ainda ver o encerrado em "Meus anúncios"), no "apagar meus dados", no reset e na faxina.
-- **Faxina diária**: anúncio vencido há mais de 30 dias ou encerrado há mais de 7 dias é apagado
-  (linha e fotos). Rodar pelo que o repo já tem (Vercel Cron do plano Hobby, 1×/dia, ou o
+- **Faxina diária**: anúncio vencido há mais de 30 dias, ou encerrado ou escondido pela gestão há
+  mais de 7 dias, é apagado (linha e fotos). O escondido entrou na revisão de código (M3, decisão
+  do coordenador): sem isso, a foto de um anúncio escondido ficava até 60 dias. Rodar pelo que o repo já tem (Vercel Cron do plano Hobby, 1×/dia, ou o
   workflow diário do GitHub chamando uma rota protegida): o builder escolhe e justifica. Falha
   da faxina não quebra nada (só atrasa).
 - Leitura: link assinado curto, como os anexos; a capa da lista vem no mesmo formato.

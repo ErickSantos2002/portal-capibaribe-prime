@@ -245,7 +245,8 @@ morador. Cada um entra num marco quando alguém pedir ou quando o marco tocar no
 | Contador de enquetes por votar na aba "Enquetes" (como o número de avisos não lidos) | Pede uma rota de contagem e o encaixe no menu; a lista já diz "Seu apartamento ainda não votou" | Revisão de usabilidade do M4 (item 16) |
 | Apartamentos maiores na grade de Unidades a 360 px | Com a letra de fábrica, cada apartamento tem 38 px de largura (o alvo de toque é 44) | Conferência da navegação com a bola (18/10), já existia antes |
 | Faixa "Fixado pela Administração do Portal" cortada a 320 px e 200 % | O texto da faixa do aviso fixado não cabe no celular estreito com a letra no máximo | Conferência da navegação com a bola (18/10), já existia antes |
-| Botão flutuante cobre o primeiro cartão a 320 px e 200 % | Em Indicações ("Indicar alguém") e em Avisos ("Novo aviso") o botão fixo embaixo tapa o começo do primeiro cartão com a letra no máximo; mudar o padrão do botão flutuante com letra grande vale para as duas telas | Correções da revisão das Indicações (18/10) |
+| Botão flutuante cobre o primeiro cartão a 320 px e 200 % | Em Indicações ("Indicar alguém") e em Avisos ("Novo aviso") o botão fixo embaixo tapa o começo do primeiro cartão com a letra no máximo; mudar o padrão do botão flutuante com letra grande vale para as duas telas (nos Classificados já foi resolvido: com a letra grande, "Anunciar" entra no fluxo) | Correções da revisão das Indicações (18/10) |
+| Anúncio duplicado da mesma unidade nos Classificados | O mesmo apartamento pode publicar o mesmo título duas vezes (dentro dos limites de 5 por dia e 10 abertos); avisar "Você já tem um anúncio parecido" na tela de anunciar | Revisão de UX dos Classificados (20/10), item 18 |
 
 ### Fora dos marcos · Navegação do celular com a bola do Menu (1.7.0)
 

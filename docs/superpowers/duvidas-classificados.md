@@ -80,6 +80,60 @@ cada uma, a opção que o spec mais sugere; dá para trocar sem mexer em regra n
     classificados", com o título e a categoria e o botão "Abrir o anúncio"; sem o motivo e sem
     placa nenhuma.
 
+## Correções das revisões (código e UX)
+
+Escolhas feitas ao corrigir os achados das revisões independentes. Cada conserto tem teste de
+regressão (`api/testes/test_classificados_revisao.py` e os blocos "revisão de UX" dos testes do
+front).
+
+20. **Visor comum.** O visor das fotos agora é o dos anexos do aviso, extraído para
+    `web/src/avisos/VisorDeFotos.tsx` e usado nos dois lugares (fundo preto opaco, botões claros,
+    "Foto anterior"/"Próxima foto"). Com a letra grande, nos dois: "Anterior" e "Próxima" ficam só
+    com a seta, lado a lado, com "1 de 3" entre elas, e o "Foto 1 de 3" do topo sai da vista (o
+    leitor de tela continua ouvindo); a foto fica com o resto da tela. Isso muda também o visor dos
+    anexos com a letra grande (antes, os dois botões ficavam um embaixo do outro).
+21. **Busca:** todas as palavras precisam aparecer, em qualquer ordem ("cinza sofa" acha "Sofá
+    cinza"), sem acento nem maiúscula; vale também nas Indicações.
+22. **Faixa de tipo:** volta a quebrar em linha (as quatro sempre à vista); com a letra grande, os
+    chips ficam mais baixos, como os da faixa de categorias.
+23. **A gestão no próprio anúncio** vê a tela do dono, sem "Para a gestão"; os avisos sobre os
+    anúncios da própria unidade não entram no "N anúncios com aviso da vizinhança". Os recados do
+    dono estão em 2ª pessoa: "A gestão escondeu o seu anúncio. Ele não aparece para os vizinhos, e
+    você só pode encerrá-lo. Ele é apagado em 7 dias, com as fotos.", "Você encerrou este anúncio
+    (vendido). …", "O seu anúncio venceu em …".
+24. **Indisponível:** caixa neutra (azul de informação) com "Este anúncio não está mais
+    disponível." e o botão "Ver outros anúncios". O erro de rede continua vermelho, com "Tentar de
+    novo".
+25. **Foco:** depois de reservar ou tirar a reserva, no botão que ficou no lugar; depois de
+    encerrar ou renovar (o botão some), no título do anúncio.
+26. **Recado e confirmação:** `centralizar` (comum) passa a descontar a altura real do topo preso
+    (que cresce com o recado aberto) e manda a caixa para o alto quando ela não cabe abaixo dele.
+    Vale para todas as confirmações do Portal; o recado continua no topo.
+27. **Reservado para o visitante:** a frase "Reservado: alguém já combinou com o dono. Você ainda
+    pode chamar." acima do botão, e a mensagem "Oi! Vi seu anúncio "…" no Portal Capibaribe Prime.
+    Vi que está reservado; se não der certo, tenho interesse.".
+28. **"Anunciar" com a letra grande:** sai o botão flutuante e entra um botão ipê no começo da
+    lista, antes de "Meus anúncios" e da busca. Com a letra de fábrica, o flutuante de sempre.
+29. **Limite ao abrir "Anunciar":** caixa de atenção no topo do formulário com a mesma frase do 429
+    ("Seu apartamento já fez 5 anúncios hoje. …" ou "… já tem 10 anúncios abertos. Encerre um para
+    anunciar outro."). O formulário continua aberto (o limite do dia pode passar).
+30. **"Meus anúncios (N)":** N conta só os abertos; sem nenhum aberto, só "Meus anúncios" (o link
+    continua, para renovar o vencido). No cartão do aberto, "Fica na lista até 19 de novembro".
+31. **Exemplo do título:** "Ex.: Sobra de piso".
+32. **"Encerrar"** com o ícone de arquivar (a caixa), não o ✓.
+33. **Selo do preço:** só quebra depois de "Vende" (ou do "·"): "Vende / R$ 1.250,50", "Vende · /
+    a combinar"; nunca "R$" de um lado e o valor do outro.
+34. **Faxina do escondido** (decisão do coordenador, M3): o anúncio escondido pela gestão é apagado
+    em 7 dias, com as fotos, como o encerrado. A Privacidade diz isso.
+35. **Fotos regravadas sempre** (M1): JPEG, PNG e WEBP, de qualquer tamanho, saem regravados do
+    aparelho; a Privacidade diz "toda foto é regravada no aparelho antes do envio, o que apaga a
+    localização (GPS) e as outras informações escondidas". Os anexos do M3 não mudaram.
+36. **O dono que avisa o próprio anúncio** (pela API) recebe 409 "Este anúncio é seu. Para tirá-lo
+    da lista, use Encerrar." (a tela já não mostrava o link para ele).
+
+Não mexido, como pedido: o fixo continua com o WhatsApp leve (spec 3.2 atualizada), o motivo do
+aviso não aparece para o dono, e o anúncio duplicado da mesma unidade foi para o roadmap.
+
 ## Para o coordenador
 
 - **Faxina = Vercel Cron** (ADR-0012): `vercel.json` ganhou `crons` (07:00 UTC). Antes do push,
