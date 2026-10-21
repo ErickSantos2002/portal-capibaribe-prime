@@ -1,6 +1,7 @@
 // Classificados · o cartão da lista e de "Meus anúncios" (spec, seção 3.1): a capa (ou um marcador
 // sem foto), o selo do tipo, o título, a categoria, a placa, há quanto tempo e a situação.
 import { Link } from 'react-router'
+import { formatarData } from '../casca/formatar'
 import { Icone } from '../casca/Icone'
 import { Placa } from '../casca/Placa'
 import { caminhoAnuncio } from './caminhos'
@@ -27,7 +28,12 @@ export function Cartao({ anuncio, mostrarPlaca = true }: { anuncio: AnuncioResum
         <span className="cla-categoria">{anuncio.categoria.nome}</span>
         <span className="linha-meta cla-meta">
           {mostrarPlaca && <Placa unidade={anuncio.unidade} />}
-          <span className="cla-quando">{haQuanto(anuncio.em)}</span>
+          {/* Em "Meus anúncios", o aberto diz até quando fica na lista (revisão UX 12). */}
+          <span className="cla-quando">
+            {!mostrarPlaca && !situacao
+              ? `Fica na lista até ${formatarData(anuncio.vence_em)}`
+              : haQuanto(anuncio.em)}
+          </span>
           {situacao && <span className={`selo cla-situacao cla-${anuncio.situacao}`}>{situacao}</span>}
           {avisos > 0 && (
             <span className="selo ind-selo-aviso">

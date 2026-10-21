@@ -39,7 +39,8 @@ export async function enviarFoto(
   ferramentas: Ferramentas = ferramentasDoNavegador,
 ): Promise<number> {
   if (!ehFoto(escolhida.type)) throw recusada(MSG_TIPO_FOTO)
-  const foto = await comprimir(escolhida, ferramentas, LIMITE_FOTO)
+  // Sempre regravada (revisão M1): sai o GPS e qualquer outro metadado, de JPEG, PNG ou WEBP.
+  const foto = await comprimir(escolhida, ferramentas, LIMITE_FOTO, true)
   const problema = problemaDaFoto(foto)
   if (problema) throw recusada(problema)
 

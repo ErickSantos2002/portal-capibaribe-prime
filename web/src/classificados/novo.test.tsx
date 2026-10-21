@@ -188,6 +188,28 @@ describe('anunciar', () => {
   })
 })
 
+describe('revisão de UX', () => {
+  it('11: já no limite, o aviso aparece ao abrir, antes do Publicar', async () => {
+    comFotos({
+      'GET /api/classificados/meus': json(200, {
+        itens: [],
+        limite: 'Seu apartamento já fez 5 anúncios hoje. Tente de novo amanhã.',
+      }),
+    })
+    abrir('/classificados/novo')
+    expect(
+      await screen.findByText('Seu apartamento já fez 5 anúncios hoje. Tente de novo amanhã.'),
+    ).toBeTruthy()
+  })
+
+  it('15: o exemplo do título é curto (não corta a 360 px com a letra a 150 %)', async () => {
+    comFotos()
+    abrir('/classificados/novo')
+    const titulo = (await screen.findByLabelText('Título')) as HTMLInputElement
+    expect(titulo.placeholder.length).toBeLessThanOrEqual(20)
+  })
+})
+
 describe('editar', () => {
   it('começa com o que o anúncio tem, as fotos inclusive, e salva com PUT', async () => {
     const chamadas = comFotos({

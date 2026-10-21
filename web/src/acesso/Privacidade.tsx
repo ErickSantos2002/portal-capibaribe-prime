@@ -69,8 +69,9 @@ export function TextoDaPolitica() {
       <p>
         Nos Classificados, o anúncio aparece com o bloco e o apartamento e com o contato que você
         escolheu, só para quem entra no Portal, nunca com o seu nome. As fotos também aparecem para
-        todos os vizinhos: evite pessoas e documentos nelas. A localização (GPS) que a foto do
-        celular costuma trazer é apagada antes do envio.
+        todos os vizinhos: evite pessoas e documentos nelas. Nos Classificados, toda foto é
+        regravada no aparelho antes do envio, o que apaga a localização (GPS) e as outras
+        informações escondidas que a foto do celular costuma trazer.
       </p>
 
       <h2>Quem cuida dos dados</h2>
@@ -103,8 +104,8 @@ export function TextoDaPolitica() {
         vez”) fica guardado, mas sem nome, celular nem e-mail.
       </p>
       <p>
-        Os anúncios dos Classificados duram pouco, sem ninguém precisar apagar: o encerrado é
-        apagado de vez em 7 dias e o vencido, em 30, com as fotos. As fotos não entram na cópia de
+        Os anúncios dos Classificados duram pouco, sem ninguém precisar apagar: o encerrado ou
+        escondido pela gestão é apagado de vez em 7 dias e o vencido, em 30, com as fotos. As fotos não entram na cópia de
         segurança do Portal.
       </p>
 

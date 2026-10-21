@@ -45,6 +45,23 @@ describe('enviarFoto', () => {
     expect(confirmacao.c).toBe('/api/classificados/fotos/41/confirmar')
   })
 
+  it('foto pequena em PNG ou WEBP também é regravada (sai todo metadado; revisão M1)', async () => {
+    for (const tipo of ['image/png', 'image/webp']) {
+      const fetch = rede()
+      const pequena = new File([new Uint8Array(300)], 'foto', { type: tipo })
+      const navegador: Ferramentas = {
+        medir: vi.fn(async () => ({ largura: 640, altura: 480 })),
+        // Regravada fica maior que a original, e vai mesmo assim.
+        regravar: vi.fn(async () => new Blob([new Uint8Array(900)], { type: 'image/webp' })),
+      }
+      await enviarFoto(pequena, navegador)
+      expect(navegador.regravar).toHaveBeenCalled()
+      const pedido = JSON.parse(String((fetch.mock.calls[0][1] as RequestInit).body))
+      expect(pedido).toEqual({ tipo: 'image/webp', tamanho_bytes: 900 })
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('PDF nem é pedido', async () => {
     const fetch = rede()
     const pdf = new File(['%PDF'], 'conta.pdf', { type: 'application/pdf' })

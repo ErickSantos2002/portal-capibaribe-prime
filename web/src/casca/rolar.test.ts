@@ -33,6 +33,26 @@ describe('centralizar', () => {
     expect(rolar).toHaveBeenCalledWith(expect.objectContaining({ block: 'start' }))
   })
 
+  it('desconta o topo preso de verdade (com o recado aberto ele cresce; revisão dos classificados, UX 8)', () => {
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 780 })
+    const topo = document.createElement('header')
+    topo.className = 'topo'
+    topo.style.position = 'sticky'
+    topo.getBoundingClientRect = () => ({ height: 250, top: 0, bottom: 250, left: 0, right: 0, width: 360, x: 0, y: 0, toJSON: () => ({}) })
+    document.body.append(topo)
+    // 600 cabe na tela sem o topo, mas não abaixo de um topo de 250: vai para o alto.
+    const { el, rolar } = bloco(600)
+    let durante = ''
+    rolar.mockImplementation(() => {
+      durante = document.documentElement.style.scrollPaddingTop
+    })
+    centralizar(el)
+    expect(rolar).toHaveBeenCalledWith(expect.objectContaining({ block: 'start' }))
+    expect(parseFloat(durante)).toBeGreaterThanOrEqual(250)
+    // Depois, o scroll-padding volta ao do CSS.
+    expect(document.documentElement.style.scrollPaddingTop).toBe('')
+  })
+
   it('leva o foco ao bloco sem rolar de novo', () => {
     const { el } = bloco(100)
     centralizar(el)

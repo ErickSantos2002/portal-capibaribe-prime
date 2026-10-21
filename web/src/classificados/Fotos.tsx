@@ -1,8 +1,9 @@
 // Classificados · as fotos do anúncio aberto (spec, seção 3.2): a primeira grande e as outras em
-// miniatura; o toque abre a foto inteira por cima da tela, com "Anterior", "Próxima" e "Fechar"
-// (também pelas setas e pelo Esc). Ao fechar, o foco volta à foto que abriu.
-import { useEffect, useRef, useState } from 'react'
-import { Icone } from '../casca/Icone'
+// miniatura; o toque abre a foto inteira no visor comum dos anexos (`avisos/VisorDeFotos.tsx`:
+// fundo inerte, foco preso, Esc, sem rolar por trás). Ao fechar, o foco volta à foto que estava
+// aberta (revisão UX 1).
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { VisorDeFotos } from '../avisos/VisorDeFotos'
 import type { FotoDoAnuncio } from './tipos'
 
 interface Props {
@@ -13,22 +14,20 @@ interface Props {
 export function FotosDoAnuncio({ fotos, titulo }: Props) {
   const [aberta, setAberta] = useState<number | null>(null)
   const botoes = useRef<(HTMLButtonElement | null)[]>([])
-  const ultima = useRef<number | null>(null)
+  const focarDepois = useRef<number | null>(null)
+  const fechar = useCallback((indice: number) => {
+    focarDepois.current = indice
+    setAberta(null)
+  }, [])
 
+  // Depois que a página deixou de estar inerte (o visor já saiu).
   useEffect(() => {
-    if (aberta === null && ultima.current !== null) {
-      botoes.current[ultima.current]?.focus()
-      ultima.current = null
-    }
+    if (aberta !== null || focarDepois.current === null) return
+    botoes.current[focarDepois.current]?.focus()
+    focarDepois.current = null
   }, [aberta])
 
   if (fotos.length === 0) return null
-
-  function abrir(indice: number) {
-    ultima.current = indice
-    setAberta(indice)
-  }
-
   const nome = (i: number) => `Foto ${i + 1} de ${fotos.length}: ${titulo}`
   return (
     <section className="cla-fotos" aria-label="Fotos">
@@ -38,7 +37,7 @@ export function FotosDoAnuncio({ fotos, titulo }: Props) {
         ref={(b) => {
           botoes.current[0] = b
         }}
-        onClick={() => abrir(0)}
+        onClick={() => setAberta(0)}
       >
         <img src={fotos[0].url} alt={nome(0)} decoding="async" />
         {fotos.length > 1 && <span className="cla-foto-conta">1 de {fotos.length}</span>}
@@ -52,7 +51,7 @@ export function FotosDoAnuncio({ fotos, titulo }: Props) {
                 ref={(b) => {
                   botoes.current[i + 1] = b
                 }}
-                onClick={() => abrir(i + 1)}
+                onClick={() => setAberta(i + 1)}
               >
                 <img src={f.url} alt={nome(i + 1)} loading="lazy" decoding="async" />
               </button>
@@ -61,59 +60,13 @@ export function FotosDoAnuncio({ fotos, titulo }: Props) {
         </ul>
       )}
       {aberta !== null && (
-        <Visor fotos={fotos} indice={aberta} trocar={setAberta} nome={nome} fechar={() => setAberta(null)} />
+        <VisorDeFotos
+          fotos={fotos.map((f) => f.url)}
+          inicio={aberta}
+          fechar={fechar}
+          descrever={nome}
+        />
       )}
     </section>
-  )
-}
-
-interface PropsVisor {
-  fotos: FotoDoAnuncio[]
-  indice: number
-  trocar: (i: number) => void
-  nome: (i: number) => string
-  fechar: () => void
-}
-
-function Visor({ fotos, indice, trocar, nome, fechar }: PropsVisor) {
-  const fecharBotao = useRef<HTMLButtonElement>(null)
-  const total = fotos.length
-  useEffect(() => fecharBotao.current?.focus(), [])
-
-  const anterior = () => trocar((indice - 1 + total) % total)
-  const proxima = () => trocar((indice + 1) % total)
-
-  return (
-    <div
-      className="cla-visor"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Foto ${indice + 1} de ${total}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') fechar()
-        else if (e.key === 'ArrowLeft' && total > 1) anterior()
-        else if (e.key === 'ArrowRight' && total > 1) proxima()
-      }}
-    >
-      <div className="cla-visor-topo">
-        <span>
-          Foto {indice + 1} de {total}
-        </span>
-        <button type="button" className="botao leve" ref={fecharBotao} onClick={fechar}>
-          <Icone nome="fechar" /> Fechar
-        </button>
-      </div>
-      <img className="cla-visor-foto" src={fotos[indice].url} alt={nome(indice)} />
-      {total > 1 && (
-        <div className="cla-visor-botoes">
-          <button type="button" className="botao leve" onClick={anterior}>
-            <Icone nome="voltar" /> Anterior
-          </button>
-          <button type="button" className="botao leve" onClick={proxima}>
-            Próxima <Icone nome="seta" />
-          </button>
-        </div>
-      )}
-    </div>
   )
 }

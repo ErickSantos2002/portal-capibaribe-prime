@@ -23,24 +23,41 @@ const MOTIVOS: { valor: MotivoEncerramento; texto: string }[] = [
 interface Props {
   anuncio: Anuncio
   trocar: (novo: Anuncio) => void
+  /** Encerrou ou renovou: o botão some, e o foco vai para o título do anúncio. */
+  focarNoTitulo: () => void
 }
 
-export function AcoesDoDono({ anuncio, trocar }: Props) {
+type DepoisDe = 'reserva' | 'titulo'
+
+export function AcoesDoDono({ anuncio, trocar, focarNoTitulo }: Props) {
   const recado = useRecado()
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')
   const [encerrando, setEncerrando] = useState(false)
   const botaoEncerrar = useDevolverFoco<HTMLButtonElement>(encerrando)
+  // Revisão UX 7: o botão desabilitado durante o pedido perdia o foco (ia para o body). Depois
+  // de reservar ou tirar a reserva, o foco volta ao botão que ficou no lugar.
+  const botaoReserva = useRef<HTMLButtonElement>(null)
+  // Lido a cada render: o pedido terminou, o botão voltou a ficar habilitado, aí o foco vai.
+  const focar = useRef<DepoisDe | null>(null)
+  useEffect(() => {
+    const destino = focar.current
+    if (!destino || ocupado) return
+    focar.current = null
+    if (destino === 'reserva') botaoReserva.current?.focus()
+    else focarNoTitulo()
+  })
 
   if (anuncio.situacao === 'encerrado') return null
   const aberto = !anuncio.escondido && !anuncio.vencido
 
-  async function fazer(acao: () => Promise<Anuncio>, frase: string) {
+  async function fazer(acao: () => Promise<Anuncio>, frase: string, depois: DepoisDe) {
     setOcupado(true)
     setErro('')
     try {
       trocar(await acao())
       recado(frase)
+      focar.current = depois
     } catch (e) {
       setErro(comoErroDaApi(e).mensagem)
     } finally {
@@ -71,7 +88,8 @@ export function AcoesDoDono({ anuncio, trocar }: Props) {
               type="button"
               className="botao leve"
               disabled={ocupado}
-              onClick={() => fazer(() => liberar(anuncio.id), 'A reserva foi tirada.')}
+              ref={botaoReserva}
+              onClick={() => fazer(() => liberar(anuncio.id), 'A reserva foi tirada.', 'reserva')}
             >
               Tirar a reserva
             </button>
@@ -80,7 +98,10 @@ export function AcoesDoDono({ anuncio, trocar }: Props) {
               type="button"
               className="botao leve"
               disabled={ocupado}
-              onClick={() => fazer(() => reservar(anuncio.id), 'Anúncio marcado como reservado.')}
+              ref={botaoReserva}
+              onClick={() =>
+                fazer(() => reservar(anuncio.id), 'Anúncio marcado como reservado.', 'reserva')
+              }
             >
               Marcar como reservado
             </button>
@@ -91,7 +112,7 @@ export function AcoesDoDono({ anuncio, trocar }: Props) {
             className="botao"
             disabled={ocupado}
             onClick={() =>
-              fazer(() => renovar(anuncio.id), 'Anúncio renovado por mais 30 dias.')
+              fazer(() => renovar(anuncio.id), 'Anúncio renovado por mais 30 dias.', 'titulo')
             }
           >
             <Icone nome="relogio" /> Renovar por mais 30 dias
@@ -100,7 +121,7 @@ export function AcoesDoDono({ anuncio, trocar }: Props) {
         {encerrando ? (
           <Encerrar
             aoEncerrar={async (motivo) => {
-              await fazer(() => encerrar(anuncio.id, motivo), 'Anúncio encerrado.')
+              await fazer(() => encerrar(anuncio.id, motivo), 'Anúncio encerrado.', 'titulo')
               setEncerrando(false)
             }}
             aoCancelar={() => setEncerrando(false)}
@@ -114,7 +135,7 @@ export function AcoesDoDono({ anuncio, trocar }: Props) {
             disabled={ocupado}
             onClick={() => setEncerrando(true)}
           >
-            <Icone nome="certo" /> Encerrar
+            <Icone nome="arquivar" /> Encerrar
           </button>
         )}
       </div>

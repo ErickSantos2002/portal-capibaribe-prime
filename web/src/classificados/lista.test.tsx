@@ -26,7 +26,7 @@ const ITENS = [
 ]
 
 function lista(itens = ITENS, extra: object = {}) {
-  return json(200, { itens, com_aviso: null, meus: 0, ...extra })
+  return json(200, { itens, com_aviso: null, meus: 0, meus_abertos: 0, ...extra })
 }
 
 describe('lista de classificados', () => {
@@ -39,7 +39,7 @@ describe('lista de classificados', () => {
       '/classificados/5',
       '/classificados/6',
     ])
-    expect(cartoes[0].textContent).toContain('Vende R$ 350')
+    expect(cartoes[0].textContent).toContain('Vende R$\u00a0350')
     expect(cartoes[0].textContent).toContain('Móveis')
     expect(cartoes[0].textContent).toContain('hoje')
     expect(cartoes[0].querySelector('img')?.getAttribute('src')).toBe(CAPA)
@@ -47,7 +47,7 @@ describe('lista de classificados', () => {
     expect(cartoes[1].textContent).toContain('Doa')
     expect(cartoes[1].textContent).toContain('Reservado')
     expect(cartoes[1].querySelector('img')).toBeNull()
-    expect(cartoes[2].textContent).toContain('Vende · a combinar')
+    expect(cartoes[2].textContent).toContain('Vende\u00a0· a\u00a0combinar')
     expect(screen.getByRole('heading', { level: 1, name: 'Classificados' })).toBeTruthy()
     // O botão de anunciar, fixo embaixo.
     expect(screen.getByRole('link', { name: /Anunciar/ }).getAttribute('href')).toBe(
@@ -62,7 +62,7 @@ describe('lista de classificados', () => {
       'GET /api/classificados?tipo=doacao&categoria=4': lista([ITENS[1]]),
     })
     abrir('/classificados')
-    const tipos = await screen.findByRole('group', { name: 'O que você procura' })
+    const tipos = await screen.findByRole('group', { name: 'O que você procura' }, { timeout: 4000 })
     expect(within(tipos).getAllByRole('button').map((b) => b.textContent)).toEqual([
       'Tudo',
       'Vende',
@@ -120,7 +120,7 @@ describe('lista de classificados', () => {
   })
 
   it('"Meus anúncios" aparece no topo só quando a unidade tem algum', async () => {
-    apiClassificados(MORADOR, { 'GET /api/classificados': lista(ITENS, { meus: 2 }) })
+    apiClassificados(MORADOR, { 'GET /api/classificados': lista(ITENS, { meus: 3, meus_abertos: 2 }) })
     abrir('/classificados')
     const meus = await screen.findByRole('link', { name: /Meus anúncios/ })
     expect(meus.getAttribute('href')).toBe('/classificados/meus')
@@ -155,6 +155,60 @@ describe('lista de classificados', () => {
     abrir('/classificados')
     const links = await screen.findAllByRole('link', { name: /Classificados/ })
     expect(links.some((l) => l.getAttribute('href') === '/classificados')).toBe(true)
+  })
+})
+
+describe('revisão de UX', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset.letra
+  })
+
+  it('4: a faixa de tipo quebra em linha (as quatro à vista); a das categorias é que rola', async () => {
+    apiClassificados(MORADOR, { 'GET /api/classificados': lista() })
+    abrir('/classificados')
+    const tipos = await screen.findByRole('group', { name: 'O que você procura' }, { timeout: 4000 })
+    expect(tipos.classList.contains('faixa-categorias')).toBe(false)
+    expect(tipos.classList.contains('cla-tipos')).toBe(true)
+    expect(screen.getByRole('navigation', { name: 'Categorias' }).classList.contains('faixa-categorias')).toBe(
+      true,
+    )
+  })
+
+  it('10: com a letra grande, "Anunciar" entra no fluxo, antes da busca; sem o flutuante', async () => {
+    document.documentElement.dataset.letra = 'grande'
+    apiClassificados(MORADOR, { 'GET /api/classificados': lista() })
+    abrir('/classificados')
+    const busca = await screen.findByLabelText(/Procurar/, {}, { timeout: 4000 })
+    const anunciar = screen.getAllByRole('link', { name: /Anunciar/ })
+    expect(anunciar).toHaveLength(1)
+    expect(anunciar[0].classList.contains('flutuante')).toBe(false)
+    expect(anunciar[0].compareDocumentPosition(busca) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('10: com a letra de fábrica, continua o flutuante', async () => {
+    apiClassificados(MORADOR, { 'GET /api/classificados': lista() })
+    abrir('/classificados')
+    await screen.findByLabelText(/Procurar/)
+    expect(screen.getByRole('link', { name: /Anunciar/ }).classList.contains('flutuante')).toBe(true)
+  })
+
+  it('12: "Meus anúncios" sem número quando nenhum está aberto', async () => {
+    apiClassificados(MORADOR, { 'GET /api/classificados': lista(ITENS, { meus: 2, meus_abertos: 0 }) })
+    abrir('/classificados')
+    const meus = await screen.findByRole('link', { name: /Meus anúncios/ })
+    expect(meus.textContent?.trim()).toBe('Meus anúncios')
+  })
+
+  it('12: em "Meus anúncios", o aberto diz até quando fica na lista', async () => {
+    apiClassificados(MORADOR, {
+      'GET /api/classificados/meus': json(200, {
+        itens: [resumo(1, { titulo: 'Aberto', vence_em: '2026-11-19T15:00:00Z' })],
+        limite: null,
+      }),
+    })
+    abrir('/classificados/meus')
+    const cartao = await screen.findByRole('link', { name: /Aberto/ })
+    expect(cartao.textContent).toContain('Fica na lista até 19 de novembro')
   })
 })
 

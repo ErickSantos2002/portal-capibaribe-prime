@@ -55,14 +55,24 @@ describe('anúncio aberto', () => {
     const grande = (await screen.findByRole('img', { name: /Foto 1 de 2/ })).closest('button')!
     fireEvent.click(grande)
     const visor = screen.getByRole('dialog', { name: 'Foto 1 de 2' })
+    // O visor comum dos anexos (revisão UX 1): no body, com o resto inerte e sem rolar por trás.
+    expect(visor.parentElement).toBe(document.body)
+    expect(visor.className).toContain('anexo-visualizador')
+    const fundo = [...document.body.children].filter((e) => e !== visor && e.tagName === 'DIV')
+    expect(fundo.length).toBeGreaterThan(0)
+    expect(fundo.every((e) => e.hasAttribute('inert'))).toBe(true)
+    expect(document.body.style.overflow).toBe('hidden')
     expect(document.activeElement).toBe(within(visor).getByRole('button', { name: /Fechar/ }))
-    fireEvent.click(within(visor).getByRole('button', { name: /Próxima/ }))
+    fireEvent.click(within(visor).getByRole('button', { name: 'Próxima foto' }))
     expect(screen.getByRole('dialog', { name: 'Foto 2 de 2' })).toBeTruthy()
-    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' })
+    fireEvent.keyDown(document, { key: 'ArrowRight' })
     expect(screen.getByRole('dialog', { name: 'Foto 1 de 2' })).toBeTruthy()
-    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    // O Esc vale em qualquer lugar (no document), não só com o foco na janela.
+    fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(document.activeElement).toBe(grande)
+    expect(fundo.some((e) => e.hasAttribute('inert'))).toBe(false)
+    expect(document.body.style.overflow).toBe('')
+    await waitFor(() => expect(document.activeElement).toBe(grande))
   })
 
   it('o morador avisa a gestão com o motivo e o link vira "Você já avisou a gestão."', async () => {
@@ -116,7 +126,7 @@ describe('anúncio aberto', () => {
       'POST /api/classificados/7/renovar': json(200, anuncio({ meu: true })),
     })
     abrir('/classificados/7')
-    expect(await screen.findByText(/Este anúncio venceu em .* e saiu da lista/)).toBeTruthy()
+    expect(await screen.findByText(/O seu anúncio venceu em .* e saiu da lista/)).toBeTruthy()
     expect(screen.queryByRole('link', { name: /Editar/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /reservado/ })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Renovar por mais 30 dias/ }))
@@ -144,7 +154,7 @@ describe('anúncio aberto', () => {
     expect(chamadas.find((c) => c.caminho === '/api/classificados/7/encerrar')?.corpo).toEqual({
       motivo: 'doei',
     })
-    expect(screen.getByText(/Anúncio encerrado \(doado\)/)).toBeTruthy()
+    expect(screen.getByText(/Você encerrou este anúncio \(doado\)/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Encerrar' })).toBeNull()
   })
 
@@ -153,7 +163,7 @@ describe('anúncio aberto', () => {
       'GET /api/classificados/7': json(200, anuncio({ meu: true, escondido: true })),
     })
     abrir('/classificados/7')
-    expect(await screen.findByText(/A gestão escondeu este anúncio/)).toBeTruthy()
+    expect(await screen.findByText(/A gestão escondeu o seu anúncio/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Encerrar' })).toBeTruthy()
     expect(screen.queryByRole('link', { name: /Editar/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /reservado/ })).toBeNull()
@@ -168,7 +178,92 @@ describe('anúncio aberto', () => {
     })
     abrir('/classificados/7')
     expect(await screen.findByText('Este anúncio não está mais disponível.')).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Ver todos os anúncios' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Ver outros anúncios' })).toBeTruthy()
+  })
+})
+
+describe('revisão de UX', () => {
+  it('5: a gestão no próprio anúncio vê a visão do dono, sem "Para a gestão"', async () => {
+    apiClassificados(ADMIN, {
+      'GET /api/classificados/7': json(200, anuncio({ meu: true, avisos: [] })),
+    })
+    abrir('/classificados/7')
+    expect(await screen.findByRole('heading', { name: 'O seu anúncio' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Para a gestão' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Esconder este anúncio/ })).toBeNull()
+  })
+
+  it('5: o escondido fala com o dono em 2ª pessoa', async () => {
+    apiClassificados(DONO, {
+      'GET /api/classificados/7': json(200, anuncio({ meu: true, escondido: true })),
+    })
+    abrir('/classificados/7')
+    expect(await screen.findByText(/e você só pode encerrá-lo/)).toBeTruthy()
+  })
+
+  it('6: indisponível é estado neutro, sem "Tentar de novo", com "Ver outros anúncios"', async () => {
+    apiClassificados(MORADOR, {
+      'GET /api/classificados/7': json(404, {
+        codigo: 'anuncio_indisponivel',
+        mensagem: 'Este anúncio não está mais disponível.',
+      }),
+    })
+    abrir('/classificados/7')
+    const frase = await screen.findByText('Este anúncio não está mais disponível.')
+    expect(frase.closest('.aviso-caixa')?.classList.contains('erro')).toBe(false)
+    expect(screen.queryByRole('button', { name: /Tentar de novo/ })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Ver outros anúncios' }).getAttribute('href')).toBe(
+      '/classificados',
+    )
+  })
+
+  it('6: erro de rede continua com "Tentar de novo"', async () => {
+    apiClassificados(MORADOR, {
+      'GET /api/classificados/7': json(500, { codigo: 'erro_interno', mensagem: 'Algo deu errado.' }),
+    })
+    abrir('/classificados/7')
+    expect(await screen.findByRole('button', { name: /Tentar de novo/ })).toBeTruthy()
+  })
+
+  it('7: depois de reservar, o foco fica no botão que ficou no lugar; depois de encerrar, no título', async () => {
+    apiClassificados(DONO, {
+      'GET /api/classificados/7': json(200, anuncio({ meu: true })),
+      'POST /api/classificados/7/reservar': json(200, anuncio({ meu: true, situacao: 'reservado' })),
+      'POST /api/classificados/7/encerrar': json(
+        200,
+        anuncio({ meu: true, situacao: 'encerrado', motivo_encerramento: 'vendi' }),
+      ),
+    })
+    abrir('/classificados/7')
+    fireEvent.click(await screen.findByRole('button', { name: 'Marcar como reservado' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Tirar a reserva' })),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Encerrar' }))
+    fireEvent.click(screen.getByLabelText('Vendi'))
+    fireEvent.click(screen.getByRole('button', { name: 'Encerrar anúncio' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('heading', { level: 2, name: 'Sofá de 3 lugares' })),
+    )
+  })
+
+  it('9: o reservado diz ao visitante que ainda dá para chamar, e a mensagem muda', async () => {
+    apiClassificados(MORADOR, {
+      'GET /api/classificados/7': json(200, anuncio({ situacao: 'reservado' })),
+    })
+    abrir('/classificados/7')
+    expect(
+      await screen.findByText('Reservado: alguém já combinou com o dono. Você ainda pode chamar.'),
+    ).toBeTruthy()
+    const href = screen.getByRole('link', { name: /Chamar no WhatsApp/ }).getAttribute('href') ?? ''
+    expect(decodeURIComponent(href.split('?text=')[1])).toBe(mensagemDoWhatsApp('Sofá de 3 lugares', true))
+  })
+
+  it('16: "Encerrar" não usa o ícone de certo', async () => {
+    apiClassificados(DONO, { 'GET /api/classificados/7': json(200, anuncio({ meu: true })) })
+    abrir('/classificados/7')
+    const botao = await screen.findByRole('button', { name: 'Encerrar' })
+    expect(botao.innerHTML).not.toContain('M5 12.5l4.5 4.5L19 7')
   })
 })
 

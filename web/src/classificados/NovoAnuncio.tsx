@@ -14,7 +14,7 @@ import { useAvisarAoSair } from '../enquetes/gestao/useAvisarAoSair'
 import { ErroGeral } from '../indicacoes/FormOpiniao'
 import { digitosDoTelefone, MSG_CONFIRA } from '../indicacoes/formulario'
 import { PerguntaSairSemPublicar } from '../indicacoes/SairSemPublicar'
-import { abrirAnuncio, anunciar, editarAnuncio, listarCategorias } from './api'
+import { abrirAnuncio, anunciar, editarAnuncio, listarCategorias, meusAnuncios } from './api'
 import { CAMINHO_CLASSIFICADOS, caminhoAnuncio } from './caminhos'
 import { EscolherFotos, type FotoNoFormulario } from './EscolherFotos'
 import { centavosDoTexto, precoNoCampo } from './formatos'
@@ -150,6 +150,11 @@ function Formulario({ inicial, anuncio }: PropsFormulario) {
   const [geral, setGeral] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [categorias, recarregarCategorias] = useCarga(() => listarCategorias(), [])
+  const [meus] = useCarga(
+    () => (anuncio ? Promise.resolve(null) : meusAnuncios()),
+    [anuncio?.id ?? 0],
+  )
+  const limite = meus.dados?.limite ?? null
 
   const fotosMudaram =
     JSON.stringify(fotos.map((f) => f.chave)) !==
@@ -234,6 +239,13 @@ function Formulario({ inicial, anuncio }: PropsFormulario) {
             na lista por 30 dias, com o bloco e o apartamento, nunca com o seu nome.
           </p>
         )}
+        {/* Já no limite (5 por dia, 10 abertos): avisa logo, não só no Publicar (revisão UX 11). */}
+        {limite && (
+          <div className="aviso-caixa atencao" role="status">
+            <Icone nome="alerta" />
+            <p>{limite}</p>
+          </div>
+        )}
         {geral && <ErroGeral mensagem={geral} />}
 
         <fieldset
@@ -294,7 +306,7 @@ function Formulario({ inicial, anuncio }: PropsFormulario) {
           onChange={(e) => mudar('titulo', e.target.value)}
           maxLength={LIMITE_TITULO}
           autoComplete="off"
-          placeholder="Ex.: Sobra de porcelanato 60x60"
+          placeholder="Ex.: Sobra de piso"
           className={erros.titulo ? 'campo-erro' : undefined}
           aria-invalid={erros.titulo ? true : undefined}
           aria-describedby={descrito('titulo')}

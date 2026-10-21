@@ -3,12 +3,13 @@
 // abre numa aba nova (a CSP não deixa embutir PDF). Os dois passam pela rota `…/abrir` do Portal,
 // que confere a sessão e redireciona para um link novo (revisão U12).
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+
 import type { ArquivoEnviado } from '../arquivos/tipos'
 import { Icone } from '../casca/Icone'
 import { descricaoDoAnexo, ehFoto } from './anexos'
 import { enderecoDoAnexo } from './api'
 import { IconeAnexo } from './IconesAnexo'
+import { VisorDeFotos } from './VisorDeFotos'
 import './anexos.css'
 
 /** Um anexo para mostrar. `previa`: a miniatura local (`blob:`) da foto ainda não publicada. */
@@ -58,116 +59,6 @@ export function MiniaturaRemota({
   const foto = useFotoQueTenta(avisoId, { arquivo })
   if (foto.falhou || !foto.url) return <IconeAnexo nome="foto" tamanho={28} />
   return <img src={foto.url} alt="" onError={foto.aoFalhar} />
-}
-
-interface PropsVisualizador {
-  avisoId?: number
-  fotos: readonly AnexoParaMostrar[]
-  inicio: number
-  /** Fecha e diz qual foto estava aberta (o foco volta para a miniatura dela). */
-  fechar: (indice: number) => void
-}
-
-/** As fotos grandes, por cima da tela (C4, U7, U8). Enquanto aberto: o resto da página fica
- *  inerte, o foco não sai, Esc fecha e as setas do teclado trocam de foto. O zoom de dois dedos
- *  do navegador continua valendo (nada de `touch-action: none`). */
-function Visualizador({ avisoId, fotos, inicio, fechar }: PropsVisualizador) {
-  const [indice, setIndice] = useState(inicio)
-  const janela = useRef<HTMLDivElement>(null)
-  const botaoFechar = useRef<HTMLButtonElement>(null)
-  const atual = useRef(indice)
-  useEffect(() => {
-    atual.current = indice
-  }, [indice])
-  const varias = fotos.length > 1
-  const rotulo = `Foto ${indice + 1} de ${fotos.length}`
-
-  useEffect(() => {
-    const dialogo = janela.current
-    botaoFechar.current?.focus()
-    // O resto da página fica inerte (nem foco nem leitor de tela chegam lá).
-    const fundo = [...document.body.children].filter((e) => dialogo && !e.contains(dialogo))
-    for (const e of fundo) e.setAttribute('inert', '')
-    const rolagem = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    function teclar(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        fechar(atual.current)
-      } else if (e.key === 'ArrowRight') {
-        setIndice((i) => (i + 1) % fotos.length)
-      } else if (e.key === 'ArrowLeft') {
-        setIndice((i) => (i - 1 + fotos.length) % fotos.length)
-      } else if (e.key === 'Tab' && dialogo) {
-        // O foco gira entre os botões da janela.
-        const botoes = [...dialogo.querySelectorAll('button')]
-        const posicao = botoes.indexOf(document.activeElement as HTMLButtonElement)
-        const proximo = e.shiftKey ? posicao - 1 : posicao + 1
-        e.preventDefault()
-        botoes[(proximo + botoes.length) % botoes.length]?.focus()
-      }
-    }
-    // O foco que escapar (um toque na foto, por exemplo) volta para a janela.
-    function prender(e: FocusEvent) {
-      if (dialogo && !dialogo.contains(e.target as Node)) botaoFechar.current?.focus()
-    }
-    document.addEventListener('keydown', teclar)
-    document.addEventListener('focusin', prender)
-    return () => {
-      document.removeEventListener('keydown', teclar)
-      document.removeEventListener('focusin', prender)
-      for (const e of fundo) e.removeAttribute('inert')
-      document.body.style.overflow = rolagem
-    }
-  }, [fechar, fotos.length])
-
-  const url = enderecoDaFoto(avisoId, fotos[indice])
-  return createPortal(
-    <div
-      ref={janela}
-      className="anexo-visualizador"
-      role="dialog"
-      aria-modal="true"
-      aria-label={rotulo}
-      // Um toque na foto ou no fundo mantém o foco na janela.
-      tabIndex={-1}
-    >
-      <div className="anexo-visualizador-topo">
-        <p aria-live="polite">{rotulo}</p>
-        <button
-          ref={botaoFechar}
-          type="button"
-          className="botao leve"
-          onClick={() => fechar(indice)}
-        >
-          <IconeAnexo nome="fechar" /> Fechar
-        </button>
-      </div>
-      {url && <img src={url} alt={rotulo} />}
-      {varias && (
-        <div className="anexo-visualizador-passar">
-          <button
-            type="button"
-            className="botao leve"
-            aria-label="Foto anterior"
-            onClick={() => setIndice((i) => (i - 1 + fotos.length) % fotos.length)}
-          >
-            <Icone nome="voltar" /> Anterior
-          </button>
-          <button
-            type="button"
-            className="botao leve"
-            aria-label="Próxima foto"
-            onClick={() => setIndice((i) => (i + 1) % fotos.length)}
-          >
-            Próxima <Icone nome="seta" />
-          </button>
-        </div>
-      )}
-    </div>,
-    document.body,
-  )
 }
 
 interface PropsFoto {
@@ -294,9 +185,8 @@ export function AnexosDoAviso({
         <Pdf key={a.arquivo.id} avisoId={avisoId} arquivo={a.arquivo} />
       ))}
       {aberta !== null && (
-        <Visualizador
-          avisoId={avisoId}
-          fotos={fotos}
+        <VisorDeFotos
+          fotos={fotos.map((a) => enderecoDaFoto(avisoId, a))}
           inicio={aberta}
           fechar={fechar}
         />

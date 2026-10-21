@@ -7,6 +7,7 @@ import { Link, useSearchParams } from 'react-router'
 import { useCarga } from '../avisos/carregar'
 import { Carregando, FalhaAoCarregar } from '../avisos/componentes'
 import { useSessao } from '../casca/contextoSessao'
+import { useLetraGrande } from '../casca/letra'
 import { Icone } from '../casca/Icone'
 import { Tela } from '../casca/Tela'
 import { useAtrasado } from '../indicacoes/useAtrasado'
@@ -37,6 +38,7 @@ function tipoDaConsulta(texto: string | null): TipoAnuncio | undefined {
 
 export function ListaClassificados() {
   const { eu } = useSessao()
+  const grande = useLetraGrande()
   const [consulta, setConsulta] = useSearchParams()
   const tipo = tipoDaConsulta(consulta.get('tipo'))
   const categoria = numero(consulta.get('categoria'))
@@ -96,17 +98,27 @@ export function ListaClassificados() {
     campoDaBusca.current?.focus()
   }
 
-  const anunciar = (
+  // Com a letra grande, o botão flutuante cobria a busca: ele entra no começo da lista, no fluxo
+  // da página (revisão UX 10). Com a letra de fábrica, o de sempre, fixo embaixo.
+  const anunciar = grande ? null : (
     <Link className="flutuante cla-anunciar" to={CAMINHO_NOVO_ANUNCIO}>
       <Icone nome="mais" /> Anunciar
     </Link>
   )
+  const abertos = lista?.meus_abertos ?? 0
 
   return (
     <Tela titulo="Classificados" extra={anunciar}>
+      {grande && (
+        <Link className="botao cla-anunciar cla-anunciar-no-fluxo" to={CAMINHO_NOVO_ANUNCIO}>
+          <Icone nome="mais" /> Anunciar
+        </Link>
+      )}
       {!!lista?.meus && (
         <Link className="cla-meus" to={CAMINHO_MEUS_ANUNCIOS}>
-          <Icone nome="classificados" /> Meus anúncios ({lista.meus})
+          {/* O número é só dos abertos (revisão UX 12); o link aparece também com só vencidos ou
+              encerrados, que dá para renovar ou rever. */}
+          <Icone nome="classificados" /> Meus anúncios{abertos > 0 ? ` (${abertos})` : ''}
           <span className="seta">
             <Icone nome="seta" />
           </span>
@@ -139,8 +151,8 @@ export function ListaClassificados() {
           {filtrando && lista && carga.situacao === 'pronta' ? encontrados(lista.itens.length) : ''}
         </p>
       </div>
-      {/* A mesma faixa das categorias: rola dentro dela, também com a letra grande. */}
-      <div className="faixa-categorias cla-tipos" role="group" aria-label="O que você procura">
+      {/* As quatro opções sempre à vista: quebram em linha, nunca rolam (revisão UX 4). */}
+      <div className="cla-tipos" role="group" aria-label="O que você procura">
         {TIPOS.map((t) => (
           <button
             key={t.texto}

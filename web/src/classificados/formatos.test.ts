@@ -13,10 +13,10 @@ import {
 
 describe('selo do tipo', () => {
   it('venda com preço, a combinar, troca e doação', () => {
-    expect(seloDoTipo('venda', 35000)).toBe('Vende R$ 350')
-    expect(seloDoTipo('venda', 125050)).toBe('Vende R$ 1.250,50')
-    expect(seloDoTipo('venda', null)).toBe('Vende · a combinar')
-    expect(seloDoTipo('venda', 0)).toBe('Vende R$ 0')
+    expect(seloDoTipo('venda', 35000)).toBe('Vende R$ 350')
+    expect(seloDoTipo('venda', 125050)).toBe('Vende R$ 1.250,50')
+    expect(seloDoTipo('venda', null)).toBe('Vende · a combinar')
+    expect(seloDoTipo('venda', 0)).toBe('Vende R$ 0')
     expect(seloDoTipo('troca', null)).toBe('Troca')
     expect(seloDoTipo('doacao', null)).toBe('Doa')
   })
@@ -65,6 +65,14 @@ describe('WhatsApp', () => {
     expect(link.startsWith('https://wa.me/5581999990001?text=')).toBe(true)
     expect(decodeURIComponent(link.split('?text=')[1])).toBe(mensagemDoWhatsApp('Sofá & cia'))
     expect(link).not.toContain('&cia')
+  })
+
+  it('no reservado, a mensagem diz que viu a reserva (revisão UX 9)', () => {
+    expect(mensagemDoWhatsApp('Berço', true)).toBe(
+      'Oi! Vi seu anúncio "Berço" no Portal Capibaribe Prime. Vi que está reservado; se não der certo, tenho interesse.',
+    )
+    const link = linkWhatsAppDoAnuncio('81999990001', 'Berço', true)
+    expect(decodeURIComponent(link.split('?text=')[1])).toBe(mensagemDoWhatsApp('Berço', true))
   })
 })
 

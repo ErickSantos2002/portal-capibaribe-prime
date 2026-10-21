@@ -2,6 +2,7 @@
 // categoria, a descrição, a placa e a data; "Chamar no WhatsApp" com a mensagem pronta (o fixo
 // ganha "Ligar", como nas indicações); o que o dono faz; "Tem algo errado aqui?"; e a seção da
 // gestão.
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useCarga } from '../avisos/carregar'
 import { Carregando, FalhaAoCarregar } from '../avisos/componentes'
@@ -36,14 +37,27 @@ export function PaginaAnuncio() {
   return (
     <Tela titulo="Anúncio" tituloDaAba={anuncio?.titulo} voltar={CAMINHO_CLASSIFICADOS}>
       {carga.situacao === 'erro' && !anuncio ? (
-        <>
-          <FalhaAoCarregar mensagem={carga.erro.mensagem} tentar={recarregar} />
-          <p>
-            <Link className="texto-link" to={CAMINHO_CLASSIFICADOS}>
-              Ver todos os anúncios
+        carga.erro.codigo === 'anuncio_indisponivel' ? (
+          // Vendido, vencido ou tirado da lista: não é erro, não adianta tentar de novo (UX 6).
+          <div className="cla-indisponivel">
+            <div className="aviso-caixa info">
+              <Icone nome="info" />
+              <p>{carga.erro.mensagem}</p>
+            </div>
+            <Link className="botao" to={CAMINHO_CLASSIFICADOS}>
+              Ver outros anúncios
             </Link>
-          </p>
-        </>
+          </div>
+        ) : (
+          <>
+            <FalhaAoCarregar mensagem={carga.erro.mensagem} tentar={recarregar} />
+            <p>
+              <Link className="texto-link" to={CAMINHO_CLASSIFICADOS}>
+                Ver todos os anúncios
+              </Link>
+            </p>
+          </>
+        )
       ) : !anuncio ? (
         <Carregando />
       ) : (
@@ -65,15 +79,19 @@ function Numero({ digitos }: { digitos: string }) {
 /** O recado do topo para o dono e a gestão quando o anúncio saiu da lista. */
 function Situacao({ anuncio }: { anuncio: Anuncio }) {
   let texto: string | null = null
+  // Para o dono, em 2ª pessoa (revisão UX 5).
   if (anuncio.escondido) {
     texto = anuncio.meu
-      ? 'A gestão escondeu este anúncio. Ele não aparece para os vizinhos e só pode ser encerrado.'
+      ? 'A gestão escondeu o seu anúncio. Ele não aparece para os vizinhos, e você só pode encerrá-lo. Ele é apagado em 7 dias, com as fotos.'
       : 'Escondido da lista pela gestão.'
   } else if (anuncio.situacao === 'encerrado' && anuncio.motivo_encerramento) {
-    texto = `Anúncio encerrado (${textoDoMotivo(anuncio.motivo_encerramento).toLowerCase()}). Ele é apagado em 7 dias, com as fotos.`
+    const motivo = textoDoMotivo(anuncio.motivo_encerramento).toLowerCase()
+    texto = anuncio.meu
+      ? `Você encerrou este anúncio (${motivo}). Ele é apagado em 7 dias, com as fotos.`
+      : `Anúncio encerrado (${motivo}). Ele é apagado em 7 dias, com as fotos.`
   } else if (anuncio.vencido) {
     texto = anuncio.meu
-      ? `Este anúncio venceu em ${formatarData(anuncio.vence_em)} e saiu da lista. Renove para ele voltar por mais 30 dias.`
+      ? `O seu anúncio venceu em ${formatarData(anuncio.vence_em)} e saiu da lista. Renove para ele voltar por mais 30 dias.`
       : `Venceu em ${formatarData(anuncio.vence_em)} e saiu da lista.`
   } else if (anuncio.meu) {
     texto = `Fica na lista até ${formatarData(anuncio.vence_em)}.`
@@ -96,6 +114,13 @@ interface PropsConteudo {
 
 function Conteudo({ anuncio, recarregar, trocar }: PropsConteudo) {
   const visivel = !anuncio.escondido && !anuncio.vencido && anuncio.situacao !== 'encerrado'
+  const reservado = anuncio.situacao === 'reservado'
+  // Encerrou ou renovou: o botão sumiu, e o foco vai ao título (revisão UX 7).
+  const [focarTitulo, setFocarTitulo] = useState(0)
+  const titulo = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (focarTitulo) titulo.current?.focus()
+  }, [focarTitulo])
   return (
     <>
       <Situacao anuncio={anuncio} />
@@ -107,7 +132,7 @@ function Conteudo({ anuncio, recarregar, trocar }: PropsConteudo) {
           </span>
           {anuncio.situacao === 'reservado' && <span className="selo cla-situacao cla-reservado">Reservado</span>}
         </p>
-        <h2 id="cla-titulo" className="cla-titulo">
+        <h2 id="cla-titulo" className="cla-titulo" ref={titulo} tabIndex={-1}>
           {anuncio.titulo}
         </h2>
         <p className="cla-categoria">{anuncio.categoria.nome}</p>
@@ -128,6 +153,12 @@ function Conteudo({ anuncio, recarregar, trocar }: PropsConteudo) {
       ) : (
         visivel && (
           <div className="ind-contatos">
+            {reservado && (
+              // Revisão UX 9: o visitante sabe o que é "Reservado" e que ainda pode chamar.
+              <p className="cla-reservado-frase">
+                Reservado: alguém já combinou com o dono. Você ainda pode chamar.
+              </p>
+            )}
             {!anuncio.celular && (
               <a className="botao ind-ligar" href={linkTelefone(anuncio.contato)}>
                 Ligar: <Numero digitos={anuncio.contato} />
@@ -135,7 +166,7 @@ function Conteudo({ anuncio, recarregar, trocar }: PropsConteudo) {
             )}
             <a
               className={anuncio.celular ? 'botao ind-whatsapp' : 'botao leve ind-whatsapp'}
-              href={linkWhatsAppDoAnuncio(anuncio.contato, anuncio.titulo)}
+              href={linkWhatsAppDoAnuncio(anuncio.contato, anuncio.titulo, reservado)}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -148,7 +179,13 @@ function Conteudo({ anuncio, recarregar, trocar }: PropsConteudo) {
         )
       )}
 
-      {anuncio.meu && <AcoesDoDono anuncio={anuncio} trocar={trocar} />}
+      {anuncio.meu && (
+        <AcoesDoDono
+          anuncio={anuncio}
+          trocar={trocar}
+          focarNoTitulo={() => setFocarTitulo((n) => n + 1)}
+        />
+      )}
 
       {!anuncio.meu && visivel && (
         <div className="ind-rodape">
@@ -162,7 +199,10 @@ function Conteudo({ anuncio, recarregar, trocar }: PropsConteudo) {
         </div>
       )}
 
-      {anuncio.avisos !== null && <ParaAGestao anuncio={anuncio} recarregar={recarregar} />}
+      {/* No próprio anúncio, a gestão vê como dona: a API manda `avisos` nulo (revisão UX 5). */}
+      {anuncio.avisos !== null && !anuncio.meu && (
+        <ParaAGestao anuncio={anuncio} recarregar={recarregar} />
+      )}
     </>
   )
 }

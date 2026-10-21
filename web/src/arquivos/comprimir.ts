@@ -94,14 +94,17 @@ async function regravarComo(
 /** O arquivo como deve ser enviado: a foto reduzida, ou o próprio arquivo. `limite` é o tamanho
  *  máximo do destino (`LIMITES[finalidade]`): a foto pequena acima dele também é regravada.
  *  Nunca falha: uma foto que o navegador não abre vai como está, e o servidor confere o
- *  conteúdo; a que continua grande é recusada na tela, pelo tamanho. */
+ *  conteúdo; a que continua grande é recusada na tela, pelo tamanho.
+ *  `sempreRegravar` (os classificados, revisão M1): toda foto é regravada, como o JPEG, para
+ *  sair qualquer metadado (PNG e WEBP também podem trazer). Os anexos do M3 seguem sem ele. */
 export async function comprimir(
   arquivo: File,
   ferramentas: Ferramentas = ferramentasDoNavegador,
   limite = Infinity,
+  sempreRegravar = false,
 ): Promise<File> {
   if (!arquivo.type.startsWith('image/')) return arquivo
-  const semGps = arquivo.type === 'image/jpeg'
+  const semGps = arquivo.type === 'image/jpeg' || sempreRegravar
   try {
     const { largura, altura } = await ferramentas.medir(arquivo)
     const cabe = Math.max(largura, altura) <= LADO_MAXIMO && arquivo.size <= limite

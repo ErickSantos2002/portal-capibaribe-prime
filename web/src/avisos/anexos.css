@@ -249,6 +249,63 @@ div.anexo-pdf .anexo-nome {
   }
 }
 
+/* "1 de 3" entre as setas: só com a letra grande (com a de fábrica, o "Foto 1 de 3" do topo). */
+.anexo-visualizador-conta {
+  display: none;
+}
+
+/* Letra grande (revisão dos classificados, UX 2): a foto não pode virar um selo no meio de
+   botões enormes. As setas ficam só com o desenho (o nome continua no aria-label), lado a lado
+   com o "1 de 3" no meio, e o "Foto 1 de 3" do topo sai da vista (continua no aria-live). */
+:root[data-letra='grande'] .anexo-visualizador {
+  gap: 0.5rem;
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+}
+
+:root[data-letra='grande'] .anexo-visualizador-topo {
+  justify-content: flex-end;
+}
+
+:root[data-letra='grande'] .anexo-visualizador-topo p {
+  position: absolute;
+  width: 1px; /* px: escondido */
+  height: 1px; /* px: escondido */
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+:root[data-letra='grande'] .anexo-visualizador-topo .botao {
+  min-height: 2.75rem;
+  padding: 0.25rem 0.75rem;
+}
+
+:root[data-letra='grande'] .anexo-visualizador-passar {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+:root[data-letra='grande'] .anexo-visualizador-passar .botao {
+  flex: none;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.75rem;
+}
+
+:root[data-letra='grande'] .anexo-visualizador-texto {
+  display: none;
+}
+
+:root[data-letra='grande'] .anexo-visualizador-conta {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  color: #ffffff;
+  font-weight: 700;
+  text-align: center;
+}
+
 /* ---------- no formulário ---------- */
 
 .anexos-lista {

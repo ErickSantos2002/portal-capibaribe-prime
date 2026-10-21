@@ -10,11 +10,15 @@ export function precoEmReais(centavos: number): string {
   return centavos % 100 === 0 ? `R$ ${inteiro.format(centavos / 100)}` : `R$ ${reais.format(centavos / 100)}`
 }
 
-/** "Vende R$ 350", "Vende · a combinar", "Troca", "Doa". */
+const ESPACO_FIXO = ' '
+
+/** "Vende R$ 350", "Vende · a combinar", "Troca", "Doa". Numa tela estreita, só quebra depois de
+ *  "Vende" (ou do "·"): nunca "R$" de um lado e o valor do outro, nem "a" sozinho (revisão UX 17). */
 export function seloDoTipo(tipo: TipoAnuncio, preco: number | null): string {
   if (tipo === 'troca') return 'Troca'
   if (tipo === 'doacao') return 'Doa'
-  return preco === null ? 'Vende · a combinar' : `Vende ${precoEmReais(preco)}`
+  if (preco === null) return `Vende${ESPACO_FIXO}· a${ESPACO_FIXO}combinar`
+  return `Vende ${precoEmReais(preco).replace(' ', ESPACO_FIXO)}`
 }
 
 /** O que a pessoa escreveu no campo do preço, em centavos. Vazio = `null` ("a combinar");
@@ -53,13 +57,17 @@ export function haQuanto(iso: string, agora: Date = new Date()): string {
   return `há ${dias} dias`
 }
 
-export function mensagemDoWhatsApp(titulo: string): string {
+/** A mensagem pronta; o reservado pede para ser lembrado se não der certo (revisão UX 9). */
+export function mensagemDoWhatsApp(titulo: string, reservado = false): string {
+  if (reservado) {
+    return `Oi! Vi seu anúncio "${titulo}" no Portal Capibaribe Prime. Vi que está reservado; se não der certo, tenho interesse.`
+  }
   return `Oi! Vi seu anúncio "${titulo}" no Portal Capibaribe Prime. Ainda está disponível?`
 }
 
 /** `https://wa.me/55<dígitos>?text=<mensagem>` (spec, seção 3.2). */
-export function linkWhatsAppDoAnuncio(digitos: string, titulo: string): string {
-  return `https://wa.me/55${digitos}?text=${encodeURIComponent(mensagemDoWhatsApp(titulo))}`
+export function linkWhatsAppDoAnuncio(digitos: string, titulo: string, reservado = false): string {
+  return `https://wa.me/55${digitos}?text=${encodeURIComponent(mensagemDoWhatsApp(titulo, reservado))}`
 }
 
 const MOTIVOS: Record<MotivoEncerramento, string> = {

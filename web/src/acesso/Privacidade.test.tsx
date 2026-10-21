@@ -76,8 +76,9 @@ describe('política de privacidade', () => {
     expect(texto).toContain('Classificados')
     expect(texto).toMatch(/contato que você escolheu/)
     expect(texto).toMatch(/Classificados, o anúncio aparece com o bloco e o apartamento/)
+    expect(texto).toMatch(/toda foto é regravada no aparelho antes do envio/)
     expect(texto).toMatch(/localização \(GPS\)/)
-    expect(texto).toMatch(/encerrado é apagado de vez em 7 dias e o vencido, em 30/)
+    expect(texto).toMatch(/encerrado ou escondido pela gestão é apagado de vez em 7 dias e o vencido, em 30/)
     expect(texto).toMatch(/Apagar meus dados.*anúncios dos Classificados/s)
   })
 
