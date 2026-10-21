@@ -17,6 +17,13 @@ export const VERSAO: string = __VERSAO__
 
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '1.9.1',
+    data: '2026-10-20',
+    itens: [
+      'Nos Classificados e nas Indicações, o tipo e a categoria agora se escolhem numa lista, sem nada escondido para o lado.',
+    ],
+  },
+  {
     versao: '1.9.0',
     data: '2026-10-20',
     nome: 'Classificados',

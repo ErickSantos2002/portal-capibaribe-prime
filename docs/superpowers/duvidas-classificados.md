@@ -165,3 +165,34 @@ aviso não aparece para o dono, e o anúncio duplicado da mesma unidade foi para
 3. **Contato por anúncio, pré-preenchido com o celular da unidade:** mantém.
 4. **Placa da unidade à vista no anúncio:** mantém.
 5. **Fotos descartáveis, fora do backup** (escondido e encerrado apagados em 7 dias): mantém.
+
+## Depois do lançamento
+
+### 1.9.1 (20/10/2026): tipo e categoria em listas de escolher
+
+O Erick, testando no celular: os chips de tipo quebravam em linha e deixavam "Procura" sozinho,
+desalinhado, e a faixa de categorias rolava para o lado sem nenhum sinal de que havia mais. Os dois
+viraram listas de escolher nativas (`<select>`), uma embaixo da outra, cada uma com rótulo
+visível (`<label for>`): **"Tipo"** (padrão "Tudo") e **"Categoria"** (padrão "Todas"). Nas
+Indicações, a faixa virou também o `<select>` **"Categoria"** (padrão "Todos"). Substitui as
+escolhas do builder 1 e a correção 22.
+
+- **Estilo:** o `select` não tem regra própria; é o de todos os campos do `estilo.css` (borda
+  `--borda`, 3,5 rem de altura, letra 1,125 rem, foco `--ipe-forte`, claro e escuro pelo
+  `color-scheme`). O invólucro é `.ind-filtro` no `indicacoes.css` (os classificados importam
+  esse arquivo). Saiu o CSS de `.faixa-categorias` e `.cla-tipos`; os guardas do CSS em
+  `web/testes/` conferem que não sobrou.
+- **"Todos" × "com aviso" (dúvida 20 das Indicações):** com o chip, tocar em "Todos" desligava
+  também o filtro "com aviso", e "Todos" ficava desmarcado enquanto ele estava ligado. Com o
+  `select` isso não se sustenta: escolher a opção que já está escolhida não dispara nada, e uma
+  lista dizendo "Todos" ao lado de um filtro ligado é verdade (nenhuma categoria escolhida).
+  **Escolha: os dois filtros são independentes.** A lista mexe só na categoria; o "com aviso"
+  liga e desliga só pelo botão dele, sem mexer na lista; "Ver todos"/"Ver todas" (lista vazia)
+  tira tudo e volta a lista para "Tudo"/"Todas"/"Todos". Nos classificados já era assim ("Todas"
+  nunca mexeu no "com aviso").
+- **Endereço:** igual a antes (`?tipo=&categoria=&busca=&com_aviso=1`); "Tudo", "Todas" e
+  "Todos" tiram a chave. O filtro que vem no endereço aparece escolhido na lista.
+- **Letra grande:** a 320 px e 200 % o primeiro cartão das Indicações começa em y ≈ 676 (era 581
+  com a faixa baixa), ainda acima das abas de baixo (≈ 698). Nos Classificados, com dois filtros,
+  o primeiro cartão fica abaixo da primeira tela a 200 %. A lista de escolher tem a altura dos
+  outros campos (como a busca); não encolhi só para ela.

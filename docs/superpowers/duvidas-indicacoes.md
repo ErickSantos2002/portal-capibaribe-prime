@@ -75,6 +75,8 @@ regressão que falhava antes.
 20. **Busca ou categoria sem resultado.** Com busca: "Limpar a busca". Só com filtro (categoria
     ou "com aviso"): "Ver todas". Com categoria, também "Indicar alguém". "Todos" fica
     desmarcado enquanto o filtro "com aviso" está ligado (e tocar nele desliga os dois).
+    *Mudou na 1.9.1:* a categoria virou lista de escolher, e a lista e o "com aviso" ficaram
+    independentes (ver `duvidas-classificados.md`, "Depois do lançamento").
 21. **Contraste da categoria:** token novo `--ipe-texto` no `estilo.css` (arquivo comum), porque
     nenhum token existente dava 4,5:1 em ipê. `--ipe-forte` continua nos focos e marcações.
 22. **Privacidade:** a frase diz que Minha unidade mostra nome, celular e e-mail, e que as

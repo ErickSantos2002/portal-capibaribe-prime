@@ -48,8 +48,11 @@ Os dois critérios do Erick para toda função nova:
 ### 3.1 Lista: `/classificados`
 - Título "Classificados". Busca "Procurar: o que você quer?" (título, descrição e categoria, sem
   diferenciar acento nem maiúscula).
-- Filtro de **tipo** (Tudo · Vende · Troca · Doa · Procura; quebra em linha, nunca esconde um) e faixa de **categorias** ("Todas" primeiro),
-  no mesmo padrão da faixa das Indicações (rola dentro, inclusive com letra grande).
+- Filtros **"Tipo"** (Tudo · Vende · Troca · Doa · Procura; "Tudo" de início) e **"Categoria"**
+  ("Todas" de início), em listas de escolher nativas (`<select>` com rótulo visível), uma
+  embaixo da outra, da largura da coluna; o mesmo filtro "Categoria" das Indicações. *Até a
+  1.9.0 eram chips de tipo que quebravam em linha e uma faixa de categorias que rolava para o
+  lado; viraram listas de escolher na 1.9.1, a pedido do Erick.*
 - Cartão: foto de capa (quadrada, ou um marcador sem foto), tipo (selo: "Vende R$ 350",
   "Troca", "Doa"; venda sem preço = "Vende · a combinar"), título, categoria, placa da unidade e
   há quanto tempo foi publicado. **Reservado** aparece como selo e o cartão continua na lista.

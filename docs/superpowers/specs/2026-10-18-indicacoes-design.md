@@ -45,9 +45,11 @@ Dois critérios do Erick valem para toda função nova:
 ### 3.1 Lista: `/indicacoes`
 - Título "Indicações". Busca "Procurar: nome ou serviço" (nome do prestador, categoria e texto
   das opiniões, sem diferenciar acento nem maiúscula).
-- Faixa de categorias, com "Todos" primeiro. Toque filtra, e a faixa rola para o lado. **Com
-  letra grande, a faixa quebra em linhas**: a regra do M5 proíbe rolagem lateral da página, e a
-  faixa é rolagem *dentro* de um elemento, que o builder pode manter se o guarda do M5 aceitar.
+- Filtro **"Categoria"**: lista de escolher nativa (`<select>` com rótulo visível), da largura
+  da coluna, com "Todos" primeiro. Escolher filtra; "Todos" tira só a categoria (o filtro "com
+  aviso" da gestão liga e desliga pelo botão dele; "Ver todas" tira os dois). *Até a 1.9.0 era
+  uma faixa de chips que rolava para o lado; virou lista de escolher na 1.9.1, a pedido do Erick
+  (a rolagem não dava sinal nenhum no celular).*
 - Cartão: categoria (em caixa alta, ipê-forte), nome, "👍 N vizinhos recomendam" (verde) e, se
   houver, "N não recomenda(m)" (cor de alerta), mais o trecho da opinião mais recente com
   comentário e o bloco de quem escreveu.
