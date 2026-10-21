@@ -73,12 +73,12 @@ describe('anunciar', () => {
     expect(screen.getByText(/Evite fotos com pessoas ou documentos/)).toBeTruthy()
   })
 
-  it('não publica sem escolher vender, trocar ou doar, sem categoria e sem título', async () => {
+  it('não publica sem escolher vender, trocar, doar ou procurar, sem categoria e sem título', async () => {
     const chamadas = comFotos()
     abrir('/classificados/novo')
     fireEvent.click(await screen.findByRole('button', { name: 'Publicar anúncio' }))
     expect(screen.getByRole('alert').textContent).toContain('Confira os campos marcados.')
-    expect(screen.getByText('Escolha se você quer vender, trocar ou doar.')).toBeTruthy()
+    expect(screen.getByText('Escolha se você quer vender, trocar, doar ou procurar.')).toBeTruthy()
     expect(screen.getByText('Escolha a categoria.')).toBeTruthy()
     expect(screen.getByText('Escreva o que você está anunciando.')).toBeTruthy()
     expect(chamadas.some((c) => c.metodo === 'POST' && c.caminho === '/api/classificados')).toBe(false)
@@ -207,6 +207,25 @@ describe('revisão de UX', () => {
     abrir('/classificados/novo')
     const titulo = (await screen.findByLabelText('Título')) as HTMLInputElement
     expect(titulo.placeholder.length).toBeLessThanOrEqual(20)
+  })
+})
+
+describe('Procura', () => {
+  it('"Procurar" é uma das opções, sem preço, e publica tipo procura', async () => {
+    const chamadas = comFotos({ 'POST /api/classificados': json(201, { id: 9 }) })
+    abrir('/classificados/novo')
+    fireEvent.click(await screen.findByLabelText('Procurar'))
+    expect(screen.queryByLabelText('Preço (opcional)')).toBeNull()
+    expect((screen.getByLabelText('Título') as HTMLInputElement).placeholder).toBe('Ex.: Berço usado')
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Berço usado' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar anúncio' }))
+    await waitFor(() =>
+      expect(chamadas.find((c) => c.caminho === '/api/classificados')?.corpo).toMatchObject({
+        tipo: 'procura',
+        preco_centavos: null,
+      }),
+    )
   })
 })
 

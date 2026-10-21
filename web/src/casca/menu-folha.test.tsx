@@ -70,7 +70,7 @@ describe('abrir', () => {
     expect(links[3].textContent).toContain('Serviços que os vizinhos recomendam')
     // Classificados (spec dos classificados, seção 3.4): logo depois de Indicações.
     expect(links[4].textContent).toContain('Classificados')
-    expect(links[4].textContent).toContain('Vender, trocar ou doar entre vizinhos')
+    expect(links[4].textContent).toContain('Vender, trocar, doar ou procurar entre vizinhos')
     expect(links[6].textContent).toContain('Unidades')
     expect(links[6].textContent).toContain('Quem já entrou e os contatos')
   })

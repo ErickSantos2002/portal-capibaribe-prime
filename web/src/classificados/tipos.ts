@@ -5,11 +5,11 @@
 import type { DataHora, UnidadeRef } from '../api/tipos'
 import type { AvisoRecebido } from '../indicacoes/tipos'
 
-export type TipoAnuncio = 'venda' | 'troca' | 'doacao'
+export type TipoAnuncio = 'venda' | 'troca' | 'doacao' | 'procura'
 
 export type SituacaoAnuncio = 'ativo' | 'reservado' | 'encerrado'
 
-export type MotivoEncerramento = 'vendi' | 'troquei' | 'doei' | 'desisti'
+export type MotivoEncerramento = 'vendi' | 'troquei' | 'doei' | 'desisti' | 'encontrei'
 
 export type TipoFoto = 'image/jpeg' | 'image/png' | 'image/webp'
 

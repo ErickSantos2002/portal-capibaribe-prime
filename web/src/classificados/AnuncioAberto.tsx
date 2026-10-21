@@ -166,7 +166,7 @@ function Conteudo({ anuncio, recarregar, trocar }: PropsConteudo) {
             )}
             <a
               className={anuncio.celular ? 'botao ind-whatsapp' : 'botao leve ind-whatsapp'}
-              href={linkWhatsAppDoAnuncio(anuncio.contato, anuncio.titulo, reservado)}
+              href={linkWhatsAppDoAnuncio(anuncio.contato, anuncio.titulo, reservado, anuncio.tipo)}
               target="_blank"
               rel="noopener noreferrer"
             >

@@ -19,6 +19,11 @@ const MOTIVOS: { valor: MotivoEncerramento; texto: string }[] = [
   { valor: 'doei', texto: 'Doei' },
   { valor: 'desisti', texto: 'Desisti' },
 ]
+// Quem procura encerra porque encontrou ou desistiu (resposta do Erick, 20/10/2026).
+const MOTIVOS_DO_PROCURA: { valor: MotivoEncerramento; texto: string }[] = [
+  { valor: 'encontrei', texto: 'Encontrei' },
+  { valor: 'desisti', texto: 'Desisti' },
+]
 
 interface Props {
   anuncio: Anuncio
@@ -82,7 +87,7 @@ export function AcoesDoDono({ anuncio, trocar, focarNoTitulo }: Props) {
             <Icone nome="editar" /> Editar
           </Link>
         )}
-        {aberto &&
+        {aberto && anuncio.tipo !== 'procura' &&
           (anuncio.situacao === 'reservado' ? (
             <button
               type="button"
@@ -126,6 +131,7 @@ export function AcoesDoDono({ anuncio, trocar, focarNoTitulo }: Props) {
             }}
             aoCancelar={() => setEncerrando(false)}
             ocupado={ocupado}
+            motivos={anuncio.tipo === 'procura' ? MOTIVOS_DO_PROCURA : MOTIVOS}
           />
         ) : (
           <button
@@ -147,9 +153,10 @@ interface PropsEncerrar {
   aoEncerrar: (motivo: MotivoEncerramento) => Promise<void>
   aoCancelar: () => void
   ocupado: boolean
+  motivos: { valor: MotivoEncerramento; texto: string }[]
 }
 
-function Encerrar({ aoEncerrar, aoCancelar, ocupado }: PropsEncerrar) {
+function Encerrar({ aoEncerrar, aoCancelar, ocupado, motivos }: PropsEncerrar) {
   const [motivo, setMotivo] = useState<MotivoEncerramento | null>(null)
   const [erro, setErro] = useState('')
   const caixa = useRef<HTMLFieldSetElement>(null)
@@ -168,7 +175,7 @@ function Encerrar({ aoEncerrar, aoCancelar, ocupado }: PropsEncerrar) {
         <strong>Encerrar o anúncio?</strong>
       </legend>
       <p>Ele sai da lista e não volta. Se quiser, anuncie de novo depois. O que aconteceu?</p>
-      {MOTIVOS.map((m) => (
+      {motivos.map((m) => (
         <label key={m.valor} className={motivo === m.valor ? 'ind-voto marcado' : 'ind-voto'}>
           <input
             type="radio"

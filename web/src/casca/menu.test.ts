@@ -47,7 +47,7 @@ describe('lugaresDo', () => {
     expect(classificados).toMatchObject({
       para: '/classificados',
       icone: 'classificados',
-      frase: 'Vender, trocar ou doar entre vizinhos',
+      frase: 'Vender, trocar, doar ou procurar entre vizinhos',
       grupo: 'dia-a-dia',
     })
     expect(classificados?.naBarra).toBeUndefined()

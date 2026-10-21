@@ -151,3 +151,17 @@ aviso não aparece para o dono, e o anúncio duplicado da mesma unidade foi para
 - Conferir no bucket real que `classificados/` **não** está travado (objeto de teste: enviar e
   apagar) antes do push.
 - Migração **0011 no Neon antes do push**.
+
+## Resposta do Erick (20/10/2026)
+
+1. **"Procuro": incluir já.** Construído como o tipo "Procura": "Procurar" no formulário (sem
+   preço, fotos opcionais), "Procura" no selo e na faixa de tipo (Tudo · Vende · Troca · Doa ·
+   Procura), a mensagem do WhatsApp "Oi! Vi no Portal Capibaribe Prime que você procura "…".
+   Tenho um que pode te interessar.", sem "Marcar como reservado" (o banco também não deixa) e
+   com os motivos "Encontrei" · "Desisti". O exemplo do título passou a ser "Ex.: Berço usado", e
+   a frase do menu, "Vender, trocar, doar ou procurar entre vizinhos". Mudou a própria 0011, que
+   ainda não foi para o Neon.
+2. **Vencimento em 30 dias, sem aviso:** mantém.
+3. **Contato por anúncio, pré-preenchido com o celular da unidade:** mantém.
+4. **Placa da unidade à vista no anúncio:** mantém.
+5. **Fotos descartáveis, fora do backup** (escondido e encerrado apagados em 7 dias): mantém.

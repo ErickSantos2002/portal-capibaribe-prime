@@ -578,6 +578,15 @@ async function semente(semear) {
       },
       [[[69, 90, 100], [96, 125, 139], [38, 50, 56]]],
     )
+    // Um "Procura" (resposta do Erick, 20/10/2026), sem foto.
+    await anunciar({
+      tipo: 'procura',
+      categoria_id: 'Infantil',
+      titulo: 'Berço usado em bom estado',
+      descricao: 'Para o quarto do bebê, que chega em dezembro.',
+      preco_centavos: null,
+      contato: '81999990203',
+    })
     const aberto = await (await api('GET', `/classificados/${classificado}`)).json()
     if (!aberto.ja_avisei) {
       await exigirOk(

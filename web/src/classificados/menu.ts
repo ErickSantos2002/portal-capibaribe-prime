@@ -9,7 +9,7 @@ export function itemClassificados(eu: Eu): Lugar {
     para: '/classificados',
     icone: 'classificados',
     texto: 'Classificados',
-    frase: 'Vender, trocar ou doar entre vizinhos',
+    frase: 'Vender, trocar, doar ou procurar entre vizinhos',
     grupo: 'dia-a-dia',
   }
 }

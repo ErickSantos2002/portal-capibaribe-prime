@@ -78,6 +78,16 @@ RESTRICOES: dict[str, tuple[int, str, str]] = {
     "anuncio_foto_anuncio_fechado": _ENCERRADO,
     "anuncio_foto_nao_descartada": _CONFLITO,
     "anuncio_escondimento": _CAMPOS,
+    "anuncio_procura_reservado": (
+        409,
+        "procura_nao_reserva",
+        "Quem procura não marca como reservado. Quando encontrar, encerre o anúncio.",
+    ),
+    "anuncio_motivo_do_tipo": (
+        422,
+        "motivo_do_tipo",
+        "Esse motivo não vale para este anúncio. Escolha outro.",
+    ),
     "aviso_anuncio_fixo": _CONFLITO,
     # CHECK (a API valida antes; chegar aqui é um caso que escapou).
     "categoria_classificado_nome_tamanho": _CAMPOS,

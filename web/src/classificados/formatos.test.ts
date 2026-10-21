@@ -76,6 +76,18 @@ describe('WhatsApp', () => {
   })
 })
 
+describe('Procura (resposta do Erick, 20/10/2026)', () => {
+  it('o selo e a mensagem de quem responde', () => {
+    expect(seloDoTipo('procura', null)).toBe('Procura')
+    expect(mensagemDoWhatsApp('Berço usado', false, 'procura')).toBe(
+      'Oi! Vi no Portal Capibaribe Prime que você procura "Berço usado". Tenho um que pode te interessar.',
+    )
+    const link = linkWhatsAppDoAnuncio('81999990001', 'Berço usado', false, 'procura')
+    expect(decodeURIComponent(link.split('?text=')[1])).toBe(mensagemDoWhatsApp('Berço usado', false, 'procura'))
+    expect(textoDoMotivo('encontrei')).toBe('Encontrado')
+  })
+})
+
 it('o motivo do encerramento na voz do morador', () => {
   expect(textoDoMotivo('vendi')).toBe('Vendido')
   expect(textoDoMotivo('troquei')).toBe('Trocado')

@@ -26,7 +26,7 @@
   color: var(--tinta-suave);
 }
 
-/* Tudo · Vende · Troca · Doa: as quatro sempre à vista, quebrando em linha (revisão UX 4); a
+/* Tudo · Vende · Troca · Doa · Procura: todas sempre à vista, quebrando em linha (revisão UX 4); a
    faixa das categorias, logo abaixo, é que rola dentro dela. Com a letra grande, chips mais
    baixos, como os da faixa. */
 .cla-tipos {

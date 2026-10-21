@@ -17,6 +17,7 @@ const ESPACO_FIXO = ' '
 export function seloDoTipo(tipo: TipoAnuncio, preco: number | null): string {
   if (tipo === 'troca') return 'Troca'
   if (tipo === 'doacao') return 'Doa'
+  if (tipo === 'procura') return 'Procura'
   if (preco === null) return `Vende${ESPACO_FIXO}· a${ESPACO_FIXO}combinar`
   return `Vende ${precoEmReais(preco).replace(' ', ESPACO_FIXO)}`
 }
@@ -57,8 +58,16 @@ export function haQuanto(iso: string, agora: Date = new Date()): string {
   return `há ${dias} dias`
 }
 
-/** A mensagem pronta; o reservado pede para ser lembrado se não der certo (revisão UX 9). */
-export function mensagemDoWhatsApp(titulo: string, reservado = false): string {
+/** A mensagem pronta; o reservado pede para ser lembrado se não der certo (revisão UX 9); quem
+ *  responde a um "Procura" oferece o que tem. */
+export function mensagemDoWhatsApp(
+  titulo: string,
+  reservado = false,
+  tipo: TipoAnuncio = 'venda',
+): string {
+  if (tipo === 'procura') {
+    return `Oi! Vi no Portal Capibaribe Prime que você procura "${titulo}". Tenho um que pode te interessar.`
+  }
   if (reservado) {
     return `Oi! Vi seu anúncio "${titulo}" no Portal Capibaribe Prime. Vi que está reservado; se não der certo, tenho interesse.`
   }
@@ -66,8 +75,14 @@ export function mensagemDoWhatsApp(titulo: string, reservado = false): string {
 }
 
 /** `https://wa.me/55<dígitos>?text=<mensagem>` (spec, seção 3.2). */
-export function linkWhatsAppDoAnuncio(digitos: string, titulo: string, reservado = false): string {
-  return `https://wa.me/55${digitos}?text=${encodeURIComponent(mensagemDoWhatsApp(titulo, reservado))}`
+export function linkWhatsAppDoAnuncio(
+  digitos: string,
+  titulo: string,
+  reservado = false,
+  tipo: TipoAnuncio = 'venda',
+): string {
+  const mensagem = mensagemDoWhatsApp(titulo, reservado, tipo)
+  return `https://wa.me/55${digitos}?text=${encodeURIComponent(mensagem)}`
 }
 
 const MOTIVOS: Record<MotivoEncerramento, string> = {
@@ -75,6 +90,7 @@ const MOTIVOS: Record<MotivoEncerramento, string> = {
   troquei: 'Trocado',
   doei: 'Doado',
   desisti: 'Desistiu',
+  encontrei: 'Encontrado',
 }
 
 export function textoDoMotivo(motivo: MotivoEncerramento): string {

@@ -21,9 +21,9 @@ export const NOVIDADES: Novidade[] = [
     data: '2026-10-20',
     nome: 'Classificados',
     itens: [
-      'Novo lugar no Menu: "Classificados", para vender, trocar ou doar entre vizinhos: a sobra de piso, o móvel que não coube, o eletrodoméstico que vai ser trocado. Dá para procurar, escolher entre Vende, Troca e Doa e filtrar pela categoria.',
+      'Novo lugar no Menu: "Classificados", para vender, trocar, doar ou procurar entre vizinhos: a sobra de piso, o móvel que não coube, o eletrodoméstico que vai ser trocado, ou aquele berço que você está procurando. Dá para buscar, escolher entre Vende, Troca, Doa e Procura e filtrar pela categoria.',
       'Em "Anunciar", você conta o que é, põe até 4 fotos e escolhe o WhatsApp ou telefone que aparece naquele anúncio. Quem se interessa toca em "Chamar no WhatsApp" e a mensagem já vai escrita. O anúncio mostra o bloco e o apartamento, nunca o seu nome.',
-      'O anúncio fica na lista por 30 dias e sai sozinho; dá para renovar com um toque. Você marca como reservado e, quando vender, trocar ou doar, encerra. Em "Meus anúncios" ficam todos os seus.',
+      'O anúncio fica na lista por 30 dias e sai sozinho; dá para renovar com um toque. Você marca como reservado e, quando vender, trocar, doar ou encontrar o que procurava, encerra. Em "Meus anúncios" ficam todos os seus.',
       'Viu algo errado num anúncio? Toque em "Tem algo errado aqui? Avisar a gestão", e a Comissão e a administração dão uma olhada.',
     ],
   },

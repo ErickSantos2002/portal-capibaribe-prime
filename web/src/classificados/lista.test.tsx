@@ -68,6 +68,7 @@ describe('lista de classificados', () => {
       'Vende',
       'Troca',
       'Doa',
+      'Procura',
     ])
     expect(within(tipos).getByRole('button', { name: 'Tudo' }).getAttribute('aria-pressed')).toBe('true')
     fireEvent.click(within(tipos).getByRole('button', { name: 'Doa' }))

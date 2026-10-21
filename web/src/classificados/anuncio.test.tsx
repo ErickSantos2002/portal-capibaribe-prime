@@ -267,6 +267,32 @@ describe('revisão de UX', () => {
   })
 })
 
+describe('Procura', () => {
+  const PROCURA = { tipo: 'procura' as const, preco_centavos: null, titulo: 'Berço usado' }
+
+  it('o visitante responde com a mensagem de quem tem o que é procurado', async () => {
+    apiClassificados(MORADOR, { 'GET /api/classificados/7': json(200, anuncio(PROCURA)) })
+    abrir('/classificados/7')
+    expect(await screen.findByText('Procura')).toBeTruthy()
+    const href = screen.getByRole('link', { name: /Chamar no WhatsApp/ }).getAttribute('href') ?? ''
+    expect(decodeURIComponent(href.split('?text=')[1])).toBe(
+      mensagemDoWhatsApp('Berço usado', false, 'procura'),
+    )
+  })
+
+  it('o dono não reserva, e encerra com "Encontrei" ou "Desisti"', async () => {
+    apiClassificados(DONO, { 'GET /api/classificados/7': json(200, anuncio({ ...PROCURA, meu: true })) })
+    abrir('/classificados/7')
+    fireEvent.click(await screen.findByRole('button', { name: 'Encerrar' }))
+    expect(screen.queryByRole('button', { name: /reservado/ })).toBeNull()
+    const caixa = screen.getByRole('group', { name: /Encerrar o anúncio/ })
+    expect(within(caixa).getAllByRole('radio').map((r) => r.closest('label')?.textContent)).toEqual([
+      'Encontrei',
+      'Desisti',
+    ])
+  })
+})
+
 describe('para a gestão', () => {
   it('o morador não vê a seção; a gestão vê os avisos, resolve e esconde', async () => {
     apiClassificados(MORADOR, { 'GET /api/classificados/7': json(200, anuncio()) })

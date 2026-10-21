@@ -8,7 +8,8 @@ Escrita à mão, no mesmo padrão da 0002 a 0010. Spec:
 `docs/superpowers/specs/2026-10-20-classificados-design.md`, seções 4 a 6; as fotos: ADR-0012.
 
 As regras ficam aqui, não na API:
-- **situação**: `ativo` ↔ `reservado` → `encerrado` (com motivo); encerrado não volta;
+- **situação**: `ativo` ↔ `reservado` → `encerrado` (com motivo); encerrado não volta; o tipo
+  `procura` (quem procura algo) nunca fica reservado e encerra com "encontrei" ou "desisti";
 - **vence em 30 dias** depois de publicar ou renovar (o banco calcula `vence_em`); vencido só
   renova ou encerra; renovar só vencido ou a menos de 7 dias de vencer;
 - **escondido pela gestão** fica travado: só o dono encerra;
@@ -71,7 +72,7 @@ create table anuncio (
     unidade_id           bigint not null references unidade (id),
     categoria_id         bigint not null references categoria_classificado (id),
     tipo                 text not null constraint anuncio_tipo check (
-                             tipo in ('venda', 'troca', 'doacao')),
+                             tipo in ('venda', 'troca', 'doacao', 'procura')),
     titulo               text not null constraint anuncio_titulo_tamanho check (
                              char_length(titulo) between 3 and 80 and titulo = btrim(titulo)),
     descricao            text constraint anuncio_descricao_tamanho check (
@@ -87,7 +88,8 @@ create table anuncio (
     situacao             text not null default 'ativo' constraint anuncio_situacao check (
                              situacao in ('ativo', 'reservado', 'encerrado')),
     motivo_encerramento  text constraint anuncio_motivo_encerramento check (
-                             motivo_encerramento in ('vendi', 'troquei', 'doei', 'desisti')),
+                             motivo_encerramento in ('vendi', 'troquei', 'doei', 'desisti',
+                                                     'encontrei')),
     publicado_em         timestamptz not null default now(),
     renovado_em          timestamptz,
     vence_em             timestamptz not null default now() + interval '30 days',
@@ -100,7 +102,11 @@ create table anuncio (
         (situacao = 'encerrado') = (motivo_encerramento is not null)
         and (situacao = 'encerrado') = (encerrado_em is not null)),
     -- Escondido tem a data e quem escondeu, ou nenhum dos dois (revisão B1).
-    constraint anuncio_escondimento check ((escondido_em is null) = (escondido_por is null))
+    constraint anuncio_escondimento check ((escondido_em is null) = (escondido_por is null)),
+    -- "Procura" encerra com "Encontrei" ou "Desisti"; os outros tipos não encontram.
+    constraint anuncio_motivo_do_tipo check (
+        motivo_encerramento is null or motivo_encerramento = 'desisti'
+        or (tipo = 'procura') = (motivo_encerramento = 'encontrei'))
 );
 -- Os limites do dia e de abertos contam por unidade; a lista e a faxina, por data.
 create index anuncio_unidade on anuncio (unidade_id, publicado_em);
@@ -239,6 +245,11 @@ begin
                       (old.categoria_id, old.tipo, old.titulo, old.descricao, old.preco_centavos,
                        old.contato);
 
+    -- Quem procura não reserva: "Procura" nunca fica reservado, nem o reservado vira "Procura".
+    if new.tipo = 'procura' and new.situacao = 'reservado' then
+        raise exception 'Quem procura não reserva.'
+            using errcode = 'check_violation', constraint = 'anuncio_procura_reservado';
+    end if;
     if escondendo then
         -- Esconder (a gestão) não muda mais nada.
         if renovando or conteudo_mudou or new.situacao <> old.situacao

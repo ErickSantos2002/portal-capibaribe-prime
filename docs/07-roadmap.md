@@ -264,7 +264,7 @@ dele: a bola abre e fecha a folha certinho, tudo funcionando.
 
 ### Fora dos marcos · Classificados entre vizinhos (1.9.0)
 
-Segunda opção da votação do grupo em 18/10/2026. Moradores anunciam para vender, trocar ou doar
+Segunda opção da votação do grupo em 18/10/2026. Moradores anunciam para vender, trocar, doar ou procurar
 (a sobra de piso, o móvel que não coube, o eletrodoméstico trocado), com até 4 fotos e o WhatsApp
 escolhido para cada anúncio; quem se interessa chama com a mensagem pronta. O anúncio vence em 30
 dias e sai sozinho (renovável), o dono marca reservado e encerra, e uma faxina diária (Vercel Cron)

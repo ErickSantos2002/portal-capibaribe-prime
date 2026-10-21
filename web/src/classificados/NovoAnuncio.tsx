@@ -1,4 +1,4 @@
-// Classificados · anunciar e editar (spec, seção 3.3): vender, trocar ou doar (sem padrão), a
+// Classificados · anunciar e editar (spec, seção 3.3): vender, trocar, doar ou procurar (sem padrão), a
 // categoria, o título, a descrição, o preço (só na venda; vazio = a combinar), até 4 fotos e o
 // WhatsApp ou telefone, que começa com o celular da unidade e aparece para os vizinhos logados.
 // Sair com coisa escrita pergunta "Sair sem publicar?".
@@ -30,6 +30,7 @@ const TIPOS: { valor: TipoAnuncio; texto: string }[] = [
   { valor: 'venda', texto: 'Vender' },
   { valor: 'troca', texto: 'Trocar' },
   { valor: 'doacao', texto: 'Doar' },
+  { valor: 'procura', texto: 'Procurar' },
 ]
 
 interface Dados {
@@ -48,7 +49,7 @@ const VAZIO: Dados = { tipo: null, categoria: '', titulo: '', descricao: '', pre
 
 function conferir(dados: Dados, fotos: FotoNoFormulario[]): Erros {
   const erros: Erros = {}
-  if (!dados.tipo) erros.tipo = 'Escolha se você quer vender, trocar ou doar.'
+  if (!dados.tipo) erros.tipo = 'Escolha se você quer vender, trocar, doar ou procurar.'
   if (!dados.categoria) erros.categoria = 'Escolha a categoria.'
   const titulo = dados.titulo.trim()
   if (!titulo) erros.titulo = 'Escreva o que você está anunciando.'
@@ -306,7 +307,7 @@ function Formulario({ inicial, anuncio }: PropsFormulario) {
           onChange={(e) => mudar('titulo', e.target.value)}
           maxLength={LIMITE_TITULO}
           autoComplete="off"
-          placeholder="Ex.: Sobra de piso"
+          placeholder="Ex.: Berço usado"
           className={erros.titulo ? 'campo-erro' : undefined}
           aria-invalid={erros.titulo ? true : undefined}
           aria-describedby={descrito('titulo')}

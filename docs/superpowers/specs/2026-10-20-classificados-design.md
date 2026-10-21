@@ -22,7 +22,8 @@ Os dois critérios do Erick para toda função nova:
 ## 2. Objetivos, não-objetivos, anti-objetivos
 
 **Objetivos**
-- Qualquer unidade ativa anuncia algo para **vender, trocar ou doar**, com até **4 fotos**.
+- Qualquer unidade ativa anuncia algo para **vender, trocar ou doar**, ou diz o que **procura**
+  (entrou por resposta do Erick em 20/10/2026), com até **4 fotos**.
 - Quem se interessa fala direto com o dono pelo **WhatsApp**, com a mensagem já escrita.
 - O dono marca **"Reservado"** e depois **"Encerrar"** (vendido, trocado, doado ou desistiu).
 - Anúncio **vence em 30 dias** e sai da lista sozinho; o dono renova com um toque.
@@ -30,7 +31,6 @@ Os dois critérios do Erick para toda função nova:
 
 **Não-objetivos (nesta versão)**
 - Pagamento, chat dentro do Portal, oferta/lance, frete.
-- "Procuro" (anúncio de quem quer comprar): fica para depois (dúvida para o Erick).
 - Notificação de anúncio novo (seria spam). Notificação de vencimento.
 - Página pública. Nada aparece fora do login.
 
@@ -48,7 +48,7 @@ Os dois critérios do Erick para toda função nova:
 ### 3.1 Lista: `/classificados`
 - Título "Classificados". Busca "Procurar: o que você quer?" (título, descrição e categoria, sem
   diferenciar acento nem maiúscula).
-- Filtro de **tipo** (Tudo · Vende · Troca · Doa) e faixa de **categorias** ("Todas" primeiro),
+- Filtro de **tipo** (Tudo · Vende · Troca · Doa · Procura; quebra em linha, nunca esconde um) e faixa de **categorias** ("Todas" primeiro),
   no mesmo padrão da faixa das Indicações (rola dentro, inclusive com letra grande).
 - Cartão: foto de capa (quadrada, ou um marcador sem foto), tipo (selo: "Vende R$ 350",
   "Troca", "Doa"; venda sem preço = "Vende · a combinar"), título, categoria, placa da unidade e
@@ -67,15 +67,19 @@ Os dois critérios do Erick para toda função nova:
   Fixo sem WhatsApp → "Ligar" (`tel:`), mesma regra do telefone das Indicações: "Ligar" é o
   principal e o WhatsApp continua como botão leve (fixo pode ter WhatsApp Business), com a mesma
   mensagem pronta (confirmado na revisão de UX, item 13).
-- Para o dono: **Editar**, **Marcar como reservado / Tirar a reserva**, **Renovar** (quando
-  vencido ou a menos de 7 dias de vencer), **Encerrar** (confirmação com o motivo: Vendi · Troquei
-  · Doei · Desisti). Encerrado não volta (anuncia de novo, se quiser).
+  No "Procura", a mensagem é de quem tem o que é procurado: "Oi! Vi no Portal Capibaribe Prime
+  que você procura "<título>". Tenho um que pode te interessar."
+- Para o dono: **Editar**, **Marcar como reservado / Tirar a reserva** (não no "Procura": quem
+  procura não reserva), **Renovar** (quando vencido ou a menos de 7 dias de vencer), **Encerrar**
+  (confirmação com o motivo: Vendi · Troquei · Doei · Desisti; no "Procura", Encontrei ·
+  Desisti). Encerrado não volta (anuncia de novo, se quiser).
 - Link discreto **"Tem algo errado aqui? Avisar a gestão"**, igual ao das Indicações.
 - Para a gestão, a seção "Para a gestão": avisos recebidos, "Esconder este anúncio",
   "Resolver aviso".
 
 ### 3.3 Anunciar: `/classificados/novo` (e editar: `/classificados/:id/editar`)
-- **O que você quer fazer?** Vender · Trocar · Doar (sem padrão marcado).
+- **O que você quer fazer?** Vender · Trocar · Doar · Procurar (sem padrão marcado). No
+  "Procurar", sem preço; fotos opcionais, como nos outros (pode ser uma foto de referência).
 - **Categoria** (lista). **Título** (3–80). **Descrição (opcional)** (até 1000).
 - **Preço** (só em Vender; opcional; em reais, até R$ 100.000; vazio = "a combinar").
 - **Fotos (até 4)**: o mesmo envio do M3 (compressão no navegador, conferência do conteúdo,
@@ -87,8 +91,8 @@ Os dois critérios do Erick para toda função nova:
 - "Publicar anúncio". Sair com coisa escrita pergunta "Sair sem publicar?".
 
 ### 3.4 Menu
-Lugar novo na lista única (`casca/menu.ts`): **"Classificados"**, frase "Vender, trocar ou doar
-entre vizinhos", grupo "Dia a dia", **fora da barra** (folha do Menu e menu lateral), ao lado de
+Lugar novo na lista única (`casca/menu.ts`): **"Classificados"**, frase "Vender, trocar, doar ou
+procurar entre vizinhos", grupo "Dia a dia", **fora da barra** (folha do Menu e menu lateral), ao lado de
 "Indicações".
 
 ## 4. Regras
@@ -96,8 +100,9 @@ entre vizinhos", grupo "Dia a dia", **fora da barra** (folha do Menu e menu late
 | Regra | Onde é garantida |
 |---|---|
 | Só unidade **ativa e logada** vê e escreve | Rotas (sessão) e trigger, como nas Indicações |
-| Tipo ∈ {venda, troca, doacao}; preço só em venda, ≥ 0 e ≤ 10.000.000 centavos | `check` |
-| Situação: `ativo` → `reservado` ↔ `ativo` → `encerrado` (com motivo). Encerrado é final | Trigger |
+| Tipo ∈ {venda, troca, doacao, procura}; preço só em venda, ≥ 0 e ≤ 10.000.000 centavos | `check` |
+| Situação: `ativo` → `reservado` ↔ `ativo` → `encerrado` (com motivo). Encerrado é final. "Procura" nunca fica reservado | Trigger |
+| Motivo do encerramento: Encontrei só no "Procura"; Vendi, Troquei e Doei só nos outros; Desisti em todos | `check` |
 | Vence em **30 dias** depois de publicar ou renovar (`vence_em`). Vencido sai da lista, sem job: a consulta filtra por data | Consulta + coluna |
 | Renovar: só o dono, só ativo/reservado, só vencido ou a menos de 7 dias de vencer | Rota + trigger |
 | Editar, reservar, renovar, encerrar: **só o dono** (a unidade que anunciou). A gestão só esconde | Rota |

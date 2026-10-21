@@ -26,6 +26,7 @@ const TIPOS: { valor: TipoAnuncio | null; texto: string }[] = [
   { valor: 'venda', texto: 'Vende' },
   { valor: 'troca', texto: 'Troca' },
   { valor: 'doacao', texto: 'Doa' },
+  { valor: 'procura', texto: 'Procura' },
 ]
 
 function numero(texto: string | null): number | undefined {
@@ -33,7 +34,9 @@ function numero(texto: string | null): number | undefined {
 }
 
 function tipoDaConsulta(texto: string | null): TipoAnuncio | undefined {
-  return texto === 'venda' || texto === 'troca' || texto === 'doacao' ? texto : undefined
+  return texto === 'venda' || texto === 'troca' || texto === 'doacao' || texto === 'procura'
+    ? texto
+    : undefined
 }
 
 export function ListaClassificados() {

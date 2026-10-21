@@ -68,6 +68,7 @@ class TipoAnuncio(enum.StrEnum):
     venda = "venda"
     troca = "troca"
     doacao = "doacao"
+    procura = "procura"
 
 
 class SituacaoAnuncio(enum.StrEnum):
@@ -81,6 +82,7 @@ class MotivoEncerramento(enum.StrEnum):
     troquei = "troquei"
     doei = "doei"
     desisti = "desisti"
+    encontrei = "encontrei"
 
 
 def _lista(valores) -> str:
@@ -144,6 +146,11 @@ class Anuncio(Base):
         ),
         CheckConstraint(
             "(escondido_em is null) = (escondido_por is null)", name="anuncio_escondimento"
+        ),
+        CheckConstraint(
+            "motivo_encerramento is null or motivo_encerramento = 'desisti'"
+            " or (tipo = 'procura') = (motivo_encerramento = 'encontrei')",
+            name="anuncio_motivo_do_tipo",
         ),
         Index("anuncio_unidade", "unidade_id", "publicado_em"),
         Index("anuncio_vence", "vence_em"),
