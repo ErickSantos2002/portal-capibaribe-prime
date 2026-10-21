@@ -169,9 +169,9 @@ describe('revisão de UX', () => {
     const tipos = await screen.findByRole('group', { name: 'O que você procura' }, { timeout: 4000 })
     expect(tipos.classList.contains('faixa-categorias')).toBe(false)
     expect(tipos.classList.contains('cla-tipos')).toBe(true)
-    expect(screen.getByRole('navigation', { name: 'Categorias' }).classList.contains('faixa-categorias')).toBe(
-      true,
-    )
+    // As categorias chegam num pedido à parte: espera por elas.
+    const faixa = await screen.findByRole('navigation', { name: 'Categorias' }, { timeout: 4000 })
+    expect(faixa.classList.contains('faixa-categorias')).toBe(true)
   })
 
   it('10: com a letra grande, "Anunciar" entra no fluxo, antes da busca; sem o flutuante', async () => {

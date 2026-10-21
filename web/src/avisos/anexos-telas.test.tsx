@@ -122,7 +122,7 @@ describe('aviso aberto com anexos', () => {
       url.pathname === '/api/avisos/5' ? json(200, completo(5, { anexos: [FOTO, FOTO2, PDF] })) : undefined,
     )
     abrir('/avisos/5')
-    const botao = await screen.findByRole('button', { name: 'Ver a foto 1 de 2 em tamanho grande' })
+    const botao = await screen.findByRole('button', { name: 'Ver a foto 1 de 2 em tamanho grande' }, { timeout: 4000 })
     const miniatura = within(botao).getByRole('img')
     expect(miniatura.getAttribute('src')).toBe('/api/avisos/5/anexos/11/abrir')
     expect(miniatura.getAttribute('alt')).toBe('Foto 1 de 2')

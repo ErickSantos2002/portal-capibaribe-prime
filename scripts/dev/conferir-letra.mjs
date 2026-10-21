@@ -170,6 +170,18 @@ const TELAS = [
   // semente (do admin), com título longo, 3 fotos e um aviso da Comissão.
   { nome: 'classificados', grupo: 'classificados', quem: 'morador', caminho: '/classificados' },
   { nome: 'classificado', grupo: 'classificados', quem: 'morador', caminho: '/classificados/{classificado}' },
+  // O visor de fotos aberto (revisão de UX, 1 e 2: o visor comum dos anexos).
+  {
+    nome: 'classificado-visor',
+    grupo: 'classificados',
+    quem: 'morador',
+    caminho: '/classificados/{classificado}',
+    depois: async (pagina) => {
+      await pagina.click('.cla-foto-grande')
+      await pagina.waitForSelector('.anexo-visualizador img')
+      await pagina.waitForTimeout(300)
+    },
+  },
   { nome: 'novo-classificado', grupo: 'classificados', quem: 'morador', caminho: '/classificados/novo' },
   // O dono: "Meus anúncios" (com um encerrado) e o próprio anúncio, com as ações.
   { nome: 'meus-classificados', grupo: 'classificados', quem: 'admin', caminho: '/classificados/meus' },

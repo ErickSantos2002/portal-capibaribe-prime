@@ -85,6 +85,8 @@
 
 .cla-cartao h2 {
   margin: 0;
+  /* Com a letra grande, "argamassa" quebrava sem hífen ("argamass / a"). */
+  hyphens: auto;
   overflow-wrap: anywhere;
   font-weight: 700;
 }
