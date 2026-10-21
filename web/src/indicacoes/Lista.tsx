@@ -1,4 +1,4 @@
-// Indicações · a lista (spec, seção 3.1): busca, faixa de categorias, os mais recomendados
+// Indicações · a lista (spec, seção 3.1): busca, a lista de escolher "Categoria", os mais recomendados
 // primeiro (a ordem vem da API) e o botão "Indicar alguém". O filtro mora no endereço
 // (`?categoria=&busca=&com_aviso=1`): voltar do prestador aberto devolve a mesma lista.
 import { useEffect, useRef, useState } from 'react'
@@ -124,30 +124,24 @@ export function ListaIndicacoes() {
           {filtrando && lista && carga.situacao === 'pronta' ? encontradas(lista.itens.length) : ''}
         </p>
       </div>
-      {categorias.dados && (
-        <nav className="faixa-categorias" aria-label="Categorias">
-          {/* "Todos" tira também o filtro "com aviso" da gestão. */}
-          <button
-            type="button"
-            className="chip"
-            aria-pressed={categoria === undefined && !comAviso}
-            onClick={() => trocar({ categoria: null, com_aviso: null })}
-          >
-            Todos
-          </button>
-          {categorias.dados.itens.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className="chip"
-              aria-pressed={categoria === c.id}
-              onClick={() => trocar({ categoria: String(c.id) })}
-            >
+      {/* A categoria numa lista de escolher nativa (pedido do Erick depois do lançamento): a
+          faixa rolava para o lado sem sinal nenhum. "Todos" tira só a categoria; o filtro "com
+          aviso" da gestão liga e desliga pelo botão dele, e "Ver todas" tira os dois. */}
+      <div className="ind-filtro">
+        <label htmlFor="ind-filtro-categoria">Categoria</label>
+        <select
+          id="ind-filtro-categoria"
+          value={categoria === undefined ? '' : String(categoria)}
+          onChange={(e) => trocar({ categoria: e.target.value || null })}
+        >
+          <option value="">Todos</option>
+          {categorias.dados?.itens.map((c) => (
+            <option key={c.id} value={String(c.id)}>
               {c.nome}
-            </button>
+            </option>
           ))}
-        </nav>
-      )}
+        </select>
+      </div>
       {carga.situacao === 'erro' && !lista ? (
         <FalhaAoCarregar mensagem={carga.erro.mensagem} tentar={recarregar} />
       ) : !lista ? (

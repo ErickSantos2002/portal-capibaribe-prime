@@ -1,5 +1,5 @@
 // Classificados · a lista (spec, seção 3.1): "Meus anúncios" no topo (quando a unidade tem algum),
-// a busca, o filtro de tipo, a faixa de categorias (a mesma das indicações, que rola dentro dela),
+// a busca, as listas de escolher "Tipo" e "Categoria" (o mesmo filtro das indicações),
 // os cartões (o mais recente primeiro, a ordem vem da API) e o botão "Anunciar". O filtro mora no
 // endereço (`?tipo=&categoria=&busca=&com_aviso=1`): voltar do anúncio devolve a mesma lista.
 import { useEffect, useRef, useState } from 'react'
@@ -154,43 +154,38 @@ export function ListaClassificados() {
           {filtrando && lista && carga.situacao === 'pronta' ? encontrados(lista.itens.length) : ''}
         </p>
       </div>
-      {/* As quatro opções sempre à vista: quebram em linha, nunca rolam (revisão UX 4). */}
-      <div className="cla-tipos" role="group" aria-label="O que você procura">
-        {TIPOS.map((t) => (
-          <button
-            key={t.texto}
-            type="button"
-            className="chip"
-            aria-pressed={(tipo ?? null) === t.valor}
-            onClick={() => trocar({ tipo: t.valor })}
-          >
-            {t.texto}
-          </button>
-        ))}
-      </div>
-      {categorias.dados && (
-        <nav className="faixa-categorias" aria-label="Categorias">
-          <button
-            type="button"
-            className="chip"
-            aria-pressed={categoria === undefined}
-            onClick={() => trocar({ categoria: null })}
-          >
-            Todas
-          </button>
-          {categorias.dados.itens.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className="chip"
-              aria-pressed={categoria === c.id}
-              onClick={() => trocar({ categoria: String(c.id) })}
-            >
-              {c.nome}
-            </button>
+      {/* Tipo e categoria em listas de escolher nativas, uma embaixo da outra (pedido do Erick
+          depois do lançamento): os chips de tipo quebravam deixando "Procura" sozinho, e a faixa
+          de categorias rolava para o lado sem sinal nenhum. "Tudo" e "Todas" tiram a chave. */}
+      <div className="ind-filtro">
+        <label htmlFor="cla-filtro-tipo">Tipo</label>
+        <select
+          id="cla-filtro-tipo"
+          value={tipo ?? ''}
+          onChange={(e) => trocar({ tipo: e.target.value || null })}
+        >
+          {TIPOS.map((t) => (
+            <option key={t.texto} value={t.valor ?? ''}>
+              {t.texto}
+            </option>
           ))}
-        </nav>
-      )}
+        </select>
+      </div>
+      <div className="ind-filtro">
+        <label htmlFor="cla-filtro-categoria">Categoria</label>
+        <select
+          id="cla-filtro-categoria"
+          value={categoria === undefined ? '' : String(categoria)}
+          onChange={(e) => trocar({ categoria: e.target.value || null })}
+        >
+          <option value="">Todas</option>
+          {categorias.dados?.itens.map((c) => (
+            <option key={c.id} value={String(c.id)}>
+              {c.nome}
+            </option>
+          ))}
+        </select>
+      </div>
       {carga.situacao === 'erro' && !lista ? (
         <FalhaAoCarregar mensagem={carga.erro.mensagem} tentar={recarregar} />
       ) : !lista ? (

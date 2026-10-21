@@ -62,28 +62,59 @@ describe('lista de indicações', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Indicações' })).toBeTruthy()
   })
 
-  it('tocar numa categoria filtra e marca aria-pressed; "Todos" volta', async () => {
+  it('"Categoria" é uma lista de escolher com rótulo, "Todos" primeiro', async () => {
+    apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: null }),
+    })
+    abrir('/indicacoes')
+    const categoria = (await screen.findByLabelText('Categoria')) as HTMLSelectElement
+    expect(categoria.tagName).toBe('SELECT')
+    expect(document.querySelector(`label[for="${categoria.id}"]`)?.textContent).toBe('Categoria')
+    await waitFor(() =>
+      expect([...categoria.options].map((o) => o.textContent)).toEqual([
+        'Todos',
+        'Móveis planejados',
+        'Ar-condicionado',
+        'Eletricista',
+        'Outros',
+      ]),
+    )
+    expect(categoria.selectedOptions[0].textContent).toBe('Todos')
+    expect(document.querySelector('.faixa-categorias')).toBeNull()
+  })
+
+  it('escolher uma categoria filtra e vai para o endereço; "Todos" volta', async () => {
     const chamadas = apiIndicacoes(MORADOR, {
       'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: null }),
       'GET /api/indicacoes?categoria=5': json(200, { itens: [ITENS[1]], com_aviso: null }),
     })
-    abrir('/indicacoes')
-    const faixa = await screen.findByRole('navigation', { name: 'Categorias' })
-    const todos = within(faixa).getByRole('button', { name: 'Todos' })
-    expect(todos.getAttribute('aria-pressed')).toBe('true')
-    const botoes = within(faixa).getAllByRole('button')
-    expect(botoes[0]).toBe(todos)
-    fireEvent.click(within(faixa).getByRole('button', { name: 'Eletricista' }))
+    const roteador = abrir('/indicacoes')
+    const categoria = (await screen.findByLabelText('Categoria')) as HTMLSelectElement
+    await screen.findByText('Marcenaria Silva')
+    fireEvent.change(categoria, { target: { value: '5' } })
     await waitFor(() =>
       expect(chamadas.some((c) => c.caminho === '/api/indicacoes?categoria=5')).toBe(true),
     )
-    expect(within(faixa).getByRole('button', { name: 'Eletricista' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    )
-    expect(todos.getAttribute('aria-pressed')).toBe('false')
+    expect(roteador.state.location.search).toBe('?categoria=5')
+    expect(categoria.selectedOptions[0].textContent).toBe('Eletricista')
     await waitFor(() => expect(screen.queryByText('Marcenaria Silva')).toBeNull())
-    fireEvent.click(todos)
+    fireEvent.change(categoria, { target: { value: '' } })
+    await waitFor(() => expect(roteador.state.location.search).toBe(''))
     expect(await screen.findByText('Marcenaria Silva')).toBeTruthy()
+  })
+
+  it('categoria e busca juntas vão na mesma consulta', async () => {
+    const chamadas = apiIndicacoes(MORADOR, {
+      'GET /api/indicacoes?categoria=5': json(200, { itens: [ITENS[1]], com_aviso: null }),
+      'GET /api/indicacoes?categoria=5&busca=joao': json(200, { itens: [ITENS[1]], com_aviso: null }),
+    })
+    abrir('/indicacoes?categoria=5')
+    const categoria = (await screen.findByLabelText('Categoria')) as HTMLSelectElement
+    await waitFor(() => expect(categoria.selectedOptions[0].textContent).toBe('Eletricista'))
+    fireEvent.change(screen.getByLabelText(/Procurar: nome ou serviço/), { target: { value: 'joao' } })
+    await waitFor(() =>
+      expect(chamadas.some((c) => c.caminho === '/api/indicacoes?categoria=5&busca=joao')).toBe(true),
+    )
   })
 
   it('a busca chama a API com ?busca= depois de digitar', async () => {
@@ -233,18 +264,23 @@ describe('lista de indicações · revisão', () => {
     expect(await screen.findByText('Marcenaria Silva')).toBeTruthy()
   })
 
-  it('"Todos" tira também o filtro "com aviso"', async () => {
+  it('com aviso e a lista de categoria são independentes: um não mexe no outro', async () => {
     apiIndicacoes(ADMIN, {
-      'GET /api/indicacoes?com_aviso=true': json(200, { itens: [ITENS[1]], com_aviso: 1 }),
-      'GET /api/indicacoes': json(200, { itens: ITENS, com_aviso: 1 }),
+      'GET /api/indicacoes?com_aviso=true': json(200, { itens: ITENS, com_aviso: 2 }),
+      'GET /api/indicacoes?categoria=5&com_aviso=true': json(200, { itens: [ITENS[1]], com_aviso: 2 }),
+      'GET /api/indicacoes?categoria=5': json(200, { itens: [ITENS[1]], com_aviso: 2 }),
     })
     const roteador = abrir('/indicacoes?com_aviso=1')
-    const faixa = await screen.findByRole('navigation', { name: 'Categorias' })
-    const todos = within(faixa).getByRole('button', { name: 'Todos' })
-    expect(todos.getAttribute('aria-pressed')).toBe('false')
-    fireEvent.click(todos)
-    await waitFor(() => expect(roteador.state.location.search).toBe(''))
-    expect(await screen.findByText('Marcenaria Silva')).toBeTruthy()
+    const categoria = (await screen.findByLabelText('Categoria')) as HTMLSelectElement
+    // Com o aviso ligado, a lista continua dizendo a verdade: nenhuma categoria escolhida.
+    expect(categoria.selectedOptions[0].textContent).toBe('Todos')
+    await waitFor(() => expect(categoria.options.length).toBe(5))
+    fireEvent.change(categoria, { target: { value: '5' } })
+    await waitFor(() => expect(roteador.state.location.search).toBe('?com_aviso=1&categoria=5'))
+    // Desligar o aviso não mexe na categoria.
+    fireEvent.click(screen.getByRole('button', { name: /2 indicações com aviso da vizinhança/ }))
+    await waitFor(() => expect(roteador.state.location.search).toBe('?categoria=5'))
+    expect(categoria.selectedOptions[0].textContent).toBe('Eletricista')
   })
 
   it('busca sem resultado oferece "Limpar a busca"', async () => {
@@ -274,6 +310,9 @@ describe('lista de indicações · revisão', () => {
     fireEvent.click(ver)
     await waitFor(() => expect(roteador.state.location.search).toBe(''))
     expect(await screen.findByText('Marcenaria Silva')).toBeTruthy()
+    expect((screen.getByLabelText('Categoria') as HTMLSelectElement).selectedOptions[0].textContent).toBe(
+      'Todos',
+    )
   })
 
   it('o anúncio do leitor de tela fala a contagem também ao trocar de categoria', async () => {
@@ -282,10 +321,11 @@ describe('lista de indicações · revisão', () => {
       'GET /api/indicacoes?categoria=5': json(200, { itens: [ITENS[1]], com_aviso: null }),
     })
     abrir('/indicacoes')
-    const faixa = await screen.findByRole('navigation', { name: 'Categorias' })
+    const categoria = (await screen.findByLabelText('Categoria')) as HTMLSelectElement
+    await waitFor(() => expect(categoria.options.length).toBe(5))
     const anuncio = document.querySelector('.ind-busca [aria-live]')!
     expect(anuncio.textContent).toBe('')
-    fireEvent.click(within(faixa).getByRole('button', { name: 'Eletricista' }))
+    fireEvent.change(categoria, { target: { value: '5' } })
     await waitFor(() => expect(anuncio.textContent).toBe('1 indicação encontrada.'))
   })
 })

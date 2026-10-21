@@ -55,35 +55,111 @@ describe('lista de classificados', () => {
     )
   })
 
-  it('o filtro de tipo e a faixa de categorias vão para a API e marcam aria-pressed', async () => {
+  it('"Tipo" e "Categoria" são listas de escolher com rótulo, uma embaixo da outra', async () => {
+    apiClassificados(MORADOR, { 'GET /api/classificados': lista() })
+    abrir('/classificados')
+    const tipo = (await screen.findByLabelText('Tipo', {}, { timeout: 4000 })) as HTMLSelectElement
+    const categoria = (await screen.findByLabelText('Categoria', {}, { timeout: 4000 })) as HTMLSelectElement
+    expect(tipo.tagName).toBe('SELECT')
+    expect(categoria.tagName).toBe('SELECT')
+    // <label for> de verdade, não aria-label.
+    expect(document.querySelector(`label[for="${tipo.id}"]`)?.textContent).toBe('Tipo')
+    expect(document.querySelector(`label[for="${categoria.id}"]`)?.textContent).toBe('Categoria')
+    expect([...tipo.options].map((o) => o.textContent)).toEqual(['Tudo', 'Vende', 'Troca', 'Doa', 'Procura'])
+    expect([...categoria.options].map((o) => o.textContent)).toEqual([
+      'Todas',
+      'Móveis',
+      'Eletrodomésticos',
+      'Material de obra e acabamento',
+      'Outros',
+    ])
+    expect(tipo.selectedOptions[0].textContent).toBe('Tudo')
+    expect(categoria.selectedOptions[0].textContent).toBe('Todas')
+    // Uma embaixo da outra: o tipo vem antes da categoria.
+    expect(tipo.compareDocumentPosition(categoria) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Nada de chips nem de faixa que rola.
+    expect(document.querySelector('.faixa-categorias, .cla-tipos')).toBeNull()
+  })
+
+  it('escolher o tipo e depois a categoria vai para a API e para o endereço', async () => {
     const chamadas = apiClassificados(MORADOR, {
       'GET /api/classificados': lista(),
       'GET /api/classificados?tipo=doacao': lista([ITENS[1]]),
       'GET /api/classificados?tipo=doacao&categoria=4': lista([ITENS[1]]),
     })
-    abrir('/classificados')
-    const tipos = await screen.findByRole('group', { name: 'O que você procura' }, { timeout: 4000 })
-    expect(within(tipos).getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'Tudo',
-      'Vende',
-      'Troca',
-      'Doa',
-      'Procura',
-    ])
-    expect(within(tipos).getByRole('button', { name: 'Tudo' }).getAttribute('aria-pressed')).toBe('true')
-    fireEvent.click(within(tipos).getByRole('button', { name: 'Doa' }))
+    const roteador = abrir('/classificados')
+    const tipo = (await screen.findByLabelText('Tipo', {}, { timeout: 4000 })) as HTMLSelectElement
+    fireEvent.change(tipo, { target: { value: 'doacao' } })
     await waitFor(() =>
       expect(chamadas.some((c) => c.caminho === '/api/classificados?tipo=doacao')).toBe(true),
     )
-    const faixa = screen.getByRole('navigation', { name: 'Categorias' })
-    expect(within(faixa).getAllByRole('button')[0].textContent).toBe('Todas')
-    fireEvent.click(within(faixa).getByRole('button', { name: 'Material de obra e acabamento' }))
+    expect(roteador.state.location.search).toBe('?tipo=doacao')
+    const categoria = (await screen.findByLabelText('Categoria', {}, { timeout: 4000 })) as HTMLSelectElement
+    fireEvent.change(categoria, { target: { value: '4' } })
     await waitFor(() =>
       expect(
         chamadas.some((c) => c.caminho === '/api/classificados?tipo=doacao&categoria=4'),
       ).toBe(true),
     )
-    expect(within(tipos).getByRole('button', { name: 'Doa' }).getAttribute('aria-pressed')).toBe('true')
+    expect(roteador.state.location.search).toBe('?tipo=doacao&categoria=4')
+    expect(tipo.selectedOptions[0].textContent).toBe('Doa')
+    expect(categoria.selectedOptions[0].textContent).toBe('Material de obra e acabamento')
+    // "Tudo" e "Todas" tiram a chave do endereço.
+    fireEvent.change(tipo, { target: { value: '' } })
+    await waitFor(() => expect(roteador.state.location.search).toBe('?categoria=4'))
+    fireEvent.change(categoria, { target: { value: '' } })
+    await waitFor(() => expect(roteador.state.location.search).toBe(''))
+  })
+
+  it('o filtro que veio no endereço aparece escolhido nas listas', async () => {
+    apiClassificados(MORADOR, {
+      'GET /api/classificados?tipo=procura&categoria=2': lista([ITENS[0]]),
+    })
+    abrir('/classificados?tipo=procura&categoria=2')
+    const tipo = (await screen.findByLabelText('Tipo', {}, { timeout: 4000 })) as HTMLSelectElement
+    const categoria = (await screen.findByLabelText('Categoria', {}, { timeout: 4000 })) as HTMLSelectElement
+    expect(tipo.selectedOptions[0].textContent).toBe('Procura')
+    await waitFor(() => expect(categoria.selectedOptions[0].textContent).toBe('Eletrodomésticos'))
+  })
+
+  it('tipo, categoria e busca juntos vão na mesma consulta', async () => {
+    const chamadas = apiClassificados(MORADOR, {
+      'GET /api/classificados?tipo=venda&categoria=1': lista([ITENS[0]]),
+      'GET /api/classificados?tipo=venda&categoria=1&busca=sofa': lista([ITENS[0]]),
+    })
+    abrir('/classificados?tipo=venda&categoria=1')
+    fireEvent.change(await screen.findByLabelText(/Procurar/), { target: { value: 'sofa' } })
+    await waitFor(() =>
+      expect(
+        chamadas.some((c) => c.caminho === '/api/classificados?tipo=venda&categoria=1&busca=sofa'),
+      ).toBe(true),
+    )
+  })
+
+  it('filtro sem resultado: "Ver todos" volta as listas para "Tudo" e "Todas"', async () => {
+    apiClassificados(MORADOR, {
+      'GET /api/classificados': lista(),
+      'GET /api/classificados?tipo=troca&categoria=8': lista([]),
+    })
+    const roteador = abrir('/classificados?tipo=troca&categoria=8')
+    fireEvent.click(await screen.findByRole('button', { name: 'Ver todos' }, { timeout: 4000 }))
+    await waitFor(() => expect(roteador.state.location.search).toBe(''))
+    expect(await screen.findByText('Sofá de 3 lugares')).toBeTruthy()
+    expect((screen.getByLabelText('Tipo') as HTMLSelectElement).selectedOptions[0].textContent).toBe('Tudo')
+    expect((screen.getByLabelText('Categoria') as HTMLSelectElement).selectedOptions[0].textContent).toBe(
+      'Todas',
+    )
+  })
+
+  it('com aviso ligado, as listas não mudam; ligar e desligar não mexe no tipo nem na categoria', async () => {
+    apiClassificados(ADMIN, {
+      'GET /api/classificados?tipo=venda': lista(ITENS, { com_aviso: 1 }),
+      'GET /api/classificados?tipo=venda&com_aviso=true': lista([ITENS[0]], { com_aviso: 1 }),
+    })
+    const roteador = abrir('/classificados?tipo=venda')
+    fireEvent.click(await screen.findByRole('button', { name: /1 anúncio com aviso da vizinhança/ }))
+    await waitFor(() => expect(roteador.state.location.search).toBe('?tipo=venda&com_aviso=1'))
+    expect((screen.getByLabelText('Tipo') as HTMLSelectElement).value).toBe('venda')
   })
 
   it('a busca chama a API com ?busca= depois de digitar', async () => {
@@ -162,17 +238,6 @@ describe('lista de classificados', () => {
 describe('revisão de UX', () => {
   afterEach(() => {
     delete document.documentElement.dataset.letra
-  })
-
-  it('4: a faixa de tipo quebra em linha (as quatro à vista); a das categorias é que rola', async () => {
-    apiClassificados(MORADOR, { 'GET /api/classificados': lista() })
-    abrir('/classificados')
-    const tipos = await screen.findByRole('group', { name: 'O que você procura' }, { timeout: 4000 })
-    expect(tipos.classList.contains('faixa-categorias')).toBe(false)
-    expect(tipos.classList.contains('cla-tipos')).toBe(true)
-    // As categorias chegam num pedido à parte: espera por elas.
-    const faixa = await screen.findByRole('navigation', { name: 'Categorias' }, { timeout: 4000 })
-    expect(faixa.classList.contains('faixa-categorias')).toBe(true)
   })
 
   it('10: com a letra grande, "Anunciar" entra no fluxo, antes da busca; sem o flutuante', async () => {

@@ -12,7 +12,7 @@ import { PaginaEditarAnuncio, PaginaNovoAnuncio } from './NovoAnuncio'
 const DOS_CLASSIFICADOS: OrigemDasCategorias = {
   titulo: 'Categorias dos classificados',
   explicacao:
-    'As categorias aparecem na faixa da lista de classificados e no formulário de anunciar. Uma categoria nova entra antes de “Outros”. Categoria não é apagada.',
+    'As categorias aparecem no filtro “Categoria” da lista de classificados e no formulário de anunciar. Uma categoria nova entra antes de “Outros”. Categoria não é apagada.',
   listar: listarCategoriasParaAdmin,
   criar: criarCategoria,
   renomear: renomearCategoria,

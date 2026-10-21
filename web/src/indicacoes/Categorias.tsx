@@ -24,7 +24,7 @@ export interface OrigemDasCategorias {
 const DAS_INDICACOES: OrigemDasCategorias = {
   titulo: 'Categorias das indicações',
   explicacao:
-    'As categorias aparecem na faixa da lista de indicações e no formulário de indicar alguém. Uma categoria nova entra antes de “Outros”. Categoria não é apagada.',
+    'As categorias aparecem no filtro “Categoria” da lista de indicações e no formulário de indicar alguém. Uma categoria nova entra antes de “Outros”. Categoria não é apagada.',
   listar: listarCategorias,
   criar: criarCategoria,
   renomear: renomearCategoria,
