@@ -91,7 +91,9 @@ front).
     "Foto anterior"/"Próxima foto"). Com a letra grande, nos dois: "Anterior" e "Próxima" ficam só
     com a seta, lado a lado, com "1 de 3" entre elas, e o "Foto 1 de 3" do topo sai da vista (o
     leitor de tela continua ouvindo); a foto fica com o resto da tela. Isso muda também o visor dos
-    anexos com a letra grande (antes, os dois botões ficavam um embaixo do outro).
+    anexos com a letra grande (antes, os dois botões ficavam um embaixo do outro). Os botões do
+    visor são brancos com o texto verde nos dois temas (no escuro eram verde-claro sobre verde
+    escuro, 4,5:1 por pouco), também nos anexos.
 21. **Busca:** todas as palavras precisam aparecer, em qualquer ordem ("cinza sofa" acha "Sofá
     cinza"), sem acento nem maiúscula; vale também nas Indicações.
 22. **Faixa de tipo:** volta a quebrar em linha (as quatro sempre à vista); com a letra grande, os
